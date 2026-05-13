@@ -1,0 +1,182 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Employee {
+  id            String   @id
+  name          String
+  role          String?
+  phoneNo       String?  @map("phone_no")
+  emergencyNo   String?  @map("emergency_no")
+  status        String?  @default("Active")
+  type          String?  @default("Employee") // Employee, Contractor, Intern
+  projectName   String?  @default("-")
+  projectStatus String?  @default("Inactive") // Active, Inactive
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("employees")
+}
+
+model Salary {
+  id         String   @id
+  month      String
+  emps       Int      @default(0)
+  total      String?
+  status     String?  @default("Draft")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("salaries")
+}
+
+model Leave {
+  id         String   @id @default(uuid())
+  name       String
+  type       String
+  days       Int      @default(1)
+  dates      String?
+  reason     String?
+  status     String?  @default("Pending")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("leaves")
+}
+
+model Attendance {
+  id         String   @id @default(uuid())
+  name       String
+  empId      String?  @map("emp_id")
+  role       String?
+  destination String?
+  date       DateTime @db.Date
+  checkIn    String?  @map("checkIn")
+  checkOut   String?  @map("checkOut")
+  breakTime  String?  @map("break_time")
+  totalWorkingHrs String? @map("total_working_hrs")
+  outTimeHrs String? @map("out_time_hrs")
+  status     String?  @default("Present")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("attendance")
+}
+
+model Project {
+  id         String   @id @default(uuid())
+  name       String
+  status     String?  @default("Active") // Active, Inactive
+  members    String?  @default("")       // Comma-separated names or IDs
+  createdAt  DateTime @default(now()) @map("created_at")
+  taskLists  TaskList[]
+
+  @@map("projects")
+}
+
+model TaskList {
+  id        String   @id @default(uuid())
+  name      String
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("task_lists")
+}
+
+model Team {
+  id         String   @id @default(uuid())
+  name       String
+  lead       String?
+  members    Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("teams")
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  taskType    String?  @map("task_type")
+  projectName String?  @map("project_name")
+  assignees   String?
+  dueDate     DateTime?
+  status      String?  @default("To Do")
+  priority    String?  @default("Medium")
+  tag         String?
+  startDate   DateTime?
+  endDate     DateTime?
+  assignedDate DateTime?
+  isBillable  Boolean  @default(false)
+  approvedHours Float?   @default(0)
+  actualHours   Float?   @default(0)
+  taskListId  String?
+  taskList    TaskList? @relation(fields: [taskListId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now()) @map("created_at")
+  attachments String?
+
+  comments    Comment[]
+
+  @@map("tasks")
+}
+
+model Bug {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  status      String?  @default("Open")
+  imageUrl    String?  @map("image_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("bugs")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  taskId    String
+  text      String
+  author    String
+  likes     Int      @default(0)
+  parentId  String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+
+  @@map("comments")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  firstName    String?
+  lastName     String?
+  fullName     String?
+  email        String?  @unique
+  password     String?
+  phoneNo      String?  @map("phone_no")
+  empId        String?  @unique @map("emp_id")
+  designation  String?
+  profileImage String?  @map("profile_image")
+  role         String?  @default("User")
+  status       String?  @default("Active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+
+
+
+model RolePermission {
+  id        String   @id @default(uuid())
+  role      String   @unique
+  data      Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("role_permissions")
+}

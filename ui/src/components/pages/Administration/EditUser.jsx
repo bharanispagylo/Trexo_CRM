@@ -1,0 +1,221 @@
+import React, { useState, useEffect } from 'react';
+import { api } from '../../../api/client';
+import { createClient } from '@supabase/supabase-js';
+import './AddUser.css'; // Reusing the same styling
+
+const supabase = createClient(
+  process.env.REACT_APP_SUPABASE_URL,
+  process.env.REACT_APP_SUPABASE_ANON_KEY
+);
+
+export default function EditUser({ userToEdit, onBack }) {
+  const [roles, setRoles] = useState(['Admin', 'Employee']);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  
+  const [form, setForm] = useState({ 
+    fullName: userToEdit.fullName || `${userToEdit.firstName || ''} ${userToEdit.lastName || ''}`.trim(),
+    email: userToEdit.email || '',
+    password: userToEdit.password || '',
+    phoneNo: userToEdit.phoneNo || '',
+    empId: userToEdit.empId || '',
+    designation: userToEdit.designation || '',
+    profileImage: userToEdit.profileImage || '',
+    role: userToEdit.role || 'Employee'
+  });
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const roleData = await api.get('/roles/permissions');
+        if (roleData) {
+          const dynamicRoles = ['Admin', 'Employee'];
+          roleData.forEach(r => {
+            const rName = r.role.charAt(0).toUpperCase() + r.role.slice(1).toLowerCase();
+            if (!dynamicRoles.includes(rName)) dynamicRoles.push(rName);
+          });
+          setRoles(dynamicRoles);
+        }
+      } catch (error) {
+        console.error('Fetch roles error:', error);
+      }
+    };
+    fetchRoles();
+  }, []);
+
+  const handleImageUpload = async (file) => {
+    if (!file) return null;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET || 'img_default');
+      
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.REACT_APP_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: 'POST', body: formData }
+      );
+
+      const data = await response.json();
+      if (data.secure_url) return data.secure_url;
+      throw new Error(data.error?.message || 'Upload failed');
+    } catch (error) {
+      console.error('Cloudinary Upload error:', error);
+      alert('Failed to upload image: ' + error.message);
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleUpdate = async () => {
+    const newErrors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^\+?[\d\s-]{10,}$/;
+    const empIdRegex = /^[A-Z0-9-]{3,10}$/i;
+    const nameRegex = /^[a-z\s]{3,50}$/i;
+
+    if (!form.fullName) newErrors.fullName = "Full name is required";
+    else if (!nameRegex.test(form.fullName)) newErrors.fullName = "Letters only, min 3 chars";
+
+    if (!form.email) newErrors.email = "Email is required";
+    else if (!emailRegex.test(form.email)) newErrors.email = "Invalid email format";
+
+    if (form.password && form.password.length < 6) newErrors.password = "Min 6 characters";
+
+    if (form.phoneNo && !phoneRegex.test(form.phoneNo)) newErrors.phoneNo = "Min 10 digits";
+    if (form.empId && !empIdRegex.test(form.empId)) newErrors.empId = "3-10 alphanumeric chars";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    
+    setErrors({});
+    setLoading(true);
+    try {
+      await api.put(`/users/${userToEdit.id}`, form);
+      alert('User updated successfully!');
+      onBack();
+    } catch (error) {
+      console.error('Update error:', error);
+      alert('Failed to update user: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+
+  return (
+    <div className="add-user-page">
+      <div className="page-header">
+        <h2 className="page-title">Edit User Details</h2>
+        <p className="page-subtitle">Update information for {form.fullName}</p>
+      </div>
+
+      <div className="saas-form-container">
+        <div className="form-grid">
+          <div className="saas-field full-width">
+            <label className="saas-label">Full Name</label>
+            <input 
+              className={`saas-input ${errors.fullName ? 'error' : ''}`} 
+              placeholder="John Doe" 
+              value={form.fullName} 
+              autoComplete="off" 
+              onChange={e => setForm({...form, fullName: e.target.value})} 
+            />
+            {errors.fullName && <span className="error-text">{errors.fullName}</span>}
+          </div>
+          <div className="saas-field">
+            <label className="saas-label">Email Address</label>
+            <input 
+              className={`saas-input ${errors.email ? 'error' : ''}`} 
+              type="email" 
+              placeholder="john@example.com" 
+              value={form.email} 
+              autoComplete="off" 
+              onChange={e => setForm({...form, email: e.target.value})} 
+            />
+            {errors.email && <span className="error-text">{errors.email}</span>}
+          </div>
+          <div className="saas-field">
+            <label className="saas-label">Password</label>
+            <input 
+              className={`saas-input ${errors.password ? 'error' : ''}`} 
+              type="password" 
+              placeholder="Leave blank to keep current" 
+              value={form.password} 
+              autoComplete="new-password" 
+              onChange={e => setForm({...form, password: e.target.value})} 
+            />
+            {errors.password && <span className="error-text">{errors.password}</span>}
+          </div>
+          <div className="saas-field">
+            <label className="saas-label">Phone Number</label>
+            <input 
+              className={`saas-input ${errors.phoneNo ? 'error' : ''}`} 
+              placeholder="+1 (555) 000-0000" 
+              value={form.phoneNo} 
+              autoComplete="off" 
+              onChange={e => setForm({...form, phoneNo: e.target.value})} 
+            />
+            {errors.phoneNo && <span className="error-text">{errors.phoneNo}</span>}
+          </div>
+          <div className="saas-field">
+            <label className="saas-label">Employee ID</label>
+            <input 
+              className={`saas-input ${errors.empId ? 'error' : ''}`} 
+              placeholder="EMP001" 
+              value={form.empId} 
+              autoComplete="off" 
+              onChange={e => setForm({...form, empId: e.target.value})} 
+            />
+            {errors.empId && <span className="error-text">{errors.empId}</span>}
+          </div>
+
+          <div className="saas-field">
+            <label className="saas-label">Designation</label>
+            <input className="saas-input" placeholder="Software Engineer" value={form.designation} autoComplete="off" onChange={e => setForm({...form, designation: e.target.value})} />
+          </div>
+          <div className="saas-field">
+            <label className="saas-label">Role</label>
+            <select className="saas-select" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+              {roles.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+          <div className="saas-field full-width">
+            <label className="saas-label">Profile Image</label>
+            <div className="image-upload-wrapper">
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={async (e) => {
+                  const file = e.target.files[0];
+                  const url = await handleImageUpload(file);
+                  if (url) setForm({...form, profileImage: url});
+                }}
+              />
+              {uploading && <span className="upload-loader">Uploading...</span>}
+              {form.profileImage && (
+                <div className="preview-container">
+                  <img src={form.profileImage} alt="Preview" className="upload-preview" />
+                  <button className="remove-img-btn" onClick={() => setForm({...form, profileImage: ''})}>✕</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="form-actions">
+          <button className="saas-btn-secondary" onClick={onBack}>Cancel</button>
+          <button className="saas-btn-primary" onClick={handleUpdate} disabled={loading || uploading}>
+            {loading ? 'Saving...' : 'Update User'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,275 @@
+/* ══════════════════════════════
+   PROJECT MANAGEMENT STYLES
+══════════════════════════════ */
+
+.projects-page {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Tab Navigation */
+.saas-tabs {
+  display: flex;
+  gap: 2.5rem;
+  border-bottom: 1px solid var(--saas-border);
+  margin-bottom: 2.5rem;
+  padding: 0 0.5rem;
+}
+
+.saas-tab {
+  padding: 0.75rem 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--saas-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.saas-tab.active {
+  border-bottom-color: var(--saas-primary-green);
+  color: var(--saas-primary-green);
+}
+
+/* Form Card */
+.saas-form-card {
+  background: var(--saas-bg-sidebar);
+  border: 1px solid var(--saas-border);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2.5rem;
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.form-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--saas-text-primary);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* Input Fields */
+.saas-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.saas-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--saas-text-muted);
+  text-transform: uppercase;
+}
+
+.saas-input, .saas-select, .saas-textarea {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border-radius: 9px;
+  border: 1px solid var(--saas-border);
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: white;
+}
+
+.saas-textarea {
+  grid-column: span 2;
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* Members Chips */
+.members-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--saas-border);
+  border-radius: 9px;
+  background: white;
+  min-height: 42px;
+}
+
+.member-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #F1F5F9;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--saas-text-secondary);
+}
+
+.remove-member {
+  cursor: pointer;
+  color: #94A3B8;
+}
+
+/* Table */
+.saas-table-container {
+  background: white;
+  border: 1px solid var(--saas-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.saas-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.saas-table th {
+  padding: 1rem 1.5rem;
+  background: var(--saas-bg-sidebar);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--saas-text-muted);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--saas-border);
+}
+
+.saas-table td {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.project-name-cell {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--saas-text-primary);
+}
+
+.members-stack {
+  display: flex;
+  margin-left: 0.5rem;
+}
+
+.member-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid white;
+  margin-left: -8px;
+  background: #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #64748B;
+}
+
+.status-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-pill.active { background: #DCFCE7; color: #15803D; }
+.status-pill.inactive { background: #F1F5F9; color: #475569; }
+
+.action-btn {
+  background: none;
+  border: none;
+  color: #EF4444;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+}
+
+.action-btn:hover { background: #FEF2F2; }
+
+/* Task List Sub-section */
+.task-lists-container {
+  padding: 1.5rem;
+  background: #F8FAFC;
+  border-top: 1px solid var(--saas-border);
+}
+
+.task-lists-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.task-list-card {
+  background: white;
+  border: 1px solid var(--saas-border);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: transform 0.2s;
+}
+
+.task-list-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.task-list-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--saas-text-primary);
+}
+
+.task-count-badge {
+  background: #EFF6FF;
+  color: #2563EB;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.add-list-inline {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.add-list-input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--saas-border);
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.btn-add-list {
+  background: var(--saas-primary-green);
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
