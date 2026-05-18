@@ -38,7 +38,7 @@ export default function AddUser({ onBack }) {
             const rName = r.role.charAt(0).toUpperCase() + r.role.slice(1).toLowerCase();
             if (!dynamicRoles.includes(rName)) dynamicRoles.push(rName);
           });
-          setRoles(dynamicRoles);
+          setRoles(dynamicRoles.sort((a, b) => a.localeCompare(b)));
         }
       } catch (error) {
         console.error('Fetch roles error:', error);

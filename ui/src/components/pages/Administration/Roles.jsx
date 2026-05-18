@@ -57,6 +57,7 @@ export default function Roles() {
           }
         });
 
+        remoteRoles.sort((a, b) => a.localeCompare(b));
         setPermissions(prev => ({ ...prev, ...remotePerms }));
         setRoles(remoteRoles);
       }
@@ -169,7 +170,10 @@ export default function Roles() {
         data: defaultData
       });
       
-      setRoles(prev => [...prev, name]);
+      setRoles(prev => {
+        const updated = [...prev, name];
+        return updated.sort((a, b) => a.localeCompare(b));
+      });
       setPermissions(prev => ({
         ...prev,
         [name]: defaultData

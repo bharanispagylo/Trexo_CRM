@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { api } from '../api/client';
 import './DashboardLayout.css';
 import { usePermissions } from '../hooks/usePermissions';
 import Employee from './pages/HR/Employee';
@@ -19,9 +20,78 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [userToEdit, setUserToEdit] = useState(null);
   const { can, loading } = usePermissions();
+  const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
+
+  // Global Search states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [allTasks, setAllTasks] = useState([]);
+  const [allProjects, setAllProjects] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchSelectedTask, setSearchSelectedTask] = useState(null);
+  const [searchSelectedProject, setSearchSelectedProject] = useState(null);
+  const searchContainerRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setShowSearchResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  const handleSearchFocus = async () => {
+    try {
+      setShowSearchResults(true);
+      const [tasksData, projectsData, usersData] = await Promise.all([
+        api.get('/tasks'),
+        api.get('/projects'),
+        api.get('/users')
+      ]);
+      setAllTasks(tasksData || []);
+      setAllProjects(projectsData || []);
+      setAllUsers(usersData || []);
+    } catch (err) {
+      console.error('Failed to pre-fetch search items:', err);
+    }
+  };
+
+  const filteredTasks = searchQuery.trim() 
+    ? allTasks.filter(t => 
+        (t.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (t.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+      ) 
+    : [];
+
+  const filteredProjects = searchQuery.trim() 
+    ? allProjects.filter(p => 
+        (p.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+      ) 
+    : [];
+
+  const filteredUsers = searchQuery.trim() 
+    ? allUsers.filter(u => 
+        (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase().includes(searchQuery.toLowerCase())
+      ) 
+    : [];
+
+  const handleItemClick = (type, item) => {
+    setSearchQuery('');
+    setShowSearchResults(false);
+    if (type === 'task') {
+      setSearchSelectedTask(item);
+      setActiveTab('tasks');
+    } else if (type === 'project') {
+      setSearchSelectedProject(item);
+      setActiveTab('projects');
+    } else if (type === 'user') {
+      setActiveTab('users');
+    }
+  };
 
   if (loading) return <div className="loading-screen">Loading Permissions...</div>;
-
 
   const renderContent = () => {
     switch (activeTab) {
@@ -29,9 +99,22 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'salary': return <Salary user={user} />;
       case 'leave': return <Leave user={user} />;
       case 'attendance': return <Attendance user={user} />;
-      case 'projects': return <Projects user={user} />;
+      case 'projects': return (
+        <Projects 
+          user={user} 
+          initialSelectedProject={searchSelectedProject} 
+          onClearInitialProject={() => setSearchSelectedProject(null)} 
+        />
+      );
       case 'teams': return <Teams user={user} />;
-      case 'tasks': return <Tasks user={user} />;
+      case 'tasks': return (
+        <Tasks 
+          user={user} 
+          initialSelectedTask={searchSelectedTask} 
+          onClearInitialTask={() => setSearchSelectedTask(null)} 
+          onDetailViewChange={(open) => setIsTaskDetailOpen(open)}
+        />
+      );
       case 'users': return <Users user={user} onAddUser={() => setActiveTab('add-user')} onEditUser={(u) => { setUserToEdit(u); setActiveTab('edit-user'); }} />;
       case 'roles': return <Roles user={user} />;
       case 'add-user': return <AddUser user={user} onBack={() => setActiveTab('users')} />;
@@ -57,7 +140,9 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'attendance': return { title: 'Attendance Logs', back: 'HR', id: 'Attendance' };
       case 'projects': return { title: 'Project Portfolio', back: 'Operations', id: 'Projects' };
       case 'teams': return { title: 'Team Structure', back: 'Operations', id: 'Teams' };
-      case 'tasks': return { title: 'Task Workspace', back: 'Operations', id: 'Tasks' };
+      case 'tasks': return isTaskDetailOpen
+        ? { title: 'Task Details', back: 'Tasks', id: 'TaskDetails' }
+        : { title: 'Tasks', back: 'Operations', id: 'Tasks' };
       case 'users': return { title: 'User Management', back: 'Admin', id: 'Users' };
       case 'roles': return { title: 'Role Permissions', back: 'Admin', id: 'Roles' };
       case 'add-user': return { title: 'Create New User', back: 'Users', id: 'NewUser' };
@@ -78,9 +163,9 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       <aside className="saas-sidebar-nav">
         <div className="saas-sidebar-header">
           <div className="saas-brand">
-            <div className="saas-logo">OC</div>
+            <div className="saas-logo spagylo-logo">S</div>
             <div className="saas-brand-text">
-              <div className="saas-company">Office CRM</div>
+              <div className="saas-company">Spagylo CRM</div>
               <div className="saas-user-role">{user?.role || 'Admin'}</div>
             </div>
           </div>
@@ -115,21 +200,138 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
         </div>
 
+        {/* Sidebar Help Support Card */}
+        <div className="saas-sidebar-footer">
+          <div className="support-card-modern">
+            <div className="support-icon-circle">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" strokeWidth="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <div className="support-text-wrapper">
+              <span className="support-title">Need help?</span>
+              <span className="support-subtitle">Contact Support</span>
+            </div>
+          </div>
+        </div>
 
       </aside>
 
       {/* MAIN CONTENT AREA */}
       <div className="saas-main-area">
         <header className="saas-main-header">
-           <div className="saas-header-left">
+           <div className="saas-header-left-breadcrumbs-group">
+               <button className="saas-hamburger-btn">
+                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+               </button>
+               <div className="saas-breadcrumbs">
+                  <span className="saas-breadcrumb-item">{header.back}</span>
+                  <span className="saas-breadcrumb-separator">&gt;</span>
+                  <span className="saas-breadcrumb-item active">{header.title}</span>
+               </div>
+            </div>
+            <div style={{ display: 'none' }}>
               <button className="saas-back-link" onClick={() => setActiveTab('overview')}>← {header.back}</button>
               <div className="saas-header-meta">
                  <span className="saas-ticket-id">#{header.id}</span>
                  <h1 className="saas-header-title">{header.title}</h1>
                  <button className="saas-star-btn">☆</button>
+              </div></div>
+           <div className="saas-header-center-search" ref={searchContainerRef} style={{ position: 'relative' }}>
+               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+               <input 
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onFocus={handleSearchFocus}
+                  placeholder="Search here..." 
+               />
+               <span className="saas-search-kbd">Ctrl + /</span>
+
+               {showSearchResults && searchQuery.trim() && (
+                  <div className="saas-search-results-overlay">
+                     {filteredTasks.length === 0 && filteredProjects.length === 0 && filteredUsers.length === 0 && (
+                        <div className="no-comments-placeholder" style={{ padding: '1rem', fontSize: '0.85rem' }}>No results found for "{searchQuery}"</div>
+                     )}
+
+                     {filteredTasks.length > 0 && (
+                        <div className="saas-search-category">
+                           <div className="saas-search-category-title">Tasks</div>
+                           {filteredTasks.slice(0, 5).map(t => (
+                              <div key={t.id} className="saas-search-item" onClick={() => handleItemClick('task', t)}>
+                                 <div className="saas-search-item-icon">#</div>
+                                 <div className="saas-search-item-content">
+                                    <div className="saas-search-item-title">{t.title}</div>
+                                    <div className="saas-search-item-subtitle">{t.status} • {t.priority}</div>
+                                 </div>
+                              </div>
+                           ))}
+                        </div>
+                     )}
+
+                     {filteredProjects.length > 0 && (
+                        <div className="saas-search-category">
+                           <div className="saas-search-category-title">Projects</div>
+                           {filteredProjects.slice(0, 5).map(p => (
+                              <div key={p.id} className="saas-search-item" onClick={() => handleItemClick('project', p)}>
+                                 <div className="saas-search-item-icon project-icon">📁</div>
+                                 <div className="saas-search-item-content">
+                                    <div className="saas-search-item-title">{p.name}</div>
+                                    <div className="saas-search-item-subtitle">{p.status}</div>
+                                 </div>
+                              </div>
+                           ))}
+                        </div>
+                     )}
+
+                     {filteredUsers.length > 0 && (
+                        <div className="saas-search-category">
+                           <div className="saas-search-category-title">Users & Employees</div>
+                           {filteredUsers.slice(0, 5).map(u => (
+                              <div key={u.id} className="saas-search-item" onClick={() => handleItemClick('user', u)}>
+                                 <div className="saas-search-item-icon user-icon">👤</div>
+                                 <div className="saas-search-item-content">
+                                    <div className="saas-search-item-title">{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`}</div>
+                                    <div className="saas-search-item-subtitle">{u.role || 'Member'}</div>
+                                 </div>
+                              </div>
+                           ))}
+                        </div>
+                     )}
+                  </div>
+               )}
+            </div>
+
+            <div className="saas-header-right">
+              {/* Notification Bell Icon */}
+              <button className="saas-header-icon-btn notification-btn" title="Notifications">
+                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                 <span className="notification-badge">2</span>
+              </button>
+
+              {/* Help support circle question mark icon */}
+              <button className="saas-header-icon-btn help-btn" title="Help & Support">
+                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              </button>
+
+              {/* Modern Rajesh Kumar style User Profile */}
+              <div className="saas-user-profile-header">
+                <div className="saas-user-avatar">
+                  {user?.profileImage ? (
+                    <img src={user.profileImage} alt="Profile" className="header-avatar-img" />
+                  ) : (
+                    <div className="header-avatar-placeholder">
+                      {initials(user?.fullName || user?.name || user?.role || 'User')}
+                    </div>
+                  )}
+                </div>
+                <div className="saas-user-info">
+                  <span className="saas-user-name">{user?.fullName || user?.name || user?.role || 'User'}</span>
+                  <span className="saas-user-email">{user?.role || 'Admin'}</span>
+                </div>
+                <span className="saas-profile-chevron">
+                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </span>
               </div>
-           </div>
-           <div className="saas-header-right">
+            </div>
+            <div style={{ display: 'none' }}>
               <div className="saas-user-profile-header">
                 <div className="saas-user-info">
                   <span className="saas-user-name">{user?.fullName || user?.name || user?.role || 'User'}</span>
@@ -145,9 +347,8 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
                   )}
                 </div>
 
-              </div>
-           </div>
-
+              </div></div>
+        
         </header>
 
         <div className="saas-page-content">

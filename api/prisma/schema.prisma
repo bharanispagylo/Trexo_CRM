@@ -99,6 +99,7 @@ model Team {
 
 model Task {
   id          String   @id @default(uuid())
+  taskNo      String?  @map("task_no")
   title       String
   description String?
   taskType    String?  @map("task_type")
@@ -111,6 +112,7 @@ model Task {
   startDate   DateTime?
   endDate     DateTime?
   assignedDate DateTime?
+  deliveredDate DateTime? @map("delivered_date")
   isBillable  Boolean  @default(false)
   approvedHours Float?   @default(0)
   actualHours   Float?   @default(0)

@@ -37,8 +37,8 @@
 }
 
 .saas-tab.active {
-  border-bottom-color: var(--saas-primary-green);
-  color: var(--saas-primary-green);
+  border-bottom-color: var(--saas-text-primary);
+  color: var(--saas-text-primary);
 }
 
 .saas-btn-add {

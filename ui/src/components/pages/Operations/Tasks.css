@@ -683,12 +683,15 @@
    MODERN SAAS TASK PAGE
 ══════════════════════════════ */
 .saas-task-page {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  position: relative;
   background: white;
-  z-index: 2000;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
   color: #0f172a;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   animation: saasFadeIn 0.2s ease-out;
@@ -1357,8 +1360,8 @@
 }
 
 .saas-tab-btn.active {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
+  color: var(--saas-text-primary, #0f172a);
+  border-bottom-color: var(--saas-text-primary, #0f172a);
 }
 
 .saas-tab-content-wrapper {
@@ -1546,3 +1549,875 @@
 .saas-avatar-sm:hover {
   transform: scale(1.1);
 }
+
+
+/* ════════════════════════════════════════════════════════════════
+   SPAGYLO CRM TASK DETAILS MODERN STYLES
+   ════════════════════════════════════════════════════════════════ */
+
+/* Navigation Header */
+.saas-breadcrumb-active {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.saas-btn-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.saas-btn-primary {
+  background: #2563eb;
+  color: white;
+  border: none;
+  box-shadow: 0 2px 4px rgba(37,99,235,0.2);
+}
+.saas-btn-primary:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.saas-btn-secondary {
+  background: white;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+.saas-btn-secondary:hover {
+  background: #f8fafc;
+}
+
+.saas-btn-danger {
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid #fee2e2;
+}
+.saas-btn-danger:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.saas-btn-more {
+  background: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+.saas-btn-more:hover {
+  background: #f8fafc;
+}
+
+/* Left Content Pane Details */
+.saas-detail-header-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.saas-id-tag {
+  background: #f3e8ff;
+  color: #7c3aed;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+
+.saas-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 50px;
+}
+
+.saas-status-badge .status-dot {
+  font-size: 0.6rem;
+}
+
+.saas-status-badge.status-to-do { background: #f1f5f9; color: #475569; }
+.saas-status-badge.status-in-progress { background: #eff6ff; color: #2563eb; }
+.saas-status-badge.status-testing { background: #faf5ff; color: #7c3aed; }
+.saas-status-badge.status-reopened { background: #fff1f2; color: #e11d48; }
+.saas-status-badge.status-prod-deployed { background: #fefce8; color: #ca8a04; }
+.saas-status-badge.status-prod-verified { background: #f0fdf4; color: #16a34a; }
+
+.saas-detail-title-block {
+  margin-bottom: 1.5rem;
+}
+
+.saas-detail-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.saas-detail-subtitle {
+  font-size: 0.95rem;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Tabs Header Row */
+.saas-tabs-header-row {
+  display: flex;
+  border-bottom: 1px solid #f1f5f9;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.saas-tab-header-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.75rem 0.25rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.saas-tab-header-btn:hover {
+  color: #0f172a;
+}
+
+.saas-tab-header-btn.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+.saas-tab-pane-content {
+  flex: 1;
+}
+
+/* Details Key-Value Grid */
+.saas-details-grid {
+  display: grid;
+  grid-template-columns: 24px 200px 10px 1fr;
+  row-gap: 1.25rem;
+  align-items: center;
+  padding-bottom: 3rem;
+}
+
+.saas-details-row {
+  display: contents;
+}
+
+.field-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  height: 24px;
+}
+
+.field-label-text {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.field-colon-sep {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #cbd5e1;
+  text-align: center;
+}
+
+.field-value-text {
+  font-size: 0.92rem;
+  color: #0f172a;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+}
+
+.field-value-text .font-bold {
+  font-weight: 700;
+}
+
+.field-value-text .font-semibold {
+  font-weight: 600;
+}
+
+/* Grid input form styles */
+.saas-grid-input {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: #0f172a;
+  outline: none;
+  background: white;
+  transition: all 0.15s ease;
+}
+
+.saas-grid-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+
+.saas-grid-input.error {
+  border-color: #ef4444;
+}
+
+.grid-error-msg {
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  font-weight: 600;
+}
+
+.saas-grid-textarea {
+  width: 100%;
+  max-width: 500px;
+  height: 80px;
+  min-height: 80px;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: #0f172a;
+  outline: none;
+  resize: vertical;
+  background: white;
+  transition: all 0.15s ease;
+}
+
+.saas-grid-textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+
+.saas-grid-select {
+  width: 100%;
+  max-width: 250px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: #0f172a;
+  outline: none;
+  background: white;
+  cursor: pointer;
+}
+
+.saas-grid-select:focus {
+  border-color: #2563eb;
+}
+
+/* Priority Pill (View Mode) */
+.saas-priority-pill {
+  display: inline-flex;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.saas-priority-pill.pill-critical { background: #fef2f2; color: #ef4444; }
+.saas-priority-pill.pill-high { background: #fffbeb; color: #d97706; }
+.saas-priority-pill.pill-medium { background: #eff6ff; color: #2563eb; }
+.saas-priority-pill.pill-low { background: #f1f5f9; color: #475569; }
+
+/* Status selector pill in view mode */
+.saas-status-inline-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.saas-status-inline-select:hover {
+  background: #dbeafe;
+}
+
+.saas-project-link-text {
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.saas-project-link-text:hover {
+  text-decoration: underline;
+  color: #1d4ed8;
+}
+
+/* Assignee Styles */
+.assignee-view-container {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.assignee-avatar-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.assignee-name-label {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.assignee-count-more {
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.assignee-edit-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 300px;
+}
+
+.assignee-edit-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.assignee-edit-chip {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.assignee-edit-chip button {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+}
+.assignee-edit-chip button:hover { color: #ef4444; }
+
+/* Attachments Layout */
+.attachments-list-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.attachment-file-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.attachment-file-pill:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.file-icon-box {
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+}
+
+.file-name-link {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+  text-decoration: none;
+}
+.file-name-link:hover {
+  color: #2563eb;
+}
+
+.remove-file-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0 0.2rem;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+.remove-file-btn:hover {
+  color: #ef4444;
+}
+
+.add-file-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: white;
+  border: 1px dashed #cbd5e1;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.add-file-pill-btn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.add-file-pill-btn .plus-sign {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Billing Pane */
+.saas-billing-pane {
+  padding: 1rem 0;
+  max-width: 500px;
+}
+
+.saas-billing-header-block {
+  margin-bottom: 1.5rem;
+}
+.saas-billing-header-block h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.25rem 0;
+}
+.saas-billing-header-block p {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.billing-fields-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.billing-field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.billing-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.billing-toggle-group {
+  display: flex;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 8px;
+}
+
+.billing-toggle-btn {
+  padding: 0.35rem 1.25rem;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.billing-toggle-btn.active {
+  background: white;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.billing-hours-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.billing-hours-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.billing-hours-field label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.billing-number-input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  background: white;
+  width: 100%;
+}
+.billing-number-input:focus {
+  border-color: #2563eb;
+}
+
+.billing-error-text {
+  color: #ef4444;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Attachments Tab Styles */
+.saas-attachments-pane {
+  padding: 1rem 0;
+}
+
+.attachments-tab-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.no-attachments-text {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  font-style: italic;
+  margin: 0;
+}
+
+/* Facebook/X Style Comments Section */
+.comments-section-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+}
+
+.comments-header-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.comments-feed-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.no-comments-placeholder {
+  text-align: center;
+  color: #cbd5e1;
+  font-size: 0.88rem;
+  font-style: italic;
+  padding: 3rem 1rem;
+}
+
+.saas-comment-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+
+.saas-comment-card:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.saas-comment-card.is-reply {
+  margin-left: 2.25rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid #e2e8f0;
+  margin-top: 0.5rem;
+}
+
+.comment-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.comment-avatar-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.comment-content-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.comment-author-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+
+.comment-author-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.comment-post-time {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.comment-text-body {
+  font-size: 0.88rem;
+  color: #334155;
+  line-height: 1.45;
+  background: transparent;
+  padding: 0.15rem 0 0.3rem 0;
+  border-radius: 0;
+  border: none;
+  display: block;
+  word-break: break-word;
+}
+
+.saas-comment-card.is-reply .comment-text-body {
+  background: transparent;
+}
+
+.comment-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  padding-left: 0.25rem;
+}
+
+.comment-action-btn-link {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.comment-action-btn-link:hover {
+  color: #2563eb;
+}
+
+.comment-likes-badge {
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #2563eb;
+  padding: 0.1rem 0.4rem;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.comment-reply-input-wrapper {
+  margin-top: 0.25rem;
+  margin-left: 2.25rem;
+}
+
+.reply-inline-input {
+  width: 100%;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  outline: none;
+}
+.reply-inline-input:focus {
+  border-color: #2563eb;
+}
+
+.comment-replies-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Comment Box Input Box at bottom */
+.comment-post-input-box {
+  padding: 1.25rem;
+  border-top: 1px solid #f1f5f9;
+  background: white;
+}
+
+.comment-box-flex-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.comment-input-field-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.comment-main-text-input {
+  width: 100%;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 0.6rem 2.25rem 0.6rem 1rem;
+  font-family: inherit;
+  font-size: 0.88rem;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.comment-main-text-input:focus {
+  background: white;
+  border-color: #cbd5e1;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+}
+
+.comment-emoji-icon {
+  position: absolute;
+  right: 0.75rem;
+  cursor: pointer;
+  font-size: 1rem;
+  user-select: none;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.comment-emoji-icon:hover {
+  opacity: 1;
+}
+
+.comment-submit-paper-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s;
+  box-shadow: 0 2px 4px rgba(37,99,235,0.25);
+  flex-shrink: 0;
+}
+
+.comment-submit-paper-btn:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.comment-submit-paper-btn:disabled {
+  background: #f1f5f9;
+  color: #cbd5e1;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.comment-submit-paper-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Micro-animations */
+.animate-fade-in {
+  animation: fadeInEffect 0.25s ease-out;
+}
+
+@keyframes fadeInEffect {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.emoji-picker-item {
+  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.emoji-picker-item:hover {
+  transform: scale(1.35);
+}
+

@@ -9,7 +9,10 @@ export const api = {
 
   async get(route) {
     const res = await fetch(`${BASE_URL}${route}`);
-    if (!res.ok) throw new Error(`GET ${route} failed: ${res.status}`);
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.details || errorData.error || `GET ${route} failed: ${res.status}`);
+    }
     return res.json();
   },
 
@@ -21,7 +24,7 @@ export const api = {
     });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.error || `POST ${route} failed: ${res.status}`);
+      throw new Error(errorData.details || errorData.error || `POST ${route} failed: ${res.status}`);
     }
     return res.json();
   },
@@ -33,7 +36,10 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(`PUT ${route} failed: ${res.status}`);
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.details || errorData.error || `PUT ${route} failed: ${res.status}`);
+    }
     return res.json();
   },
 
@@ -41,7 +47,10 @@ export const api = {
     const res = await fetch(`${BASE_URL}${route}`, {
       method: 'DELETE',
     });
-    if (!res.ok) throw new Error(`DELETE ${route} failed: ${res.status}`);
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.details || errorData.error || `DELETE ${route} failed: ${res.status}`);
+    }
     return res.json();
   },
 };

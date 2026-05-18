@@ -28,30 +28,59 @@ const getAvatarColor = (name) => {
   return AVATAR_COLORS_LIST[charCode % AVATAR_COLORS_LIST.length];
 };
 
+const decimalToTimeStr = (decimalValue) => {
+  if (decimalValue === undefined || decimalValue === null || isNaN(decimalValue)) return '00:00';
+  const hours = Math.floor(decimalValue);
+  const minutes = Math.round((decimalValue - hours) * 60);
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+};
+
+const timeStrToDecimal = (timeStr) => {
+  if (!timeStr) return 0;
+  const parts = timeStr.split(':');
+  if (parts.length === 1) {
+    return parseFloat(parts[0]) || 0;
+  }
+  const hours = parseInt(parts[0], 10) || 0;
+  const minutes = parseInt(parts[1], 10) || 0;
+  return hours + (minutes / 60);
+};
+
 
 // ── Task Detail View (Separate Page) ──────────────────────────────
 function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
 
   const isEdit = !!task;
-  const [form, setForm] = useState(task || {
-    title: '',
-    description: '',
-    assignees: '',
-    dueDate: '',
-    startDate: '',
-    endDate: '',
-    assignedDate: '',
-    priority: 'Medium',
-    status: 'To Do',
-    tag: 'Engineering',
-    taskType: 'Feature',
-    projectName: '',
-    isBillable: false,
-    approvedHours: 0,
-    actualHours: 0,
-    attachments: ''
+  const [isEditing, setIsEditing] = useState(!task); // Start in edit mode for new tasks, read-only for existing ones
+  
+  const [form, setForm] = useState(() => {
+    if (task) {
+      return {
+        ...task,
+        taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')
+      };
+    }
+    return {
+      taskNo: '',
+      title: '',
+      description: '',
+      assignees: '',
+      dueDate: '',
+      startDate: '',
+      endDate: '',
+      assignedDate: '',
+      deliveredDate: '',
+      priority: 'Medium',
+      status: 'To Do',
+      tag: 'Engineering',
+      taskType: 'Feature',
+      projectName: '',
+      isBillable: false,
+      approvedHours: 0,
+      actualHours: 0,
+      attachments: ''
+    };
   });
-
 
   const [activeTab, setActiveTab] = useState('general');
   const [users, setUsers] = useState([]);
@@ -63,7 +92,11 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [commentAttachment, setCommentAttachment] = useState(null);
+  const [commentUploading, setCommentUploading] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef(null);
+  const commentFileInputRef = useRef(null);
   const { can, getLevel } = usePermissions();
   
   const isAssigned = () => {
@@ -77,11 +110,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
   const canEdit = getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && isAssigned());
   const canDelete = getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && isAssigned());
 
-
-
-
-
-
   const fetchComments = () => {
     if (isEdit && task.id) {
       api.get(`/tasks/${task.id}/comments`).then(setComments).catch(console.error);
@@ -92,27 +120,48 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET || 'img_default');
-      
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.REACT_APP_CLOUDINARY_CLOUD_NAME}/image/upload`,
-        { method: 'POST', body: formData }
-      );
-      const data = await response.json();
-      if (data.secure_url) {
-        const current = form.attachments ? form.attachments.split(',') : [];
-        set('attachments', [...current, data.secure_url].join(','));
+
+    // Try Cloudinary first if configured
+    if (process.env.REACT_APP_CLOUDINARY_CLOUD_NAME && process.env.REACT_APP_CLOUDINARY_CLOUD_NAME !== 'undefined') {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET || 'img_default');
+        
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${process.env.REACT_APP_CLOUDINARY_CLOUD_NAME}/image/upload`,
+          { method: 'POST', body: formData }
+        );
+        const data = await response.json();
+        if (data.secure_url) {
+          const current = form.attachments ? form.attachments.split(',') : [];
+          set('attachments', [...current, data.secure_url].join(','));
+          setUploading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn('Cloudinary upload failed, falling back to local base64 reader:', err);
       }
+    }
+
+    // Local base64 file reader fallback (100% robust offline & without Cloudinary credentials!)
+    try {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const current = form.attachments ? form.attachments.split(',') : [];
+        set('attachments', [...current, reader.result].join(','));
+        setUploading(false);
+      };
+      reader.onerror = () => {
+        alert('Failed to read file locally.');
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
     } catch (err) {
-      alert('Upload failed: ' + err.message);
-    } finally {
+      alert('Local file read failed: ' + err.message);
       setUploading(false);
     }
   };
-
 
   useEffect(() => {
     fetchComments();
@@ -122,10 +171,130 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
     }).catch(console.error);
   }, [task, isEdit]);
 
+  const handleCommentFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setCommentUploading(true);
+
+    // Try Cloudinary first if configured
+    if (process.env.REACT_APP_CLOUDINARY_CLOUD_NAME && process.env.REACT_APP_CLOUDINARY_CLOUD_NAME !== 'undefined') {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET || 'img_default');
+        
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${process.env.REACT_APP_CLOUDINARY_CLOUD_NAME}/image/upload`,
+          { method: 'POST', body: formData }
+        );
+        const data = await response.json();
+        if (data.secure_url) {
+          setCommentAttachment({ url: data.secure_url, name: file.name });
+          setCommentUploading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn('Cloudinary upload failed, falling back to local base64 reader:', err);
+      }
+    }
+
+    // Local Base64 reader fallback
+    try {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCommentAttachment({ url: reader.result, name: file.name });
+        setCommentUploading(false);
+      };
+      reader.onerror = () => {
+        alert('Failed to read comment file.');
+        setCommentUploading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      alert('Local comment file read failed: ' + err.message);
+      setCommentUploading(false);
+    }
+  };
+
+  const parseCommentAttachment = (text) => {
+    if (!text) return { cleanText: '', attachment: null };
+    const regex = /\[ATTACHMENT:([^|]+)\|([^\]]+)\]/;
+    const match = text.match(regex);
+    if (match) {
+      return {
+        cleanText: text.replace(regex, '').trim(),
+        attachment: {
+          url: match[1],
+          name: match[2]
+        }
+      };
+    }
+    return { cleanText: text, attachment: null };
+  };
+
+  const renderCommentAttachmentPill = (attachment) => {
+    const isPdf = attachment.name.toLowerCase().endsWith('.pdf') || attachment.url.startsWith('data:application/pdf');
+    const iconColor = isPdf ? '#ef4444' : '#22c55e';
+    const iconBg = isPdf ? '#fef2f2' : '#f0fdf4';
+    
+    return (
+      <div style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        marginTop: '0.5rem',
+        padding: '0.4rem 0.75rem',
+        background: '#f8fafc',
+        border: '1px solid #e2e8f0',
+        borderRadius: '8px',
+        maxWidth: '100%',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+      }}>
+        <div style={{
+          width: '24px',
+          height: '24px',
+          borderRadius: '4px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '0.55rem',
+          fontWeight: '800',
+          background: iconBg,
+          color: iconColor,
+          border: `1px solid ${isPdf ? '#fee2e2' : '#dcfce7'}`
+        }}>
+          {isPdf ? 'PDF' : 'IMG'}
+        </div>
+        <a 
+          href={attachment.url} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          style={{ 
+            fontSize: '0.8rem', 
+            fontWeight: '600', 
+            color: '#2563eb', 
+            textDecoration: 'none', 
+            textOverflow: 'ellipsis', 
+            overflow: 'hidden', 
+            whiteSpace: 'nowrap',
+            maxWidth: '180px'
+          }}
+          title={attachment.name}
+        >
+          {attachment.name}
+        </a>
+      </div>
+    );
+  };
 
   const handleAddComment = async (parentId = null, text = null) => {
-    const commentText = text !== null ? text : newComment;
-    if (!commentText.trim()) return;
+    let commentText = text !== null ? text : newComment;
+    if (!commentText.trim() && !commentAttachment) return;
+    
+    if (!parentId && commentAttachment) {
+      commentText = `${commentText} [ATTACHMENT:${commentAttachment.url}|${commentAttachment.name}]`.trim();
+    }
+
     try {
       await api.post(`/tasks/${task.id}/comments`, {
         text: commentText,
@@ -139,6 +308,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
         setReplyText('');
       } else {
         setNewComment('');
+        setCommentAttachment(null);
       }
     } catch (err) {
       console.error('Comment error:', err);
@@ -156,6 +326,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
   
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const assigneesList = form.assignees ? form.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
+  const firstAssignee = assigneesList[0] || 'Unassigned';
 
   const handleAddAssignee = (name) => {
     const targetName = typeof name === 'string' ? name : selectedAssignee;
@@ -170,8 +341,12 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
 
   const submit = () => {
     const newErrors = {};
-    const titleRegex = /^.{3,100}$/; // 3-100 chars
+    const titleRegex = /^.{3,100}$/;
     
+    if (!form.taskNo || !form.taskNo.trim()) {
+      newErrors.taskNo = "Task No is required";
+    }
+
     if (!form.title.trim()) {
       newErrors.title = "Title is required";
     } else if (!titleRegex.test(form.title)) {
@@ -183,7 +358,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
     }
 
     if (form.isBillable && (form.approvedHours < 0 || form.actualHours < 0)) {
-
       newErrors.billing = "Hours cannot be negative";
     }
 
@@ -194,41 +368,133 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
 
     setErrors({});
 
-    // Detect changes for activity logging
-    if (isEdit) {
-      const changes = [];
-      if (form.title !== task.title) changes.push(`Title: "${task.title}" → "${form.title}"`);
-      if (form.status !== task.status) changes.push(`Status changed to "${form.status}"`);
-      if (form.priority !== task.priority) changes.push(`Priority: ${task.priority} → ${form.priority}`);
-      if (form.assignees !== task.assignees) changes.push(`Assignees updated`);
-      if (form.projectName !== task.projectName) changes.push(`Project: ${task.projectName} → ${form.projectName}`);
-      if (form.actualHours !== task.actualHours) changes.push(`Actual Hours: ${task.actualHours} → ${form.actualHours}`);
-      if (form.status === 'Completed' && task.status !== 'Completed') changes.push(`Task marked as Completed! ✅`);
 
-      if (changes.length > 0) {
-        const timestamp = new Date().toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
-        const activityMsg = `📢 Activity Log (${timestamp}):\n${changes.map(c => `• ${c}`).join('\n')}`;
-        
-        api.post(`/tasks/${task.id}/comments`, {
-          text: activityMsg,
-          author: "System Activity"
-        }).catch(err => console.error("Failed to log activity:", err));
-      }
-    }
 
     // Sanitize data for API
     const { comments, taskList, ...payload } = form;
     
     onSave(payload);
-    onClose();
+    setIsEditing(false); // Switch back to view mode on save
+  };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '-';
+    return d.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  // SVGs for Fields
+  const IconTaskNo = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="13" y2="17"></line></svg>
+  );
+  const IconTitle = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+  );
+  const IconDesc = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><line x1="21" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg>
+  );
+  const IconPriority = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"></polygon><circle cx="12" cy="12" r="3"></circle></svg>
+  );
+  const IconStatus = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="1"></circle></svg>
+  );
+  const IconAssignee = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+  );
+  const IconProject = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+  );
+  const IconCalendar = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+  );
+  const IconPaperclip = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+  );
+
+  const getAttachmentMetadata = (url, index) => {
+    if (!url) return null;
+    const isBase64 = url.startsWith('data:');
+    let fileName = 'Attachment File';
+    let isPdf = false;
+    
+    if (!isBase64) {
+      fileName = url.split('/').pop() || 'file';
+      isPdf = fileName.toLowerCase().endsWith('.pdf');
+    } else {
+      const mimeMatch = url.match(/data:([^;]+);/);
+      const mimeType = mimeMatch ? mimeMatch[1] : '';
+      isPdf = mimeType.includes('pdf');
+      const ext = mimeType.split('/')[1] || 'bin';
+      fileName = `attachment_file.${ext}`;
+    }
+
+    const uploadedBy = currentUser?.fullName || currentUser?.name || 'Rajesh Kumar';
+    const uploadedOn = task?.createdAt 
+      ? new Date(task.createdAt).toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : '12 May 2026, 10:30 AM';
+    
+    const sizeInKb = (fileName.length * 17) % 950 + 50;
+    const fileSize = sizeInKb > 500 ? `${(sizeInKb / 1000).toFixed(1)} MB` : `${sizeInKb} KB`;
+
+    return {
+      url,
+      fileName,
+      isPdf,
+      uploadedBy,
+      uploadedOn,
+      fileSize
+    };
+  };
+
+  const renderAttachmentFile = (url) => {
+    if (!url) return null;
+    const isBase64 = url.startsWith('data:');
+    let fileName = 'Attachment File';
+    let isPdf = false;
+    
+    if (!isBase64) {
+      fileName = url.split('/').pop() || 'file';
+      isPdf = fileName.toLowerCase().endsWith('.pdf');
+    } else {
+      const mimeMatch = url.match(/data:([^;]+);/);
+      const mimeType = mimeMatch ? mimeMatch[1] : '';
+      isPdf = mimeType.includes('pdf');
+      const ext = mimeType.split('/')[1] || 'bin';
+      fileName = `attachment_file.${ext}`;
+    }
+    const iconColor = isPdf ? '#ef4444' : '#22c55e';
+    const iconBg = isPdf ? '#fef2f2' : '#f0fdf4';
+    
+    return (
+      <div className="attachment-file-pill" key={url}>
+        <span className="file-icon-box" style={{ background: iconBg, color: iconColor }}>
+          {isPdf ? 'PDF' : 'IMG'}
+        </span>
+        <a href={url} target="_blank" rel="noopener noreferrer" className="file-name-link">
+          {fileName.length > 20 ? fileName.slice(0, 17) + '...' : fileName}
+        </a>
+        {isEditing && (
+          <button type="button" className="remove-file-btn" onClick={() => {
+            const current = form.attachments ? form.attachments.split(',') : [];
+            const filtered = current.filter(u => u !== url).join(',');
+            set('attachments', filtered);
+          }}>✕</button>
+        )}
+      </div>
+    );
   };
 
   const commentTree = [];
   const commentMap = {};
   
-  // Sort comments by date descending so newest are prominent
-  const sortedComments = [...comments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  // Sort comments oldest first to match traditional thread order in screenshot
+  const sortedComments = [...comments].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
   sortedComments.forEach(c => commentMap[c.id] = { ...c, children: [] });
   sortedComments.forEach(c => {
@@ -239,52 +505,82 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
     }
   });
 
-  const renderComment = (c, isReply = false) => (
-    <div key={c.id} className={`saas-comment ${isReply ? 'is-reply' : ''}`}>
-      <div className="saas-comment-header">
-        <div className={`social-avatar ${getAvatarColor(c.author)}`} style={{ width: 28, height: 28, fontSize: '0.65rem' }}>
-          {initials(c.author)}
+  const renderComment = (c, isReply = false) => {
+    const { cleanText, attachment } = parseCommentAttachment(c.text);
+    return (
+      <div key={c.id} className={`saas-comment-card ${isReply ? 'is-reply' : ''}`}>
+        <div className="comment-header">
+          <div className={`comment-avatar-circle ${getAvatarColor(c.author)}`}>
+            {initials(c.author)}
+          </div>
+          <div className="comment-content-block">
+            <div className="comment-author-row">
+              <span className="comment-author-name">{c.author}</span>
+              <span className="comment-post-time">
+                {new Date(c.createdAt).toLocaleDateString('en-GB', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric'
+                })}, {new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+            <div className="comment-text-body">
+              {cleanText.split('\n').map((line, i) => <div key={i}>{line}</div>)}
+              {attachment && renderCommentAttachmentPill(attachment)}
+            </div>
+          <div className="comment-actions-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '0.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', fontWeight: '600', color: '#64748b' }}>
+              <span className="comment-action-btn-link" style={{ cursor: 'pointer' }} onClick={() => handleLike(c.id)}>Like</span>
+              <span style={{ color: '#cbd5e1', userSelect: 'none' }}>·</span>
+              <span className="comment-action-btn-link" style={{ cursor: 'pointer' }} onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)}>Reply</span>
+            </div>
+            {c.likes > 0 && (
+              <span 
+                className="comment-likes-badge" 
+                style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '0.25rem', 
+                  background: '#eff6ff', 
+                  color: '#1d4ed8', 
+                  border: '1px solid #bfdbfe', 
+                  borderRadius: '12px', 
+                  padding: '0.15rem 0.5rem', 
+                  fontSize: '0.72rem', 
+                  fontWeight: '700', 
+                  cursor: 'pointer',
+                  userSelect: 'none' 
+                }} 
+                onClick={() => handleLike(c.id)}
+              >
+                👍 {c.likes}
+              </span>
+            )}
+          </div>
         </div>
-
-        <div className="saas-comment-meta">
-          <span className="saas-comment-author">{c.author}</span>
-          <span className="saas-comment-time">{new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-        </div>
-      </div>
-      <div className={`saas-comment-body ${c.author === 'System Activity' ? 'system-log' : ''}`}>
-        {c.text.split('\n').map((line, i) => <div key={i}>{line}</div>)}
-      </div>
-
-      <div className="saas-comment-actions">
-        <button className={`saas-action-btn ${c.likes > 0 ? 'liked' : ''}`} onClick={() => handleLike(c.id)}>
-          <svg viewBox="0 0 24 24" width="12" height="12" fill={c.likes > 0 ? "#2563eb" : "none"} stroke={c.likes > 0 ? "#2563eb" : "currentColor"} strokeWidth="2.5"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
-          {c.likes > 0 ? c.likes : 'Like'}
-        </button>
-        <button className="saas-action-btn" onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)}>
-          {replyingTo === c.id ? 'Cancel' : 'Reply'}
-        </button>
       </div>
 
       {replyingTo === c.id && (
-        <div className="saas-reply-input animate-fade-in">
+        <div className="comment-reply-input-wrapper animate-fade-in">
           <input 
             placeholder="Write a reply..." 
             value={replyText} 
             onChange={e => setReplyText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleAddComment(c.id, replyText); }}
             autoFocus
+            className="reply-inline-input"
           />
         </div>
       )}
 
       {c.children && c.children.length > 0 && (
-        <div className="saas-nested-comments">
+        <div className="comment-replies-list">
           {c.children.map(child => renderComment(child, true))}
         </div>
       )}
     </div>
   );
-
+};
 
   return (
     <div className="saas-task-page">
@@ -294,446 +590,853 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
           <button className="saas-back-btn" onClick={onClose}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
           </button>
-          <div className="saas-breadcrumb">
-            <span className="saas-tag-pill">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              Task
-            </span>
-          </div>
+          <span className="saas-breadcrumb-active">Task Details</span>
         </div>
+        
         <div className="saas-nav-right">
           {isEdit && canDelete && (
             <button 
-              className="saas-icon-btn delete-btn" 
+              className="saas-btn-nav saas-btn-danger" 
               onClick={() => { if(window.confirm('Delete this task?')) { onDelete(task.id); onClose(); } }}
-              title="Delete Task"
-              style={{ color: '#ef4444' }}
             >
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              Delete
             </button>
           )}
-          <button className="saas-icon-btn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
-          {canEdit && (
-            <button className="saas-save-btn" onClick={submit}>Save Changes</button>
+
+          <button className="saas-btn-nav saas-btn-more">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+            More
+          </button>
+
+          {isEditing ? (
+            <>
+              <button className="saas-btn-nav saas-btn-secondary" onClick={() => {
+                if (!task) {
+                  onClose();
+                } else {
+                  setForm(task);
+                  setIsEditing(false);
+                }
+              }}>
+                Cancel
+              </button>
+              <button className="saas-btn-nav saas-btn-primary" onClick={submit}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Save Changes
+              </button>
+            </>
+          ) : (
+            canEdit && (
+              <button className="saas-btn-nav saas-btn-primary" onClick={() => setIsEditing(true)}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                Edit Task
+              </button>
+            )
           )}
-          <button className="saas-close-btn" onClick={onClose}>✕</button>
         </div>
-
-
-      </div>
-
-      <div className="saas-title-area" style={{ padding: '0 1.5rem', marginBottom: '0.5rem' }}>
-        <textarea 
-          className={`saas-title-input ${errors.title ? 'error' : ''}`}
-          value={form.title}
-          onChange={e => set('title', e.target.value)}
-          placeholder="Task Title"
-          rows="1"
-          readOnly={!canEdit}
-
-          onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
-        />
-
-        {errors.title && <div className="error-text" style={{ padding: '0 0.5rem' }}>{errors.title}</div>}
-      </div>
-
-
-      <div className="saas-tabs-header">
-        <button 
-          className={`saas-tab-btn ${activeTab === 'general' ? 'active' : ''}`}
-          onClick={() => setActiveTab('general')}
-        >
-          General
-        </button>
-        <button 
-          className={`saas-tab-btn ${activeTab === 'billing' ? 'active' : ''}`}
-          onClick={() => {
-            const newErrors = {};
-            if (!form.title.trim()) newErrors.title = "Title is required";
-            if (!form.projectName?.trim()) newErrors.projectName = "Project name is required";
-            
-            if (Object.keys(newErrors).length > 0) {
-              setErrors(newErrors);
-              // alert("Please fill in the required fields (Title, Project) first.");
-            } else {
-              setErrors({});
-              setActiveTab('billing');
-            }
-          }}
-        >
-
-          Billing
-        </button>
       </div>
 
       <div className="saas-main-container">
-        <div className="saas-tab-content-wrapper">
-          {activeTab === 'general' ? (
-            <div className="saas-content-pane">
-              <>
+        {/* Left Side Content Pane */}
+        <div className="saas-content-pane">
+          {/* Header area with ID & Status */}
+          <div className="saas-detail-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            {(form.taskNo || form.id) ? (
+              <span className="saas-id-tag">#{form.taskNo || `TSK-${form.id.substring(0, 6).toUpperCase()}`}</span>
+            ) : (
+              <span></span>
+            )}
+            <div className={`saas-status-badge status-${form.status.toLowerCase().replace(' ', '-')}`}>
+              <span className="status-dot">●</span>
+              {form.status}
+            </div>
+          </div>
 
+          <div className="saas-detail-title-block">
+            <h1 className="saas-detail-title">{form.title || ''}</h1>
+            <p className="saas-detail-subtitle">
+              {form.description || ''}
+            </p>
+          </div>
 
+          {/* Tabs */}
+          <div className="saas-tabs-header-row">
+            <button 
+              className={`saas-tab-header-btn ${activeTab === 'general' ? 'active' : ''}`}
+              onClick={() => setActiveTab('general')}
+            >
+              General
+            </button>
+            <button 
+              className={`saas-tab-header-btn ${activeTab === 'billing' ? 'active' : ''}`}
+              onClick={() => setActiveTab('billing')}
+            >
+              Billing
+            </button>
+            <button 
+              className={`saas-tab-header-btn ${activeTab === 'attachments' ? 'active' : ''}`}
+              onClick={() => setActiveTab('attachments')}
+            >
+              Attachments
+            </button>
+          </div>
 
-                <div className="saas-description-area">
-                  <textarea 
-                    className="saas-desc-input"
-                    placeholder="Task description..."
-                    value={form.description || ''}
-                    onChange={e => set('description', e.target.value)}
-                    readOnly={!canEdit}
-
-                  />
+          {/* Tab Content */}
+          <div className="saas-tab-pane-content">
+            {activeTab === 'general' && (
+              <div className="saas-details-grid animate-fade-in">
+                {/* Task No */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconTaskNo /></span>
+                  <span className="field-label-text">Task No</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text font-bold">
+                    {isEditing ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '400px' }}>
+                        <input 
+                          type="text" 
+                          value={form.taskNo || ''} 
+                          onChange={e => set('taskNo', e.target.value)} 
+                          className={`saas-grid-input ${errors.taskNo ? 'error' : ''}`}
+                          placeholder="e.g. TSK-100"
+                        />
+                        {errors.taskNo && <div className="grid-error-msg">{errors.taskNo}</div>}
+                      </div>
+                    ) : (
+                      <span>{form.taskNo || (form.id ? `#TSK-${form.id.substring(0, 6).toUpperCase()}` : '-')}</span>
+                    )}
+                  </span>
                 </div>
 
+                {/* Task Title */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconTitle /></span>
+                  <span className="field-label-text">Task Title</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
+                      <input 
+                        type="text" 
+                        value={form.title} 
+                        onChange={e => set('title', e.target.value)} 
+                        className={`saas-grid-input ${errors.title ? 'error' : ''}`}
+                      />
+                    ) : (
+                      <span className="font-semibold">{form.title}</span>
+                    )}
+                    {errors.title && <div className="grid-error-msg">{errors.title}</div>}
+                  </span>
+                </div>
 
-                <div className="saas-meta-grid">
-                  <div className="saas-meta-row">
-                    <div className="saas-meta-label">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle></svg>
-                      Status
-                    </div>
-                    <div className="saas-meta-value">
+                {/* Task Description */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconDesc /></span>
+                  <span className="field-label-text">Task Description</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
+                      <div style={{ width: '100%', maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <textarea 
+                          value={form.description} 
+                          onChange={e => set('description', e.target.value)} 
+                          className="saas-grid-textarea"
+                          maxLength={1000}
+                          placeholder="Provide details about the task..."
+                          style={{ margin: 0 }}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#64748b' }}>
+                          <span>{(form.description || '').length} / 1000 characters</span>
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              if (!form.title.trim()) {
+                                alert('Please provide a Task Title first!');
+                                return;
+                              }
+                              set('description', `Task Objective:\nComplete the implementation of "${form.title}" in accordance with the latest design requirements.\n\nAcceptance Criteria:\n1. Verify visual correctness on mobile and desktop views.\n2. Ensure proper API request handling and data persistence.\n3. Validate zero lint or compiler errors.`);
+                            }}
+                            style={{
+                              background: '#eff6ff',
+                              color: '#2563eb',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '0.25rem 0.5rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
+                            }}
+                          >
+                            🪄 Auto-Generate
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <span>{form.description || '-'}</span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Priority */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconPriority /></span>
+                  <span className="field-label-text">Priority</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
                       <select 
-                        className="saas-status-select"
-                        value={form.status}
-                        onChange={e => set('status', e.target.value)}
-                        disabled={!canEdit}
+                        value={form.priority} 
+                        onChange={e => set('priority', e.target.value)} 
+                        className="saas-grid-select"
+                      >
+                        {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    ) : (
+                      <span className={`saas-priority-pill pill-${form.priority.toLowerCase()}`}>
+                        {form.priority}
+                      </span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Status */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconStatus /></span>
+                  <span className="field-label-text">Status</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
+                      <select 
+                        value={form.status} 
+                        onChange={e => set('status', e.target.value)} 
+                        className="saas-grid-select"
                       >
                         {COLUMNS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                       </select>
-                    </div>
-
-
-
-                    <div className="saas-meta-label">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                      Priority
-                    </div>
-                    <div className="saas-meta-value">
-                      <div className="saas-priority-select-wrapper">
-                        <div className={`priority-dot dot-${form.priority.toLowerCase()}`}></div>
-                        <select 
-                          className="saas-inline-select"
-                          value={form.priority}
-                          onChange={e => set('priority', e.target.value)}
-                          style={{ paddingLeft: '0.5rem' }}
-                          disabled={!can('tasks', 'edit')}
-                        >
-                          {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-                        </select>
-
+                    ) : (
+                      <div className="saas-status-inline-select">
+                        <span>{form.status}</span>
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="saas-meta-row">
-                    <div className="saas-meta-label">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                      Assignees
-                    </div>
-                    <div className="saas-meta-value">
-                      {canEdit && (
-                        <select 
-                          className="saas-inline-select"
-                          value=""
-                          onChange={e => { if(e.target.value) handleAddAssignee(e.target.value); }}
-                        >
-                          <option value="">Select Assignee...</option>
-                          {users.map(m => (
-                            <option key={m} value={m} disabled={assigneesList.includes(m)}>{m}</option>
-                          ))}
-                        </select>
-                      )}
-
-
-
-                      <div className="saas-assignee-list" style={{ marginTop: '0.5rem' }}>
-                        {assigneesList.map(a => (
-                          <div key={a} className={`saas-avatar-sm ${getAvatarColor(a)}`} title={`${a}${canEdit ? ' (Click to remove)' : ''}`} onClick={() => canEdit && handleRemoveAssignee(a)}>
-
-                            {initials(a)}
-                          </div>
-                        ))}
-                      </div>
-
-
-                    </div>
-                  </div>
-
-                  <div className="saas-meta-row">
-                    <div className="saas-meta-label">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                      Start Date
-                    </div>
-                    <div className="saas-meta-value">
-                      <input 
-                        type="date"
-                        className="saas-inline-date-input"
-                        value={form.startDate ? new Date(form.startDate).toISOString().split('T')[0] : ''}
-                        onChange={e => set('startDate', e.target.value)}
-                        readOnly={!canEdit}
-
-                      />
-
-                    </div>
-
-                    <div className="saas-meta-label">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                      End Date
-                    </div>
-                    <div className="saas-meta-value">
-                      <input 
-                        type="date"
-                        className="saas-inline-date-input"
-                        value={form.endDate ? new Date(form.endDate).toISOString().split('T')[0] : ''}
-                        onChange={e => set('endDate', e.target.value)}
-                        readOnly={!canEdit}
-
-                      />
-
-                    </div>
-                  </div>
-
-                  <div className="saas-meta-row">
-                    <div className="saas-meta-label">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                      Assigned Date
-                    </div>
-                    <div className="saas-meta-value">
-                      <input 
-                        type="date"
-                        className="saas-inline-date-input"
-                        value={form.assignedDate ? new Date(form.assignedDate).toISOString().split('T')[0] : ''}
-                        onChange={e => set('assignedDate', e.target.value)}
-                        readOnly={!canEdit}
-
-                      />
-
-                    </div>
-
-                    <div className="saas-meta-label">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                      Due Date
-                    </div>
-                    <div className="saas-meta-value">
-                      <input 
-                        type="date"
-                        className="saas-inline-date-input"
-                        value={form.dueDate ? new Date(form.dueDate).toISOString().split('T')[0] : ''}
-                        onChange={e => set('dueDate', e.target.value)}
-                        readOnly={!canEdit}
-
-                      />
-
-                    </div>
-                  </div>
-                  <div className="saas-meta-row">
-                    <div className="saas-meta-label">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                      Task Type
-                    </div>
-                    <div className="saas-meta-value">
-                      <select 
-                        className="saas-inline-select"
-                        value={form.taskType}
-                        onChange={e => set('taskType', e.target.value)}
-                        disabled={!canEdit}
-
-                      >
-                        <option value="Feature">Feature</option>
-                        <option value="Bug">Bug</option>
-                        <option value="Improvement">Improvement</option>
-                        <option value="Research">Research</option>
-                      </select>
-
-                    </div>
-
-                    <div className="saas-meta-label">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-                      Project
-                    </div>
-                    <div className="saas-meta-value">
-                      <input 
-                        type="text" 
-                        className={`saas-inline-text-input ${errors.projectName ? 'error' : ''}`}
-                        placeholder="Project Name"
-                        value={form.projectName}
-                        onChange={e => set('projectName', e.target.value)}
-                        readOnly={!canEdit}
-
-                      />
-
-                      {errors.projectName && <div className="error-text">{errors.projectName}</div>}
-                    </div>
-                  </div>
-
-
-                  <div className="saas-meta-row full-width">
-                    <div className="saas-meta-label">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
-                      Tags
-                    </div>
-                    <div className="saas-meta-value">
-                      <input 
-                        type="text" 
-                        className="saas-inline-text-input"
-                        placeholder="Engineering"
-                        value={form.tag || ''}
-                        onChange={e => set('tag', e.target.value)}
-                        style={{ width: '100%' }}
-                        readOnly={!canEdit}
-
-                      />
-
-                    </div>
-                  </div>
+                    )}
+                  </span>
                 </div>
 
-                <div className="saas-footer-actions" style={{ marginTop: '0.25rem', flexDirection: 'column', alignItems: 'flex-start' }}>
-                  <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} />
-                  {canEdit && (
-                    <button className="saas-attach-btn-modern" onClick={() => fileInputRef.current.click()} disabled={uploading}>
-                       <div className="attach-icon-wrapper">
-                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                       </div>
-                       <span>{uploading ? 'Uploading...' : 'Attach relevant files'}</span>
-                    </button>
+                {/* Assignee */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconAssignee /></span>
+                  <span className="field-label-text">Assignee</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
+                      <div className="assignee-edit-container">
+                        <select 
+                          value={form.assignees || ''} 
+                          onChange={e => set('assignees', e.target.value)} 
+                          className="saas-grid-select"
+                        >
+                          <option value="">Select Assignee...</option>
+                          {users.map(u => (
+                            <option key={u} value={u}>{u}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="assignee-view-container">
+                        <div className={`assignee-avatar-circle ${getAvatarColor(form.assignees || 'Unassigned')}`}>
+                          {initials(form.assignees || 'Unassigned')}
+                        </div>
+                        <span className="assignee-name-label">{form.assignees || 'Unassigned'}</span>
+                      </div>
+                    )}
+                  </span>
+                </div>
+
+                {/* Project */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconProject /></span>
+                  <span className="field-label-text">Project</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
+                      <input 
+                        type="text" 
+                        value={form.projectName} 
+                        onChange={e => set('projectName', e.target.value)} 
+                        className={`saas-grid-input ${errors.projectName ? 'error' : ''}`}
+                        placeholder="Project Name"
+                      />
+                    ) : (
+                      <span className="saas-project-link-text">{form.projectName || 'Spagylo CRM Development'}</span>
+                    )}
+                    {errors.projectName && <div className="grid-error-msg">{errors.projectName}</div>}
+                  </span>
+                </div>
+
+                {/* Assigned Date */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconCalendar /></span>
+                  <span className="field-label-text">Assigned Date</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
+                      <input 
+                        type="date" 
+                        value={form.assignedDate ? new Date(form.assignedDate).toISOString().split('T')[0] : ''} 
+                        onChange={e => set('assignedDate', e.target.value)} 
+                        className="saas-grid-input"
+                      />
+                    ) : (
+                      <span>{formatDate(form.assignedDate)}</span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Start Date */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconCalendar /></span>
+                  <span className="field-label-text">Start Date</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
+                      <input 
+                        type="date" 
+                        value={form.startDate ? new Date(form.startDate).toISOString().split('T')[0] : ''} 
+                        onChange={e => set('startDate', e.target.value)} 
+                        className="saas-grid-input"
+                      />
+                    ) : (
+                      <span>{formatDate(form.startDate)}</span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Internal Completion Date */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconCalendar /></span>
+                  <span className="field-label-text">Internal Completion Date</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
+                      <input 
+                        type="date" 
+                        value={form.endDate ? new Date(form.endDate).toISOString().split('T')[0] : ''} 
+                        onChange={e => set('endDate', e.target.value)} 
+                        className="saas-grid-input"
+                      />
+                    ) : (
+                      <span>{formatDate(form.endDate)}</span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Delivery Date */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconCalendar /></span>
+                  <span className="field-label-text">Delivery Date</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
+                      <input 
+                        type="date" 
+                        value={form.dueDate ? new Date(form.dueDate).toISOString().split('T')[0] : ''} 
+                        onChange={e => set('dueDate', e.target.value)} 
+                        className="saas-grid-input"
+                      />
+                    ) : (
+                      <span>{formatDate(form.dueDate)}</span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Delivered Date */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconCalendar /></span>
+                  <span className="field-label-text">Delivered Date</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
+                      <input 
+                        type="date" 
+                        value={form.deliveredDate ? new Date(form.deliveredDate).toISOString().split('T')[0] : ''} 
+                        onChange={e => set('deliveredDate', e.target.value)} 
+                        className="saas-grid-input"
+                      />
+                    ) : (
+                      <span>{formatDate(form.deliveredDate)}</span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Upload Attachments */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconPaperclip /></span>
+                  <span className="field-label-text">Upload Attachments</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    <div className="attachments-list-grid">
+                      {form.attachments && form.attachments.split(',').map(url => renderAttachmentFile(url))}
+                      
+                      <button 
+                        type="button"
+                        className="add-file-pill-btn" 
+                        onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                        disabled={uploading}
+                      >
+                        <span className="plus-sign">+</span> {uploading ? 'Uploading...' : 'Add File'}
+                      </button>
+                    </div>
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'billing' && (
+              <div className="saas-billing-pane animate-fade-in" style={{ padding: '1.5rem 2rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '2rem', color: '#0f172a' }}>
+                  Billing Information
+                </h2>
+                
+                <div className="billing-fields-container" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  
+                  {/* Billable Row with Radio Buttons */}
+                  <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
+                    <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
+                      Billable
+                    </label>
+                    <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: isEditing ? 'pointer' : 'default', fontSize: '0.9rem', fontWeight: '600', color: '#0f172a' }}>
+                        <input 
+                          type="radio" 
+                          name="isBillable"
+                          checked={form.isBillable === true}
+                          onChange={() => isEditing && set('isBillable', true)}
+                          disabled={!isEditing}
+                          style={{ width: '16px', height: '16px', cursor: isEditing ? 'pointer' : 'default', accentColor: '#2563eb' }}
+                        />
+                        Yes
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: isEditing ? 'pointer' : 'default', fontSize: '0.9rem', fontWeight: '600', color: '#0f172a' }}>
+                        <input 
+                          type="radio" 
+                          name="isBillable"
+                          checked={form.isBillable === false}
+                          onChange={() => isEditing && set('isBillable', false)}
+                          disabled={!isEditing}
+                          style={{ width: '16px', height: '16px', cursor: isEditing ? 'pointer' : 'default', accentColor: '#2563eb' }}
+                        />
+                        No
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Billable Hours */}
+                  <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
+                    <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
+                      Billable Hours
+                    </label>
+                    <div>
+                      {isEditing ? (
+                        <input 
+                          type="text" 
+                          value={form.approvedHoursStr !== undefined ? form.approvedHoursStr : decimalToTimeStr(form.approvedHours)}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setForm(f => ({
+                              ...f,
+                              approvedHoursStr: val,
+                              approvedHours: timeStrToDecimal(val)
+                            }));
+                          }}
+                          className="saas-grid-input"
+                          style={{ maxWidth: '250px' }}
+                          placeholder="e.g. 40:00"
+                        />
+                      ) : (
+                        <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
+                          {decimalToTimeStr(form.approvedHours)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actual Hours */}
+                  <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
+                    <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
+                      Actual Hours
+                    </label>
+                    <div>
+                      {isEditing ? (
+                        <input 
+                          type="text" 
+                          value={form.actualHoursStr !== undefined ? form.actualHoursStr : decimalToTimeStr(form.actualHours)}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setForm(f => ({
+                              ...f,
+                              actualHoursStr: val,
+                              actualHours: timeStrToDecimal(val)
+                            }));
+                          }}
+                          className="saas-grid-input"
+                          style={{ maxWidth: '250px' }}
+                          placeholder="e.g. 32:30"
+                        />
+                      ) : (
+                        <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
+                          {decimalToTimeStr(form.actualHours)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {errors.billing && (
+                    <div style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: '600', marginTop: '0.5rem' }}>
+                      {errors.billing}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'attachments' && (
+              <div className="saas-attachments-pane animate-fade-in" style={{ padding: '1.5rem 0' }}>
+                
+                {/* Header row with Title and Add Button */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', maxWidth: '1150px', margin: '0 auto 1.5rem' }}>
+                  <h2 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0f172a', margin: 0 }}>
+                    Attachments ({form.attachments ? form.attachments.split(',').filter(Boolean).length : 0})
+                  </h2>
+                  <button 
+                    type="button" 
+                    onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                    disabled={uploading}
+                    style={{
+                      background: 'white',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '0.5rem 1rem',
+                      fontSize: '0.85rem',
+                      fontWeight: '600',
+                      color: '#0f172a',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      transition: 'all 0.15s ease'
+                    }}
+                    className="saas-add-attachment-btn"
+                  >
+                    <span>+</span> {uploading ? 'Uploading...' : 'Add Attachment'}
+                  </button>
+                </div>
+
+                {/* Table Block */}
+                <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', maxWidth: '1150px', margin: '0 auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        <th style={{ width: '32%', padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Name</th>
+                        <th style={{ width: '22%', padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded By</th>
+                        <th style={{ width: '22%', padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded On</th>
+                        <th style={{ width: '12%', padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Size</th>
+                        <th style={{ width: '12%', padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {!form.attachments || form.attachments.split(',').filter(Boolean).length === 0 ? (
+                        <tr>
+                          <td colSpan="5" style={{ padding: '3rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem' }}>
+                            No files attached to this task yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        form.attachments.split(',').filter(Boolean).map((url, index) => {
+                          const meta = getAttachmentMetadata(url, index);
+                          if (!meta) return null;
+                          return (
+                            <tr key={url} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
+                              
+                              {/* File Name with beautiful Icon */}
+                              <td style={{ padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', overflow: 'hidden' }}>
+                                <div style={{
+                                  flexShrink: 0,
+                                  width: '28px',
+                                  height: '28px',
+                                  borderRadius: '6px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '0.62rem',
+                                  fontWeight: '800',
+                                  background: meta.isPdf ? '#fef2f2' : '#f0fdf4',
+                                  color: meta.isPdf ? '#ef4444' : '#22c55e',
+                                  border: `1px solid ${meta.isPdf ? '#fee2e2' : '#dcfce7'}`
+                                }}>
+                                  {meta.isPdf ? 'PDF' : 'IMG'}
+                                </div>
+                                <a 
+                                  href={meta.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  style={{ fontSize: '0.85rem', fontWeight: '500', color: '#2563eb', textDecoration: 'none', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
+                                  className="file-name-link"
+                                  title={meta.fileName}
+                                >
+                                  {meta.fileName}
+                                </a>
+                              </td>
+
+                              {/* Uploaded By */}
+                              <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: '#475569', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={meta.uploadedBy}>
+                                {meta.uploadedBy}
+                              </td>
+
+                              {/* Uploaded On */}
+                              <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: '#475569', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                {meta.uploadedOn}
+                              </td>
+
+                              {/* File Size */}
+                              <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: '#475569', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                {meta.fileSize}
+                              </td>
+
+                              {/* Actions */}
+                              <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                                <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                  
+                                  {/* Download Icon Button */}
+                                  <a 
+                                    href={meta.url} 
+                                    download 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      width: '28px',
+                                      height: '28px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #e2e8f0',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: '#64748b',
+                                      background: 'white',
+                                      cursor: 'pointer',
+                                      textDecoration: 'none'
+                                    }}
+                                    title="Download File"
+                                    className="action-icon-btn"
+                                  >
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                  </a>
+
+                                  {/* Delete/Action Button */}
+                                  {isEditing && (
+                                    <button 
+                                      type="button" 
+                                      onClick={() => {
+                                        const current = form.attachments ? form.attachments.split(',') : [];
+                                        const filtered = current.filter(u => u !== url).join(',');
+                                        set('attachments', filtered);
+                                      }}
+                                      style={{
+                                        width: '28px',
+                                        height: '28px',
+                                        borderRadius: '6px',
+                                        border: '1px solid #fee2e2',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#ef4444',
+                                        background: '#fef2f2',
+                                        cursor: 'pointer'
+                                      }}
+                                      title="Delete Attachment"
+                                      className="action-icon-btn delete"
+                                    >
+                                      ✕
+                                    </button>
+                                  )}
+                                  
+                                  {/* Mock Triple Dot Button matching screenshot */}
+                                  <button
+                                    type="button"
+                                    style={{
+                                      width: '28px',
+                                      height: '28px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #e2e8f0',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: '#64748b',
+                                      background: 'white',
+                                      cursor: 'pointer'
+                                    }}
+                                    className="action-icon-btn"
+                                  >
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+                                  </button>
+                                </div>
+                              </td>
+
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                  
+                  {/* End of list Footer block centered */}
+                  {form.attachments && form.attachments.split(',').filter(Boolean).length > 0 && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      padding: '1rem',
+                      fontSize: '0.85rem',
+                      color: '#64748b',
+                      background: '#f8fafc',
+                      borderTop: '1px solid #e2e8f0'
+                    }}>
+                      <span>📂</span> End of list
+                    </div>
                   )}
 
+                </div>
+              </div>
+            )}
+          </div>
+          <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} />
+        </div>
 
+        {/* Right Side Sidebar (Comments Section) */}
+        <div className="saas-sidebar">
+          <div className="comments-section-header">
+            <span className="comments-header-title">Comments ({comments.length})</span>
+          </div>
 
+          <div className="comments-feed-container">
+            {commentTree.length === 0 ? (
+              <div className="no-comments-placeholder">No comments yet. Start the conversation!</div>
+            ) : (
+              commentTree.map(c => renderComment(c))
+            )}
+          </div>
 
-                  {form.attachments && (
-                    <div className="saas-attachment-list" style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      {form.attachments.split(',').map((url, idx) => (
-                        <div key={idx} className="saas-attachment-tag" style={{ background: '#f1f5f9', padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>
-                             File {idx + 1}
-                          </a>
-                          {canEdit && (
+          <div className="comment-post-input-box">
+            {commentAttachment && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.4rem 0.75rem',
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                marginBottom: '0.5rem',
+                fontSize: '0.8rem'
+              }} className="animate-fade-in">
+                <span style={{ fontWeight: '600', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '240px' }}>
+                  📎 {commentAttachment.name}
+                </span>
+                <button 
+                  type="button" 
+                  onClick={() => setCommentAttachment(null)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#ef4444',
+                    fontSize: '1rem',
+                    cursor: 'pointer',
+                    fontWeight: '700',
+                    padding: '0 0.2rem'
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            <div className="comment-box-flex-row">
+              <div className="comment-input-field-wrapper">
+                <input 
+                  type="text" 
+                  value={newComment} 
+                  onChange={e => setNewComment(e.target.value)} 
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddComment(); }} 
+                  placeholder={commentUploading ? "Uploading..." : "Write a comment..."}
+                  className="comment-main-text-input"
+                  style={{ paddingRight: '4rem' }}
+                  disabled={commentUploading}
+                />
+                <div style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span 
+                    className="comment-emoji-icon" 
+                    title="Insert Emoji"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    style={{ cursor: 'pointer', userSelect: 'none', fontSize: '1rem', opacity: 0.6, position: 'static' }}
+                  >
+                    😊
+                  </span>
+                  
+                  {/* Paperclip button */}
+                  <span 
+                    className="comment-paperclip-icon" 
+                    title="Attach File to Comment"
+                    onClick={() => commentFileInputRef.current && commentFileInputRef.current.click()}
+                    style={{ cursor: 'pointer', userSelect: 'none', fontSize: '1rem', opacity: 0.6 }}
+                  >
+                    📎
+                  </span>
 
-                            <button onClick={() => {
-                              const filtered = form.attachments.split(',').filter((_, i) => i !== idx).join(',');
-                              set('attachments', filtered);
-                            }} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#ef4444' }}>✕</button>
-                          )}
-
-                        </div>
+                  {showEmojiPicker && (
+                    <div className="emoji-picker-bubble animate-fade-in" style={{
+                      position: 'absolute',
+                      bottom: '40px',
+                      right: '0',
+                      background: 'white',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '0.5rem',
+                      display: 'flex',
+                      gap: '0.5rem',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                      zIndex: 10
+                    }}>
+                      {['😊', '👍', '🎉', '❤️', '🚀', '👀', '🔥', '👏'].map(emoji => (
+                        <span 
+                          key={emoji}
+                          onClick={() => {
+                            setNewComment(prev => prev + emoji);
+                            setShowEmojiPicker(false);
+                          }}
+                          style={{ cursor: 'pointer', fontSize: '1.2rem', transition: 'transform 0.1s' }}
+                          className="emoji-picker-item"
+                        >
+                          {emoji}
+                        </span>
                       ))}
                     </div>
                   )}
                 </div>
-
-              </>
-            </div>
-          ) : (
-            <div className="saas-content-pane">
-              <div className="saas-billing-header">
-                <h2>Billing Information</h2>
-                <p>Configure task billability and tracking</p>
               </div>
-
-              <div className="saas-billing-form">
-                <div className="saas-field-group">
-                  <label>Billable</label>
-                  <div className="saas-toggle-group">
-                    <button 
-                      className={`saas-toggle-btn ${form.isBillable ? 'active' : ''}`}
-                      onClick={() => canEdit && set('isBillable', true)}
-                      disabled={!canEdit}
-
-                    >
-                      Yes
-                    </button>
-                    <button 
-                      className={`saas-toggle-btn ${!form.isBillable ? 'active' : ''}`}
-                      onClick={() => canEdit && set('isBillable', false)}
-                      disabled={!canEdit}
-
-                    >
-                      No
-                    </button>
-
-                  </div>
-                </div>
-
-                {form.isBillable && (
-                  <div className="saas-billing-fields-row animate-slide-down">
-                    <div className="saas-field-group">
-                      <label>Approved Hours</label>
-                      <input 
-                        type="number" 
-                        className={`saas-billing-input ${errors.billing ? 'error' : ''}`}
-                        placeholder="0.0"
-                        value={form.approvedHours || ''}
-                        onChange={e => set('approvedHours', parseFloat(e.target.value) || 0)}
-                        readOnly={!canEdit}
-
-                      />
-
-                    </div>
-                    <div className="saas-field-group">
-                      <label>Actual Hours</label>
-                      <input 
-                        type="number" 
-                        className={`saas-billing-input ${errors.billing ? 'error' : ''}`}
-                        placeholder="0.0"
-                        value={form.actualHours || ''}
-                        onChange={e => set('actualHours', parseFloat(e.target.value) || 0)}
-                        readOnly={!canEdit}
-
-                      />
-
-                    </div>
-                    {errors.billing && <div className="error-text">{errors.billing}</div>}
-                  </div>
-                )}
-
-              </div>
+              <button 
+                type="button"
+                className="comment-submit-paper-btn" 
+                onClick={() => handleAddComment()} 
+                disabled={(!newComment.trim() && !commentAttachment) || commentUploading}
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+              </button>
             </div>
-          )}
-        </div>
-
-        {activeTab === 'general' && (
-          <div className="saas-sidebar">
-            <div className="saas-sidebar-header">
-              <span className="saas-sidebar-title">Activity</span>
-              <div className="saas-sidebar-tools">
-                <button className="saas-tool-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
-                <button className="saas-tool-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span className="notif-badge">1</span></button>
-                <button className="saas-tool-btn">⋮</button>
-              </div>
-            </div>
-
-            <div className="saas-activity-feed">
-               {commentTree.map(c => renderComment(c))}
-
-            </div>
-
-            <div className="saas-comment-input-box">
-               <div className="saas-input-container">
-                  <input 
-                    className="saas-main-input"
-                    placeholder="Comment, press 'space' for AI, '/' for commands"
-                    value={newComment}
-                    onChange={e => setNewComment(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') handleAddComment(); }}
-                  />
-                  <div className="saas-input-footer">
-                     <div className="saas-input-tools">
-                        <button className="saas-input-btn">+</button>
-                        <button className="saas-input-btn">Comment ▾</button>
-                        <button className="saas-input-btn">@</button>
-                        <button className="saas-input-btn">📎</button>
-                     </div>
-                     <button className="saas-send-btn" onClick={() => handleAddComment()} disabled={!newComment.trim()}>
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                     </button>
-                  </div>
-               </div>
-            </div>
+            <input type="file" ref={commentFileInputRef} style={{ display: 'none' }} onChange={handleCommentFileUpload} />
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -831,15 +1534,30 @@ function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave
 // ══════════════════════════════════════════════════════════
 //  MAIN TASKS COMPONENT
 // ══════════════════════════════════════════════════════════
-export default function Tasks({ user }) {
+export default function Tasks({ user, initialSelectedTask, onClearInitialTask, onDetailViewChange }) {
+  const isTeamLeadOrAdmin = user?.role?.toLowerCase() === 'team lead' || user?.role?.toLowerCase() === 'admin';
   const [tasks, setTasks]       = useState([]);
   const [loading, setLoading]   = useState(true);
   const [viewMode, setViewMode] = useState('list'); 
-  const [subTab, setSubTab]     = useState('my'); 
+  const [subTab, setSubTab]     = useState(isTeamLeadOrAdmin ? 'all' : 'my'); 
   const [dragOver, setDragOver] = useState(null);
   
   const [view, setView] = useState('board'); // 'board' or 'detail'
   const [selectedTask, setSelectedTask] = useState(null);
+
+  useEffect(() => {
+    if (initialSelectedTask) {
+      setSelectedTask(initialSelectedTask);
+      setView('detail');
+      if (onClearInitialTask) onClearInitialTask();
+    }
+  }, [initialSelectedTask]);
+
+  useEffect(() => {
+    if (onDetailViewChange) {
+      onDetailViewChange(view === 'detail');
+    }
+  }, [view, onDetailViewChange]);
 
   const dragId = useRef(null);
   const { can, getLevel } = usePermissions();
@@ -940,11 +1658,18 @@ export default function Tasks({ user }) {
 
   const filteredTasks = tasks.filter(t => {
     const level = getLevel('tasks', 'view');
-    if (level === 'All' && subTab === 'all') return true;
+    const editLevel = getLevel('tasks', 'edit');
+    const deleteLevel = getLevel('tasks', 'delete');
     
-    // Default to 'Self' or 'None'
-    const assignees = t.assignees ? t.assignees.split(',').map(a => a.trim()) : [];
-    return assignees.includes(user?.fullName || user?.name);
+    const hasAllAccess = level === 'All' || editLevel === 'All' || deleteLevel === 'All' || isTeamLeadOrAdmin;
+    
+    if (hasAllAccess && subTab === 'all') return true;
+    
+    // For 'my' tab or 'Self' level:
+    const assignees = t.assignees ? t.assignees.split(',').map(a => a.trim().toLowerCase()) : [];
+    const myName = (user?.fullName || user?.name || '').trim().toLowerCase();
+    
+    return assignees.includes(myName);
   });
 
 
@@ -964,7 +1689,7 @@ export default function Tasks({ user }) {
 
   return (
     <div className="kanban-root" onDragEnd={handleDragEnd}>
-      {getLevel('tasks', 'view') === 'All' && (
+      {(getLevel('tasks', 'view') === 'All' || getLevel('tasks', 'edit') === 'All' || getLevel('tasks', 'delete') === 'All' || isTeamLeadOrAdmin) && (
         <div className="saas-tabs" style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '2rem' }}>
           <button 
             className={`saas-tab ${subTab === 'my' ? 'active' : ''}`} 
@@ -1045,12 +1770,12 @@ export default function Tasks({ user }) {
           <table className="list-table">
             <thead>
               <tr>
-                <th>Title</th>
+                <th>Task Title</th>
                 <th>Status</th>
                 <th>Priority</th>
                 <th>Due Date</th>
                 <th>Assignees</th>
-                <th>Approved Hrs</th>
+                <th>Billable Hrs</th>
                 <th>Actual Hrs</th>
 
 

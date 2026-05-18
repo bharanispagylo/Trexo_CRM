@@ -3,7 +3,7 @@ import { api } from '../../../api/client';
 import './Projects.css';
 import { usePermissions } from '../../../hooks/usePermissions';
 
-export default function Projects({ user }) {
+export default function Projects({ user, initialSelectedProject, onClearInitialProject }) {
   const [projects, setProjects] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,6 +15,14 @@ export default function Projects({ user }) {
   const [form, setForm] = useState({ name: '', status: 'Active' });
   const [expandedProjectId, setExpandedProjectId] = useState(null);
   const { can, getLevel } = usePermissions();
+
+  useEffect(() => {
+    if (initialSelectedProject) {
+      setSelectedProject(initialSelectedProject);
+      setCurrentView('detail');
+      if (onClearInitialProject) onClearInitialProject();
+    }
+  }, [initialSelectedProject]);
 
   // ── FETCH DATA ──
   const fetchData = async () => {

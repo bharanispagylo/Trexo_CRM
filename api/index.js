@@ -1,3 +1,11 @@
+try {
+  console.log('[Startup] Generating Prisma Client...');
+  require('child_process').execSync('npx prisma generate', { stdio: 'inherit' });
+  console.log('[Startup] Prisma Client successfully regenerated!');
+} catch (err) {
+  console.error('[Startup] Prisma generate warning:', err.message);
+}
+
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
@@ -7,8 +15,44 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 5000;
 
+// Self-healing database column verification
+prisma.$connect()
+  .then(async () => {
+    console.log('[Self-Healing] Database connected, verifying columns...');
+    try {
+      await prisma.$executeRawUnsafe('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS task_no TEXT;');
+      console.log('[Self-Healing] Column task_no verified/added successfully.');
+    } catch (e) {
+      console.warn('[Self-Healing] Column task_no addition warning:', e.message);
+    }
+    try {
+      await prisma.$executeRawUnsafe('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS delivered_date TIMESTAMP;');
+      console.log('[Self-Healing] Column delivered_date verified/added successfully.');
+    } catch (e) {
+      console.warn('[Self-Healing] Column delivered_date addition warning:', e.message);
+    }
+  })
+  .catch(console.error);
+
+const sanitizeTaskData = (taskData) => {
+  if (!prisma.task || !prisma.task.fields) return taskData;
+  const sanitized = {};
+  Object.keys(taskData).forEach(key => {
+    if (key in prisma.task.fields) {
+      sanitized[key] = taskData[key];
+    }
+  });
+  return sanitized;
+};
+
 app.use(cors());
 app.use(express.json());
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
 
 // --- ROUTES ---
 
@@ -20,7 +64,12 @@ app.get('/api/users', async (req, res) => {
     });
     res.json(users);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('GET /api/users error:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch users', 
+      details: error.message,
+      code: error.code
+    });
   }
 });
 
@@ -57,6 +106,7 @@ app.post('/api/users', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
+  console.log(`Login attempt for email: ${email}`);
   try {
     const user = await prisma.user.findUnique({
       where: { email }
@@ -68,7 +118,12 @@ app.post('/api/login', async (req, res) => {
 
     res.json(user);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('POST /api/login error:', error);
+    res.status(500).json({ 
+      error: 'Login failed', 
+      details: error.message,
+      code: error.code
+    });
   }
 });
 
@@ -376,7 +431,7 @@ app.post('/api/tasks', async (req, res) => {
     let { id, comments, createdAt, ...taskData } = req.body;
     
     // Sanitize and convert dates
-    ['dueDate', 'startDate', 'endDate', 'assignedDate'].forEach(key => {
+    ['dueDate', 'startDate', 'endDate', 'assignedDate', 'deliveredDate'].forEach(key => {
       if (taskData[key]) {
         const d = new Date(taskData[key]);
         if (!isNaN(d.getTime())) {
@@ -393,8 +448,8 @@ app.post('/api/tasks', async (req, res) => {
     if (taskData.approvedHours !== undefined) taskData.approvedHours = parseFloat(taskData.approvedHours) || 0;
     if (taskData.actualHours !== undefined) taskData.actualHours = parseFloat(taskData.actualHours) || 0;
     
-    // Remove any fields that aren't in the schema
-    delete taskData.billableHrs;
+    // Universal model field sanitizer to protect Prisma against drift
+    taskData = sanitizeTaskData(taskData);
 
     const task = await prisma.task.create({
       data: taskData
@@ -412,7 +467,7 @@ app.put('/api/tasks/:id', async (req, res) => {
     let { id, createdAt, comments, ...taskData } = req.body;
     
     // Sanitize and convert dates
-    ['dueDate', 'startDate', 'endDate', 'assignedDate'].forEach(key => {
+    ['dueDate', 'startDate', 'endDate', 'assignedDate', 'deliveredDate'].forEach(key => {
       if (taskData[key]) {
         const d = new Date(taskData[key]);
         if (!isNaN(d.getTime())) {
@@ -429,7 +484,8 @@ app.put('/api/tasks/:id', async (req, res) => {
     if (taskData.approvedHours !== undefined) taskData.approvedHours = parseFloat(taskData.approvedHours) || 0;
     if (taskData.actualHours !== undefined) taskData.actualHours = parseFloat(taskData.actualHours) || 0;
 
-    delete taskData.billableHrs;
+    // Universal model field sanitizer to protect Prisma against drift
+    taskData = sanitizeTaskData(taskData);
 
     const task = await prisma.task.update({
       where: { id: req.params.id },

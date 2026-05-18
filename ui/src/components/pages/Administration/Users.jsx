@@ -21,7 +21,12 @@ export default function Users({ onAddUser, onEditUser }) {
     setLoading(true);
     try {
       const userData = await api.get('/users');
-      setUsers(userData || []);
+      const sortedUsers = (userData || []).sort((a, b) => {
+        const nameA = a.fullName || `${a.firstName || ''} ${a.lastName || ''}`.trim();
+        const nameB = b.fullName || `${b.firstName || ''} ${b.lastName || ''}`.trim();
+        return nameA.localeCompare(nameB);
+      });
+      setUsers(sortedUsers);
       
       const roleData = await api.get('/roles/permissions');
       if (roleData) {
@@ -30,7 +35,7 @@ export default function Users({ onAddUser, onEditUser }) {
           const rName = r.role.charAt(0).toUpperCase() + r.role.slice(1).toLowerCase();
           if (!dynamicRoles.includes(rName)) dynamicRoles.push(rName);
         });
-        setRoles(dynamicRoles);
+        setRoles(dynamicRoles.sort((a, b) => a.localeCompare(b)));
       }
     } catch (error) {
       console.error('Fetch error:', error);
