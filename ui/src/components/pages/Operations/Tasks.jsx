@@ -50,17 +50,11 @@ const timeStrToDecimal = (timeStr) => {
 // ── Task Detail View (Separate Page) ──────────────────────────────
 function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
 
-  const isEdit = !!task;
-  const [isEditing, setIsEditing] = useState(!task); // Start in edit mode for new tasks, read-only for existing ones
+  const isEdit = !!(task && task.id);
+  const [isEditing, setIsEditing] = useState(!task || !task.id); // Start in edit mode for new tasks, read-only for existing ones
   
   const [form, setForm] = useState(() => {
-    if (task) {
-      return {
-        ...task,
-        taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')
-      };
-    }
-    return {
+    const defaults = {
       taskNo: '',
       title: '',
       description: '',
@@ -80,6 +74,14 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
       actualHours: 0,
       attachments: ''
     };
+    if (task) {
+      return {
+        ...defaults,
+        ...task,
+        taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')
+      };
+    }
+    return defaults;
   });
 
   const [activeTab, setActiveTab] = useState('general');
@@ -410,6 +412,12 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
   const IconProject = () => (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
   );
+  const IconTag = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+  );
+  const IconType = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+  );
   const IconCalendar = () => (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
   );
@@ -604,15 +612,12 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
             </button>
           )}
 
-          <button className="saas-btn-nav saas-btn-more">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
-            More
-          </button>
+
 
           {isEditing ? (
             <>
               <button className="saas-btn-nav saas-btn-secondary" onClick={() => {
-                if (!task) {
+                if (!task || !task.id) {
                   onClose();
                 } else {
                   setForm(task);
@@ -623,7 +628,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
               </button>
               <button className="saas-btn-nav saas-btn-primary" onClick={submit}>
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                Save Changes
+                {isEdit ? 'Save Changes' : 'Create Task'}
               </button>
             </>
           ) : (
@@ -875,6 +880,54 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                   </span>
                 </div>
 
+                {/* Tag */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconTag /></span>
+                  <span className="field-label-text">Tag</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
+                      <input 
+                        type="text" 
+                        value={form.tag || ''} 
+                        onChange={e => set('tag', e.target.value)} 
+                        className="saas-grid-input"
+                        placeholder="e.g. Engineering, Design..."
+                      />
+                    ) : (
+                      <span className={`card-tag tag-${(form.tag || 'engineering').toLowerCase()}`} style={{ display: 'inline-block', marginTop: '0', padding: '0.2rem 0.6rem', fontSize: '0.75rem' }}>
+                        {form.tag || 'Engineering'}
+                      </span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Task Type */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconType /></span>
+                  <span className="field-label-text">Task Type</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
+                      <select 
+                        value={form.taskType || 'Feature'} 
+                        onChange={e => set('taskType', e.target.value)} 
+                        className="saas-grid-select"
+                      >
+                        <option value="Feature">Feature</option>
+                        <option value="Bug">Bug</option>
+                        <option value="Enhancement">Enhancement</option>
+                        <option value="Documentation">Documentation</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    ) : (
+                      <span style={{ fontWeight: '500', color: '#334155' }}>
+                        {form.taskType || 'Feature'}
+                      </span>
+                    )}
+                  </span>
+                </div>
+
                 {/* Assigned Date */}
                 <div className="saas-details-row">
                   <span className="field-icon-box"><IconCalendar /></span>
@@ -1023,7 +1076,22 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                           type="radio" 
                           name="isBillable"
                           checked={form.isBillable === false}
-                          onChange={() => isEditing && set('isBillable', false)}
+                          onChange={() => {
+                            if (isEditing) {
+                              setForm(f => ({
+                                ...f,
+                                isBillable: false,
+                                approvedHours: 0,
+                                actualHours: 0,
+                                approvedHoursStr: '00:00',
+                                actualHoursStr: '00:00'
+                              }));
+                              setErrors(errs => {
+                                const { billing, ...rest } = errs;
+                                return rest;
+                              });
+                            }
+                          }}
                           disabled={!isEditing}
                           style={{ width: '16px', height: '16px', cursor: isEditing ? 'pointer' : 'default', accentColor: '#2563eb' }}
                         />
@@ -1032,65 +1100,69 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                     </div>
                   </div>
 
-                  {/* Billable Hours */}
-                  <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
-                    <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
-                      Billable Hours
-                    </label>
-                    <div>
-                      {isEditing ? (
-                        <input 
-                          type="text" 
-                          value={form.approvedHoursStr !== undefined ? form.approvedHoursStr : decimalToTimeStr(form.approvedHours)}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setForm(f => ({
-                              ...f,
-                              approvedHoursStr: val,
-                              approvedHours: timeStrToDecimal(val)
-                            }));
-                          }}
-                          className="saas-grid-input"
-                          style={{ maxWidth: '250px' }}
-                          placeholder="e.g. 40:00"
-                        />
-                      ) : (
-                        <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
-                          {decimalToTimeStr(form.approvedHours)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  {form.isBillable && (
+                    <>
+                      {/* Billable Hours */}
+                      <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
+                        <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
+                          Billable Hours
+                        </label>
+                        <div>
+                          {isEditing ? (
+                            <input 
+                              type="text" 
+                              value={form.approvedHoursStr !== undefined ? form.approvedHoursStr : decimalToTimeStr(form.approvedHours)}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setForm(f => ({
+                                  ...f,
+                                  approvedHoursStr: val,
+                                  approvedHours: timeStrToDecimal(val)
+                                }));
+                              }}
+                              className="saas-grid-input"
+                              style={{ maxWidth: '250px' }}
+                              placeholder="e.g. 40:00"
+                            />
+                          ) : (
+                            <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
+                              {decimalToTimeStr(form.approvedHours)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
-                  {/* Actual Hours */}
-                  <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
-                    <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
-                      Actual Hours
-                    </label>
-                    <div>
-                      {isEditing ? (
-                        <input 
-                          type="text" 
-                          value={form.actualHoursStr !== undefined ? form.actualHoursStr : decimalToTimeStr(form.actualHours)}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setForm(f => ({
-                              ...f,
-                              actualHoursStr: val,
-                              actualHours: timeStrToDecimal(val)
-                            }));
-                          }}
-                          className="saas-grid-input"
-                          style={{ maxWidth: '250px' }}
-                          placeholder="e.g. 32:30"
-                        />
-                      ) : (
-                        <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
-                          {decimalToTimeStr(form.actualHours)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                      {/* Actual Hours */}
+                      <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
+                        <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
+                          Actual Hours
+                        </label>
+                        <div>
+                          {isEditing ? (
+                            <input 
+                              type="text" 
+                              value={form.actualHoursStr !== undefined ? form.actualHoursStr : decimalToTimeStr(form.actualHours)}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setForm(f => ({
+                                  ...f,
+                                  actualHoursStr: val,
+                                  actualHours: timeStrToDecimal(val)
+                                }));
+                              }}
+                              className="saas-grid-input"
+                              style={{ maxWidth: '250px' }}
+                              placeholder="e.g. 32:30"
+                            />
+                          ) : (
+                            <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
+                              {decimalToTimeStr(form.actualHours)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   {errors.billing && (
                     <div style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: '600', marginTop: '0.5rem' }}>
@@ -1105,7 +1177,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
               <div className="saas-attachments-pane animate-fade-in" style={{ padding: '1.5rem 0' }}>
                 
                 {/* Header row with Title and Add Button */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', maxWidth: '1150px', margin: '0 auto 1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', maxWidth: '100%', margin: '0 auto 1.5rem' }}>
                   <h2 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0f172a', margin: 0 }}>
                     Attachments ({form.attachments ? form.attachments.split(',').filter(Boolean).length : 0})
                   </h2>
@@ -1135,15 +1207,15 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                 </div>
 
                 {/* Table Block */}
-                <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', maxWidth: '1150px', margin: '0 auto' }}>
+                <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', maxWidth: '100%', margin: '0 auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                        <th style={{ width: '32%', padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Name</th>
-                        <th style={{ width: '22%', padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded By</th>
-                        <th style={{ width: '22%', padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded On</th>
-                        <th style={{ width: '12%', padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Size</th>
-                        <th style={{ width: '12%', padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
+                        <th style={{ width: '32%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Name</th>
+                        <th style={{ width: '22%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded By</th>
+                        <th style={{ width: '22%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded On</th>
+                        <th style={{ width: '12%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Size</th>
+                        <th style={{ width: '12%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1182,7 +1254,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                                   href={meta.url} 
                                   target="_blank" 
                                   rel="noopener noreferrer" 
-                                  style={{ fontSize: '0.85rem', fontWeight: '500', color: '#2563eb', textDecoration: 'none', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
+                                  style={{ fontSize: '0.75rem', fontWeight: '500', color: '#2563eb', textDecoration: 'none', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
                                   className="file-name-link"
                                   title={meta.fileName}
                                 >
@@ -1191,17 +1263,17 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                               </td>
 
                               {/* Uploaded By */}
-                              <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: '#475569', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={meta.uploadedBy}>
+                              <td style={{ padding: '0.85rem 1rem', fontSize: '0.75rem', color: '#475569', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={meta.uploadedBy}>
                                 {meta.uploadedBy}
                               </td>
 
                               {/* Uploaded On */}
-                              <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: '#475569', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                              <td style={{ padding: '0.85rem 1rem', fontSize: '0.75rem', color: '#475569' }}>
                                 {meta.uploadedOn}
                               </td>
 
                               {/* File Size */}
-                              <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: '#475569', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                              <td style={{ padding: '0.85rem 1rem', fontSize: '0.75rem', color: '#475569', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                                 {meta.fileSize}
                               </td>
 
@@ -1235,13 +1307,28 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                                   </a>
 
                                   {/* Delete/Action Button */}
-                                  {isEditing && (
+                                  {(isEditing || canEdit) && (
                                     <button 
                                       type="button" 
-                                      onClick={() => {
-                                        const current = form.attachments ? form.attachments.split(',') : [];
-                                        const filtered = current.filter(u => u !== url).join(',');
-                                        set('attachments', filtered);
+                                      onClick={async () => {
+                                        if (window.confirm('Are you sure you want to remove this attachment?')) {
+                                          const current = form.attachments ? form.attachments.split(',') : [];
+                                          const filtered = current.filter(u => u !== url).join(',');
+                                          
+                                          if (isEditing) {
+                                            set('attachments', filtered);
+                                          } else {
+                                            try {
+                                              const updatedTask = { ...form, attachments: filtered };
+                                              const { comments, taskList, ...payload } = updatedTask;
+                                              await onSave(payload);
+                                              setForm(f => ({ ...f, attachments: filtered }));
+                                            } catch (error) {
+                                              console.error('Failed to remove attachment:', error);
+                                              alert('Failed to remove attachment: ' + error.message);
+                                            }
+                                          }
+                                        }
                                       }}
                                       style={{
                                         width: '28px',
@@ -1258,29 +1345,9 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                                       title="Delete Attachment"
                                       className="action-icon-btn delete"
                                     >
-                                      ✕
+                                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                     </button>
                                   )}
-                                  
-                                  {/* Mock Triple Dot Button matching screenshot */}
-                                  <button
-                                    type="button"
-                                    style={{
-                                      width: '28px',
-                                      height: '28px',
-                                      borderRadius: '6px',
-                                      border: '1px solid #e2e8f0',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      color: '#64748b',
-                                      background: 'white',
-                                      cursor: 'pointer'
-                                    }}
-                                    className="action-icon-btn"
-                                  >
-                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
-                                  </button>
                                 </div>
                               </td>
 
@@ -1626,6 +1693,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         await api.put(`/tasks/${taskData.id}`, taskData);
       } else {
         await api.post('/tasks', taskData);
+        setView('board');
       }
       fetchTasks();
     } catch (error) {

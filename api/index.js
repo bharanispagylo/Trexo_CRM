@@ -6,6 +6,14 @@ try {
   console.error('[Startup] Prisma generate warning:', err.message);
 }
 
+try {
+  console.log('[Startup] Pushing database schema (db push)...');
+  require('child_process').execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
+  console.log('[Startup] Database schema successfully pushed!');
+} catch (err) {
+  console.error('[Startup] Prisma db push warning/error:', err.message);
+}
+
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
@@ -189,6 +197,19 @@ app.post('/api/employees', async (req, res) => {
   }
 });
 
+app.put('/api/employees/:id', async (req, res) => {
+  try {
+    const employee = await prisma.employee.update({
+      where: { id: req.params.id },
+      data: req.body
+    });
+    res.json(employee);
+  } catch (error) {
+    console.error('PUT /api/employees error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.delete('/api/employees/:id', async (req, res) => {
   try {
     await prisma.employee.delete({
@@ -311,7 +332,9 @@ app.get('/api/projects', async (req, res) => {
       include: { 
         taskLists: {
           include: { tasks: true }
-        }
+        },
+        queries: true,
+        attachments: true
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -323,9 +346,13 @@ app.get('/api/projects', async (req, res) => {
 
 app.post('/api/projects', async (req, res) => {
   try {
-    const project = await prisma.project.create({
-      data: req.body
-    });
+    const { estimatedHours, actualHours, billableHours, taskLists, ...rest } = req.body;
+    const data = { ...rest };
+    if (estimatedHours !== undefined) data.estimatedHours = parseFloat(estimatedHours) || 0;
+    if (actualHours !== undefined) data.actualHours = parseFloat(actualHours) || 0;
+    if (billableHours !== undefined) data.billableHours = parseFloat(billableHours) || 0;
+
+    const project = await prisma.project.create({ data });
     res.json(project);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -334,9 +361,15 @@ app.post('/api/projects', async (req, res) => {
 
 app.put('/api/projects/:id', async (req, res) => {
   try {
+    const { estimatedHours, actualHours, billableHours, taskLists, ...rest } = req.body;
+    const data = { ...rest };
+    if (estimatedHours !== undefined) data.estimatedHours = parseFloat(estimatedHours) || 0;
+    if (actualHours !== undefined) data.actualHours = parseFloat(actualHours) || 0;
+    if (billableHours !== undefined) data.billableHours = parseFloat(billableHours) || 0;
+
     const project = await prisma.project.update({
       where: { id: req.params.id },
-      data: req.body
+      data
     });
     res.json(project);
   } catch (error) {
@@ -385,6 +418,19 @@ app.delete('/api/task-lists/:id', async (req, res) => {
       where: { id: req.params.id }
     });
     res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/task-lists/:id', async (req, res) => {
+  try {
+    const { name } = req.body;
+    const taskList = await prisma.taskList.update({
+      where: { id: req.params.id },
+      data: { name }
+    });
+    res.json(taskList);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -545,6 +591,65 @@ app.put('/api/tasks/:id/comments/:commentId/like', async (req, res) => {
       data: { likes: { increment: 1 } }
     });
     res.json(comment);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 9. Project Queries
+app.post('/api/project-queries', async (req, res) => {
+  try {
+    const { title, description, sentTo, status, solved, priority, projectId } = req.body;
+    
+    // Auto-generate queryId like QRY-0001
+    const count = await prisma.projectQuery.count({ where: { projectId } });
+    const queryId = `QRY-${String(count + 1).padStart(4, '0')}`;
+
+    const query = await prisma.projectQuery.create({
+      data: {
+        queryId,
+        title,
+        description,
+        sentTo,
+        status: status || 'Open',
+        solved: solved === undefined ? false : Boolean(solved),
+        priority: priority || 'Medium',
+        projectId
+      }
+    });
+    res.json(query);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/project-queries/:id', async (req, res) => {
+  try {
+    const { title, description, sentTo, status, solved, priority } = req.body;
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (sentTo !== undefined) updateData.sentTo = sentTo;
+    if (status !== undefined) updateData.status = status;
+    if (solved !== undefined) updateData.solved = Boolean(solved);
+    if (priority !== undefined) updateData.priority = priority;
+
+    const query = await prisma.projectQuery.update({
+      where: { id: req.params.id },
+      data: updateData
+    });
+    res.json(query);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/project-queries/:id', async (req, res) => {
+  try {
+    await prisma.projectQuery.delete({
+      where: { id: req.params.id }
+    });
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

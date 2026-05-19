@@ -104,6 +104,11 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
           user={user} 
           initialSelectedProject={searchSelectedProject} 
           onClearInitialProject={() => setSearchSelectedProject(null)} 
+          onNavigateToTasks={(taskData) => {
+            setSearchSelectedTask(taskData);
+            setIsTaskDetailOpen(true);
+            setActiveTab('tasks');
+          }}
         />
       );
       case 'teams': return <Teams user={user} />;
@@ -300,16 +305,19 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             </div>
 
             <div className="saas-header-right">
-              {/* Notification Bell Icon */}
-              <button className="saas-header-icon-btn notification-btn" title="Notifications">
-                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-                 <span className="notification-badge">2</span>
-              </button>
+              {/* Action Icons Group */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                {/* Notification Bell Icon */}
+                <button className="saas-header-icon-btn notification-btn" title="Notifications">
+                   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                   <span className="notification-badge">2</span>
+                </button>
 
-              {/* Help support circle question mark icon */}
-              <button className="saas-header-icon-btn help-btn" title="Help & Support">
-                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-              </button>
+                {/* Help support circle question mark icon */}
+                <button className="saas-header-icon-btn help-btn" title="Help & Support">
+                   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </button>
+              </div>
 
               {/* Modern Rajesh Kumar style User Profile */}
               <div className="saas-user-profile-header">
