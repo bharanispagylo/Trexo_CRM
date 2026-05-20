@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
+import { useAlert } from '../../../context/AlertContext';
 
 export default function Salary() {
   const [payrolls, setPayrolls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ id: '', month: '', emps: '', total: '', status: 'Draft' });
+  const { alert } = useAlert();
 
   // ── FETCH from API ──
   const fetchPayrolls = async () => {
@@ -37,7 +39,7 @@ export default function Salary() {
       fetchPayrolls();
     } catch (error) {
       console.error('Insert error:', error);
-      alert('Failed to add payroll: ' + error.message);
+      alert('Failed to add payroll: ' + error.message, 'error', 'Error');
     }
   };
 
@@ -57,7 +59,7 @@ export default function Salary() {
           <h3 style={{ marginTop: 0 }}>New Payroll</h3>
           <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
             <input type="text" placeholder="PR-2025-06" value={form.id} onChange={e => setForm({...form, id: e.target.value})} className="btn btn-outline" style={{ flex: 1, backgroundColor: 'white' }} />
-            <input type="text" placeholder="June 2025" value={form.month} onChange={e => setForm({...form, month: e.target.value})} className="btn btn-outline" style={{ flex: 1, backgroundColor: 'white' }} />
+            <input type="text" placeholder="June 2025 *" value={form.month} onChange={e => setForm({...form, month: e.target.value})} className="btn btn-outline" style={{ flex: 1, backgroundColor: 'white' }} />
             <input type="number" placeholder="Employees" value={form.emps} onChange={e => setForm({...form, emps: e.target.value})} className="btn btn-outline" style={{ flex: 1, backgroundColor: 'white' }} />
             <input type="text" placeholder="₹ Total" value={form.total} onChange={e => setForm({...form, total: e.target.value})} className="btn btn-outline" style={{ flex: 1, backgroundColor: 'white' }} />
             <select value={form.status} onChange={e => setForm({...form, status: e.target.value})} className="btn btn-outline" style={{ backgroundColor: 'white' }}>

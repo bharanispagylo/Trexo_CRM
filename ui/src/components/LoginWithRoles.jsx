@@ -4,68 +4,7 @@ import DashboardLayout from "./DashboardLayout";
 import { api } from "../api/client";
 import { PermissionProvider } from "../hooks/usePermissions";
 
-// ── Mock Users Database ────────────────────────────────────
-const USERS = [
-  {
-    id: 1,
-    name: "Rajesh Kumar",
-    email: "rajesh.admin@officecrm.in",
-    password: "Admin@123",
-    role: "admin",
-    avatar: "RK",
-    dept: "Administration",
-    title: "System Administrator",
-  },
-  {
-    id: 2,
-    name: "Meena Sundaram",
-    email: "meena.admin@officecrm.in",
-    password: "Admin@456",
-    role: "admin",
-    avatar: "MS",
-    dept: "HR Management",
-    title: "HR Administrator",
-  },
-  {
-    id: 3,
-    name: "Arjun Krishnan",
-    email: "arjun.k@officecrm.in",
-    password: "Emp@123",
-    role: "employee",
-    avatar: "AK",
-    dept: "Engineering",
-    title: "Backend Developer",
-    empId: "EMP-2025-001",
-    joined: "02 May 2025",
-    bloodGroup: "B+",
-  },
-  {
-    id: 4,
-    name: "Priya Nair",
-    email: "priya.n@officecrm.in",
-    password: "Emp@456",
-    role: "employee",
-    avatar: "PN",
-    dept: "Design",
-    title: "UI/UX Designer",
-    empId: "EMP-2025-002",
-    joined: "28 Apr 2025",
-    bloodGroup: "O+",
-  },
-  {
-    id: 5,
-    name: "Karthik Selvam",
-    email: "karthik.s@officecrm.in",
-    password: "Emp@789",
-    role: "employee",
-    avatar: "KS",
-    dept: "Engineering",
-    title: "DevOps Engineer",
-    empId: "EMP-2025-003",
-    joined: "15 Apr 2025",
-    bloodGroup: "A+",
-  },
-];
+// ── Mock Users Database Removed ──────────────────────────────
 
 // ── Avatar ─────────────────────────────────────────────────
 function Avatar({ initials, image, size = "md", ring = false }) {
@@ -288,7 +227,6 @@ function RegisterPage({ onRegister, onLoginClick }) {
   const [name, setName]         = useState("");
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole]         = useState("admin");
   const [showPwd, setShowPwd]   = useState(false);
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
@@ -468,23 +406,7 @@ function AdminDashboard({ user, onLogout }) {
         </div>
         <div className="flex-spacer" />
         <div className="topbar-actions">
-          <div className="role-pill role-pill-admin">
-             🛡️ {user.role || 'Admin'}
-          </div>
-          <Avatar 
-            initials={user.firstName?.charAt(0) || user.fullName?.charAt(0) || "U"} 
-            image={user.profileImage}
-            size="sm" 
-          />
-
-          <div className="user-info">
-            <div className="user-name">{user.fullName || `${user.firstName} ${user.lastName}`}</div>
-            <div className="user-email">{user.email}</div>
-          </div>
-          <button
-            onClick={onLogout}
-            className="btn-signout"
-          >Sign Out</button>
+          {/* Profile block removed in favor of DashboardLayout header */}
         </div>
       </header>
 
@@ -594,36 +516,30 @@ function EmployeeDashboard({ user, onLogout, setActiveTab }) {
   const [recentLeaves, setRecentLeaves] = useState([]);
   const [attendanceCount, setAttendanceCount] = useState(0);
   const [leaveBalance, setLeaveBalance] = useState(15);
-  const [loading, setLoading] = useState(true);
-
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const userName = (user.fullName || user.firstName || '').trim().toLowerCase();
+
+        // 1. Fetch Attendance
+        const allAttendance = await api.get('/attendance');
+        const myAttendanceCount = (allAttendance || []).filter(a => a.name?.trim().toLowerCase() === userName).length;
+        setAttendanceCount(myAttendanceCount);
+
+        // 2. Fetch Leaves
+        const allLeaves = await api.get('/leaves');
+        const myLeaves = (allLeaves || []).filter(l => l.name?.trim().toLowerCase() === userName);
+        setRecentLeaves(myLeaves.slice(0, 5)); 
+        
+        const myApprovedLeaves = myLeaves.filter(l => l.status === 'Approved');
+        const usedDays = myApprovedLeaves.reduce((sum, l) => sum + (l.days || 0), 0);
+        setLeaveBalance(15 - usedDays);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      }
+    };
     fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const userName = (user.fullName || user.firstName || '').trim().toLowerCase();
-
-
-      // 1. Fetch Attendance
-      const allAttendance = await api.get('/attendance');
-      const myAttendanceCount = (allAttendance || []).filter(a => a.name?.trim().toLowerCase() === userName).length;
-      setAttendanceCount(myAttendanceCount);
-
-      // 2. Fetch Leaves
-      const allLeaves = await api.get('/leaves');
-      const myLeaves = (allLeaves || []).filter(l => l.name?.trim().toLowerCase() === userName);
-      setRecentLeaves(myLeaves.slice(0, 5)); 
-      
-      const myApprovedLeaves = myLeaves.filter(l => l.status === 'Approved');
-      const usedDays = myApprovedLeaves.reduce((sum, l) => sum + (l.days || 0), 0);
-      setLeaveBalance(15 - usedDays);
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-    }
-    setLoading(false);
-  };
+  }, [user]);
 
   return (
     <div className="dashboard-container dashboard-container-emp app-container">
@@ -635,23 +551,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab }) {
         </div>
         <div className="flex-spacer" />
         <div className="topbar-actions">
-          <div className="role-pill role-pill-emp">
-             👤 {user.role || 'Employee'}
-          </div>
-          <Avatar 
-            initials={user.firstName?.charAt(0) || user.fullName?.charAt(0) || "U"} 
-            image={user.profileImage}
-            size="sm" 
-          />
-
-          <div className="user-info">
-            <div className="user-name">{user.fullName || `${user.firstName} ${user.lastName}`}</div>
-            <div className="user-email">{user.empId}</div>
-          </div>
-          <button
-            onClick={onLogout}
-            className="btn-signout"
-          >Sign Out</button>
+          {/* Profile block removed in favor of DashboardLayout header */}
         </div>
       </header>
 
@@ -740,25 +640,43 @@ function EmployeeDashboard({ user, onLogout, setActiveTab }) {
 //  ROOT — ENTRY POINT
 // ══════════════════════════════════════════════════════════
 export default function LoginWithRoles() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    // Restore session from localStorage on hard refresh
+    try {
+      const saved = localStorage.getItem('crm_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [isRegistering, setIsRegistering] = useState(false);
+
+  const handleLogin = (u) => {
+    setUser(u);
+    localStorage.setItem('crm_user', JSON.stringify(u));
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('crm_user');
+  };
 
   if (!user) {
     if (isRegistering) {
-      return <RegisterPage onRegister={setUser} onLoginClick={() => setIsRegistering(false)} />;
+      return <RegisterPage onRegister={handleLogin} onLoginClick={() => setIsRegistering(false)} />;
     }
-    return <LoginPage onLogin={setUser} onRegisterClick={() => setIsRegistering(true)} />;
+    return <LoginPage onLogin={handleLogin} onRegisterClick={() => setIsRegistering(true)} />;
   }
   if (user.role?.toLowerCase() === "admin") {
     return (
       <PermissionProvider userRole={user.role}>
-        <DashboardLayout user={user} onLogout={() => setUser(null)} renderOverview={(setActiveTab) => <AdminDashboard user={user} onLogout={() => setUser(null)} setActiveTab={setActiveTab} />} />
+        <DashboardLayout user={user} onLogout={handleLogout} renderOverview={(setActiveTab) => <AdminDashboard user={user} onLogout={handleLogout} setActiveTab={setActiveTab} />} />
       </PermissionProvider>
     );
   }
   return (
     <PermissionProvider userRole={user.role}>
-      <DashboardLayout user={user} onLogout={() => setUser(null)} renderOverview={(setActiveTab) => <EmployeeDashboard user={user} onLogout={() => setUser(null)} setActiveTab={setActiveTab} />} />
+      <DashboardLayout user={user} onLogout={handleLogout} renderOverview={(setActiveTab) => <EmployeeDashboard user={user} onLogout={handleLogout} setActiveTab={setActiveTab} />} />
     </PermissionProvider>
   );
 }

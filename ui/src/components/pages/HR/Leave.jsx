@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../../api/client';
 import './Leave.css';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { useAlert } from '../../../context/AlertContext';
 
 export default function Leave({ user }) {
   const [requests, setRequests] = useState([]);
@@ -12,6 +13,7 @@ export default function Leave({ user }) {
     casual: { used: 0, total: 12 }
   });
   const { can, getLevel } = usePermissions();
+  const { alert } = useAlert();
   
   const [form, setForm] = useState({ 
     type: 'Full Day', 
@@ -58,6 +60,7 @@ export default function Leave({ user }) {
     setLoading(false);
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchLeaves(); }, [user]);
 
   const handleFileUpload = async (e) => {
@@ -79,14 +82,14 @@ export default function Leave({ user }) {
         setForm({ ...form, attachments: [...current, data.secure_url].join(',') });
       }
     } catch (err) {
-      alert('Upload failed: ' + err.message);
+      alert('Upload failed: ' + err.message, 'error', 'Upload Failed');
     }
     setUploading(false);
   };
 
   const handleAdd = async () => {
     if (!form.startDate || !form.endDate || !form.reason) {
-      alert("Please fill in start date, end date and reason.");
+      alert("Please fill in start date, end date and reason.", 'warning', 'Required Fields');
       return;
     }
     try {
@@ -103,7 +106,7 @@ export default function Leave({ user }) {
       setCurrentView('list');
       fetchLeaves();
     } catch (error) {
-      alert('Failed to submit: ' + error.message);
+      alert('Failed to submit: ' + error.message, 'error', 'Submission Failed');
     }
   };
 
@@ -181,15 +184,15 @@ export default function Leave({ user }) {
                     <input className="saas-input" type="number" min="1" value={form.days} onChange={e => setForm({...form, days: e.target.value})} />
                   </div>
                   <div className="saas-field">
-                    <label className="saas-label">Start Date</label>
+                    <label className="saas-label">Start Date *</label>
                     <input className="saas-input" type="date" value={form.startDate} onChange={e => setForm({...form, startDate: e.target.value})} />
                   </div>
                   <div className="saas-field">
-                    <label className="saas-label">End Date</label>
+                    <label className="saas-label">End Date *</label>
                     <input className="saas-input" type="date" value={form.endDate} onChange={e => setForm({...form, endDate: e.target.value})} />
                   </div>
                   <div className="saas-field" style={{ gridColumn: '1 / -1' }}>
-                    <label className="saas-label">Reason for Leave</label>
+                    <label className="saas-label">Reason for Leave *</label>
                     <textarea className="saas-textarea" rows="4" placeholder="Brief explanation..." value={form.reason} onChange={e => setForm({...form, reason: e.target.value})} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #E2E8F0' }}></textarea>
                   </div>
                   

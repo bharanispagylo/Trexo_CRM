@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Roles.css';
 import { api } from '../../../api/client';
+import { useAlert } from '../../../context/AlertContext';
 
 const ACTIONS = [
   { id: 'create', label: 'Create' },
@@ -19,6 +20,7 @@ const MODULES = [
   { id: 'users', label: 'Users' },
   { id: 'projects', label: 'Projects' },
   { id: 'salaries', label: 'Salaries' },
+  { id: 'reports', label: 'Reports' },
 ];
 
 export default function Roles() {
@@ -29,6 +31,7 @@ export default function Roles() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
   const [expandedModules, setExpandedModules] = useState(['attendance', 'leave', 'tasks']); // Default some expanded
+  const { alert, confirm } = useAlert();
   
   // Initial default permissions
   const createDefaultPerms = () => MODULES.reduce((acc, m) => ({
@@ -78,18 +81,18 @@ export default function Roles() {
         role: selectedRole,
         data: permissions[selectedRole]
       });
-      alert(`Success: Permissions for "${selectedRole}" saved to database.`);
+      alert(`Permissions for "${selectedRole}" saved successfully.`, 'success', 'Saved');
       setIsEditing(false);
       await fetchPermissions();
     } catch (err) {
-      alert('Save failed: ' + err.message);
+      alert('Save failed: ' + err.message, 'error', 'Save Failed');
     }
     setLoading(false);
   };
 
   const togglePerm = (modId, actId, level) => {
     if (!isEditing) {
-      alert("Please click 'Edit Permissions' first to make changes.");
+      alert("Please click 'Edit Permissions' first to make changes.", 'warning', 'Read Only');
       return;
     }
     
@@ -140,8 +143,7 @@ export default function Roles() {
 
   const handleDeleteRole = async (roleToDelete) => {
     if (roleToDelete === 'Admin') return;
-    
-    if (window.confirm(`Permanently delete the "${roleToDelete}" role? This cannot be undone.`)) {
+    confirm(`Permanently delete the "${roleToDelete}" role? This cannot be undone.`, async () => {
       try {
         await api.delete(`/roles/permissions/${roleToDelete}`);
         setRoles(prev => prev.filter(r => r !== roleToDelete));
@@ -150,7 +152,7 @@ export default function Roles() {
         setRoles(prev => prev.filter(r => r !== roleToDelete));
         if (selectedRole === roleToDelete) setSelectedRole('Admin');
       }
-    }
+    }, 'Delete Role');
   };
 
   const handleCreateRole = async () => {
@@ -158,7 +160,7 @@ export default function Roles() {
     if (!name) return;
     
     if (roles.includes(name)) {
-      alert("Error: This role already exists!");
+      alert("This role already exists!", 'error', 'Duplicate Role');
       return;
     }
 
@@ -183,7 +185,7 @@ export default function Roles() {
       setShowCreateModal(false);
       setIsEditing(true);
     } catch (err) {
-      alert('Creation failed: ' + err.message);
+      alert('Creation failed: ' + err.message, 'error', 'Error');
     }
     setLoading(false);
   };

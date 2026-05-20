@@ -1,18 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
-import { createClient } from '@supabase/supabase-js';
 import './AddUser.css'; // Reusing the same styling
-
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
-);
+import { useAlert } from '../../../context/AlertContext';
 
 export default function EditUser({ userToEdit, onBack }) {
   const [roles, setRoles] = useState(['Admin', 'Employee']);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState({});
+  const { alert } = useAlert();
 
   
   const [form, setForm] = useState({ 
@@ -63,7 +59,7 @@ export default function EditUser({ userToEdit, onBack }) {
       throw new Error(data.error?.message || 'Upload failed');
     } catch (error) {
       console.error('Cloudinary Upload error:', error);
-      alert('Failed to upload image: ' + error.message);
+      alert('Failed to upload image: ' + error.message, 'error', 'Upload Failed');
       return null;
     } finally {
       setUploading(false);
@@ -97,11 +93,11 @@ export default function EditUser({ userToEdit, onBack }) {
     setLoading(true);
     try {
       await api.put(`/users/${userToEdit.id}`, form);
-      alert('User updated successfully!');
+      alert('User updated successfully!', 'success', 'Profile Updated');
       onBack();
     } catch (error) {
       console.error('Update error:', error);
-      alert('Failed to update user: ' + error.message);
+      alert('Failed to update user: ' + error.message, 'error', 'Error');
     } finally {
       setLoading(false);
     }
@@ -119,7 +115,7 @@ export default function EditUser({ userToEdit, onBack }) {
       <div className="saas-form-container">
         <div className="form-grid">
           <div className="saas-field full-width">
-            <label className="saas-label">Full Name</label>
+            <label className="saas-label">Full Name *</label>
             <input 
               className={`saas-input ${errors.fullName ? 'error' : ''}`} 
               placeholder="John Doe" 
@@ -130,7 +126,7 @@ export default function EditUser({ userToEdit, onBack }) {
             {errors.fullName && <span className="error-text">{errors.fullName}</span>}
           </div>
           <div className="saas-field">
-            <label className="saas-label">Email Address</label>
+            <label className="saas-label">Email Address *</label>
             <input 
               className={`saas-input ${errors.email ? 'error' : ''}`} 
               type="email" 

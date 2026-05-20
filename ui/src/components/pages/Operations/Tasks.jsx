@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../../../api/client';
 import './Tasks.css';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { useAlert } from '../../../context/AlertContext';
 
 const COLUMNS = [
   { id: 'To Do',         label: 'To Do',         color: 'col-todo' },
@@ -52,6 +53,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
 
   const isEdit = !!(task && task.id);
   const [isEditing, setIsEditing] = useState(!task || !task.id); // Start in edit mode for new tasks, read-only for existing ones
+  const { alert, confirm } = useAlert();
   
   const [form, setForm] = useState(() => {
     const defaults = {
@@ -86,9 +88,11 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
 
   const [activeTab, setActiveTab] = useState('general');
   const [users, setUsers] = useState([]);
+  const [taskLists, setTaskLists] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [errors, setErrors] = useState({});
 
-  const [selectedAssignee, setSelectedAssignee] = useState('');
+
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
@@ -99,7 +103,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef(null);
   const commentFileInputRef = useRef(null);
-  const { can, getLevel } = usePermissions();
+  const { getLevel } = usePermissions();
   
   const isAssigned = () => {
     if (!task) return true;
@@ -112,11 +116,11 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
   const canEdit = getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && isAssigned());
   const canDelete = getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && isAssigned());
 
-  const fetchComments = () => {
-    if (isEdit && task.id) {
+  const fetchComments = useCallback(() => {
+    if (isEdit && task?.id) {
       api.get(`/tasks/${task.id}/comments`).then(setComments).catch(console.error);
     }
-  };
+  }, [isEdit, task?.id]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -155,15 +159,16 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
         setUploading(false);
       };
       reader.onerror = () => {
-        alert('Failed to read file locally.');
+        alert('Failed to read file locally.', 'error', 'Error');
         setUploading(false);
       };
       reader.readAsDataURL(file);
     } catch (err) {
-      alert('Local file read failed: ' + err.message);
+      alert('Local file read failed: ' + err.message, 'error', 'Error');
       setUploading(false);
     }
   };
+
 
   useEffect(() => {
     fetchComments();
@@ -171,7 +176,13 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
       const names = data.map(u => u.fullName || `${u.firstName} ${u.lastName}`.trim());
       setUsers(names);
     }).catch(console.error);
-  }, [task, isEdit]);
+    api.get('/task-lists').then(data => {
+      setTaskLists(data || []);
+    }).catch(console.error);
+    api.get('/projects').then(data => {
+      setProjects(data || []);
+    }).catch(console.error);
+  }, [task, isEdit, fetchComments]);
 
   const handleCommentFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -208,12 +219,12 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
         setCommentUploading(false);
       };
       reader.onerror = () => {
-        alert('Failed to read comment file.');
+        alert('Failed to read comment file.', 'error', 'Error');
         setCommentUploading(false);
       };
       reader.readAsDataURL(file);
     } catch (err) {
-      alert('Local comment file read failed: ' + err.message);
+      alert('Local comment file read failed: ' + err.message, 'error', 'Error');
       setCommentUploading(false);
     }
   };
@@ -328,25 +339,13 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
   
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const assigneesList = form.assignees ? form.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
-  const firstAssignee = assigneesList[0] || 'Unassigned';
-
-  const handleAddAssignee = (name) => {
-    const targetName = typeof name === 'string' ? name : selectedAssignee;
-    if (targetName && !assigneesList.includes(targetName)) {
-      set('assignees', [...assigneesList, targetName].join(', '));
-    }
-  };
-
-  const handleRemoveAssignee = (name) => {
-    set('assignees', assigneesList.filter(a => a !== name).join(', '));
-  };
 
   const submit = () => {
     const newErrors = {};
     const titleRegex = /^.{3,100}$/;
     
     if (!form.taskNo || !form.taskNo.trim()) {
-      newErrors.taskNo = "Task No is required";
+      newErrors.taskNo = "Task ID is required";
     }
 
     if (!form.title.trim()) {
@@ -605,7 +604,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
           {isEdit && canDelete && (
             <button 
               className="saas-btn-nav saas-btn-danger" 
-              onClick={() => { if(window.confirm('Delete this task?')) { onDelete(task.id); onClose(); } }}
+              onClick={() => confirm('Are you sure you want to delete this task?', () => { onDelete(task.id); onClose(); }, 'Delete Task')}
             >
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
               Delete
@@ -691,10 +690,10 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
           <div className="saas-tab-pane-content">
             {activeTab === 'general' && (
               <div className="saas-details-grid animate-fade-in">
-                {/* Task No */}
+                {/* Task ID */}
                 <div className="saas-details-row">
                   <span className="field-icon-box"><IconTaskNo /></span>
-                  <span className="field-label-text">Task No</span>
+                  <span className="field-label-text">Task ID</span>
                   <span className="field-colon-sep">:</span>
                   <span className="field-value-text font-bold">
                     {isEditing ? (
@@ -717,7 +716,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                 {/* Task Title */}
                 <div className="saas-details-row">
                   <span className="field-icon-box"><IconTitle /></span>
-                  <span className="field-label-text">Task Title</span>
+                  <span className="field-label-text">Task Title{isEditing ? ' *' : ''}</span>
                   <span className="field-colon-sep">:</span>
                   <span className="field-value-text">
                     {isEditing ? (
@@ -752,30 +751,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                         />
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#64748b' }}>
                           <span>{(form.description || '').length} / 1000 characters</span>
-                          <button 
-                            type="button" 
-                            onClick={() => {
-                              if (!form.title.trim()) {
-                                alert('Please provide a Task Title first!');
-                                return;
-                              }
-                              set('description', `Task Objective:\nComplete the implementation of "${form.title}" in accordance with the latest design requirements.\n\nAcceptance Criteria:\n1. Verify visual correctness on mobile and desktop views.\n2. Ensure proper API request handling and data persistence.\n3. Validate zero lint or compiler errors.`);
-                            }}
-                            style={{
-                              background: '#eff6ff',
-                              color: '#2563eb',
-                              border: 'none',
-                              borderRadius: '6px',
-                              padding: '0.25rem 0.5rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.25rem'
-                            }}
-                          >
-                            🪄 Auto-Generate
-                          </button>
                         </div>
                       </div>
                     ) : (
@@ -843,7 +818,9 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                           className="saas-grid-select"
                         >
                           <option value="">Select Assignee...</option>
-                          {users.map(u => (
+                          {(form.projectName && projects.find(p => p.name === form.projectName)?.members 
+                              ? projects.find(p => p.name === form.projectName).members.split(',').map(m => m.trim()).filter(Boolean) 
+                              : users).map(u => (
                             <option key={u} value={u}>{u}</option>
                           ))}
                         </select>
@@ -862,21 +839,62 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                 {/* Project */}
                 <div className="saas-details-row">
                   <span className="field-icon-box"><IconProject /></span>
-                  <span className="field-label-text">Project</span>
+                  <span className="field-label-text">Project{isEditing ? ' *' : ''}</span>
                   <span className="field-colon-sep">:</span>
                   <span className="field-value-text">
                     {isEditing ? (
-                      <input 
-                        type="text" 
-                        value={form.projectName} 
+                      <select 
+                        value={form.projectName || ''} 
                         onChange={e => set('projectName', e.target.value)} 
-                        className={`saas-grid-input ${errors.projectName ? 'error' : ''}`}
-                        placeholder="Project Name"
-                      />
+                        className={`saas-grid-select ${errors.projectName ? 'error' : ''}`}
+                      >
+                        <option value="">-- Select Project --</option>
+                        {projects.map(proj => (
+                          <option key={proj.id} value={proj.name}>
+                            {proj.name}
+                          </option>
+                        ))}
+                      </select>
                     ) : (
                       <span className="saas-project-link-text">{form.projectName || 'Spagylo CRM Development'}</span>
                     )}
                     {errors.projectName && <div className="grid-error-msg">{errors.projectName}</div>}
+                  </span>
+                </div>
+
+                {/* Task List */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="8" y1="6" x2="21" y2="6"></line>
+                      <line x1="8" y1="12" x2="21" y2="12"></line>
+                      <line x1="8" y1="18" x2="21" y2="18"></line>
+                      <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                      <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                      <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                    </svg>
+                  </span>
+                  <span className="field-label-text">Task List</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
+                      <select
+                        value={form.taskListId || ''}
+                        onChange={e => set('taskListId', e.target.value || null)}
+                        className="saas-grid-select"
+                      >
+                        <option value="">-- Select Task List --</option>
+                        {taskLists.map(tl => (
+                          <option key={tl.id} value={tl.id}>
+                            {tl.name}{tl.project ? ` (${tl.project.name})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span style={{ fontWeight: '500', color: '#334155' }}>
+                        {taskLists.find(tl => tl.id === form.taskListId)?.name || (form.taskListId ? form.taskListId : '-')}
+                      </span>
+                    )}
                   </span>
                 </div>
 
@@ -1311,7 +1329,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                                     <button 
                                       type="button" 
                                       onClick={async () => {
-                                        if (window.confirm('Are you sure you want to remove this attachment?')) {
+                                        confirm('Are you sure you want to remove this attachment?', async () => {
                                           const current = form.attachments ? form.attachments.split(',') : [];
                                           const filtered = current.filter(u => u !== url).join(',');
                                           
@@ -1325,10 +1343,10 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                                               setForm(f => ({ ...f, attachments: filtered }));
                                             } catch (error) {
                                               console.error('Failed to remove attachment:', error);
-                                              alert('Failed to remove attachment: ' + error.message);
+                                              alert('Failed to remove attachment: ' + error.message, 'error', 'Error');
                                             }
                                           }
-                                        }
+                                        }, 'Remove Attachment');
                                       }}
                                       style={{
                                         width: '28px',
@@ -1511,7 +1529,8 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
 
 // ── Task Card (Kanban) ─────────────────────────────────────
 function TaskCard({ task, onDragStart, onClick, onDelete, currentUser }) {
-  const { can, getLevel } = usePermissions();
+  const { getLevel } = usePermissions();
+  const { confirm: showConfirm } = useAlert();
   const pm = PRIORITY_META[task.priority] || PRIORITY_META['Medium'];
   const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
 
@@ -1527,7 +1546,7 @@ function TaskCard({ task, onDragStart, onClick, onDelete, currentUser }) {
         <span className={`card-tag tag-${task.tag?.toLowerCase() || 'engineering'}`}>{task.tag || 'Engineering'}</span>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (currentUser?.fullName || currentUser?.name) && assignees.map(a => a.toLowerCase()).includes((currentUser?.fullName || currentUser?.name).toLowerCase()))) && (
-            <button className="card-view-btn delete-icon" title="Delete Task" onClick={(e) => { e.stopPropagation(); if(window.confirm('Delete this task?')) onDelete(task.id); }}>
+            <button className="card-view-btn delete-icon" title="Delete Task" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => onDelete(task.id), 'Delete Task'); }}>
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#ef4444" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           )}
@@ -1618,6 +1637,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       setView('detail');
       if (onClearInitialTask) onClearInitialTask();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSelectedTask]);
 
   useEffect(() => {
@@ -1628,6 +1648,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
   const dragId = useRef(null);
   const { can, getLevel } = usePermissions();
+  const { alert, confirm: showConfirm } = useAlert();
 
   // ── FETCH from API ──
   const fetchTasks = async () => {
@@ -1698,7 +1719,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       fetchTasks();
     } catch (error) {
       console.error('Save error:', error);
-      alert('Failed to save task: ' + error.message);
+      alert('Failed to save task: ' + error.message, 'error', 'Error');
     }
   };
 
@@ -1877,7 +1898,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                             </button>
                           )}
                           {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && (task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))) && (
-                            <button className="list-delete-btn" onClick={(e) => { e.stopPropagation(); if(window.confirm('Delete this task?')) handleDeleteTask(task.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Delete Task">
+                            <button className="list-delete-btn" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Delete Task">
                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             </button>
                           )}

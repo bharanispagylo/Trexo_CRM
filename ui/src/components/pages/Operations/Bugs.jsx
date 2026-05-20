@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
 import './Bugs.css';
+import { useAlert } from '../../../context/AlertContext';
 
 export default function Bugs() {
   const [bugs, setBugs] = useState([]);
@@ -13,6 +14,7 @@ export default function Bugs() {
   const [status, setStatus] = useState('Open');
   const [imageFile, setImageFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const { alert } = useAlert();
 
   useEffect(() => {
     fetchBugs();
@@ -34,7 +36,7 @@ export default function Bugs() {
     const uploadPreset = process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET;
 
     if (!cloudName || !uploadPreset) {
-      alert("Cloudinary Cloud Name or Upload Preset is missing from .env");
+      alert("Cloudinary Cloud Name or Upload Preset is missing from .env", 'error', 'Configuration Error');
       return null;
     }
 
@@ -56,12 +58,12 @@ export default function Bugs() {
         return data.secure_url;
       } else {
         console.error("Cloudinary error:", data);
-        alert(`Cloudinary Upload Error: ${data.error?.message || 'Unknown error. Please check your upload preset.'}`);
+        alert(`Cloudinary Upload Error: ${data.error?.message || 'Unknown error. Please check your upload preset.'}`, 'error', 'Upload Failed');
         return null;
       }
     } catch (error) {
       console.error('Error uploading image:', error);
-      alert('Network error while uploading image to Cloudinary.');
+      alert('Network error while uploading image to Cloudinary.', 'error', 'Network Error');
       return null;
     }
   };
@@ -92,7 +94,7 @@ export default function Bugs() {
       fetchBugs();
     } catch (error) {
       console.error('Error adding bug:', error);
-      alert('Failed to add bug via API.');
+      alert('Failed to add bug via API.', 'error', 'Error');
     } finally {
       setUploading(false);
     }
@@ -159,7 +161,7 @@ export default function Bugs() {
             </div>
             <form onSubmit={handleAddBug} className="modal-body">
               <div className="mfield">
-                <label className="mlabel">Bug Title</label>
+                <label className="mlabel">Bug Title *</label>
                 <input className="minput" required value={title} onChange={e => setTitle(e.target.value)} placeholder="E.g., Login button not working" />
               </div>
               <div className="mfield">

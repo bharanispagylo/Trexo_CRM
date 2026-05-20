@@ -1,14 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
-import { createClient } from '@supabase/supabase-js';
 import './Users.css';
 import { usePermissions } from '../../../hooks/usePermissions';
-
-// Initialize Supabase
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
-);
+import { useAlert } from '../../../context/AlertContext';
 
 export default function Users({ onAddUser, onEditUser }) {
   const [users, setUsers] = useState([]);
@@ -16,6 +10,7 @@ export default function Users({ onAddUser, onEditUser }) {
   const [loading, setLoading] = useState(true);
   const [selectedRoleFilter, setSelectedRoleFilter] = useState('All');
   const { can } = usePermissions();
+  const { alert, confirm } = useAlert();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -131,15 +126,15 @@ export default function Users({ onAddUser, onEditUser }) {
                     <button 
                       className="user-action-btn delete" 
                       title="Delete User"
-                      onClick={async () => {
-                        if (window.confirm('Are you sure you want to delete this user?')) {
+                      onClick={() => {
+                        confirm('Are you sure you want to delete this user? This action cannot be undone.', async () => {
                           try {
                             await api.delete(`/users/${u.id}`);
                             fetchUsers();
                           } catch (error) {
-                            alert('Delete failed: ' + error.message);
+                            alert('Delete failed: ' + error.message, 'error', 'Delete Failed');
                           }
-                        }
+                        }, 'Delete User');
                       }}
                     >
                       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>

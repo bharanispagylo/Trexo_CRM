@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
 import './Attendance.css';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { useAlert } from '../../../context/AlertContext';
 
 export default function Attendance({ user }) {
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [session, setSession] = useState(null);
+
   const [view, setView] = useState('main'); // 'main' or 'manual'
   const { can, getLevel } = usePermissions();
+  const { alert } = useAlert();
 
   // ── TICKING CLOCK ──
   useEffect(() => {
@@ -35,49 +37,17 @@ export default function Attendance({ user }) {
 
       // Check if already checked in today
       const todayStr = new Date().toISOString().split('T')[0];
-      const todayRecord = filteredData.find(a => a.date === todayStr);
-      setSession(todayRecord || null);
+
     } catch (error) {
       console.error('Fetch error:', error);
     }
     setLoading(false);
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchAttendance(); }, [user]);
 
-  const handlePunch = async () => {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-    const dateStr = now.toISOString().split('T')[0];
 
-    try {
-      if (!session) {
-        // PUNCH IN
-        await api.post('/attendance', {
-          name: user.fullName || user.firstName || user.name,
-          empId: user.id || '',
-          role: user.role || '',
-          date: dateStr,
-          checkIn: timeStr,
-          checkOut: '--',
-          status: 'Present'
-        });
-      } else {
-        // PUNCH OUT
-        if (session.checkOut !== '--') {
-          alert("Already punched out for today.");
-          return;
-        }
-        await api.put(`/attendance/${session.id}`, {
-          checkOut: timeStr,
-          status: 'Out'
-        });
-      }
-      fetchAttendance();
-    } catch (error) {
-      alert('Action failed: ' + error.message);
-    }
-  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -103,6 +73,10 @@ export default function Attendance({ user }) {
   });
 
   const handleManualAdd = async () => {
+    if (!manualForm.date || !manualForm.empId?.trim() || !manualForm.checkIn || !manualForm.checkOut) {
+      alert("Please fill out all mandatory fields: Date, Employee ID, Check In, and Check Out.");
+      return;
+    }
     try {
       const formatTime = (time) => {
         const [h, m] = time.split(':');
@@ -128,7 +102,7 @@ export default function Attendance({ user }) {
       setView('main');
       fetchAttendance();
     } catch (error) {
-      alert('Failed to add entry: ' + error.message);
+      alert('Failed to add entry: ' + error.message, 'error', 'Error');
     }
   };
 
@@ -143,13 +117,13 @@ export default function Attendance({ user }) {
           
           <div className="manual-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label style={{ fontWeight: 700, fontSize: '0.85rem', color: '#475569' }}>Select Date</label>
+              <label style={{ fontWeight: 700, fontSize: '0.85rem', color: '#475569' }}>Select Date *</label>
               <input type="date" value={manualForm.date} onChange={e => setManualForm({...manualForm, date: e.target.value})} style={{ padding: '0.75rem', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }} />
             </div>
 
             <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontWeight: 700, fontSize: '0.85rem', color: '#475569' }}>Employee ID</label>
+                <label style={{ fontWeight: 700, fontSize: '0.85rem', color: '#475569' }}>Employee ID *</label>
                 <input type="text" value={manualForm.empId} onChange={e => setManualForm({...manualForm, empId: e.target.value})} style={{ padding: '0.75rem', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }} />
               </div>
               <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -160,11 +134,11 @@ export default function Attendance({ user }) {
 
             <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontWeight: 700, fontSize: '0.85rem', color: '#475569' }}>Check In Time</label>
+                <label style={{ fontWeight: 700, fontSize: '0.85rem', color: '#475569' }}>Check In Time *</label>
                 <input type="time" value={manualForm.checkIn} onChange={e => setManualForm({...manualForm, checkIn: e.target.value})} style={{ padding: '0.75rem', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }} />
               </div>
               <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontWeight: 700, fontSize: '0.85rem', color: '#475569' }}>Check Out Time</label>
+                <label style={{ fontWeight: 700, fontSize: '0.85rem', color: '#475569' }}>Check Out Time *</label>
                 <input type="time" value={manualForm.checkOut} onChange={e => setManualForm({...manualForm, checkOut: e.target.value})} style={{ padding: '0.75rem', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }} />
               </div>
             </div>

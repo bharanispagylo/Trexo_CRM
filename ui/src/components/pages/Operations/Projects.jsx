@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
 import './Projects.css';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { useAlert } from '../../../context/AlertContext';
 
 export default function Projects({ user, initialSelectedProject, onClearInitialProject, onNavigateToTasks }) {
   const [projects, setProjects] = useState([]);
@@ -56,16 +57,20 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     priority: 'Medium'
   });
 
-  const [expandedProjectId, setExpandedProjectId] = useState(null);
-  const { can, getLevel } = usePermissions();
 
+  const [selectedProjectIds, setSelectedProjectIds] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('All');
+  const { can, getLevel } = usePermissions();
+  const { alert, confirm } = useAlert();
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (initialSelectedProject) {
       setSelectedProject(initialSelectedProject);
       setCurrentView('detail');
       if (onClearInitialProject) onClearInitialProject();
     }
-  }, [initialSelectedProject]);
+  }, [initialSelectedProject, onClearInitialProject]);
 
   // ── FETCH DATA ──
   const fetchData = async () => {
@@ -91,6 +96,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     setLoading(false);
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchData(); }, []);
 
   const formatDateForInput = (dateStr) => {
@@ -132,6 +138,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       
       seedMissing();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProject, loading]);
 
   // ── DETAIL VIEW HANDLERS ──
@@ -167,7 +174,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
   const handleAddMember = async () => {
     if (!selectedEmployeeToAdd) {
-      alert('Please select an employee to add');
+      alert('Please select an employee to add', 'warning', 'No Selection');
       return;
     }
     try {
@@ -184,19 +191,27 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         members: currentMembers.join(', ')
       });
 
+      const emp = employees.find(e => e.name.trim().toLowerCase() === selectedEmployeeToAdd.trim().toLowerCase());
+      if (emp) {
+        await api.put(`/employees/${emp.id}`, {
+          projectName: selectedProject.name,
+          projectStatus: 'Active'
+        });
+      }
+
       setSelectedEmployeeToAdd('');
       setShowAddMemberModal(false);
       fetchData();
-      alert('Member added to project successfully!');
+      alert('Member added to project successfully!', 'success', 'Member Added');
     } catch (error) {
       console.error('Error adding member:', error);
-      alert('Failed to add member: ' + error.message);
+      alert('Failed to add member: ' + error.message, 'error', 'Error');
     }
   };
 
   const handleCreateAndAddMember = async () => {
     if (!createMemberForm.name.trim()) {
-      alert('Please enter a member name');
+      alert('Please enter a member name', 'warning', 'Required');
       return;
     }
     try {
@@ -227,22 +242,33 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       setCreateMemberForm({ name: '', role: '', status: 'Active' });
       setShowCreateMemberModal(false);
       fetchData();
-      alert('Member created and added to project successfully!');
+      alert('Member created and added to project successfully!', 'success', 'Done');
     } catch (error) {
       console.error('Error creating and adding member:', error);
-      alert('Failed to create and add member: ' + error.message);
+      alert('Failed to create and add member: ' + error.message, 'error', 'Error');
     }
   };
 
   const handleToggleStatus = async (emp) => {
     if (!emp.id) return;
-    const newStatus = emp.status === 'Inactive' ? 'Active' : 'Inactive';
+    
+    let inactiveProjects = (emp.projectStatus || '').split(',').map(s => s.trim()).filter(Boolean);
+    const projName = selectedProject.name;
+    
+    if (inactiveProjects.includes(projName)) {
+      inactiveProjects = inactiveProjects.filter(p => p !== projName);
+    } else {
+      inactiveProjects.push(projName);
+    }
+    
+    const newStatusStr = inactiveProjects.join(', ');
+    
     try {
-      await api.put(`/employees/${emp.id}`, { status: newStatus });
+      await api.put(`/employees/${emp.id}`, { projectStatus: newStatusStr });
       fetchData();
     } catch (error) {
       console.error('Toggle status error:', error);
-      alert('Failed to update status');
+      alert('Failed to update status', 'error', 'Error');
     }
   };
 
@@ -252,7 +278,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       await api.put(`/employees/${editingEmployee.id}`, {
         name: editingEmployee.name,
         role: editingEmployee.role,
-        status: editingEmployee.status
+        projectStatus: editingEmployee.status
       });
       // If the name changed, we also need to update the project's member list!
       const originalName = employees.find(e => e.id === editingEmployee.id)?.name || '';
@@ -269,10 +295,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       setShowEditMemberModal(false);
       setEditingEmployee(null);
       fetchData();
-      alert('Member updated successfully!');
+      alert('Member updated successfully!', 'success', 'Updated');
     } catch (error) {
       console.error('Save edit member error:', error);
-      alert('Failed to save changes');
+      alert('Failed to save changes', 'error', 'Error');
     }
   };
 
@@ -290,38 +316,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     }
   };
 
-  const [newTaskNames, setNewTaskNames] = useState({}); // { listId: 'name' }
 
-  const handleAddTask = async (listId) => {
-    const taskName = newTaskNames[listId];
-    if (!taskName?.trim()) return;
-
-    try {
-      await api.post('/tasks', {
-        title: taskName,
-        taskListId: listId,
-        status: 'To Do'
-      });
-      setNewTaskNames({ ...newTaskNames, [listId]: '' });
-      fetchData();
-    } catch (error) {
-      console.error('Add task error:', error);
-    }
-  };
-
-  const handleRemoveTask = async (taskId) => {
-    if (!window.confirm('Remove this task?')) return;
-    try {
-      await api.delete(`/tasks/${taskId}`);
-      fetchData();
-    } catch (error) {
-      console.error('Delete task error:', error);
-    }
-  };
 
   // ── LIST HANDLERS ──
   const handleAdd = async () => {
-    if (!form.name.trim()) return;
+    if (!form.name?.trim() || !form.client?.trim() || !form.description?.trim()) {
+      alert("Please fill out all mandatory fields: Project Name, Client, and Description.", 'warning', 'Required Fields');
+      return;
+    }
     try {
       if (form.id) {
         await api.put(`/projects/${form.id}`, form);
@@ -338,33 +340,35 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       }
     } catch (error) {
       console.error('Save error:', error);
-      alert('Failed to save project');
+      alert('Failed to save project', 'error', 'Error');
     }
   };
 
   const handleRemove = async (id) => {
-    if (!window.confirm('Remove this project?')) return;
-    try {
-      await api.delete(`/projects/${id}`);
-      fetchData();
-    } catch (error) {
-      console.error('Delete error:', error);
-    }
+    confirm('Remove this project? This action cannot be undone.', async () => {
+      try {
+        await api.delete(`/projects/${id}`);
+        fetchData();
+      } catch (error) {
+        console.error('Delete error:', error);
+      }
+    }, 'Delete Project');
   };
 
   const handleRemoveList = async (listId) => {
-    if (!window.confirm('Delete this task list?')) return;
-    try {
-      await api.delete(`/task-lists/${listId}`);
-      fetchData();
-    } catch (error) {
-      console.error('Delete list error:', error);
-    }
+    confirm('Delete this task list? All tasks inside will also be removed.', async () => {
+      try {
+        await api.delete(`/task-lists/${listId}`);
+        fetchData();
+      } catch (error) {
+        console.error('Delete list error:', error);
+      }
+    }, 'Delete Task List');
   };
 
   const handleRenameList = async (listId) => {
     if (!editingListName.trim()) {
-      alert('Category name cannot be empty.');
+      alert('Category name cannot be empty.', 'warning', 'Required');
       return;
     }
     try {
@@ -374,7 +378,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       fetchData();
     } catch (error) {
       console.error('Rename list error:', error);
-      alert('Failed to rename category.');
+      alert('Failed to rename category.', 'error', 'Error');
     }
   };
 
@@ -409,8 +413,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleSaveTask = async () => {
-    if (!taskFormFields.title?.trim()) {
-      alert('Task title is required.');
+    if (!taskFormFields.title?.trim() || !taskFormFields.description?.trim()) {
+      alert('Task title and description are required.', 'warning', 'Required Fields');
       return;
     }
     
@@ -437,19 +441,20 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       fetchData();
     } catch (error) {
       console.error('Save task error:', error);
-      alert('Failed to save task');
+      alert('Failed to save task', 'error', 'Error');
     }
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (!window.confirm('Are you sure you want to delete this task?')) return;
-    try {
-      await api.delete(`/tasks/${taskId}`);
-      fetchData();
-    } catch (error) {
-      console.error('Delete task error:', error);
-      alert('Failed to delete task');
-    }
+    confirm('Are you sure you want to delete this task?', async () => {
+      try {
+        await api.delete(`/tasks/${taskId}`);
+        fetchData();
+      } catch (error) {
+        console.error('Delete task error:', error);
+        alert('Failed to delete task', 'error', 'Error');
+      }
+    }, 'Delete Task');
   };
 
   const handleOpenCreateQueryModal = () => {
@@ -482,7 +487,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
   const handleSaveQuery = async () => {
     if (!queryFormFields.title?.trim()) {
-      alert('Query title is required.');
+      alert('Query title is required.', 'warning', 'Required');
       return;
     }
 
@@ -507,19 +512,20 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       fetchData();
     } catch (error) {
       console.error('Save query error:', error);
-      alert('Failed to save query');
+      alert('Failed to save query', 'error', 'Error');
     }
   };
 
   const handleDeleteQuery = async (queryId) => {
-    if (!window.confirm('Are you sure you want to delete this query?')) return;
-    try {
-      await api.delete(`/project-queries/${queryId}`);
-      fetchData();
-    } catch (error) {
-      console.error('Delete query error:', error);
-      alert('Failed to delete query');
-    }
+    confirm('Are you sure you want to delete this query?', async () => {
+      try {
+        await api.delete(`/project-queries/${queryId}`);
+        fetchData();
+      } catch (error) {
+        console.error('Delete query error:', error);
+        alert('Failed to delete query', 'error', 'Error');
+      }
+    }, 'Delete Query');
   };
 
   const renderForm = () => (
@@ -531,15 +537,15 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       
       <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
         <div className="saas-field">
-          <label className="saas-label">Project Name</label>
+          <label className="saas-label">Project Name *</label>
           <input className="saas-input" placeholder="e.g. Phoenix Redesign" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
         </div>
         <div className="saas-field">
-          <label className="saas-label">Client</label>
+          <label className="saas-label">Client *</label>
           <input className="saas-input" placeholder="e.g. Spagylo Technologies" value={form.client} onChange={e => setForm({...form, client: e.target.value})} />
         </div>
         <div className="saas-field" style={{ gridColumn: 'span 2' }}>
-          <label className="saas-label">Description</label>
+          <label className="saas-label">Description *</label>
           <textarea className="saas-textarea" style={{ minHeight: '60px' }} placeholder="Project description..." value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
         </div>
         <div className="saas-field">
@@ -665,7 +671,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             </div>
 
             <div className="saas-field">
-              <label className="saas-label">Description</label>
+              <label className="saas-label">Description *</label>
               <textarea
                 className="saas-textarea"
                 placeholder="Task details..."
@@ -1081,7 +1087,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>Queries Opened</span>
-                <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>6</span>
+                <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>0</span>
                 <button style={{ background: 'none', border: 'none', padding: 0, color: '#64748b', fontSize: '0.75rem', fontWeight: '500', cursor: 'pointer', textAlign: 'left', marginTop: '0.2rem' }} onClick={() => setDetailTab('Queries')}>View Queries</button>
               </div>
             </div>
@@ -1091,8 +1097,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>Delivery Status</span>
-                <span style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0ea5e9' }}>On Track</span>
-                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>5 days left</span>
+                <span style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0ea5e9' }}>-</span>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>-</span>
               </div>
             </div>
           </div>
@@ -1150,7 +1156,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                   </div>
                   <div style={{ width: '30px', color: '#cbd5e1' }}>:</div>
                   <div style={{ color: '#0f172a', fontWeight: '500', fontSize: '0.85rem', maxWidth: '600px', lineHeight: '1.6' }}>
-                    {selectedProject.description || 'This project is for developing a complete CRM system including leads, pipeline, tasks, reports, and analytics for internal team and clients.'}
+                    {selectedProject.description || '-'}
                   </div>
                 </div>
 
@@ -1160,7 +1166,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     Client
                   </div>
                   <div style={{ width: '30px', color: '#cbd5e1' }}>:</div>
-                  <div style={{ color: '#0f172a', fontWeight: '700', fontSize: '0.9rem' }}>{selectedProject.client || 'Spagylo Technologies'}</div>
+                  <div style={{ color: '#0f172a', fontWeight: '700', fontSize: '0.9rem' }}>{selectedProject.client || '-'}</div>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1183,21 +1189,21 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     Estimated Hours
                   </div>
                   <div style={{ width: '30px', color: '#cbd5e1' }}>:</div>
-                  <div style={{ color: '#0f172a', fontWeight: '700', fontSize: '0.9rem', width: '150px' }}>{selectedProject.estimatedHours || 320} hrs</div>
+                  <div style={{ color: '#0f172a', fontWeight: '700', fontSize: '0.9rem', width: '150px' }}>{selectedProject.estimatedHours ? `${selectedProject.estimatedHours} hrs` : '-'}</div>
 
                   <div style={{ width: '150px', display: 'flex', alignItems: 'center', gap: '1rem', color: '#475569', fontWeight: '600', fontSize: '0.85rem' }}>
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     Actual Hours
                   </div>
                   <div style={{ width: '30px', color: '#cbd5e1' }}>:</div>
-                  <div style={{ color: '#0f172a', fontWeight: '700', fontSize: '0.9rem', width: '150px' }}>{selectedProject.actualHours || 208} hrs</div>
+                  <div style={{ color: '#0f172a', fontWeight: '700', fontSize: '0.9rem', width: '150px' }}>{selectedProject.actualHours ? `${selectedProject.actualHours} hrs` : '-'}</div>
 
                   <div style={{ width: '150px', display: 'flex', alignItems: 'center', gap: '1rem', color: '#475569', fontWeight: '600', fontSize: '0.85rem' }}>
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                     Billable Hours
                   </div>
                   <div style={{ width: '30px', color: '#cbd5e1' }}>:</div>
-                  <div style={{ color: '#0f172a', fontWeight: '700', fontSize: '0.9rem' }}>{selectedProject.billableHours || 200} hrs</div>
+                  <div style={{ color: '#0f172a', fontWeight: '700', fontSize: '0.9rem' }}>{selectedProject.billableHours ? `${selectedProject.billableHours} hrs` : '-'}</div>
                 </div>
 
               </div>
@@ -1210,12 +1216,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 // View A: List of Task Categories
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>Project Task Categories</h3>
+                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>Task Details</h3>
                     {can('projects', 'create') && (
                       <div className="add-list-inline" style={{ marginTop: 0, display: 'flex', gap: '0.5rem' }}>
                         <input 
                           className="saas-input" 
-                          placeholder="New Category Name..." 
+                          placeholder="New Task Name..." 
                           style={{ width: '200px', height: '36px', fontSize: '0.85rem', padding: '0 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none' }}
                           value={newListName}
                           onChange={e => setNewListName(e.target.value)}
@@ -1225,7 +1231,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                           style={{ padding: '0 1rem', height: '36px', fontSize: '0.8rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
                           onClick={handleAddList}
                         >
-                          + Add Category
+                          + Add Task
                         </button>
                       </div>
                     )}
@@ -1333,9 +1339,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                     style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.1rem', transition: 'color 0.2s', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
                                     title="Delete Category"
                                     onClick={() => {
-                                      if (window.confirm(`Delete "${list.name}" list and all its tasks?`)) {
-                                        handleRemoveList(list.id);
-                                      }
+                                      confirm(`Delete "${list.name}" list and all its tasks?`, () => handleRemoveList(list.id), 'Delete Category');
                                     }}
                                     onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
                                     onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
@@ -1564,8 +1568,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         const emp = employees.find(e => e.name.trim().toLowerCase() === m.toLowerCase()) || {};
                         const usr = users.find(u => (u.fullName || '').trim().toLowerCase() === m.toLowerCase()) || {};
                         
-                        const statusVal = emp.status || 'Active';
-                        const isActive = statusVal.toLowerCase() !== 'inactive';
+                        const inactiveProjects = (emp.projectStatus || '').split(',').map(s => s.trim()).filter(Boolean);
+                        const isActive = !inactiveProjects.includes(selectedProject.name);
+                        const statusVal = isActive ? 'Active' : 'Inactive';
                         const designation = emp.role || 'Member';
                         
                         const loggedInName = (user?.fullName || user?.name || '').trim().toLowerCase();
@@ -1636,9 +1641,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                                     {/* Delete Icon */}
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ cursor: 'pointer', color: '#ef4444' }} onClick={() => {
-                                      if (window.confirm(`Delete member "${m}" from this project?`)) {
-                                        toggleMemberDetail(m);
-                                      }
+                                      confirm(`Delete member "${m}" from this project?`, () => toggleMemberDetail(m), 'Remove Member');
                                     }}>
                                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
@@ -2227,15 +2230,44 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   }
 
   // ── RENDER LIST VIEW ──
-  const mockClients = ["Spagylo Technologies", "TechSolutions Pvt. Ltd.", "FutureSoft Inc.", "Global Enterprises", "Brandify Solutions", "Insight Analytics"];
-  const mockStatusMap = {
-    '0': 'In Progress',
-    '1': 'In Progress',
-    '2': 'On Hold',
-    '3': 'In Progress',
-    '4': 'Completed',
-    '5': 'In Progress',
-    '6': 'Pending'
+
+
+  const viewLevel = getLevel('projects', 'view');
+  let allowedProjects = projects;
+
+  if (viewLevel === 'Self') {
+    const loggedInName = (user?.fullName || user?.name || '').trim().toLowerCase();
+    allowedProjects = allowedProjects.filter(p => {
+      const rawMembers = (p.members || '').split(',').map(m => m.trim()).filter(m => m !== "");
+      if (!rawMembers.some(m => m.toLowerCase() === loggedInName)) return false;
+      const emp = employees.find(e => e.name.trim().toLowerCase() === loggedInName);
+      if (emp) {
+        if ((emp.status || 'Active').toLowerCase() === 'inactive') return false;
+        const inactiveProjects = (emp.projectStatus || '').split(',').map(s => s.trim()).filter(Boolean);
+        if (inactiveProjects.includes(p.name)) return false;
+      }
+      return true;
+    });
+  }
+
+  const filteredProjects = statusFilter === 'All' 
+    ? allowedProjects 
+    : allowedProjects.filter(p => (p.status || 'In Progress') === statusFilter);
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedProjectIds(filteredProjects.map(p => p.id));
+    } else {
+      setSelectedProjectIds([]);
+    }
+  };
+
+  const handleSelectOne = (e, id) => {
+    if (e.target.checked) {
+      setSelectedProjectIds(prev => [...prev, id]);
+    } else {
+      setSelectedProjectIds(prev => prev.filter(pid => pid !== id));
+    }
   };
 
   return (
@@ -2247,11 +2279,17 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>Manage and track all your projects.</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
-          <button style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', color: '#334155', cursor: 'pointer' }}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-            Filters
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-          </button>
+          <select 
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', color: '#334155', cursor: 'pointer', outline: 'none' }}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="All">All Statuses</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
+            <option value="On Hold">On Hold</option>
+            <option value="Pending">Pending</option>
+          </select>
           <button style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={() => setShowForm(true)}>
             + Add Project
           </button>
@@ -2265,7 +2303,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       <div className="saas-table-container" style={{ padding: '0', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
         {/* Table Top Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', background: 'white' }}>
-          <span style={{ fontWeight: '700', color: '#0f172a', fontSize: '0.95rem' }}>Total Projects: {projects.length || 15}</span>
+          <span style={{ fontWeight: '700', color: '#0f172a', fontSize: '0.95rem' }}>Total Projects: {filteredProjects.length || 0}</span>
           
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <div style={{ position: 'relative', width: '250px' }}>
@@ -2285,7 +2323,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           <thead>
             <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
               <th style={{ width: '40px', padding: '1rem 1.5rem', background: 'white' }}>
-                <input type="checkbox" style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} />
+                <input 
+                  type="checkbox" 
+                  style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
+                  checked={filteredProjects.length > 0 && selectedProjectIds.length === filteredProjects.length}
+                  onChange={handleSelectAll}
+                />
               </th>
               <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>#</th>
               <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Project Name</th>
@@ -2301,16 +2344,16 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           <tbody>
             {loading ? (
               <tr><td colSpan="10" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>Syncing workspace...</td></tr>
-            ) : projects.length === 0 ? (
+            ) : filteredProjects.length === 0 ? (
               <tr><td colSpan="10" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No projects in this view.</td></tr>
             ) : (
-              projects.map((proj, idx) => {
-                const client = mockClients[idx % mockClients.length];
-                const estHours = (150 + (idx * 50)) + ' hrs';
-                const actHours = (80 + (idx * 30)) + ' hrs';
-                const bilHours = (60 + (idx * 25)) + ' hrs';
-                const createdOn = proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}) : '12 May 2026';
-                const displayStatus = mockStatusMap[(idx % 7).toString()] || 'In Progress';
+              filteredProjects.map((proj, idx) => {
+                const client = proj.client || '-';
+                const estHours = proj.estimatedHours ? `${proj.estimatedHours} hrs` : '-';
+                const actHours = proj.actualHours ? `${proj.actualHours} hrs` : '-';
+                const bilHours = proj.billableHours ? `${proj.billableHours} hrs` : '-';
+                const createdOn = proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}) : '-';
+                const displayStatus = proj.status || 'In Progress';
                 
                 let statusBg = '#dcfce7'; let statusColor = '#16a34a';
                 if (displayStatus === 'On Hold') { statusBg = '#fef3c7'; statusColor = '#d97706'; }
@@ -2320,7 +2363,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 return (
                   <tr key={proj.id} style={{ borderBottom: '1px solid #f1f5f9', background: 'white' }}>
                     <td style={{ padding: '1rem 1.5rem' }}>
-                      <input type="checkbox" style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} />
+                      <input 
+                        type="checkbox" 
+                        style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
+                        checked={selectedProjectIds.includes(proj.id)}
+                        onChange={(e) => handleSelectOne(e, proj.id)}
+                      />
                     </td>
                     <td style={{ padding: '1rem 1rem', fontSize: '0.85rem', color: '#1e293b', fontWeight: '600' }}>
                       {idx + 1}

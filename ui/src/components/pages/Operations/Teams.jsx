@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { useAlert } from '../../../context/AlertContext';
 
 export default function Teams() {
   const [teams, setTeams] = useState([]);
@@ -8,6 +9,7 @@ export default function Teams() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', lead: '', members: '' });
   const { can } = usePermissions();
+  const { alert } = useAlert();
 
   // ── FETCH from API ──
   const fetchTeams = async () => {
@@ -37,7 +39,7 @@ export default function Teams() {
       fetchTeams();
     } catch (error) {
       console.error('Insert error:', error);
-      alert('Failed to create team: ' + error.message);
+      alert('Failed to create team: ' + error.message, 'error', 'Error');
     }
   };
 
@@ -58,7 +60,7 @@ export default function Teams() {
         <div className="data-card" style={{ marginBottom: '1.5rem', backgroundColor: '#f8fafc' }}>
           <h3 style={{ marginTop: 0 }}>New Team</h3>
           <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-            <input type="text" placeholder="Team Name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="btn btn-outline" style={{ flex: 2, backgroundColor: 'white' }} />
+            <input type="text" placeholder="Team Name *" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="btn btn-outline" style={{ flex: 2, backgroundColor: 'white' }} />
             <input type="text" placeholder="Team Lead" value={form.lead} onChange={e => setForm({...form, lead: e.target.value})} className="btn btn-outline" style={{ flex: 2, backgroundColor: 'white' }} />
             <input type="number" placeholder="Members" value={form.members} onChange={e => setForm({...form, members: e.target.value})} className="btn btn-outline" style={{ width: '100px', backgroundColor: 'white' }} />
           </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
 import './Employee.css';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { useAlert } from '../../../context/AlertContext';
 
 export default function Employee() {
   const [employees, setEmployees] = useState([]);
@@ -19,6 +20,7 @@ export default function Employee() {
     projectStatus: 'Inactive'
   });
   const { can } = usePermissions();
+  const { alert, confirm } = useAlert();
 
   useEffect(() => {
     const handleOpenForm = () => setShowForm(true);
@@ -42,7 +44,10 @@ export default function Employee() {
 
   // ── INSERT into API ──
   const handleAdd = async () => {
-    if (!form.name.trim()) return;
+    if (!form.name?.trim() || !form.role?.trim()) {
+      alert("Please fill out all mandatory fields: Full Name and Role.", 'warning', 'Required Fields');
+      return;
+    }
     try {
       await api.post('/employees', {
         id: form.id || `EMP-${Date.now().toString().slice(-3)}`,
@@ -60,18 +65,19 @@ export default function Employee() {
       fetchEmployees();
     } catch (error) {
       console.error('Insert error:', error);
-      alert('Failed to add employee: ' + error.message);
+      alert('Failed to add employee: ' + error.message, 'error', 'Error');
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this employee record?')) return;
-    try {
-      await api.delete(`/employees/${id}`);
-      fetchEmployees();
-    } catch (error) {
-      console.error('Delete error:', error);
-    }
+    confirm('Delete this employee record? This cannot be undone.', async () => {
+      try {
+        await api.delete(`/employees/${id}`);
+        fetchEmployees();
+      } catch (error) {
+        console.error('Delete error:', error);
+      }
+    }, 'Delete Employee');
   };
 
   return (
@@ -98,7 +104,7 @@ export default function Employee() {
           
           <div className="form-grid">
             <div className="saas-field">
-              <label className="saas-label">Full Name</label>
+              <label className="saas-label">Full Name *</label>
               <input className="saas-input" placeholder="e.g. Santi Cazorla" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
             </div>
             <div className="saas-field">
@@ -114,7 +120,7 @@ export default function Employee() {
               <input className="saas-input" placeholder="e.g. EMP-004 (Auto if empty)" value={form.id} onChange={e => setForm({...form, id: e.target.value})} />
             </div>
             <div className="saas-field">
-              <label className="saas-label">Role</label>
+              <label className="saas-label">Role *</label>
               <input className="saas-input" placeholder="e.g. UI/UX Designer" value={form.role} onChange={e => setForm({...form, role: e.target.value})} />
             </div>
             <div className="saas-field">

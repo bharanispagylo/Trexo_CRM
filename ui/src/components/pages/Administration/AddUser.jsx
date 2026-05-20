@@ -1,20 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
-import { createClient } from '@supabase/supabase-js';
 import './AddUser.css';
-import { usePermissions } from '../../../hooks/usePermissions';
-
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
-);
+import { useAlert } from '../../../context/AlertContext';
 
 export default function AddUser({ onBack }) {
   const [roles, setRoles] = useState(['Admin', 'Employee']);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState({});
-  const { can } = usePermissions();
+  const { alert } = useAlert();
+
 
   
   const [form, setForm] = useState({ 
@@ -71,7 +66,7 @@ export default function AddUser({ onBack }) {
       }
     } catch (error) {
       console.error('Cloudinary Upload error:', error);
-      alert('Failed to upload image: ' + error.message);
+      alert('Failed to upload image: ' + error.message, 'error', 'Upload Failed');
       return null;
     } finally {
       setUploading(false);
@@ -106,11 +101,11 @@ export default function AddUser({ onBack }) {
     setLoading(true);
     try {
       await api.post('/users', form);
-      alert('User added successfully!');
+      alert('User added successfully!', 'success', 'User Created');
       onBack();
     } catch (error) {
       console.error('Insert error:', error);
-      alert('Failed to add user: ' + error.message);
+      alert('Failed to add user: ' + error.message, 'error', 'Error');
     } finally {
       setLoading(false);
     }
@@ -128,7 +123,7 @@ export default function AddUser({ onBack }) {
       <div className="saas-form-container">
         <div className="form-grid">
           <div className="saas-field full-width">
-            <label className="saas-label">Full Name</label>
+            <label className="saas-label">Full Name *</label>
             <input 
               className={`saas-input ${errors.fullName ? 'error' : ''}`} 
               placeholder="John Doe" 
@@ -139,7 +134,7 @@ export default function AddUser({ onBack }) {
             {errors.fullName && <span className="error-text">{errors.fullName}</span>}
           </div>
           <div className="saas-field">
-            <label className="saas-label">Email Address</label>
+            <label className="saas-label">Email Address *</label>
             <input 
               className={`saas-input ${errors.email ? 'error' : ''}`} 
               type="email" 
@@ -151,7 +146,7 @@ export default function AddUser({ onBack }) {
             {errors.email && <span className="error-text">{errors.email}</span>}
           </div>
           <div className="saas-field">
-            <label className="saas-label">Password</label>
+            <label className="saas-label">Password *</label>
             <input 
               className={`saas-input ${errors.password ? 'error' : ''}`} 
               type="password" 
