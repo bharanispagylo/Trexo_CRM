@@ -392,7 +392,7 @@ app.delete('/api/projects/:id', async (req, res) => {
 app.get('/api/task-lists', async (req, res) => {
   try {
     const taskLists = await prisma.taskList.findMany({
-      include: { tasks: true },
+      include: { tasks: true, project: true },
       orderBy: { createdAt: 'desc' }
     });
     res.json(taskLists);
@@ -655,7 +655,90 @@ app.delete('/api/project-queries/:id', async (req, res) => {
   }
 });
 
-// 10. Role Permissions
+// 10. Reports
+app.get('/api/reports/monthly', async (req, res) => {
+  try {
+    const { month, year, project, assignee } = req.query;
+    
+    // Default to current month/year if not provided
+    const currentDate = new Date();
+    const targetMonth = month ? parseInt(month) - 1 : currentDate.getMonth(); // 0-indexed
+    const targetYear = year ? parseInt(year) : currentDate.getFullYear();
+    
+    const startDate = new Date(targetYear, targetMonth, 1);
+    const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
+    
+    const whereClause = {
+      deliveredDate: {
+        gte: startDate,
+        lte: endDate,
+      }
+    };
+    
+    if (project && project !== 'All Projects') {
+      whereClause.projectName = project;
+    }
+    
+    if (assignee && assignee !== 'All Assignees') {
+      whereClause.assignees = {
+        contains: assignee
+      };
+    }
+
+    const tasks = await prisma.task.findMany({
+      where: whereClause,
+      orderBy: { deliveredDate: 'desc' }
+    });
+    
+    res.json(tasks);
+  } catch (error) {
+    console.error('GET /api/reports/monthly error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 11. Custom Reports (Range)
+app.get('/api/reports/range', async (req, res) => {
+  try {
+    const { startDate, endDate, project, assignee } = req.query;
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'startDate and endDate are required' });
+    }
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    const whereClause = {
+      deliveredDate: {
+        gte: start,
+        lte: end,
+      }
+    };
+    
+    if (project && project !== 'All Projects') {
+      whereClause.projectName = project;
+    }
+    
+    if (assignee && assignee !== 'All Assignees') {
+      whereClause.assignees = {
+        contains: assignee
+      };
+    }
+
+    const tasks = await prisma.task.findMany({
+      where: whereClause,
+      orderBy: { deliveredDate: 'desc' }
+    });
+    
+    res.json(tasks);
+  } catch (error) {
+    console.error('GET /api/reports/range error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 12. Role Permissions
 app.get('/api/roles/permissions', async (req, res) => {
   try {
     const perms = await prisma.rolePermission.findMany();
