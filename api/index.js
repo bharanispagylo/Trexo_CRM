@@ -42,6 +42,29 @@ prisma.$connect()
   })
   .catch(console.error);
 
+// Helper to create notifications for multiple users
+const createNotification = async (userIds, title, message) => {
+  if (!userIds || !prisma.notification) return;
+  const users = (typeof userIds === 'string' ? userIds.split(',') : userIds).map(u => u.trim()).filter(Boolean);
+  try {
+    for (const user of users) {
+      await prisma.notification.create({
+        data: { userId: user, title, message }
+      });
+    }
+  } catch (err) {
+    console.error('[Notification Error]', err.message);
+  }
+};
+
+const notifyAdmins = async (title, message) => {
+  try {
+    const admins = await prisma.user.findMany({ where: { role: 'Admin' } });
+    const adminNames = admins.map(a => a.fullName || `${a.firstName} ${a.lastName}`.trim());
+    await createNotification(adminNames, title, message);
+  } catch (err) {}
+};
+
 const sanitizeTaskData = (taskData) => {
   if (!prisma.task || !prisma.task.fields) return taskData;
   const sanitized = {};
@@ -190,6 +213,8 @@ app.post('/api/employees', async (req, res) => {
     const employee = await prisma.employee.create({
       data: employeeData
     });
+    notifyAdmins(`New Employee Added`, `${employee.name} has been added to the system.`);
+    createNotification([employee.name], `Welcome!`, `Your employee profile has been created.`);
     res.json(employee);
   } catch (error) {
     console.error('POST /api/employees error:', error);
@@ -203,6 +228,7 @@ app.put('/api/employees/:id', async (req, res) => {
       where: { id: req.params.id },
       data: req.body
     });
+    createNotification([employee.name], `Profile Updated`, `Your employee profile was updated.`);
     res.json(employee);
   } catch (error) {
     console.error('PUT /api/employees error:', error);
@@ -263,6 +289,7 @@ app.post('/api/leaves', async (req, res) => {
     const leave = await prisma.leave.create({
       data: req.body
     });
+    notifyAdmins(`New Leave Request`, `${leave.employeeName} requested leave.`);
     res.json(leave);
   } catch (error) {
     console.error('POST /api/leaves error:', error);
@@ -276,6 +303,7 @@ app.put('/api/leaves/:id', async (req, res) => {
       where: { id: req.params.id },
       data: req.body
     });
+    createNotification([leave.employeeName], `Leave Updated`, `Your leave request status is now: ${leave.status}`);
     res.json(leave);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -353,6 +381,10 @@ app.post('/api/projects', async (req, res) => {
     if (billableHours !== undefined) data.billableHours = parseFloat(billableHours) || 0;
 
     const project = await prisma.project.create({ data });
+    if (project.members) {
+      createNotification(project.members, `New Project: ${project.name}`, `You have been added to the project team.`);
+    }
+    notifyAdmins(`Project Created`, `Project ${project.name} was created.`);
     res.json(project);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -371,6 +403,9 @@ app.put('/api/projects/:id', async (req, res) => {
       where: { id: req.params.id },
       data
     });
+    if (project.members) {
+      createNotification(project.members, `Project Updated`, `Project ${project.name} has been updated.`);
+    }
     res.json(project);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -537,6 +572,12 @@ app.put('/api/tasks/:id', async (req, res) => {
       where: { id: req.params.id },
       data: taskData
     });
+    
+    // Notify assignees about task update
+    if (task.assignees) {
+      createNotification(task.assignees, `Task Updated: ${task.title}`, `Task has been updated by a team member.`);
+    }
+
     res.json(task);
   } catch (error) {
     console.error('PUT /api/tasks error:', error);
@@ -578,20 +619,48 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
         parentId: req.body.parentId || null
       }
     });
+
+    // Notify assignees about the new comment
+    try {
+      const task = await prisma.task.findUnique({ where: { id: req.params.id } });
+      if (task && task.assignees) {
+        // Exclude the author from notifications
+        const assignees = task.assignees.split(',').map(a => a.trim()).filter(a => a && a.toLowerCase() !== comment.author.toLowerCase());
+        createNotification(assignees, `New Comment on ${task.title}`, `${comment.author} commented: "${comment.text.substring(0, 30)}..."`);
+      }
+    } catch (e) {
+      console.error('Failed to send comment notification', e);
+    }
+
     res.json(comment);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.put('/api/tasks/:id/comments/:commentId/like', async (req, res) => {
+app.put('/api/tasks/:id/comments/:commentId/react', async (req, res) => {
   try {
-    const comment = await prisma.comment.update({
+    const { emoji, user } = req.body;
+    const comment = await prisma.comment.findUnique({ where: { id: req.params.commentId } });
+    let reactions = comment.reactions || {};
+    if (typeof reactions === 'string') reactions = JSON.parse(reactions);
+    
+    if (!reactions[emoji]) reactions[emoji] = [];
+    const idx = reactions[emoji].indexOf(user);
+    if (idx > -1) {
+      reactions[emoji].splice(idx, 1);
+      if (reactions[emoji].length === 0) delete reactions[emoji];
+    } else {
+      reactions[emoji].push(user);
+    }
+
+    const updated = await prisma.comment.update({
       where: { id: req.params.commentId },
-      data: { likes: { increment: 1 } }
+      data: { reactions }
     });
-    res.json(comment);
+    res.json(updated);
   } catch (error) {
+    console.error('React error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -617,6 +686,9 @@ app.post('/api/project-queries', async (req, res) => {
         projectId
       }
     });
+    if (query.sentTo) {
+      createNotification([query.sentTo], `New Query Assigned`, `You have a new query: ${query.title}`);
+    }
     res.json(query);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -638,6 +710,9 @@ app.put('/api/project-queries/:id', async (req, res) => {
       where: { id: req.params.id },
       data: updateData
     });
+    if (query.sentTo) {
+      createNotification([query.sentTo], `Query Updated`, `Query ${query.title} was updated.`);
+    }
     res.json(query);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -669,6 +744,7 @@ app.get('/api/reports/monthly', async (req, res) => {
     const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
     
     const whereClause = {
+      status: 'Delivered',
       deliveredDate: {
         gte: startDate,
         lte: endDate,
@@ -710,6 +786,7 @@ app.get('/api/reports/range', async (req, res) => {
     const end = new Date(endDate);
     
     const whereClause = {
+      status: 'Delivered',
       deliveredDate: {
         gte: start,
         lte: end,
@@ -772,6 +849,85 @@ app.delete('/api/roles/permissions/:role', async (req, res) => {
     res.json({ message: `Role ${role} deleted` });
   } catch (error) {
     console.error('Delete error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+// 13. Project Attachments
+app.get('/api/projects/:projectId/attachments', async (req, res) => {
+  try {
+    const attachments = await prisma.projectAttachment.findMany({
+      where: { projectId: req.params.projectId },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(attachments);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/projects/:projectId/attachments', async (req, res) => {
+  try {
+    const attachment = await prisma.projectAttachment.create({
+      data: {
+        ...req.body,
+        projectId: req.params.projectId
+      }
+    });
+    res.json(attachment);
+  } catch (error) {
+    console.error('POST attachment error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/projects/:projectId/attachments/:id', async (req, res) => {
+  try {
+    await prisma.projectAttachment.delete({
+      where: { id: req.params.id }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Notifications
+app.get('/api/notifications/:userId', async (req, res) => {
+  try {
+    const notifications = await prisma.notification.findMany({
+      where: { userId: { equals: req.params.userId, mode: 'insensitive' } },
+      orderBy: { createdAt: 'desc' },
+      take: 50 // Limit to recent 50
+    });
+    res.json(notifications);
+  } catch (error) {
+    console.error('GET /api/notifications error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/notifications/:id/read', async (req, res) => {
+  try {
+    const notification = await prisma.notification.update({
+      where: { id: req.params.id },
+      data: { isRead: true }
+    });
+    res.json(notification);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/notifications/user/:userId/read-all', async (req, res) => {
+  try {
+    const result = await prisma.notification.updateMany({
+      where: { userId: { equals: req.params.userId, mode: 'insensitive' }, isRead: false },
+      data: { isRead: true }
+    });
+    res.json(result);
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
