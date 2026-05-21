@@ -10,7 +10,7 @@ import { PermissionProvider } from "../hooks/usePermissions";
 function Avatar({ initials, image, size = "md", ring = false }) {
   const sizeClass = `avatar-${size}`;
   const ringClass = ring ? "avatar-ring" : "";
-  
+
   if (image) {
     return (
       <div className={`avatar ${sizeClass} ${ringClass}`}>
@@ -21,7 +21,7 @@ function Avatar({ initials, image, size = "md", ring = false }) {
 
   const validInitials = ["RK", "MS", "AK", "PN", "KS"];
   const gradClass = validInitials.includes(initials) ? `avatar-${initials}` : "avatar-default";
-  
+
   return (
     <div className={`avatar ${sizeClass} ${gradClass} ${ringClass}`}>
       {initials}
@@ -34,11 +34,11 @@ function Avatar({ initials, image, size = "md", ring = false }) {
 //  LOGIN PAGE
 // ══════════════════════════════════════════════════════════
 function LoginPage({ onLogin, onRegisterClick }) {
-  const [email, setEmail]       = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPwd, setShowPwd]   = useState(false);
-  const [error, setError]       = useState("");
-  const [loading, setLoading]   = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [demoUsers, setDemoUsers] = useState([]);
 
   useEffect(() => {
@@ -67,10 +67,10 @@ function LoginPage({ onLogin, onRegisterClick }) {
     }
   };
 
-  const fillDemo = (u) => { 
-    setEmail(u.email); 
-    setPassword(u.password); 
-    setError(""); 
+  const fillDemo = (u) => {
+    setEmail(u.email);
+    setPassword(u.password);
+    setError("");
   };
 
   return (
@@ -159,7 +159,7 @@ function LoginPage({ onLogin, onRegisterClick }) {
               <button
                 onClick={() => setShowPwd(v => !v)}
                 className="pwd-toggle-btn"
-              >{showPwd ? "👁️" : "🔒"}</button>
+              >{showPwd ? "" : ""}</button>
             </div>
           </div>
 
@@ -171,7 +171,7 @@ function LoginPage({ onLogin, onRegisterClick }) {
             {loading ? (
               <><span className="spinner"></span> Signing in...</>
             ) : (
-              <><span>🔑</span> Sign In</>
+              <><span></span> Sign In</>
             )}
           </button>
 
@@ -194,10 +194,10 @@ function LoginPage({ onLogin, onRegisterClick }) {
                   onClick={() => fillDemo(u)}
                   className="demo-btn"
                 >
-                  <Avatar 
-                    initials={u.firstName?.charAt(0) || u.fullName?.charAt(0) || "U"} 
+                  <Avatar
+                    initials={u.firstName?.charAt(0) || u.fullName?.charAt(0) || "U"}
                     image={u.profileImage}
-                    size="sm" 
+                    size="sm"
                   />
                   <div className="demo-info">
 
@@ -224,12 +224,12 @@ function LoginPage({ onLogin, onRegisterClick }) {
 //  REGISTER PAGE
 // ══════════════════════════════════════════════════════════
 function RegisterPage({ onRegister, onLoginClick }) {
-  const [name, setName]         = useState("");
-  const [email, setEmail]       = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPwd, setShowPwd]   = useState(false);
-  const [error, setError]       = useState("");
-  const [loading, setLoading]   = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
     setError("");
@@ -382,6 +382,7 @@ const recentEmps = [
   { name: "Karthik Selvam", role: "DevOps Engineer",   dept: "Engineering", joined: "15 Apr 2025", status: "Active",   av: "KS" },
 ];
 
+<<<<<<< HEAD
 const depts = [
   { name: "Engineering", count: 420, pct: 33, color: "bg-blue-500" },
   { name: "Sales",       count: 210, pct: 16, color: "bg-emerald-500" },
@@ -390,6 +391,86 @@ const depts = [
   { name: "Marketing",   count: 180, pct: 14, color: "bg-amber-500" },
   { name: "Others",      count: 231, pct: 18, color: "bg-slate-400" },
 ];
+=======
+        const employees = Array.isArray(employeesData) ? employeesData : [];
+        const leaves = Array.isArray(leavesData) ? leavesData : [];
+
+        const total = employees.length;
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+
+        let newJoinersCount = 0;
+        let activeCount = 0;
+        const deptCounts = {};
+
+        employees.forEach(emp => {
+          if ((emp.status || 'Active') === 'Active') activeCount++;
+
+          if (emp.joinedDate || emp.createdAt) {
+            const d = new Date(emp.joinedDate || emp.createdAt);
+            if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+              newJoinersCount++;
+            }
+          }
+
+          const dpt = emp.dept || 'Others';
+          deptCounts[dpt] = (deptCounts[dpt] || 0) + 1;
+        });
+
+        // Compute On Leave Today (Basic approximation based on Approved leaves that overlap today)
+        const todayStr = new Date().toISOString().split('T')[0];
+        let onLeaveCount = 0;
+        leaves.forEach(l => {
+          if (l.status === 'Approved' && l.dates) {
+            if (l.dates.includes(todayStr) || l.dates.includes(new Date().toLocaleDateString('en-GB'))) {
+              onLeaveCount++;
+            }
+          }
+        });
+
+        setStats({
+          totalEmployees: total,
+          activeThisMonth: activeCount,
+          newJoiners: newJoinersCount,
+          onLeaveToday: onLeaveCount
+        });
+
+        // Recent emps
+        const sorted = [...employees].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+        setRecentEmps(sorted.map(e => ({
+          name: e.name || `${e.firstName || ''} ${e.lastName || ''}`.trim(),
+          role: e.designation || e.role || 'Employee',
+          dept: e.dept || 'Others',
+          joined: (e.joinedDate || e.createdAt) ? new Date(e.joinedDate || e.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
+          status: e.status || 'Active',
+          av: (e.name || e.firstName || 'U').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()
+        })));
+
+        // Depts
+        const colors = ["bg-blue-500", "bg-emerald-500", "bg-violet-500", "bg-rose-500", "bg-amber-500", "bg-slate-400"];
+        const deptArr = Object.entries(deptCounts).map(([name, count], i) => ({
+          name,
+          count,
+          pct: Math.round((count / (total || 1)) * 100),
+          color: colors[i % colors.length]
+        })).sort((a, b) => b.count - a.count);
+
+        setDepts(deptArr);
+
+      } catch (err) {
+        console.error("Dashboard data fetch error:", err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const adminStatsDisplay = [
+    { label: "Total Employees", value: stats.totalEmployees, change: "", up: true, icon: Icons.Users, grad: "from-blue-600 to-blue-400" },
+    { label: "Active This Month", value: stats.activeThisMonth, change: "", up: true, icon: Icons.CheckCircle, grad: "from-emerald-600 to-emerald-400" },
+    { label: "New Joiners", value: stats.newJoiners, change: "", up: true, icon: Icons.UserPlus, grad: "from-violet-600 to-violet-400" },
+    { label: "On Leave Today", value: stats.onLeaveToday, change: "", up: false, icon: Icons.CalendarOff, grad: "from-amber-500 to-amber-400" },
+  ];
+>>>>>>> 1208a21a1af8bbb4bd9be503c554722f01b18ee4
 
 function AdminDashboard({ user, onLogout }) {
   return (
@@ -421,11 +502,11 @@ function AdminDashboard({ user, onLogout }) {
             </p>
           </div>
 
-          <Avatar 
-            initials={user.firstName?.charAt(0) || user.fullName?.charAt(0) || "U"} 
+          <Avatar
+            initials={user.firstName?.charAt(0) || user.fullName?.charAt(0) || "U"}
             image={user.profileImage}
-            size="lg" 
-            ring 
+            size="lg"
+            ring
           />
 
         </div>
@@ -453,12 +534,29 @@ function AdminDashboard({ user, onLogout }) {
               <button className="panel-link">View All →</button>
             </div>
             <div className="list-group">
+<<<<<<< HEAD
               {recentEmps.map((e, i) => (
                 <div key={i} className="list-item">
                   <Avatar initials={e.av} size="sm" />
                   <div className="list-item-info">
                     <div className="list-item-title">{e.name}</div>
                     <div className="list-item-sub">{e.role}</div>
+=======
+              {recentEmps.length === 0 ? (
+                <p style={{ color: '#94a3b8', padding: '1rem' }}>No employees found.</p>
+              ) : (
+                recentEmps.map((e, i) => (
+                  <div key={i} className="list-item">
+                    <Avatar initials={e.av} size="sm" />
+                    <div className="list-item-info">
+                      <div className="list-item-title">{e.name}</div>
+                      <div className="list-item-sub">{e.role}</div>
+                    </div>
+                    <div className="list-item-date">{e.joined}</div>
+                    <span className={`status-badge ${e.status === "Active" ? "status-badge-active" : "status-badge-leave"}`}>
+                      {e.status}
+                    </span>
+>>>>>>> 1208a21a1af8bbb4bd9be503c554722f01b18ee4
                   </div>
                   <div className="list-item-date">{e.joined}</div>
                   <span className={`status-badge ${e.status === "Active" ? "status-badge-active" : "status-badge-leave"}`}>
@@ -471,13 +569,28 @@ function AdminDashboard({ user, onLogout }) {
 
           {/* Dept breakdown */}
           <div className="panel-card panel-card-col-2">
-            <h2 className="panel-title" style={{marginBottom: "1rem"}}>Department Breakdown</h2>
+            <h2 className="panel-title" style={{ marginBottom: "1rem" }}>Department Breakdown</h2>
             <div className="dept-list">
+<<<<<<< HEAD
               {depts.map((d, i) => (
                 <div key={i}>
                   <div className="dept-header">
                     <span className="dept-name">{d.name}</span>
                     <span className="dept-stats">{d.count} · {d.pct}%</span>
+=======
+              {depts.length === 0 ? (
+                <p style={{ color: '#94a3b8' }}>No data available.</p>
+              ) : (
+                depts.map((d, i) => (
+                  <div key={i}>
+                    <div className="dept-header">
+                      <span className="dept-name">{d.name}</span>
+                      <span className="dept-stats">{d.count} · {d.pct}%</span>
+                    </div>
+                    <div className="progress-bg">
+                      <div className={`progress-bar ${d.color}`} style={{ width: `${d.pct}%` }} />
+                    </div>
+>>>>>>> 1208a21a1af8bbb4bd9be503c554722f01b18ee4
                   </div>
                   <div className="progress-bg">
                     <div className={`progress-bar ${d.color}`} style={{ width: `${d.pct}%` }} />
@@ -490,13 +603,20 @@ function AdminDashboard({ user, onLogout }) {
 
         {/* Quick Actions */}
         <div className="quick-actions-panel">
-          <h2 className="panel-title" style={{marginBottom: "1rem"}}>Admin Quick Actions</h2>
+          <h2 className="panel-title" style={{ marginBottom: "1rem" }}>Admin Quick Actions</h2>
           <div className="quick-actions-grid">
             {[
+<<<<<<< HEAD
               { icon: "➕", label: "Add Employee",   color: "action-blue" },
               { icon: "", label: "Leave Requests", color: "action-amber" },
               { icon: "", label: "Reports",        color: "action-violet" },
               { icon: "", label: "KYC Review",     color: "action-rose" },
+=======
+              { icon: Icons.Plus, label: "Add Employee", color: "action-blue", tab: "employees" },
+              { icon: Icons.FileText, label: "Leave Requests", color: "action-amber", tab: "leave" },
+              { icon: Icons.BarChart, label: "Reports", color: "action-violet", tab: "reports" },
+              { icon: Icons.ShieldCheck, label: "KYC Review", color: "action-rose", tab: "users" },
+>>>>>>> 1208a21a1af8bbb4bd9be503c554722f01b18ee4
             ].map((a, i) => (
               <button key={i} className={`action-btn ${a.color}`}>
                 <span>{a.icon}</span> {a.label}
@@ -529,8 +649,8 @@ function EmployeeDashboard({ user, onLogout, setActiveTab }) {
         // 2. Fetch Leaves
         const allLeaves = await api.get('/leaves');
         const myLeaves = (allLeaves || []).filter(l => l.name?.trim().toLowerCase() === userName);
-        setRecentLeaves(myLeaves.slice(0, 5)); 
-        
+        setRecentLeaves(myLeaves.slice(0, 5));
+
         const myApprovedLeaves = myLeaves.filter(l => l.status === 'Approved');
         const usedDays = myApprovedLeaves.reduce((sum, l) => sum + (l.days || 0), 0);
         setLeaveBalance(15 - usedDays);
@@ -566,11 +686,11 @@ function EmployeeDashboard({ user, onLogout, setActiveTab }) {
             </p>
           </div>
 
-          <Avatar 
-            initials={user.firstName?.charAt(0) || user.fullName?.charAt(0) || "U"} 
+          <Avatar
+            initials={user.firstName?.charAt(0) || user.fullName?.charAt(0) || "U"}
             image={user.profileImage}
-            size="lg" 
-            ring 
+            size="lg"
+            ring
           />
 
         </div>
@@ -581,8 +701,13 @@ function EmployeeDashboard({ user, onLogout, setActiveTab }) {
             {/* Stats */}
             <div className="emp-stats-grid">
               {[
+<<<<<<< HEAD
                 { label: "Days Present", value: attendanceCount, icon: "📅", color: "icon-blue" },
                 { label: "Leave Balance", value: leaveBalance,  icon: "🏖️", color: "icon-amber" },
+=======
+                { label: "Days Present", value: attendanceCount, icon: Icons.CalendarCheck, color: "icon-blue" },
+                { label: "Leave Balance", value: leaveBalance, icon: Icons.Coffee, color: "icon-amber" },
+>>>>>>> 1208a21a1af8bbb4bd9be503c554722f01b18ee4
               ].map((s, i) => (
                 <div key={i} className="emp-stat-card">
                   <div className={`emp-stat-icon ${s.color}`}>{s.icon}</div>
@@ -593,22 +718,22 @@ function EmployeeDashboard({ user, onLogout, setActiveTab }) {
             </div>
 
             {/* My Leaves */}
-            <div className="tasks-panel" style={{marginTop: '1.5rem'}}>
+            <div className="tasks-panel" style={{ marginTop: '1.5rem' }}>
               <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <h3 className="tasks-title" style={{ margin: 0 }}>Recent Leave History</h3>
                 <button className="saas-btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setActiveTab('leave')}>View All</button>
               </div>
               <div className="tasks-list">
                 {recentLeaves.length === 0 ? (
-                  <p style={{color: '#94a3b8', padding: '1rem'}}>No leave history found.</p>
+                  <p style={{ color: '#94a3b8', padding: '1rem' }}>No leave history found.</p>
                 ) : (
                   recentLeaves.map((l) => (
-                    <div key={l.id} className="task-item" style={{display: 'flex', justifyContent: 'space-between', padding: '1rem', borderBottom: '1px solid #f1f5f9'}}>
+                    <div key={l.id} className="task-item" style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', borderBottom: '1px solid #f1f5f9' }}>
                       <div>
                         <div style={{ fontWeight: 600, color: '#1e293b' }}>{l.type}</div>
-                        <div style={{fontSize: '0.75rem', color: '#64748b'}}>{l.dates} · {l.days} Days</div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{l.dates} · {l.days} Days</div>
                       </div>
-                      <span className={`badge ${l.status === 'Approved' ? 'badge-green' : l.status === 'Rejected' ? 'badge-red' : 'badge-yellow'}`} style={{fontSize: '0.7rem', padding: '0.2rem 0.6rem', borderRadius: '12px', height: 'fit-content'}}>
+                      <span className={`badge ${l.status === 'Approved' ? 'badge-green' : l.status === 'Rejected' ? 'badge-red' : 'badge-yellow'}`} style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', borderRadius: '12px', height: 'fit-content' }}>
                         {l.status}
                       </span>
                     </div>
@@ -618,7 +743,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab }) {
             </div>
 
             {/* Quick actions */}
-            <div className="quick-actions-panel" style={{marginTop: '1.5rem'}}>
+            <div className="quick-actions-panel" style={{ marginTop: '1.5rem' }}>
               <h3 className="tasks-title">Self Service</h3>
               <div className="emp-actions-grid">
                 <button className="action-btn action-btn-sm action-amber" onClick={() => setActiveTab('leave')}>
