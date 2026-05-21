@@ -3,7 +3,7 @@
  * Connects the React frontend to the Express backend at localhost:5000
  */
 
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 export const api = {
 

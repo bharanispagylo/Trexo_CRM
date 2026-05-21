@@ -35,8 +35,6 @@ export default function Attendance({ user }) {
       filteredData.sort((a, b) => new Date(b.date) - new Date(a.date));
       setAttendance(filteredData);
 
-      // Check if already checked in today
-      const todayStr = new Date().toISOString().split('T')[0];
 
     } catch (error) {
       console.error('Fetch error:', error);

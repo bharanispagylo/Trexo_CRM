@@ -338,8 +338,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
   };
   
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const assigneesList = form.assignees ? form.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
-
   const submit = () => {
     const newErrors = {};
     const titleRegex = /^.{3,100}$/;
