@@ -119,6 +119,7 @@
 .col-reopened      { background: #fff1f2; border-color: #fecdd3; }
 .col-prod-deployed { background: #fefce8; border-color: #fde68a; }
 .col-prod-verified { background: #f0fdf4; border-color: #bbf7d0; }
+.col-delivered     { background: #f0fdfa; border-color: #99f6e4; }
 
 .kanban-col.drag-over {
   border-color: #2563eb !important;

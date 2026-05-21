@@ -11,6 +11,7 @@ const COLUMNS = [
   { id: 'Re-opened',     label: 'Re-opened',     color: 'col-reopened' },
   { id: 'Prod Deployed', label: 'Prod Deployed', color: 'col-prod-deployed' },
   { id: 'Prod Verified', label: 'Prod Verified', color: 'col-prod-verified' },
+  { id: 'Delivered',     label: 'Delivered',     color: 'col-delivered' },
 ];
 
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
@@ -49,10 +50,10 @@ const timeStrToDecimal = (timeStr) => {
 
 
 // ── Task Detail View (Separate Page) ──────────────────────────────
-function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
+function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialEditMode = false }) {
 
   const isEdit = !!(task && task.id);
-  const [isEditing, setIsEditing] = useState(!task || !task.id); // Start in edit mode for new tasks, read-only for existing ones
+  const [isEditing, setIsEditing] = useState((!task || !task.id) || initialEditMode); // Start in edit mode for new tasks, or if requested
   const { alert, confirm } = useAlert();
   
   const [form, setForm] = useState(() => {
@@ -328,12 +329,15 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
     }
   };
 
-  const handleLike = async (commentId) => {
+  const handleReact = async (commentId, emoji = '👍') => {
     try {
-      await api.put(`/tasks/${task.id}/comments/${commentId}/like`);
-      fetchComments(); 
+      await api.put(`/tasks/${task.id}/comments/${commentId}/react`, {
+        emoji,
+        user: currentUser?.fullName || currentUser?.name || 'User'
+      });
+      fetchComments();
     } catch (err) {
-      console.error('Like error:', err);
+      console.error('React error:', err);
     }
   };
   
@@ -520,9 +524,12 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
           <div className={`comment-avatar-circle ${getAvatarColor(c.author)}`}>
             {initials(c.author)}
           </div>
-          <div className="comment-content-block">
+          <div className="comment-content-block" style={{ width: '100%' }}>
             <div className="comment-author-row">
-              <span className="comment-author-name">{c.author}</span>
+              <span className="comment-author-name">
+                {c.author}
+                {isReply && <span style={{ color: '#94a3b8', fontSize: '0.7rem', fontWeight: '500', marginLeft: '0.4rem', fontStyle: 'italic' }}>replied</span>}
+              </span>
               <span className="comment-post-time">
                 {new Date(c.createdAt).toLocaleDateString('en-GB', {
                   day: 'numeric',
@@ -535,34 +542,83 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
               {cleanText.split('\n').map((line, i) => <div key={i}>{line}</div>)}
               {attachment && renderCommentAttachmentPill(attachment)}
             </div>
-          <div className="comment-actions-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '0.25rem' }}>
+          <div className="comment-actions-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '0.25rem', position: 'relative' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', fontWeight: '600', color: '#64748b' }}>
-              <span className="comment-action-btn-link" style={{ cursor: 'pointer' }} onClick={() => handleLike(c.id)}>Like</span>
+              <div 
+                className="reaction-trigger" 
+                style={{ position: 'relative', display: 'inline-block' }}
+                onMouseEnter={e => {
+                  const popup = e.currentTarget.querySelector('.reaction-picker-popup');
+                  if (popup) popup.style.display = 'flex';
+                }}
+                onMouseLeave={e => {
+                  const popup = e.currentTarget.querySelector('.reaction-picker-popup');
+                  if (popup) popup.style.display = 'none';
+                }}
+              >
+                <span className="comment-action-btn-link" style={{ cursor: 'pointer' }} onClick={() => handleReact(c.id, '👍')}>Like</span>
+                <div className="reaction-picker-popup" style={{ display: 'none', position: 'absolute', bottom: '100%', left: '0', background: 'white', padding: '0.25rem 0.5rem', borderRadius: '24px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', gap: '0.5rem', zIndex: 10, border: '1px solid #e2e8f0', marginBottom: '4px' }}>
+                   {['👍', '❤️', '😂', '🎉', '👀'].map(emoji => (
+                     <span key={emoji} style={{ cursor: 'pointer', fontSize: '1rem', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} onClick={(e) => { e.stopPropagation(); handleReact(c.id, emoji); }}>{emoji}</span>
+                   ))}
+                </div>
+              </div>
               <span style={{ color: '#cbd5e1', userSelect: 'none' }}>·</span>
               <span className="comment-action-btn-link" style={{ cursor: 'pointer' }} onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)}>Reply</span>
             </div>
-            {c.likes > 0 && (
-              <span 
-                className="comment-likes-badge" 
-                style={{ 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  gap: '0.25rem', 
-                  background: '#eff6ff', 
-                  color: '#1d4ed8', 
-                  border: '1px solid #bfdbfe', 
-                  borderRadius: '12px', 
-                  padding: '0.15rem 0.5rem', 
-                  fontSize: '0.72rem', 
-                  fontWeight: '700', 
-                  cursor: 'pointer',
-                  userSelect: 'none' 
-                }} 
-                onClick={() => handleLike(c.id)}
-              >
-                👍 {c.likes}
-              </span>
-            )}
+            <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+              {(() => {
+                let reacts = c.reactions || {};
+                if (typeof reacts === 'string') {
+                  try { reacts = JSON.parse(reacts); } catch(e) { reacts = {}; }
+                }
+                const count = Object.values(reacts).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0);
+                
+                if (count > 0) {
+                  return Object.entries(reacts).map(([emoji, users]) => {
+                    if (!Array.isArray(users) || users.length === 0) return null;
+                    return (
+                      <span 
+                        key={emoji}
+                        title={users.join(', ')} 
+                        className="comment-likes-badge" 
+                        style={{ 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: '0.25rem', 
+                          background: '#eff6ff', 
+                          color: '#1d4ed8', 
+                          border: '1px solid #bfdbfe', 
+                          borderRadius: '12px', 
+                          padding: '0.15rem 0.5rem', 
+                          fontSize: '0.72rem', 
+                          fontWeight: '700', 
+                          cursor: 'pointer',
+                          userSelect: 'none' 
+                        }} 
+                        onClick={() => handleReact(c.id, emoji)}
+                      >
+                        {emoji} {users.length}
+                      </span>
+                    );
+                  });
+                }
+                
+                if (c.likes > 0) {
+                  return (
+                    <span 
+                      title="Legacy Likes"
+                      className="comment-likes-badge" 
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '0.15rem 0.5rem', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', userSelect: 'none' }} 
+                      onClick={() => handleReact(c.id, '👍')}
+                    >
+                      👍 {c.likes}
+                    </span>
+                  );
+                }
+                return null;
+              })()}
+            </div>
           </div>
         </div>
       </div>
@@ -790,7 +846,14 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                     {isEditing ? (
                       <select 
                         value={form.status} 
-                        onChange={e => set('status', e.target.value)} 
+                        onChange={e => {
+                          const newStatus = e.target.value;
+                          const updates = { status: newStatus };
+                          if (newStatus === 'Delivered' && !form.deliveredDate) {
+                            updates.deliveredDate = new Date().toISOString();
+                          }
+                          setForm(f => ({ ...f, ...updates }));
+                        }} 
                         className="saas-grid-select"
                       >
                         {COLUMNS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
@@ -884,9 +947,9 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser }) {
                         className="saas-grid-select"
                       >
                         <option value="">-- Select Task List --</option>
-                        {taskLists.map(tl => (
+                        {taskLists.filter((tl, index, self) => index === self.findIndex((t) => t.name.toLowerCase() === tl.name.toLowerCase())).map(tl => (
                           <option key={tl.id} value={tl.id}>
-                            {tl.name}{tl.project ? ` (${tl.project.name})` : ''}
+                            {tl.name}
                           </option>
                         ))}
                       </select>
@@ -1627,6 +1690,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const [viewMode, setViewMode] = useState('list'); 
   const [subTab, setSubTab]     = useState(isTeamLeadOrAdmin ? 'all' : 'my'); 
   const [dragOver, setDragOver] = useState(null);
+  const [taskDetailMode, setTaskDetailMode] = useState(false); // false=view, true=edit
   
   const [view, setView] = useState('board'); // 'board' or 'detail'
   const [selectedTask, setSelectedTask] = useState(null);
@@ -1683,9 +1747,16 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     e.preventDefault();
     const id = dragId.current;
     if (id !== null) {
-      setTasks(ts => ts.map(t => t.id === id ? { ...t, status: colId } : t));
+      const updateData = { status: colId };
+      if (colId === 'Delivered') {
+        const existingTask = tasks.find(t => t.id === id);
+        if (existingTask && !existingTask.deliveredDate) {
+          updateData.deliveredDate = new Date().toISOString();
+        }
+      }
+      setTasks(ts => ts.map(t => t.id === id ? { ...t, ...updateData } : t));
       try {
-        await api.put(`/tasks/${id}`, { status: colId });
+        await api.put(`/tasks/${id}`, updateData);
       } catch (error) {
         console.error('Update error:', error);
         fetchTasks();
@@ -1738,8 +1809,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     setView('detail');
   };
 
-  const openTaskDetail = (task) => {
+  const openTaskDetail = (task, editMode = false) => {
     setSelectedTask(task);
+    setTaskDetailMode(editMode);
     setView('detail');
   };
 
@@ -1771,6 +1843,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         onDelete={handleDeleteTask}
         onClose={() => setView('board')}
         currentUser={user}
+        initialEditMode={taskDetailMode}
       />
 
     );
@@ -1881,7 +1954,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 filteredTasks.map(task => {
                   const pm = PRIORITY_META[task.priority] || PRIORITY_META['Medium'];
                   return (
-                    <tr key={task.id} onClick={() => openTaskDetail(task)}>
+                    <tr key={task.id} onClick={() => openTaskDetail(task, false)}>
                       <td style={{ fontWeight: 600 }}>{task.title}</td>
                       <td>{task.status}</td>
                       <td><span className={`card-priority ${pm.cls}`} style={{display:'inline-block'}}>{task.priority}</span></td>
@@ -1893,9 +1966,14 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                       {(can('tasks', 'edit') || can('tasks', 'delete')) && (
                         <td style={{ textAlign: 'right' }}>
                           {(getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && (user?.fullName || user?.name) && (task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))) && (
-                            <button className="list-edit-btn" onClick={(e) => { e.stopPropagation(); openTaskDetail(task); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', marginRight: '0.5rem' }} title="Edit Task">
-                               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                            </button>
+                            <>
+                              <button className="list-view-btn" onClick={(e) => { e.stopPropagation(); openTaskDetail(task, false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981', marginRight: '0.75rem' }} title="View Task">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                              </button>
+                              <button className="list-edit-btn" onClick={(e) => { e.stopPropagation(); openTaskDetail(task, true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', marginRight: '0.75rem' }} title="Edit Task">
+                                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                              </button>
+                            </>
                           )}
                           {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && (task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))) && (
                             <button className="list-delete-btn" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Delete Task">

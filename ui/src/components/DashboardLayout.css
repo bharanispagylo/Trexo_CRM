@@ -728,6 +728,30 @@
   color: #64748b;
 }
 
+/* Notification Dropdown Styles */
+.saas-notification-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: -10px;
+  width: 320px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  animation: saas-search-fade-in 0.15s ease-out;
+}
+
+.saas-notification-item:hover {
+  background: #f8fafc !important;
+}
+
+.saas-notification-item.unread {
+  border-left: 3px solid #0066FF;
+}
+
 
 
 
