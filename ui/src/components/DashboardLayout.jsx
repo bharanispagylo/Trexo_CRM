@@ -13,7 +13,7 @@ import Users from './pages/Administration/Users';
 import Roles from './pages/Administration/Roles';
 import AddUser from './pages/Administration/AddUser';
 import EditUser from './pages/Administration/EditUser';
-import Reports from './pages/Administration/Reports';
+import Clients from './pages/Client/Clients';
 
 
 
