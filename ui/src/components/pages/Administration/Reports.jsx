@@ -9,42 +9,7 @@ const formatTime = (hours) => {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 };
 
-const generateRecentWeeks = () => {
-  const weeks = [];
-  const today = new Date();
-  const dayOfWeek = today.getDay(); // 0 is Sunday, 5 is Friday
-  
-  let diff = 5 - dayOfWeek;
-  if (diff > 0) diff -= 7;
-  
-  let endFriday = new Date(today);
-  endFriday.setDate(today.getDate() + diff);
-  endFriday.setHours(23, 59, 59, 999);
-
-  for (let i = 0; i < 10; i++) {
-    const end = new Date(endFriday);
-    end.setDate(endFriday.getDate() - (i * 7));
-    
-    const start = new Date(end);
-    start.setDate(end.getDate() - 6);
-    start.setHours(0, 0, 0, 0);
-
-    const formatDate = (d) => {
-      const day = d.getDate().toString().padStart(2, '0');
-      const month = d.toLocaleString('default', { month: 'short' });
-      const year = d.getFullYear();
-      return `${day} ${month} ${year}`;
-    };
-    const label = `${formatDate(start)} (Sat) - ${formatDate(end)} (Fri)`;
-    
-    weeks.push({
-      label,
-      startDate: start.toISOString(),
-      endDate: end.toISOString()
-    });
-  }
-  return weeks;
-};
+// Removed generateRecentWeeks
 
 export default function Reports({ user }) {
   const [reportType, setReportType] = useState('monthly'); // 'monthly' | 'weekly'
@@ -54,8 +19,8 @@ export default function Reports({ user }) {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   
-  const weeks = useMemo(() => generateRecentWeeks(), []);
-  const [selectedWeek, setSelectedWeek] = useState(weeks[0]?.startDate);
+  const [customStartDate, setCustomStartDate] = useState(new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]);
+  const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   const [selectedProject, setSelectedProject] = useState('All Projects');
   const [selectedAssignee, setSelectedAssignee] = useState('All Assignees');
@@ -76,11 +41,10 @@ export default function Reports({ user }) {
         });
         data = await api.get(`/reports/monthly?${params.toString()}`);
       } else {
-        const week = weeks.find(w => w.startDate === selectedWeek);
-        if (week) {
+        if (customStartDate && customEndDate) {
           const params = new URLSearchParams({
-            startDate: week.startDate,
-            endDate: week.endDate,
+            startDate: new Date(customStartDate).toISOString(),
+            endDate: new Date(new Date(customEndDate).setHours(23, 59, 59, 999)).toISOString(),
             project: selectedProject,
             assignee: selectedAssignee
           });
@@ -108,8 +72,8 @@ export default function Reports({ user }) {
 
   useEffect(() => {
     fetchReports();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportType, selectedMonth, selectedYear, selectedWeek]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportType, selectedMonth, selectedYear, customStartDate, customEndDate]);
 
   const totalTasks = tasks.length;
   const totalBillableHours = tasks.reduce((sum, t) => sum + (parseFloat(t.actualHours) || parseFloat(t.approvedHours) || 0), 0);
@@ -144,7 +108,7 @@ export default function Reports({ user }) {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = reportType === 'monthly' ? `Monthly_Report_${selectedYear}_${selectedMonth}.csv` : `Weekly_Report.csv`;
+    a.download = reportType === 'monthly' ? `Monthly_Report_${selectedYear}_${selectedMonth}.csv` : `Custom_Report_${customStartDate}_to_${customEndDate}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -170,11 +134,11 @@ export default function Reports({ user }) {
              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
           </div>
           <div className="reports-title-text">
-            <h2>{reportType === 'monthly' ? 'Monthly Report' : 'Weekly Report'}</h2>
+            <h2>{reportType === 'monthly' ? 'Monthly Report' : 'Custom Report'}</h2>
             <p>
               {reportType === 'monthly' 
                 ? 'View delivered tasks summary for the selected month.'
-                : 'View delivered tasks summary for each week (Saturday to Friday).'}
+                : 'View delivered tasks summary for a custom date range.'}
             </p>
           </div>
         </div>
@@ -188,10 +152,10 @@ export default function Reports({ user }) {
               Monthly
             </button>
             <button 
-              className={reportType === 'weekly' ? 'active' : ''} 
-              onClick={() => setReportType('weekly')}
+              className={reportType === 'custom' ? 'active' : ''} 
+              onClick={() => setReportType('custom')}
             >
-              Weekly
+              Custom
             </button>
           </div>
 
@@ -218,9 +182,11 @@ export default function Reports({ user }) {
                 </select>
               </>
             ) : (
-              <select value={selectedWeek} onChange={(e) => setSelectedWeek(e.target.value)} style={{ minWidth: '220px' }}>
-                {weeks.map(w => <option key={w.startDate} value={w.startDate}>{w.label}</option>)}
-              </select>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                <span style={{ color: '#64748b' }}>to</span>
+                <input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+              </div>
             )}
           </div>
         </div>
@@ -278,7 +244,7 @@ export default function Reports({ user }) {
 
       <div className="reports-info-banner">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-        This report shows only delivered tasks for the selected {reportType === 'monthly' ? 'month' : 'week'}.
+        This report shows only delivered tasks for the selected {reportType === 'monthly' ? 'month' : 'date range'}.
       </div>
 
       <div className="reports-table-container">
@@ -343,8 +309,8 @@ export default function Reports({ user }) {
             <span className="note-text">Monthly report includes only tasks delivered within the selected month only.</span>
           ) : (
             <div className="note-text" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <span>• Only tasks with "Delivered" status are included in this weekly report.</span>
-              <span>• Weekly period is calculated from Saturday to Friday.</span>
+              <span>• Only tasks with "Delivered" status are included in this custom report.</span>
+              <span>• Date range is inclusive of the start and end dates.</span>
             </div>
           )}
         </div>

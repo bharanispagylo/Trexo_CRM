@@ -57,6 +57,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     priority: 'Medium'
   });
 
+  // Attachments Tab State
+  const [attachSearch, setAttachSearch] = useState('');
+  const [attachTypeFilter, setAttachTypeFilter] = useState('All');
+  const [attachPage, setAttachPage] = useState(1);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadForm, setUploadForm] = useState({ name: '', description: '', file: null });
+  const [uploading, setUploading] = useState(false);
+  const attachFileRef = React.useRef(null);
 
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
   const [statusFilter, setStatusFilter] = useState('All');
@@ -952,12 +960,17 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     const rawMembers = (selectedProject.members || '').split(',').map(m => m.trim()).filter(m => m !== "");
     const projMembers = [...new Set(rawMembers)];
     
-    // Mock metrics
-    const totalTasksCount = selectedProject.taskLists?.reduce((acc, list) => acc + (list.tasks?.length || 0), 0) || 42;
-    const completedTasksCount = 27;
-    const pendingTasksCount = 15;
-    const inProgressTasksCount = 8;
-    const teamCount = projMembers.length > 0 ? projMembers.length : 6;
+    // Dynamic metrics from actual project data
+    const allProjectTasks = (selectedProject.taskLists || []).reduce((acc, list) => acc.concat(list.tasks || []), []);
+    const totalTasksCount = allProjectTasks.length;
+    const completedTasksCount = allProjectTasks.filter(t => (t.status || '').toLowerCase() === 'completed').length;
+    const inProgressTasksCount = allProjectTasks.filter(t => (t.status || '').toLowerCase() === 'in progress').length;
+    const pendingTasksCount = allProjectTasks.filter(t => {
+      const s = (t.status || '').toLowerCase();
+      return s !== 'completed' && s !== 'in progress';
+    }).length;
+    const teamCount = projMembers.length;
+    const queriesCount = (selectedProject.queries || []).length;
     const projectID = selectedProject.projectNo || `PRJ-2026-${selectedProject.id.substring(0,4).toUpperCase()}`;
 
     return (
@@ -1087,7 +1100,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>Queries Opened</span>
-                <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>0</span>
+                <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>{queriesCount}</span>
                 <button style={{ background: 'none', border: 'none', padding: 0, color: '#64748b', fontSize: '0.75rem', fontWeight: '500', cursor: 'pointer', textAlign: 'left', marginTop: '0.2rem' }} onClick={() => setDetailTab('Queries')}>View Queries</button>
               </div>
             </div>
@@ -1557,7 +1570,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Member Name</th>
                       <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Designation</th>
                       <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Status</th>
-                      <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Actions</th>
+                      {can('projects', 'assign') && (
+                        <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Actions</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -1630,59 +1645,52 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                 {statusVal}
                               </span>
                             </td>
-                            <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '1rem', justifyContent: 'flex-end' }}>
-                                {can('projects', 'assign') && (
-                                  <>
-                                    {/* Edit Icon */}
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ cursor: 'pointer', color: '#64748b' }} onClick={() => { setEditingEmployee(emp.id ? emp : { id: `EMP-${Date.now()}`, name: m, role: designation, status: statusVal }); setShowEditMemberModal(true); }}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                    </svg>
+                            {can('projects', 'assign') && (
+                              <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '1rem', justifyContent: 'flex-end' }}>
+                                  {/* Edit Icon */}
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ cursor: 'pointer', color: '#64748b' }} onClick={() => { setEditingEmployee(emp.id ? emp : { id: `EMP-${Date.now()}`, name: m, role: designation, status: statusVal }); setShowEditMemberModal(true); }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                  </svg>
 
-                                    {/* Delete Icon */}
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ cursor: 'pointer', color: '#ef4444' }} onClick={() => {
-                                      confirm(`Delete member "${m}" from this project?`, () => toggleMemberDetail(m), 'Remove Member');
-                                    }}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
+                                  {/* Delete Icon */}
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ cursor: 'pointer', color: '#ef4444' }} onClick={() => {
+                                    confirm(`Delete member "${m}" from this project?`, () => toggleMemberDetail(m), 'Remove Member');
+                                  }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
 
-                                    {/* Toggle Switch */}
-                                    {emp.id && (
-                                      <label style={{ display: 'inline-block', position: 'relative', width: '38px', height: '20px', cursor: 'pointer' }}>
-                                        <input 
-                                          type="checkbox" 
-                                          checked={isActive} 
-                                          onChange={() => handleToggleStatus(emp)} 
-                                          style={{ opacity: 0, width: 0, height: 0 }} 
-                                        />
+                                  {/* Toggle Switch */}
+                                  {emp.id && (
+                                    <label style={{ display: 'inline-block', position: 'relative', width: '38px', height: '20px', cursor: 'pointer' }}>
+                                      <input 
+                                        type="checkbox" 
+                                        checked={isActive} 
+                                        onChange={() => handleToggleStatus(emp)} 
+                                        style={{ opacity: 0, width: 0, height: 0 }} 
+                                      />
+                                      <span style={{ 
+                                        position: 'absolute', 
+                                        top: 0, left: 0, right: 0, bottom: 0, 
+                                        backgroundColor: isActive ? '#0066FF' : '#cbd5e1', 
+                                        transition: '0.3s', 
+                                        borderRadius: '20px' 
+                                      }}>
                                         <span style={{ 
                                           position: 'absolute', 
-                                          top: 0, left: 0, right: 0, bottom: 0, 
-                                          backgroundColor: isActive ? '#0066FF' : '#cbd5e1', 
+                                          height: '14px', width: '14px', 
+                                          left: isActive ? '20px' : '3px', 
+                                          bottom: '3px', 
+                                          backgroundColor: 'white', 
                                           transition: '0.3s', 
-                                          borderRadius: '20px' 
-                                        }}>
-                                          <span style={{ 
-                                            position: 'absolute', 
-                                            height: '14px', width: '14px', 
-                                            left: isActive ? '20px' : '3px', 
-                                            bottom: '3px', 
-                                            backgroundColor: 'white', 
-                                            transition: '0.3s', 
-                                            borderRadius: '50%' 
-                                          }} />
-                                        </span>
-                                      </label>
-                                    )}
-                                  </>
-                                )}
-
-                                {/* Three dots menu */}
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ color: '#64748b' }}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                                </svg>
-                              </div>
-                            </td>
+                                          borderRadius: '50%' 
+                                        }} />
+                                      </span>
+                                    </label>
+                                  )}
+                                </div>
+                              </td>
+                            )}
                           </tr>
                         );
                       })
@@ -2177,53 +2185,288 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             </div>
           )}
 
-          {detailTab === 'Attachments' && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>Project Attachments</h3>
-                {can('projects', 'create') && (
-                  <button className="saas-btn-submit" style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }} onClick={() => alert('File upload feature coming soon.')}>
-                    + Upload File
-                  </button>
+          {detailTab === 'Attachments' && (() => {
+            const attachments = selectedProject.attachments || [];
+            const perPage = 10;
+
+            const getFileExt = (name) => {
+              if (!name) return '';
+              const parts = name.split('.');
+              return parts.length > 1 ? parts.pop().toLowerCase() : '';
+            };
+
+            const getFileIcon = (name) => {
+              const ext = getFileExt(name);
+              const s = { width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: '800', color: 'white', flexShrink: 0 };
+              if (!ext || ['folder'].includes(ext)) return <div style={{ ...s, background: '#facc15', color: '#854d0e' }}>📁</div>;
+              if (['pdf'].includes(ext)) return <div style={{ ...s, background: '#ef4444' }}>PDF</div>;
+              if (['xls', 'xlsx', 'csv'].includes(ext)) return <div style={{ ...s, background: '#22c55e' }}>XLS</div>;
+              if (['doc', 'docx'].includes(ext)) return <div style={{ ...s, background: '#3b82f6' }}>DOC</div>;
+              if (['ppt', 'pptx'].includes(ext)) return <div style={{ ...s, background: '#f97316' }}>PPT</div>;
+              if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) return <div style={{ ...s, background: '#8b5cf6' }}>IMG</div>;
+              if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return <div style={{ ...s, background: '#64748b' }}>ZIP</div>;
+              return <div style={{ ...s, background: '#94a3b8' }}>FILE</div>;
+            };
+
+            const getFileType = (name) => {
+              const ext = getFileExt(name);
+              if (!ext) return 'Folder';
+              if (['pdf'].includes(ext)) return 'PDF';
+              if (['xls', 'xlsx', 'csv'].includes(ext)) return 'Spreadsheet';
+              if (['doc', 'docx'].includes(ext)) return 'Document';
+              if (['ppt', 'pptx'].includes(ext)) return 'Presentation';
+              if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) return 'Image';
+              if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'Archive';
+              return 'Other';
+            };
+
+            const filtered = attachments.filter(a => {
+              const matchesSearch = !attachSearch.trim() || (a.name || '').toLowerCase().includes(attachSearch.toLowerCase()) || (a.description || '').toLowerCase().includes(attachSearch.toLowerCase());
+              const matchesType = attachTypeFilter === 'All' || getFileType(a.name) === attachTypeFilter;
+              return matchesSearch && matchesType;
+            });
+
+            const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+            const paginated = filtered.slice((attachPage - 1) * perPage, attachPage * perPage);
+
+            const handleUpload = async () => {
+              if (!uploadForm.name.trim()) { alert('Please enter a file name', 'warning', 'Required'); return; }
+              setUploading(true);
+              let fileUrl = '';
+              let fileSize = '';
+
+              if (uploadForm.file) {
+                fileSize = uploadForm.file.size < 1024 * 1024
+                  ? (uploadForm.file.size / 1024).toFixed(1) + ' KB'
+                  : (uploadForm.file.size / (1024 * 1024)).toFixed(2) + ' MB';
+
+                if (process.env.REACT_APP_CLOUDINARY_CLOUD_NAME && process.env.REACT_APP_CLOUDINARY_CLOUD_NAME !== 'undefined') {
+                  try {
+                    const fd = new FormData();
+                    fd.append('file', uploadForm.file);
+                    fd.append('upload_preset', process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET || 'img_default');
+                    const resp = await fetch(`https://api.cloudinary.com/v1_1/${process.env.REACT_APP_CLOUDINARY_CLOUD_NAME}/auto/upload`, { method: 'POST', body: fd });
+                    const data = await resp.json();
+                    fileUrl = data.secure_url || data.url || '';
+                  } catch (err) {
+                    console.error('Cloudinary upload error:', err);
+                  }
+                }
+              }
+
+              try {
+                await api.post(`/projects/${selectedProject.id}/attachments`, {
+                  name: uploadForm.name,
+                  description: uploadForm.description,
+                  uploadedBy: user?.fullName || user?.name || 'Unknown',
+                  fileSize: fileSize || '-',
+                  fileUrl
+                });
+                setShowUploadModal(false);
+                setUploadForm({ name: '', description: '', file: null });
+                fetchData();
+                alert('File uploaded successfully!', 'success', 'Uploaded');
+              } catch (err) {
+                console.error('Upload save error:', err);
+                alert('Failed to save attachment', 'error', 'Error');
+              }
+              setUploading(false);
+            };
+
+            const handleDeleteAttachment = async (attId) => {
+              try {
+                await api.delete(`/projects/${selectedProject.id}/attachments/${attId}`);
+                fetchData();
+              } catch (err) {
+                console.error('Delete attachment error:', err);
+              }
+            };
+
+            return (
+              <div>
+                {/* Toolbar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                    <div style={{ position: 'relative' }}>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth="2" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                      <input
+                        placeholder="Search attachments..."
+                        value={attachSearch}
+                        onChange={e => setAttachSearch(e.target.value)}
+                        style={{ padding: '0.5rem 0.75rem 0.5rem 2rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', width: '220px', outline: 'none', color: '#334155' }}
+                      />
+                    </div>
+                    <select
+                      value={attachTypeFilter}
+                      onChange={e => { setAttachTypeFilter(e.target.value); setAttachPage(1); }}
+                      style={{ padding: '0.5rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', color: '#334155', background: 'white', outline: 'none', cursor: 'pointer' }}
+                    >
+                      <option value="All">All File Types</option>
+                      <option value="PDF">PDF</option>
+                      <option value="Document">Documents</option>
+                      <option value="Spreadsheet">Spreadsheets</option>
+                      <option value="Presentation">Presentations</option>
+                      <option value="Image">Images</option>
+                      <option value="Archive">Archives</option>
+                      <option value="Folder">Folders</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    {can('projects', 'create') && (
+                      <button
+                        onClick={() => setShowUploadModal(true)}
+                        style={{ padding: '0.5rem 1rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                      >
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Upload Files
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Table */}
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Name</th>
+                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Description</th>
+                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Uploaded By</th>
+                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>File Size</th>
+                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Uploaded On</th>
+                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', textAlign: 'center' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginated.length === 0 ? (
+                          <tr><td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8', fontSize: '0.9rem' }}>No attachments found.</td></tr>
+                        ) : paginated.map(a => (
+                          <tr key={a.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                            <td style={{ padding: '0.85rem 1.25rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                {getFileIcon(a.name)}
+                                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{a.name}</span>
+                              </div>
+                            </td>
+                            <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.description || '-'}</td>
+                            <td style={{ padding: '0.85rem 1.25rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#dbeafe', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: '800' }}>
+                                  {(a.uploadedBy || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2)}
+                                </div>
+                                <span style={{ fontSize: '0.85rem', color: '#334155', fontWeight: '500' }}>{a.uploadedBy}</span>
+                              </div>
+                            </td>
+                            <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569', fontWeight: '500' }}>{a.fileSize || '-'}</td>
+                            <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569' }}>
+                              {new Date(a.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}, {new Date(a.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                            </td>
+                            <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', alignItems: 'center' }}>
+                                {a.fileUrl && (
+                                  <a href={a.fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', cursor: 'pointer', display: 'flex' }} title="Download">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                  </a>
+                                )}
+                                {can('projects', 'delete') && (
+                                  <button onClick={() => confirm('Delete this attachment?', () => handleDeleteAttachment(a.id), 'Delete Attachment')} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: 0 }} title="Delete">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Pagination */}
+                {filtered.length > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '0 0.25rem' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                      Showing {Math.min((attachPage - 1) * perPage + 1, filtered.length)} to {Math.min(attachPage * perPage, filtered.length)} of {filtered.length} attachments
+                    </span>
+                    <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                      <button disabled={attachPage <= 1} onClick={() => setAttachPage(p => p - 1)} style={{ width: '32px', height: '32px', border: '1px solid #e2e8f0', borderRadius: '8px', background: 'white', cursor: attachPage <= 1 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: attachPage <= 1 ? 0.4 : 1 }}>
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                        <button key={p} onClick={() => setAttachPage(p)} style={{ width: '32px', height: '32px', border: 'none', borderRadius: '8px', background: attachPage === p ? '#2563eb' : 'transparent', color: attachPage === p ? 'white' : '#64748b', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}>{p}</button>
+                      ))}
+                      <button disabled={attachPage >= totalPages} onClick={() => setAttachPage(p => p + 1)} style={{ width: '32px', height: '32px', border: '1px solid #e2e8f0', borderRadius: '8px', background: 'white', cursor: attachPage >= totalPages ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: attachPage >= totalPages ? 0.4 : 1 }}>
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Upload Modal */}
+                {showUploadModal && (
+                  <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div style={{ background: 'white', borderRadius: '16px', width: '500px', padding: '2rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>Upload Attachment</h3>
+                        <button onClick={() => setShowUploadModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#94a3b8' }}>✕</button>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#334155', marginBottom: '0.35rem' }}>File Name *</label>
+                          <input
+                            value={uploadForm.name}
+                            onChange={e => setUploadForm({ ...uploadForm, name: e.target.value })}
+                            placeholder="e.g. Project_Requirements.pdf"
+                            style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#334155', marginBottom: '0.35rem' }}>Description</label>
+                          <textarea
+                            value={uploadForm.description}
+                            onChange={e => setUploadForm({ ...uploadForm, description: e.target.value })}
+                            placeholder="Brief description of the file..."
+                            rows={3}
+                            style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#334155', marginBottom: '0.35rem' }}>Choose File</label>
+                          <div
+                            onClick={() => attachFileRef.current?.click()}
+                            style={{ border: '2px dashed #cbd5e1', borderRadius: '10px', padding: '1.5rem', textAlign: 'center', cursor: 'pointer', background: '#f8fafc', transition: 'border-color 0.2s' }}
+                            onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
+                            onMouseLeave={e => e.currentTarget.style.borderColor = '#cbd5e1'}
+                          >
+                            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#94a3b8" strokeWidth="1.5" style={{ margin: '0 auto 0.5rem' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>
+                              {uploadForm.file ? uploadForm.file.name : 'Click to browse or drag & drop'}
+                            </p>
+                            {uploadForm.file && <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>{(uploadForm.file.size / (1024 * 1024)).toFixed(2)} MB</p>}
+                          </div>
+                          <input ref={attachFileRef} type="file" style={{ display: 'none' }} onChange={e => {
+                            const f = e.target.files[0];
+                            if (f) {
+                              setUploadForm(prev => ({ ...prev, file: f, name: prev.name || f.name }));
+                            }
+                          }} />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                        <button onClick={() => setShowUploadModal(false)} style={{ padding: '0.6rem 1.25rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', color: '#64748b', cursor: 'pointer', fontSize: '0.85rem' }}>Cancel</button>
+                        <button onClick={handleUpload} disabled={uploading} style={{ padding: '0.6rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: uploading ? 'wait' : 'pointer', fontSize: '0.85rem', opacity: uploading ? 0.7 : 1 }}>
+                          {uploading ? 'Uploading...' : 'Upload'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-              <div className="saas-table-container" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'auto' }}>
-                <table className="saas-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
-                  <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                      <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>File Name</th>
-                      <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Description</th>
-                      <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Uploaded By</th>
-                      <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>File Size</th>
-                      <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Uploaded On</th>
-                      <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(!selectedProject.attachments || selectedProject.attachments.length === 0) ? (
-                      <tr><td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No files attached to this project.</td></tr>
-                    ) : (
-                      selectedProject.attachments.map((a) => (
-                        <tr key={a.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '1rem', fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{a.name}</td>
-                          <td style={{ padding: '1rem', fontSize: '0.85rem', color: '#475569' }}>{a.description || '-'}</td>
-                          <td style={{ padding: '1rem', fontSize: '0.85rem', color: '#475569' }}>{a.uploadedBy}</td>
-                          <td style={{ padding: '1rem', fontSize: '0.85rem', color: '#475569' }}>{a.fileSize || '-'}</td>
-                          <td style={{ padding: '1rem', fontSize: '0.85rem', color: '#475569' }}>{new Date(a.createdAt).toLocaleDateString()}</td>
-                          <td style={{ padding: '1rem', textAlign: 'center', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                            <button style={{ color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer' }} title="Download">↓</button>
-                            {can('projects', 'delete') && (
-                              <button style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }} title="Delete">✕</button>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
     );

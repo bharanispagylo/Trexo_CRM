@@ -25,6 +25,48 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
 
+  // Notifications State
+  const [notifications, setNotifications] = useState([]);
+  const [isNotificationDropdownOpen, setIsNotificationDropdownOpen] = useState(false);
+  const notificationDropdownRef = useRef(null);
+
+  const fetchNotifications = async () => {
+    try {
+      const name = user?.fullName || user?.name;
+      if (!name) return;
+      const data = await api.get(`/notifications/${encodeURIComponent(name)}`);
+      setNotifications(data || []);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 10000); // Check every 10 seconds
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const handleMarkAsRead = async (id) => {
+    try {
+      await api.put(`/notifications/${id}/read`);
+      fetchNotifications();
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      const name = user?.fullName || user?.name;
+      if (!name) return;
+      await api.put(`/notifications/user/${encodeURIComponent(name)}/read-all`);
+      fetchNotifications();
+    } catch (err) {
+      console.error('Failed to mark all notifications as read:', err);
+    }
+  };
+
   // Global Search states
   const [searchQuery, setSearchQuery] = useState('');
   const [allTasks, setAllTasks] = useState([]);
@@ -42,6 +84,9 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       }
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target)) {
         setIsProfileDropdownOpen(false);
+      }
+      if (notificationDropdownRef.current && !notificationDropdownRef.current.contains(e.target)) {
+        setIsNotificationDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
@@ -202,7 +247,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
               {can('employees', 'view') && <NavItem id="employee" label="Employees" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>} />}
               {can('users', 'view') && <NavItem id="users" label="Users" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-3-3.87"></path><path d="M2 21v-2a4 4 0 0 1 3-3.87"></path><circle cx="12" cy="7" r="4"></circle></svg>} />}
               {user?.role?.toLowerCase() === 'admin' && <NavItem id="reports" label="Reports" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>} />}
-              {user?.role?.toLowerCase() === 'admin' && <NavItem id="roles" label="Settings" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>} />}
+              {user?.role?.toLowerCase() === 'admin' && <NavItem id="roles" label="Roles" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>} />}
             </div>
           )}
 
@@ -311,15 +356,40 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
               {/* Action Icons Group */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                 {/* Notification Bell Icon */}
-                <button className="saas-header-icon-btn notification-btn" title="Notifications">
-                   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-                   <span className="notification-badge">2</span>
-                </button>
+                <div style={{ position: 'relative' }} ref={notificationDropdownRef}>
+                  <button 
+                    className="saas-header-icon-btn notification-btn" 
+                    title="Notifications"
+                    onClick={() => setIsNotificationDropdownOpen(!isNotificationDropdownOpen)}
+                  >
+                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                     {notifications.filter(n => !n.isRead).length > 0 && (
+                       <span className="notification-badge">{notifications.filter(n => !n.isRead).length}</span>
+                     )}
+                  </button>
 
-                {/* Help support circle question mark icon */}
-                <button className="saas-header-icon-btn help-btn" title="Help & Support">
-                   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                </button>
+                  {isNotificationDropdownOpen && (
+                    <div className="saas-notification-dropdown">
+                      <div className="saas-notification-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderBottom: '1px solid #f1f5f9' }}>
+                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700', color: '#0f172a' }}>Notifications</h4>
+                        <span onClick={handleMarkAllAsRead} style={{ cursor: 'pointer', color: '#0066FF', fontSize: '0.75rem', fontWeight: 600 }}>Mark all read</span>
+                      </div>
+                      <div className="saas-notification-list" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                        {notifications.length === 0 ? (
+                          <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>No notifications</div>
+                        ) : (
+                          notifications.map(n => (
+                            <div key={n.id} className={`saas-notification-item ${!n.isRead ? 'unread' : ''}`} onClick={() => handleMarkAsRead(n.id)} style={{ padding: '1rem', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: !n.isRead ? '#f0f9ff' : 'white', transition: 'background 0.2s' }}>
+                              <div style={{ fontWeight: !n.isRead ? 700 : 600, color: '#0f172a', fontSize: '0.85rem' }}>{n.title}</div>
+                              <div style={{ color: '#475569', fontSize: '0.8rem', marginTop: '0.25rem', lineHeight: '1.4' }}>{n.message}</div>
+                              <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: '0.5rem', fontWeight: '500' }}>{new Date(n.createdAt).toLocaleString()}</div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Modern Rajesh Kumar style User Profile */}
