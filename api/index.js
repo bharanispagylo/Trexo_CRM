@@ -87,6 +87,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Root route to check API status
+app.get('/', (req, res) => {
+  res.json({ message: 'Trexo CRM API is running successfully!' });
+});
+
 // --- ROUTES ---
 
 // 0. Users (Administration)
