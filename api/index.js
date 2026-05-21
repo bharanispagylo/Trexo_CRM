@@ -1,17 +1,19 @@
-try {
-  console.log('[Startup] Generating Prisma Client...');
-  require('child_process').execSync('npx prisma generate', { stdio: 'inherit' });
-  console.log('[Startup] Prisma Client successfully regenerated!');
-} catch (err) {
-  console.error('[Startup] Prisma generate warning:', err.message);
-}
+if (!process.env.VERCEL) {
+  try {
+    console.log('[Startup] Generating Prisma Client...');
+    require('child_process').execSync('npx prisma generate', { stdio: 'inherit' });
+    console.log('[Startup] Prisma Client successfully regenerated!');
+  } catch (err) {
+    console.error('[Startup] Prisma generate warning:', err.message);
+  }
 
-try {
-  console.log('[Startup] Pushing database schema (db push)...');
-  require('child_process').execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
-  console.log('[Startup] Database schema successfully pushed!');
-} catch (err) {
-  console.error('[Startup] Prisma db push warning/error:', err.message);
+  try {
+    console.log('[Startup] Pushing database schema (db push)...');
+    require('child_process').execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
+    console.log('[Startup] Database schema successfully pushed!');
+  } catch (err) {
+    console.error('[Startup] Prisma db push warning/error:', err.message);
+  }
 }
 
 const express = require('express');
@@ -780,3 +782,5 @@ app.delete('/api/roles/permissions/:role', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+module.exports = app;
