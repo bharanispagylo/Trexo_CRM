@@ -30,6 +30,22 @@ function Avatar({ initials, image, size = "md", ring = false }) {
 }
 
 
+// ── Icons ──────────────────────────────────────────────────
+const Icons = {
+  Users: <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
+  CheckCircle: <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>,
+  UserPlus: <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>,
+  CalendarOff: <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>,
+  Plus: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
+  FileText: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>,
+  BarChart: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>,
+  ShieldCheck: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>,
+  CalendarCheck: <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="M9 16l2 2 4-4"></path></svg>,
+  Coffee: <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>,
+  Edit: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>,
+  Clock: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+};
+
 // ══════════════════════════════════════════════════════════
 //  LOGIN PAGE
 // ══════════════════════════════════════════════════════════
@@ -367,31 +383,98 @@ function RegisterPage({ onRegister, onLoginClick }) {
 // ══════════════════════════════════════════════════════════
 //  ADMIN DASHBOARD
 // ══════════════════════════════════════════════════════════
-const adminStats = [
-  { label: "Total Employees", value: "", change: "", up: true,  icon: "", grad: "from-blue-600 to-blue-400" },
-  { label: "Active This Month", value: "", change: "", up: true,  icon: "", grad: "from-emerald-600 to-emerald-400" },
-  { label: "New Joiners",       value: "",    change: "", up: true,  icon: "", grad: "from-violet-600 to-violet-400" },
-  { label: "On Leave Today",    value: "",    change: "", up: false, icon: "", grad: "from-amber-500 to-amber-400" },
-];
+function AdminDashboard({ user, onLogout, setActiveTab }) {
+  const [stats, setStats] = useState({ totalEmployees: 0, activeThisMonth: 0, newJoiners: 0, onLeaveToday: 0 });
+  const [recentEmps, setRecentEmps] = useState([]);
+  const [depts, setDepts] = useState([]);
 
-const recentEmps = [
-  { name: "Arjun Krishnan", role: "Backend Developer", dept: "Engineering", joined: "02 May 2025", status: "Active",   av: "AK" },
-  { name: "Priya Nair",     role: "UI/UX Designer",    dept: "Design",      joined: "28 Apr 2025", status: "Active",   av: "PN" },
-  { name: "Rahul Mehta",    role: "HR Manager",        dept: "HR",          joined: "25 Apr 2025", status: "Active",   av: "RK" },
-  { name: "Sana Shaikh",    role: "QA Engineer",       dept: "Quality",     joined: "20 Apr 2025", status: "On Leave", av: "MS" },
-  { name: "Karthik Selvam", role: "DevOps Engineer",   dept: "Engineering", joined: "15 Apr 2025", status: "Active",   av: "KS" },
-];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [employeesData, leavesData] = await Promise.all([
+          api.get('/employees').catch(() => []),
+          api.get('/leaves').catch(() => [])
+        ]);
 
-const depts = [
-  { name: "Engineering", count: 420, pct: 33, color: "bg-blue-500" },
-  { name: "Sales",       count: 210, pct: 16, color: "bg-emerald-500" },
-  { name: "Design",      count: 145, pct: 11, color: "bg-violet-500" },
-  { name: "HR",          count: 98,  pct: 8,  color: "bg-rose-500" },
-  { name: "Marketing",   count: 180, pct: 14, color: "bg-amber-500" },
-  { name: "Others",      count: 231, pct: 18, color: "bg-slate-400" },
-];
+        const employees = Array.isArray(employeesData) ? employeesData : [];
+        const leaves = Array.isArray(leavesData) ? leavesData : [];
 
-function AdminDashboard({ user, onLogout }) {
+        const total = employees.length;
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        
+        let newJoinersCount = 0;
+        let activeCount = 0;
+        const deptCounts = {};
+        
+        employees.forEach(emp => {
+          if ((emp.status || 'Active') === 'Active') activeCount++;
+          
+          if (emp.joinedDate || emp.createdAt) {
+             const d = new Date(emp.joinedDate || emp.createdAt);
+             if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                newJoinersCount++;
+             }
+          }
+          
+          const dpt = emp.dept || 'Others';
+          deptCounts[dpt] = (deptCounts[dpt] || 0) + 1;
+        });
+
+        // Compute On Leave Today (Basic approximation based on Approved leaves that overlap today)
+        const todayStr = new Date().toISOString().split('T')[0];
+        let onLeaveCount = 0;
+        leaves.forEach(l => {
+           if (l.status === 'Approved' && l.dates) {
+              if (l.dates.includes(todayStr) || l.dates.includes(new Date().toLocaleDateString('en-GB'))) {
+                onLeaveCount++; 
+              }
+           }
+        });
+
+        setStats({
+          totalEmployees: total,
+          activeThisMonth: activeCount,
+          newJoiners: newJoinersCount,
+          onLeaveToday: onLeaveCount
+        });
+        
+        // Recent emps
+        const sorted = [...employees].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+        setRecentEmps(sorted.map(e => ({
+          name: e.name || `${e.firstName || ''} ${e.lastName || ''}`.trim(),
+          role: e.designation || e.role || 'Employee',
+          dept: e.dept || 'Others',
+          joined: (e.joinedDate || e.createdAt) ? new Date(e.joinedDate || e.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric'}) : '-',
+          status: e.status || 'Active',
+          av: (e.name || e.firstName || 'U').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()
+        })));
+        
+        // Depts
+        const colors = ["bg-blue-500", "bg-emerald-500", "bg-violet-500", "bg-rose-500", "bg-amber-500", "bg-slate-400"];
+        const deptArr = Object.entries(deptCounts).map(([name, count], i) => ({
+           name, 
+           count,
+           pct: Math.round((count / (total || 1)) * 100),
+           color: colors[i % colors.length]
+        })).sort((a,b) => b.count - a.count);
+        
+        setDepts(deptArr);
+
+      } catch (err) {
+        console.error("Dashboard data fetch error:", err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const adminStatsDisplay = [
+    { label: "Total Employees", value: stats.totalEmployees, change: "", up: true,  icon: Icons.Users, grad: "from-blue-600 to-blue-400" },
+    { label: "Active This Month", value: stats.activeThisMonth, change: "", up: true,  icon: Icons.CheckCircle, grad: "from-emerald-600 to-emerald-400" },
+    { label: "New Joiners",       value: stats.newJoiners,    change: "", up: true,  icon: Icons.UserPlus, grad: "from-violet-600 to-violet-400" },
+    { label: "On Leave Today",    value: stats.onLeaveToday,    change: "", up: false, icon: Icons.CalendarOff, grad: "from-amber-500 to-amber-400" },
+  ];
+
   return (
     <div className="dashboard-container app-container">
       {/* Top bar */}
@@ -432,7 +515,7 @@ function AdminDashboard({ user, onLogout }) {
 
         {/* Stats */}
         <div className="stats-grid">
-          {adminStats.map((s, i) => (
+          {adminStatsDisplay.map((s, i) => (
             <div key={i} className="stat-card">
               <div className="stat-header">
                 <div className="stat-icon" style={{ background: s.grad.includes('blue') ? 'linear-gradient(to bottom right, #2563eb, #60a5fa)' : s.grad.includes('emerald') ? 'linear-gradient(to bottom right, #059669, #34d399)' : s.grad.includes('violet') ? 'linear-gradient(to bottom right, #7c3aed, #a78bfa)' : 'linear-gradient(to bottom right, #f59e0b, #fbbf24)' }}>{s.icon}</div>
@@ -450,22 +533,26 @@ function AdminDashboard({ user, onLogout }) {
           <div className="panel-card panel-card-col-3">
             <div className="panel-header">
               <h2 className="panel-title">Recent Employees</h2>
-              <button className="panel-link">View All →</button>
+              <button className="panel-link" onClick={() => setActiveTab('employees')}>View All →</button>
             </div>
             <div className="list-group">
-              {recentEmps.map((e, i) => (
-                <div key={i} className="list-item">
-                  <Avatar initials={e.av} size="sm" />
-                  <div className="list-item-info">
-                    <div className="list-item-title">{e.name}</div>
-                    <div className="list-item-sub">{e.role}</div>
+              {recentEmps.length === 0 ? (
+                <p style={{color: '#94a3b8', padding: '1rem'}}>No employees found.</p>
+              ) : (
+                recentEmps.map((e, i) => (
+                  <div key={i} className="list-item">
+                    <Avatar initials={e.av} size="sm" />
+                    <div className="list-item-info">
+                      <div className="list-item-title">{e.name}</div>
+                      <div className="list-item-sub">{e.role}</div>
+                    </div>
+                    <div className="list-item-date">{e.joined}</div>
+                    <span className={`status-badge ${e.status === "Active" ? "status-badge-active" : "status-badge-leave"}`}>
+                      {e.status}
+                    </span>
                   </div>
-                  <div className="list-item-date">{e.joined}</div>
-                  <span className={`status-badge ${e.status === "Active" ? "status-badge-active" : "status-badge-leave"}`}>
-                    {e.status}
-                  </span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -473,17 +560,21 @@ function AdminDashboard({ user, onLogout }) {
           <div className="panel-card panel-card-col-2">
             <h2 className="panel-title" style={{marginBottom: "1rem"}}>Department Breakdown</h2>
             <div className="dept-list">
-              {depts.map((d, i) => (
-                <div key={i}>
-                  <div className="dept-header">
-                    <span className="dept-name">{d.name}</span>
-                    <span className="dept-stats">{d.count} · {d.pct}%</span>
+              {depts.length === 0 ? (
+                <p style={{color: '#94a3b8'}}>No data available.</p>
+              ) : (
+                depts.map((d, i) => (
+                  <div key={i}>
+                    <div className="dept-header">
+                      <span className="dept-name">{d.name}</span>
+                      <span className="dept-stats">{d.count} · {d.pct}%</span>
+                    </div>
+                    <div className="progress-bg">
+                      <div className={`progress-bar ${d.color}`} style={{ width: `${d.pct}%` }} />
+                    </div>
                   </div>
-                  <div className="progress-bg">
-                    <div className={`progress-bar ${d.color}`} style={{ width: `${d.pct}%` }} />
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -493,13 +584,13 @@ function AdminDashboard({ user, onLogout }) {
           <h2 className="panel-title" style={{marginBottom: "1rem"}}>Admin Quick Actions</h2>
           <div className="quick-actions-grid">
             {[
-              { icon: "➕", label: "Add Employee",   color: "action-blue" },
-              { icon: "", label: "Leave Requests", color: "action-amber" },
-              { icon: "", label: "Reports",        color: "action-violet" },
-              { icon: "", label: "KYC Review",     color: "action-rose" },
+              { icon: Icons.Plus, label: "Add Employee",   color: "action-blue", tab: "employees" },
+              { icon: Icons.FileText, label: "Leave Requests", color: "action-amber", tab: "leave" },
+              { icon: Icons.BarChart, label: "Reports",        color: "action-violet", tab: "reports" },
+              { icon: Icons.ShieldCheck, label: "KYC Review",     color: "action-rose", tab: "users" },
             ].map((a, i) => (
-              <button key={i} className={`action-btn ${a.color}`}>
-                <span>{a.icon}</span> {a.label}
+              <button key={i} className={`action-btn ${a.color}`} onClick={() => setActiveTab(a.tab)}>
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{a.icon}</span> {a.label}
               </button>
             ))}
           </div>
@@ -581,8 +672,8 @@ function EmployeeDashboard({ user, onLogout, setActiveTab }) {
             {/* Stats */}
             <div className="emp-stats-grid">
               {[
-                { label: "Days Present", value: attendanceCount, icon: "📅", color: "icon-blue" },
-                { label: "Leave Balance", value: leaveBalance,  icon: "🏖️", color: "icon-amber" },
+                { label: "Days Present", value: attendanceCount, icon: Icons.CalendarCheck, color: "icon-blue" },
+                { label: "Leave Balance", value: leaveBalance,  icon: Icons.Coffee, color: "icon-amber" },
               ].map((s, i) => (
                 <div key={i} className="emp-stat-card">
                   <div className={`emp-stat-icon ${s.color}`}>{s.icon}</div>
@@ -622,10 +713,10 @@ function EmployeeDashboard({ user, onLogout, setActiveTab }) {
               <h3 className="tasks-title">Self Service</h3>
               <div className="emp-actions-grid">
                 <button className="action-btn action-btn-sm action-amber" onClick={() => setActiveTab('leave')}>
-                  <span>📝</span> Apply for Leave
+                  <span style={{ display: 'flex', alignItems: 'center' }}>{Icons.Edit}</span> Apply for Leave
                 </button>
                 <button className="action-btn action-btn-sm action-blue" onClick={() => setActiveTab('attendance')}>
-                  <span>⏰</span> My Attendance
+                  <span style={{ display: 'flex', alignItems: 'center' }}>{Icons.Clock}</span> My Attendance
                 </button>
               </div>
             </div>
