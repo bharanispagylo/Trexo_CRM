@@ -214,6 +214,7 @@ model Task {
   @@map("tasks")
 }
 
+
 model Bug {
   id          String   @id @default(uuid())
   title       String
