@@ -203,6 +203,26 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
     }).catch(console.error);
   }, [task, isEdit, fetchComments, fetchWorkLogs]);
 
+  useEffect(() => {
+    if (workLogs.length > 0) {
+      const totalHours = workLogs.reduce((acc, log) => acc + (Number(log.hoursWorked) || 0), 0);
+      const billedHours = workLogs.filter(log => log.isBilled).reduce((acc, log) => acc + (Number(log.hoursWorked) || 0), 0);
+      
+      setForm(prev => {
+        if (prev.actualHours !== totalHours || prev.approvedHours !== billedHours) {
+          return {
+            ...prev,
+            actualHours: totalHours,
+            actualHoursStr: decimalToTimeStr(totalHours),
+            approvedHours: billedHours,
+            approvedHoursStr: decimalToTimeStr(billedHours)
+          };
+        }
+        return prev;
+      });
+    }
+  }, [workLogs]);
+
   const handleCommentFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -366,21 +386,31 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
     }
     setWorkLogSaving(true);
     try {
-      await api.post(`/tasks/${task.id}/worklogs`, {
-        userId: currentUser?.id,
-        logDate: workLogForm.logDate,
-        hoursWorked: workLogForm.hoursWorked,
-        description: workLogForm.description,
-        isBilled: workLogForm.isBilled
-      });
+      if (workLogForm.id) {
+        await api.put(`/worklogs/${workLogForm.id}`, {
+          logDate: workLogForm.logDate,
+          hoursWorked: workLogForm.hoursWorked,
+          description: workLogForm.description,
+          isBilled: workLogForm.isBilled
+        });
+      } else {
+        await api.post(`/tasks/${task.id}/worklogs`, {
+          userId: currentUser?.id,
+          logDate: workLogForm.logDate,
+          hoursWorked: workLogForm.hoursWorked,
+          description: workLogForm.description,
+          isBilled: workLogForm.isBilled
+        });
+      }
       fetchWorkLogs();
       setWorkLogForm({
         logDate: new Date().toISOString().split('T')[0],
         hoursWorked: '',
         description: '',
-        isBilled: false
+        isBilled: false,
+        id: null
       });
-      alert('Work log added successfully!', 'success', 'Saved');
+      alert(`Work log ${workLogForm.id ? 'updated' : 'added'} successfully!`, 'success', 'Saved');
     } catch (err) {
       alert('Failed to add work log: ' + err.message, 'error', 'Error');
     } finally {
@@ -1395,9 +1425,21 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                     <label className="saas-field-label">Description (Optional)</label>
                     <input type="text" className="saas-input" placeholder="What did you work on?" value={workLogForm.description} onChange={e => setWorkLogForm({...workLogForm, description: e.target.value})} />
                   </div>
-                  <button className="saas-btn-primary" onClick={handleAddWorkLog} disabled={workLogSaving}>
-                    {workLogSaving ? 'Saving...' : 'Add Work Log'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="saas-btn-primary" onClick={handleAddWorkLog} disabled={workLogSaving}>
+                      {workLogSaving ? 'Saving...' : (workLogForm.id ? 'Update Work Log' : 'Add Work Log')}
+                    </button>
+                    {workLogForm.id && (
+                      <button 
+                        className="saas-btn-secondary" 
+                        onClick={() => setWorkLogForm({ logDate: new Date().toISOString().split('T')[0], hoursWorked: '', description: '', isBilled: false, id: null })}
+                        disabled={workLogSaving}
+                        style={{ padding: '0.5rem 1rem' }}
+                      >
+                        Cancel Edit
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -1429,9 +1471,22 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                               </span>
                             </td>
                             <td style={{ padding: '0.75rem' }}>
-                              <button style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
-                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                              </button>
+                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button title="Edit" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer' }} onClick={() => {
+                                  setWorkLogForm({
+                                    id: log.id,
+                                    logDate: new Date(log.logDate).toISOString().split('T')[0],
+                                    hoursWorked: log.hoursWorked,
+                                    description: log.description || '',
+                                    isBilled: log.isBilled
+                                  });
+                                }}>
+                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                </button>
+                                <button title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
+                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
