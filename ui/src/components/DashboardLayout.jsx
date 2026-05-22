@@ -181,8 +181,14 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'add-user': return <AddUser user={user} onBack={() => setActiveTab('users')} />;
       case 'edit-user': return <EditUser userToEdit={userToEdit} onBack={() => setActiveTab('users')} />;
       case 'reports': return <Reports user={user} />;
-      default: return renderOverview(setActiveTab);
-
+      default: return renderOverview(
+        setActiveTab, 
+        (taskData) => {
+          setSearchSelectedTask(taskData);
+          setIsTaskDetailOpen(true);
+          setActiveTab('tasks');
+        }
+      );
 
     }
   };
@@ -333,7 +339,9 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
                            <div className="saas-search-category-title">Projects</div>
                            {filteredProjects.slice(0, 5).map(p => (
                               <div key={p.id} className="saas-search-item" onClick={() => handleItemClick('project', p)}>
-                                 <div className="saas-search-item-icon project-icon">📁</div>
+                                 <div className="saas-search-item-icon project-icon">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                                 </div>
                                  <div className="saas-search-item-content">
                                     <div className="saas-search-item-title">{p.name}</div>
                                     <div className="saas-search-item-subtitle">{p.status}</div>
@@ -348,7 +356,9 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
                            <div className="saas-search-category-title">Users & Employees</div>
                            {filteredUsers.slice(0, 5).map(u => (
                               <div key={u.id} className="saas-search-item" onClick={() => handleItemClick('user', u)}>
-                                 <div className="saas-search-item-icon user-icon">👤</div>
+                                 <div className="saas-search-item-icon user-icon">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                 </div>
                                  <div className="saas-search-item-content">
                                     <div className="saas-search-item-title">{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`}</div>
                                     <div className="saas-search-item-subtitle">{u.role || 'Member'}</div>

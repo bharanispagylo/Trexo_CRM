@@ -8,7 +8,6 @@ const ACTIONS = [
   { id: 'view',   label: 'View' },
   { id: 'edit',   label: 'Edit' },
   { id: 'delete', label: 'Delete' },
-  { id: 'assign', label: 'Assign' },
 ];
 
 const MODULES = [

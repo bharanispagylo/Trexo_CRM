@@ -391,7 +391,118 @@ const depts = [
   { name: "Others",      count: 231, pct: 18, color: "bg-slate-400" },
 ];
 
-function AdminDashboard({ user, onLogout }) {
+function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
+  const [tasks, setTasks] = useState({ today: [], upcoming: [], backlog: [] });
+  const [usersData, setUsersData] = useState([]);
+  const [deptData, setDeptData] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [allTasks, allUsers] = await Promise.all([
+          api.get('/tasks'),
+          api.get('/users').catch(() => [])
+        ]);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayTasks = [];
+        const upcomingTasks = [];
+        const backlogTasks = [];
+
+        (allTasks || []).forEach(task => {
+          if (task.status === 'Delivered' || task.status === 'Prod Verified') return;
+          const todayTime = today.getTime();
+          if (task.dueDate) {
+             const d = new Date(task.dueDate);
+             d.setHours(0, 0, 0, 0);
+             const time = d.getTime();
+             if (time < todayTime) backlogTasks.push(task);
+             else if (time === todayTime) todayTasks.push(task);
+             else upcomingTasks.push(task);
+          } else {
+             const c = new Date(task.createdAt || Date.now());
+             c.setHours(0, 0, 0, 0);
+             if (c.getTime() === todayTime) todayTasks.push(task);
+             else upcomingTasks.push(task);
+          }
+        });
+        setTasks({ today: todayTasks, upcoming: upcomingTasks, backlog: backlogTasks });
+        setUsersData(allUsers || []);
+
+        // Calculate dynamic departments
+        const deptCounts = {};
+        (allUsers || []).forEach(u => {
+          const d = u.dept || 'Others';
+          deptCounts[d] = (deptCounts[d] || 0) + 1;
+        });
+        const total = (allUsers || []).length || 1;
+        const deptsArray = Object.entries(deptCounts).map(([name, count], i) => {
+          const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-rose-500', 'bg-amber-500', 'bg-slate-400'];
+          return { name, count, pct: Math.round((count/total)*100), color: colors[i % colors.length] };
+        }).sort((a,b) => b.count - a.count);
+        setDeptData(deptsArray);
+
+      } catch (err) {
+        console.error('Failed to fetch dashboard data', err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const renderTaskCard = (title, tasksList, type) => (
+    <div className={`panel-card task-card-${type}`} style={{ flex: 1, minWidth: '300px' }}>
+      <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 className="panel-title">{title}</h3>
+        <span style={{ background: '#e2e8f0', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600 }}>{tasksList.length}</span>
+      </div>
+      <div className="list-group" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+        {tasksList.length === 0 ? (
+          <p style={{ color: '#94a3b8', padding: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>No tasks found.</p>
+        ) : (
+          tasksList.slice(0, 5).map((t, i) => (
+            <div key={i} className="list-item" style={{ cursor: 'pointer', padding: '0.75rem', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '4px' }} onClick={() => handleTaskClick ? handleTaskClick(t) : (setActiveTab && setActiveTab('tasks'))}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{t.title}</span>
+                  <span className={`status-badge status-${t.status.toLowerCase().replace(' ', '-')}`} style={{ fontSize: '0.7rem' }}>{t.status}</span>
+               </div>
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.taskNo || `TSK-${t.id?.substring(0, 4)}`} • {t.priority}</span>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'No Date'}</span>
+               </div>
+            </div>
+          ))
+        )}
+        {tasksList.length > 5 && (
+          <button onClick={() => handleTaskClick ? handleTaskClick(null) : (setActiveTab && setActiveTab('tasks'))} style={{ width: '100%', padding: '0.5rem', background: 'none', border: 'none', color: '#2563eb', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600, borderTop: '1px solid #f1f5f9' }}>View All {tasksList.length} Tasks →</button>
+        )}
+      </div>
+    </div>
+  );
+
+  const totalEmployees = usersData.length;
+  const newJoiners = usersData.filter(u => {
+    if (!u.createdAt) return false;
+    const created = new Date(u.createdAt);
+    const now = new Date();
+    return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+  }).length;
+
+  const dynamicStats = [
+    { label: "Total Employees", value: totalEmployees, change: "+2", up: true,  icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>, grad: "from-blue-600 to-blue-400" },
+    { label: "Active This Month", value: totalEmployees, change: "+1", up: true,  icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>, grad: "from-emerald-600 to-emerald-400" },
+    { label: "New Joiners",       value: newJoiners,    change: "Current month", up: true,  icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>, grad: "from-violet-600 to-violet-400" },
+  ];
+
+  const dynamicRecentEmps = usersData.slice().sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 5).map(u => ({
+    name: u.fullName || `${u.firstName || ''} ${u.lastName || ''}`,
+    role: u.role || 'Employee',
+    dept: u.dept || 'Engineering',
+    joined: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Unknown',
+    status: 'Active',
+    av: (u.firstName?.charAt(0) || u.fullName?.charAt(0) || 'U').toUpperCase()
+  }));
+
   return (
     <div className="dashboard-container app-container">
       {/* Top bar */}
@@ -427,12 +538,19 @@ function AdminDashboard({ user, onLogout }) {
             size="lg"
             ring
           />
+        </div>
 
+        {/* Task Cards Section MOVED TO TOP */}
+        <h2 className="panel-title" style={{ marginTop: "1rem", marginBottom: "1rem" }}>Task Overview</h2>
+        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+          {renderTaskCard("Today's Tasks", tasks.today, "today")}
+          {renderTaskCard("Upcoming Tasks", tasks.upcoming, "upcoming")}
+          {renderTaskCard("Backlog Tasks", tasks.backlog, "backlog")}
         </div>
 
         {/* Stats */}
         <div className="stats-grid">
-          {adminStats.map((s, i) => (
+          {dynamicStats.map((s, i) => (
             <div key={i} className="stat-card">
               <div className="stat-header">
                 <div className="stat-icon" style={{ background: s.grad.includes('blue') ? 'linear-gradient(to bottom right, #2563eb, #60a5fa)' : s.grad.includes('emerald') ? 'linear-gradient(to bottom right, #059669, #34d399)' : s.grad.includes('violet') ? 'linear-gradient(to bottom right, #7c3aed, #a78bfa)' : 'linear-gradient(to bottom right, #f59e0b, #fbbf24)' }}>{s.icon}</div>
@@ -447,13 +565,13 @@ function AdminDashboard({ user, onLogout }) {
         {/* Table + Depts */}
         <div className="content-grid">
           {/* Recent Employees */}
-          <div className="panel-card panel-card-col-3">
+          <div className="panel-card panel-card-col-3" style={{ gridColumn: 'span 3' }}>
             <div className="panel-header">
               <h2 className="panel-title">Recent Employees</h2>
-              <button className="panel-link">View All →</button>
+              <button className="panel-link" onClick={() => setActiveTab('employee')}>View All →</button>
             </div>
             <div className="list-group">
-              {recentEmps.map((e, i) => (
+              {dynamicRecentEmps.map((e, i) => (
                 <div key={i} className="list-item">
                   <Avatar initials={e.av} size="sm" />
                   <div className="list-item-info">
@@ -468,24 +586,6 @@ function AdminDashboard({ user, onLogout }) {
               ))}
             </div>
           </div>
-
-          {/* Dept breakdown */}
-          <div className="panel-card panel-card-col-2">
-            <h2 className="panel-title" style={{ marginBottom: "1rem" }}>Department Breakdown</h2>
-            <div className="dept-list">
-              {depts.map((d, i) => (
-                <div key={i}>
-                  <div className="dept-header">
-                    <span className="dept-name">{d.name}</span>
-                    <span className="dept-stats">{d.count} · {d.pct}%</span>
-                  </div>
-                  <div className="progress-bg">
-                    <div className={`progress-bar ${d.color}`} style={{ width: `${d.pct}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Quick Actions */}
@@ -493,13 +593,13 @@ function AdminDashboard({ user, onLogout }) {
           <h2 className="panel-title" style={{ marginBottom: "1rem" }}>Admin Quick Actions</h2>
           <div className="quick-actions-grid">
             {[
-              { icon: "➕", label: "Add Employee",   color: "action-blue" },
-              { icon: "", label: "Leave Requests", color: "action-amber" },
-              { icon: "", label: "Reports",        color: "action-violet" },
-              { icon: "", label: "KYC Review",     color: "action-rose" },
+              { icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>, label: "Add Employee",   color: "action-blue" },
+              { icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>, label: "Leave Requests", color: "action-amber" },
+              { icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>, label: "Reports",        color: "action-violet" },
+              { icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>, label: "KYC Review",     color: "action-rose" },
             ].map((a, i) => (
               <button key={i} className={`action-btn ${a.color}`}>
-                <span>{a.icon}</span> {a.label}
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{a.icon}</span> {a.label}
               </button>
             ))}
           </div>
@@ -512,10 +612,12 @@ function AdminDashboard({ user, onLogout }) {
 // ══════════════════════════════════════════════════════════
 //  EMPLOYEE DASHBOARD
 // ══════════════════════════════════════════════════════════
-function EmployeeDashboard({ user, onLogout, setActiveTab }) {
+function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
   const [recentLeaves, setRecentLeaves] = useState([]);
   const [attendanceCount, setAttendanceCount] = useState(0);
   const [leaveBalance, setLeaveBalance] = useState(15);
+  const [tasks, setTasks] = useState({ today: [], upcoming: [], backlog: [] });
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -534,12 +636,73 @@ function EmployeeDashboard({ user, onLogout, setActiveTab }) {
         const myApprovedLeaves = myLeaves.filter(l => l.status === 'Approved');
         const usedDays = myApprovedLeaves.reduce((sum, l) => sum + (l.days || 0), 0);
         setLeaveBalance(15 - usedDays);
+
+        // 3. Fetch Tasks
+        const allTasks = await api.get('/tasks');
+        const myTasks = allTasks.filter(t => (t.assignees || '').toLowerCase().includes(userName));
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const todayTasks = [];
+        const upcomingTasks = [];
+        const backlogTasks = [];
+
+        myTasks.forEach(task => {
+          if (task.status === 'Delivered' || task.status === 'Prod Verified') return; // ignore completed
+          const todayTime = today.getTime();
+          if (task.dueDate) {
+             const d = new Date(task.dueDate);
+             d.setHours(0, 0, 0, 0);
+             const time = d.getTime();
+             if (time < todayTime) backlogTasks.push(task);
+             else if (time === todayTime) todayTasks.push(task);
+             else upcomingTasks.push(task);
+          } else {
+             const c = new Date(task.createdAt || Date.now());
+             c.setHours(0, 0, 0, 0);
+             if (c.getTime() === todayTime) todayTasks.push(task);
+             else upcomingTasks.push(task);
+          }
+        });
+        setTasks({ today: todayTasks, upcoming: upcomingTasks, backlog: backlogTasks });
+
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       }
     };
     fetchData();
   }, [user]);
+
+  const renderTaskCard = (title, tasksList, type) => (
+    <div className={`panel-card task-card-${type}`} style={{ flex: 1, minWidth: '300px' }}>
+      <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 className="panel-title">{title}</h3>
+        <span style={{ background: '#e2e8f0', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600 }}>{tasksList.length}</span>
+      </div>
+      <div className="list-group" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+        {tasksList.length === 0 ? (
+          <p style={{ color: '#94a3b8', padding: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>No tasks found.</p>
+        ) : (
+          tasksList.slice(0, 5).map((t, i) => (
+            <div key={i} className="list-item" style={{ cursor: 'pointer', padding: '0.75rem', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '4px' }} onClick={() => handleTaskClick ? handleTaskClick(t) : (setActiveTab && setActiveTab('tasks'))}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{t.title}</span>
+                  <span className={`status-badge status-${t.status.toLowerCase().replace(' ', '-')}`} style={{ fontSize: '0.7rem' }}>{t.status}</span>
+               </div>
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.taskNo || `TSK-${t.id?.substring(0, 4)}`} • {t.priority}</span>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'No Date'}</span>
+               </div>
+            </div>
+          ))
+        )}
+        {tasksList.length > 5 && (
+          <button onClick={() => handleTaskClick ? handleTaskClick(null) : (setActiveTab && setActiveTab('tasks'))} style={{ width: '100%', padding: '0.5rem', background: 'none', border: 'none', color: '#2563eb', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600, borderTop: '1px solid #f1f5f9' }}>View All {tasksList.length} Tasks →</button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="dashboard-container dashboard-container-emp app-container">
@@ -572,60 +735,32 @@ function EmployeeDashboard({ user, onLogout, setActiveTab }) {
             size="lg"
             ring
           />
+        </div>
 
+        {/* Task Cards Section MOVED TO TOP */}
+        <div style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
+          <h3 className="tasks-title" style={{ marginBottom: '1rem' }}>My Tasks</h3>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+            {renderTaskCard("Today's Tasks", tasks.today, "today")}
+            {renderTaskCard("Upcoming Tasks", tasks.upcoming, "upcoming")}
+            {renderTaskCard("Backlog Tasks", tasks.backlog, "backlog")}
+          </div>
         </div>
 
         {/* Info row */}
         <div className="emp-grid" style={{ gridTemplateColumns: '1fr' }}>
           <div className="emp-content">
-            {/* Stats */}
-            <div className="emp-stats-grid">
-              {[
-                { label: "Days Present", value: attendanceCount, icon: "📅", color: "icon-blue" },
-                { label: "Leave Balance", value: leaveBalance,  icon: "🏖️", color: "icon-amber" },
-              ].map((s, i) => (
-                <div key={i} className="emp-stat-card">
-                  <div className={`emp-stat-icon ${s.color}`}>{s.icon}</div>
-                  <div className="emp-stat-value">{s.value}</div>
-                  <div className="emp-stat-label">{s.label}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* My Leaves */}
-            <div className="tasks-panel" style={{ marginTop: '1.5rem' }}>
-              <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 className="tasks-title" style={{ margin: 0 }}>Recent Leave History</h3>
-                <button className="saas-btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setActiveTab('leave')}>View All</button>
-              </div>
-              <div className="tasks-list">
-                {recentLeaves.length === 0 ? (
-                  <p style={{ color: '#94a3b8', padding: '1rem' }}>No leave history found.</p>
-                ) : (
-                  recentLeaves.map((l) => (
-                    <div key={l.id} className="task-item" style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', borderBottom: '1px solid #f1f5f9' }}>
-                      <div>
-                        <div style={{ fontWeight: 600, color: '#1e293b' }}>{l.type}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{l.dates} · {l.days} Days</div>
-                      </div>
-                      <span className={`badge ${l.status === 'Approved' ? 'badge-green' : l.status === 'Rejected' ? 'badge-red' : 'badge-yellow'}`} style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', borderRadius: '12px', height: 'fit-content' }}>
-                        {l.status}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
             {/* Quick actions */}
-            <div className="quick-actions-panel" style={{ marginTop: '1.5rem' }}>
-              <h3 className="tasks-title">Self Service</h3>
+            <div className="quick-actions-panel">
+              <h3 className="tasks-title" style={{ marginBottom: '1rem' }}>Self Service</h3>
               <div className="emp-actions-grid">
-                <button className="action-btn action-btn-sm action-amber" onClick={() => setActiveTab('leave')}>
-                  <span>📝</span> Apply for Leave
+                <button className="action-btn action-btn-sm action-amber" onClick={() => setActiveTab('leave')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                  Apply for Leave
                 </button>
-                <button className="action-btn action-btn-sm action-blue" onClick={() => setActiveTab('attendance')}>
-                  <span>⏰</span> My Attendance
+                <button className="action-btn action-btn-sm action-blue" onClick={() => setActiveTab('attendance')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  My Attendance
                 </button>
               </div>
             </div>
@@ -670,13 +805,13 @@ export default function LoginWithRoles() {
   if (user.role?.toLowerCase() === "admin") {
     return (
       <PermissionProvider userRole={user.role}>
-        <DashboardLayout user={user} onLogout={handleLogout} renderOverview={(setActiveTab) => <AdminDashboard user={user} onLogout={handleLogout} setActiveTab={setActiveTab} />} />
+        <DashboardLayout user={user} onLogout={handleLogout} renderOverview={(setActiveTab, handleTaskClick) => <AdminDashboard user={user} onLogout={handleLogout} setActiveTab={setActiveTab} handleTaskClick={handleTaskClick} />} />
       </PermissionProvider>
     );
   }
   return (
     <PermissionProvider userRole={user.role}>
-      <DashboardLayout user={user} onLogout={handleLogout} renderOverview={(setActiveTab) => <EmployeeDashboard user={user} onLogout={handleLogout} setActiveTab={setActiveTab} />} />
+      <DashboardLayout user={user} onLogout={handleLogout} renderOverview={(setActiveTab, handleTaskClick) => <EmployeeDashboard user={user} onLogout={handleLogout} setActiveTab={setActiveTab} handleTaskClick={handleTaskClick} />} />
     </PermissionProvider>
   );
 }
