@@ -662,6 +662,37 @@ app.post('/api/tasks/:id/worklogs', async (req, res) => {
   }
 });
 
+app.put('/api/worklogs/:logId', async (req, res) => {
+  try {
+    const { logDate, hoursWorked, description, isBilled } = req.body;
+    const log = await prisma.workLog.update({
+      where: { id: req.params.logId },
+      data: {
+        logDate: new Date(logDate),
+        hoursWorked: parseFloat(hoursWorked),
+        description,
+        isBilled: isBilled || false
+      }
+    });
+
+    const allLogs = await prisma.workLog.findMany({ where: { taskId: log.taskId } });
+    const totalHours = allLogs.reduce((sum, l) => sum + l.hoursWorked, 0);
+    const billedHours = allLogs.filter(l => l.isBilled).reduce((sum, l) => sum + l.hoursWorked, 0);
+    await prisma.task.update({
+      where: { id: log.taskId },
+      data: { 
+        actualHours: totalHours,
+        approvedHours: billedHours
+      }
+    });
+
+    res.json(log);
+  } catch (error) {
+    console.error('PUT worklogs error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.delete('/api/worklogs/:logId', async (req, res) => {
   try {
     const log = await prisma.workLog.findUnique({ where: { id: req.params.logId } });
