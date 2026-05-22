@@ -71,6 +71,8 @@ model Project {
   name            String
   description     String?  @db.Text
   client          String?
+  clientId        String?  @map("client_id")
+  clientRef       Client?  @relation(fields: [clientId], references: [id])
   status          String?  @default("Active")
   estimatedHours  Float?   @default(0) @map("estimated_hours")
   actualHours     Float?   @default(0) @map("actual_hours")
@@ -80,8 +82,48 @@ model Project {
   taskLists       TaskList[]
   queries         ProjectQuery[]
   attachments     ProjectAttachment[]
+  tasks           Task[]
+  estimations     Estimation[]
 
   @@map("projects")
+}
+
+model Client {
+  id              String    @id @default(uuid())
+  clientType      String?   @default("Direct") @map("client_type") // Direct, Agency, Agency Client
+  parentAgencyId  String?   @map("parent_agency_id")
+  parentAgency    Client?   @relation("AgencyClients", fields: [parentAgencyId], references: [id])
+  agencyClients   Client[]  @relation("AgencyClients")
+  name            String
+  email           String?
+  phone           String?
+  company         String?
+  address         String?
+  status          String?   @default("Active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  projects        Project[]
+  tasks           Task[]
+  estimations     Estimation[]
+
+  @@map("clients")
+}
+
+model Estimation {
+  id              String   @id @default(uuid())
+  estimationNo    String?  @map("estimation_no")
+  taskName        String   @map("task_name")
+  description     String?  @db.Text
+  estimatedHours  Float    @default(0) @map("estimated_hours")
+  clientId        String?  @map("client_id")
+  clientRef       Client?  @relation(fields: [clientId], references: [id])
+  projectId       String?  @map("project_id")
+  projectRef      Project? @relation(fields: [projectId], references: [id])
+  status          String?  @default("Pending") // Pending, Converted, Cancelled
+  taskId          String?  @map("task_id")
+  taskRef         Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("estimations")
 }
 
 model ProjectQuery {
@@ -143,6 +185,10 @@ model Task {
   description String?
   taskType    String?  @map("task_type")
   projectName String?  @map("project_name")
+  projectId   String?  @map("project_id")
+  projectRef  Project? @relation(fields: [projectId], references: [id])
+  clientId    String?  @map("client_id")
+  clientRef   Client?  @relation(fields: [clientId], references: [id])
   assignees   String?
   dueDate     DateTime?
   status      String?  @default("To Do")
@@ -153,6 +199,7 @@ model Task {
   assignedDate DateTime?
   deliveredDate DateTime? @map("delivered_date")
   isBillable  Boolean  @default(false)
+  estimatedHours Float?  @default(0) @map("estimated_hours")
   approvedHours Float?   @default(0)
   actualHours   Float?   @default(0)
   taskListId  String?
@@ -161,6 +208,8 @@ model Task {
   attachments String?
 
   comments    Comment[]
+  estimations Estimation[]
+  workLogs    WorkLog[]
 
   @@map("tasks")
 }
@@ -208,7 +257,25 @@ model User {
   status       String?  @default("Active")
   createdAt    DateTime @default(now()) @map("created_at")
 
+  workLogs     WorkLog[]
+
   @@map("users")
+}
+
+model WorkLog {
+  id          String   @id @default(uuid())
+  taskId      String   @map("task_id")
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logDate     DateTime @db.Date @map("log_date")
+  hoursWorked Float    @map("hours_worked")
+  description String?  @db.Text
+  isBilled    Boolean  @default(false) @map("is_billed")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("work_logs")
 }
 
 

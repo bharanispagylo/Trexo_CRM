@@ -616,6 +616,76 @@ app.get('/api/tasks/:id/comments', async (req, res) => {
   }
 });
 
+// ── TASK WORK LOGS ──────────────────────────────────────────────────────────
+app.get('/api/tasks/:id/worklogs', async (req, res) => {
+  try {
+    const logs = await prisma.workLog.findMany({
+      where: { taskId: req.params.id },
+      include: { user: true },
+      orderBy: { logDate: 'desc' }
+    });
+    res.json(logs);
+  } catch (error) {
+    console.error('GET worklogs error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/tasks/:id/worklogs', async (req, res) => {
+  try {
+    const log = await prisma.workLog.create({
+      data: {
+        taskId: req.params.id,
+        userId: req.body.userId,
+        logDate: new Date(req.body.logDate),
+        hoursWorked: parseFloat(req.body.hoursWorked),
+        description: req.body.description,
+        isBilled: req.body.isBilled || false
+      }
+    });
+
+    const allLogs = await prisma.workLog.findMany({ where: { taskId: req.params.id } });
+    const totalHours = allLogs.reduce((sum, l) => sum + l.hoursWorked, 0);
+    const billedHours = allLogs.filter(l => l.isBilled).reduce((sum, l) => sum + l.hoursWorked, 0);
+    await prisma.task.update({
+      where: { id: req.params.id },
+      data: { 
+        actualHours: totalHours,
+        approvedHours: billedHours
+      }
+    });
+
+    res.json(log);
+  } catch (error) {
+    console.error('POST worklogs error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/worklogs/:logId', async (req, res) => {
+  try {
+    const log = await prisma.workLog.findUnique({ where: { id: req.params.logId } });
+    if (!log) return res.status(404).json({ error: 'Not found' });
+    
+    await prisma.workLog.delete({ where: { id: req.params.logId } });
+    
+    const allLogs = await prisma.workLog.findMany({ where: { taskId: log.taskId } });
+    const totalHours = allLogs.reduce((sum, l) => sum + l.hoursWorked, 0);
+    const billedHours = allLogs.filter(l => l.isBilled).reduce((sum, l) => sum + l.hoursWorked, 0);
+    await prisma.task.update({
+      where: { id: log.taskId },
+      data: { 
+        actualHours: totalHours,
+        approvedHours: billedHours
+      }
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/tasks/:id/comments', async (req, res) => {
   try {
     const comment = await prisma.comment.create({
@@ -737,10 +807,160 @@ app.delete('/api/project-queries/:id', async (req, res) => {
   }
 });
 
+// 9a. Clients
+app.get('/api/clients', async (req, res) => {
+  try {
+    const clients = await prisma.client.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(clients);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/clients', async (req, res) => {
+  try {
+    const client = await prisma.client.create({
+      data: req.body
+    });
+    res.json(client);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/clients/:id', async (req, res) => {
+  try {
+    const client = await prisma.client.update({
+      where: { id: req.params.id },
+      data: req.body
+    });
+    res.json(client);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/clients/:id', async (req, res) => {
+  try {
+    await prisma.client.delete({
+      where: { id: req.params.id }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 9b. Estimations
+app.get('/api/estimations', async (req, res) => {
+  try {
+    const estimations = await prisma.estimation.findMany({
+      include: { clientRef: true, projectRef: true, taskRef: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(estimations);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/estimations', async (req, res) => {
+  try {
+    const count = await prisma.estimation.count();
+    const estimationNo = `EST-${String(count + 1).padStart(4, '0')}`;
+    
+    // Clean up input fields to match prisma
+    const { clientId, projectId, estimatedHours, ...rest } = req.body;
+    
+    const estimation = await prisma.estimation.create({
+      data: {
+        ...rest,
+        estimationNo,
+        estimatedHours: parseFloat(estimatedHours) || 0,
+        clientId: clientId || null,
+        projectId: projectId || null
+      }
+    });
+    res.json(estimation);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/estimations/:id', async (req, res) => {
+  try {
+    const { clientId, projectId, estimatedHours, ...rest } = req.body;
+    
+    const estimation = await prisma.estimation.update({
+      where: { id: req.params.id },
+      data: {
+        ...rest,
+        estimatedHours: estimatedHours !== undefined ? parseFloat(estimatedHours) || 0 : undefined,
+        clientId: clientId !== undefined ? (clientId || null) : undefined,
+        projectId: projectId !== undefined ? (projectId || null) : undefined
+      }
+    });
+    res.json(estimation);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/estimations/:id', async (req, res) => {
+  try {
+    await prisma.estimation.delete({
+      where: { id: req.params.id }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/estimations/:id/convert', async (req, res) => {
+  try {
+    const estimation = await prisma.estimation.findUnique({
+      where: { id: req.params.id },
+      include: { projectRef: true }
+    });
+    
+    if (!estimation) return res.status(404).json({ error: 'Estimation not found' });
+    if (estimation.status === 'Converted') return res.status(400).json({ error: 'Already converted' });
+
+    // Create the task based on estimation
+    const task = await prisma.task.create({
+      data: {
+        title: estimation.taskName,
+        description: estimation.description,
+        projectName: estimation.projectRef ? estimation.projectRef.name : null,
+        projectId: estimation.projectId,
+        clientId: estimation.clientId,
+        estimatedHours: estimation.estimatedHours,
+        status: 'To Do',
+        priority: 'Medium',
+        taskType: 'Feature'
+      }
+    });
+
+    // Update estimation
+    const updatedEst = await prisma.estimation.update({
+      where: { id: estimation.id },
+      data: { status: 'Converted', taskId: task.id }
+    });
+
+    res.json({ task, estimation: updatedEst });
+  } catch (error) {
+    console.error('Convert estimation error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 10. Reports
 app.get('/api/reports/monthly', async (req, res) => {
   try {
-    const { month, year, project, assignee } = req.query;
+    const { month, year, project, assignee, client } = req.query;
     
     // Default to current month/year if not provided
     const currentDate = new Date();
@@ -751,29 +971,58 @@ app.get('/api/reports/monthly', async (req, res) => {
     const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
     
     const whereClause = {
-      status: 'Delivered',
-      deliveredDate: {
+      logDate: {
         gte: startDate,
         lte: endDate,
       }
     };
-    
-    if (project && project !== 'All Projects') {
-      whereClause.projectName = project;
-    }
-    
+
     if (assignee && assignee !== 'All Assignees') {
-      whereClause.assignees = {
-        contains: assignee
-      };
+      whereClause.user = { fullName: { contains: assignee } }; // This is an approximation
     }
 
-    const tasks = await prisma.task.findMany({
+    const taskFilters = {};
+    if (project && project !== 'All Projects') {
+      taskFilters.projectName = project;
+    }
+    if (client && client !== 'All Clients') {
+      taskFilters.clientId = client;
+    }
+
+    if (Object.keys(taskFilters).length > 0) {
+      whereClause.task = taskFilters;
+    }
+
+    const logs = await prisma.workLog.findMany({
       where: whereClause,
-      orderBy: { deliveredDate: 'desc' }
+      include: {
+        task: {
+          include: { clientRef: true, projectRef: true }
+        },
+        user: true
+      }
     });
-    
-    res.json(tasks);
+
+    // Aggregate by task
+    const taskMap = {};
+    logs.forEach(log => {
+      const taskId = log.taskId;
+      if (!taskMap[taskId]) {
+        taskMap[taskId] = {
+          ...log.task,
+          actualHours: 0,
+          approvedHours: 0, // In this context, approvedHours could be "Billed Hours"
+          workLogPeriodString: `${month}/${year}`,
+          deliveredDate: log.logDate // using logDate as reference
+        };
+      }
+      taskMap[taskId].actualHours += log.hoursWorked;
+      if (log.isBilled) {
+        taskMap[taskId].approvedHours += log.hoursWorked;
+      }
+    });
+
+    res.json(Object.values(taskMap));
   } catch (error) {
     console.error('GET /api/reports/monthly error:', error);
     res.status(500).json({ error: error.message });
@@ -783,7 +1032,7 @@ app.get('/api/reports/monthly', async (req, res) => {
 // 11. Custom Reports (Range)
 app.get('/api/reports/range', async (req, res) => {
   try {
-    const { startDate, endDate, project, assignee } = req.query;
+    const { startDate, endDate, project, assignee, client } = req.query;
     
     if (!startDate || !endDate) {
       return res.status(400).json({ error: 'startDate and endDate are required' });
@@ -793,29 +1042,52 @@ app.get('/api/reports/range', async (req, res) => {
     const end = new Date(endDate);
     
     const whereClause = {
-      status: 'Delivered',
-      deliveredDate: {
+      logDate: {
         gte: start,
         lte: end,
       }
     };
     
+    const taskFilters = {};
     if (project && project !== 'All Projects') {
-      whereClause.projectName = project;
+      taskFilters.projectName = project;
     }
-    
-    if (assignee && assignee !== 'All Assignees') {
-      whereClause.assignees = {
-        contains: assignee
-      };
+    if (client && client !== 'All Clients') {
+      taskFilters.clientId = client;
+    }
+    if (Object.keys(taskFilters).length > 0) {
+      whereClause.task = taskFilters;
     }
 
-    const tasks = await prisma.task.findMany({
+    const logs = await prisma.workLog.findMany({
       where: whereClause,
-      orderBy: { deliveredDate: 'desc' }
+      include: {
+        task: {
+          include: { clientRef: true, projectRef: true }
+        },
+        user: true
+      }
     });
     
-    res.json(tasks);
+    // Aggregate by task
+    const taskMap = {};
+    logs.forEach(log => {
+      const taskId = log.taskId;
+      if (!taskMap[taskId]) {
+        taskMap[taskId] = {
+          ...log.task,
+          actualHours: 0,
+          approvedHours: 0, // Billed Hours
+          deliveredDate: log.logDate
+        };
+      }
+      taskMap[taskId].actualHours += log.hoursWorked;
+      if (log.isBilled) {
+        taskMap[taskId].approvedHours += log.hoursWorked;
+      }
+    });
+
+    res.json(Object.values(taskMap));
   } catch (error) {
     console.error('GET /api/reports/range error:', error);
     res.status(500).json({ error: error.message });
