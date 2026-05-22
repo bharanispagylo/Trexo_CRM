@@ -42,6 +42,7 @@ model Leave {
   dates      String?
   reason     String?
   status     String?  @default("Pending")
+  attachments String?
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@map("leaves")

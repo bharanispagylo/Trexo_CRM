@@ -293,10 +293,18 @@ app.get('/api/leaves', async (req, res) => {
 app.post('/api/leaves', async (req, res) => {
   try {
     console.log('POST /api/leaves body:', req.body);
+    const { id, createdAt, attachments, ...leaveData } = req.body;
+    
+    // Pass attachments only if it's explicitly handled or added to schema.
+    // It's safe to pass if the backend restarted and ran db push,
+    // but just to be safe and prevent the 500 error we filter unknown keys.
+    const finalData = { ...leaveData };
+    if (attachments) finalData.attachments = attachments;
+
     const leave = await prisma.leave.create({
-      data: req.body
+      data: finalData
     });
-    notifyAdmins(`New Leave Request`, `${leave.employeeName} requested leave.`);
+    notifyAdmins(`New Leave Request`, `${leave.employeeName || leave.name} requested leave.`);
     res.json(leave);
   } catch (error) {
     console.error('POST /api/leaves error:', error);
@@ -306,12 +314,24 @@ app.post('/api/leaves', async (req, res) => {
 
 app.put('/api/leaves/:id', async (req, res) => {
   try {
+    const { id, createdAt, ...updateData } = req.body;
     const leave = await prisma.leave.update({
       where: { id: req.params.id },
-      data: req.body
+      data: updateData
     });
     createNotification([leave.employeeName], `Leave Updated`, `Your leave request status is now: ${leave.status}`);
     res.json(leave);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/leaves/:id', async (req, res) => {
+  try {
+    await prisma.leave.delete({
+      where: { id: req.params.id }
+    });
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
