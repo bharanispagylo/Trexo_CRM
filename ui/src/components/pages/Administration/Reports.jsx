@@ -24,9 +24,11 @@ export default function Reports({ user }) {
 
   const [selectedProject, setSelectedProject] = useState('All Projects');
   const [selectedAssignee, setSelectedAssignee] = useState('All Assignees');
+  const [selectedClient, setSelectedClient] = useState('All Clients');
   
   const [projects, setProjects] = useState([]);
   const [assignees, setAssignees] = useState([]);
+  const [clients, setClients] = useState([]);
 
   const fetchReports = async () => {
     try {
@@ -37,7 +39,8 @@ export default function Reports({ user }) {
           month: selectedMonth,
           year: selectedYear,
           project: selectedProject,
-          assignee: selectedAssignee
+          assignee: selectedAssignee,
+          client: selectedClient
         });
         data = await api.get(`/reports/monthly?${params.toString()}`);
       } else {
@@ -46,7 +49,8 @@ export default function Reports({ user }) {
             startDate: new Date(customStartDate).toISOString(),
             endDate: new Date(new Date(customEndDate).setHours(23, 59, 59, 999)).toISOString(),
             project: selectedProject,
-            assignee: selectedAssignee
+            assignee: selectedAssignee,
+            client: selectedClient
           });
           data = await api.get(`/reports/range?${params.toString()}`);
         } else {
@@ -56,12 +60,14 @@ export default function Reports({ user }) {
       setTasks(data || []);
       
       if (projects.length === 0) {
-        const [projectsData, usersData] = await Promise.all([
+        const [projectsData, usersData, clientsData] = await Promise.all([
           api.get('/projects'),
-          api.get('/users')
+          api.get('/users'),
+          api.get('/clients')
         ]);
         setProjects(projectsData || []);
         setAssignees(usersData || []);
+        setClients(clientsData || []);
       }
     } catch (err) {
       console.error('Failed to fetch reports:', err);
@@ -73,10 +79,11 @@ export default function Reports({ user }) {
   useEffect(() => {
     fetchReports();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportType, selectedMonth, selectedYear, customStartDate, customEndDate]);
+  }, [reportType, selectedMonth, selectedYear, customStartDate, customEndDate, selectedClient]);
 
   const totalTasks = tasks.length;
-  const totalBillableHours = tasks.reduce((sum, t) => sum + (parseFloat(t.actualHours) || parseFloat(t.approvedHours) || 0), 0);
+  const totalBillableHours = tasks.reduce((sum, t) => sum + (parseFloat(t.approvedHours) || 0), 0);
+  const totalActualHours = tasks.reduce((sum, t) => sum + (parseFloat(t.actualHours) || 0), 0);
   
   const uniqueProjects = useMemo(() => {
     const projNames = new Set(tasks.map(t => t.projectName).filter(Boolean));
@@ -93,13 +100,15 @@ export default function Reports({ user }) {
   };
 
   const handleExport = () => {
-    const headers = ['Task # No', 'Title', 'Project', 'Assignee', 'Billable Hours', 'Delivered Date'];
+    const headers = ['Task # No', 'Title', 'Client', 'Project', 'Assignee', 'Total Hours', 'Billable Hours', 'Delivered Date'];
     const rows = tasks.map(t => [
       t.taskNo || '-',
       `"${(t.title || '').replace(/"/g, '""')}"`,
+      `"${(t.clientRef?.name || '-').replace(/"/g, '""')}"`,
       `"${(t.projectName || '-').replace(/"/g, '""')}"`,
       `"${(t.assignees || '-').replace(/"/g, '""')}"`,
-      formatTime(parseFloat(t.actualHours) || parseFloat(t.approvedHours) || 0),
+      formatTime(parseFloat(t.actualHours) || 0),
+      formatTime(parseFloat(t.approvedHours) || 0),
       t.deliveredDate ? new Date(t.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'
     ]);
     
@@ -125,6 +134,8 @@ export default function Reports({ user }) {
   if (user?.role?.toLowerCase() !== 'admin') {
     return <div className="reports-container"><h3>Access Denied. Only Admins can view reports.</h3></div>;
   }
+
+  if (loading) return <div className="loading-screen">Loading Reports...</div>;
 
   return (
     <div className="reports-container">
@@ -191,6 +202,10 @@ export default function Reports({ user }) {
           </div>
         </div>
         <div className="reports-filter-right">
+          <select className="reports-select" value={selectedClient} onChange={e => setSelectedClient(e.target.value)}>
+            <option value="All Clients">All Clients</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
           <select className="reports-select" value={selectedProject} onChange={e => setSelectedProject(e.target.value)}>
             <option value="All Projects">All Projects</option>
             {projects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
@@ -248,16 +263,15 @@ export default function Reports({ user }) {
       </div>
 
       <div className="reports-table-container">
-        {loading ? (
-          <div className="reports-loading">Loading...</div>
-        ) : (
           <table className="reports-table">
             <thead>
               <tr>
                 <th>Task # No</th>
                 <th>Title</th>
+                <th>Client</th>
                 <th>Project</th>
                 <th>Assignee</th>
+                <th>Total Hours</th>
                 <th>Billable Hours</th>
                 <th>Delivered Date</th>
               </tr>
@@ -267,6 +281,7 @@ export default function Reports({ user }) {
                 <tr key={task.id}>
                   <td>{task.taskNo || '-'}</td>
                   <td className="task-title-cell">{task.title}</td>
+                  <td>{task.clientRef ? task.clientRef.name : '-'}</td>
                   <td>{task.projectName || '-'}</td>
                   <td>
                     <div className="assignee-cell">
@@ -276,7 +291,8 @@ export default function Reports({ user }) {
                       {task.assignees || 'Unassigned'}
                     </div>
                   </td>
-                  <td>{formatTime(parseFloat(task.actualHours) || parseFloat(task.approvedHours) || 0)}</td>
+                  <td>{formatTime(parseFloat(task.actualHours) || 0)}</td>
+                  <td>{formatTime(parseFloat(task.approvedHours) || 0)}</td>
                   <td>{task.deliveredDate ? new Date(task.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</td>
                 </tr>
               ))}
@@ -289,14 +305,14 @@ export default function Reports({ user }) {
             {tasks.length > 0 && (
               <tfoot>
                 <tr>
-                  <td colSpan="4" className="footer-total-label">Total</td>
+                  <td colSpan="5" className="footer-total-label">Total</td>
+                  <td className="footer-total-hours">{formatTime(totalActualHours)} hrs</td>
                   <td className="footer-total-hours">{formatTime(totalBillableHours)} hrs</td>
-                  <td className="footer-total-tasks">{totalTasks}</td>
+                  <td className="footer-total-tasks">{totalTasks} tasks</td>
                 </tr>
               </tfoot>
             )}
           </table>
-        )}
       </div>
 
       <div className="reports-bottom-note">

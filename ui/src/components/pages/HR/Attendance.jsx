@@ -7,6 +7,7 @@ import { useAlert } from '../../../context/AlertContext';
 export default function Attendance({ user }) {
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const [view, setView] = useState('main'); // 'main' or 'manual'
@@ -75,6 +76,7 @@ export default function Attendance({ user }) {
       alert("Please fill out all mandatory fields: Date, Employee ID, Check In, and Check Out.");
       return;
     }
+    setIsSaving(true);
     try {
       const formatTime = (time) => {
         const [h, m] = time.split(':');
@@ -97,10 +99,13 @@ export default function Attendance({ user }) {
         outTimeHrs: manualForm.outTimeHrs,
         status: manualForm.checkOut ? 'Out' : 'Present'
       });
+      alert('Attendance entry saved successfully!', 'success', 'Success');
       setView('main');
       fetchAttendance();
     } catch (error) {
       alert('Failed to add entry: ' + error.message, 'error', 'Error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -172,6 +177,8 @@ export default function Attendance({ user }) {
       </div>
     );
   }
+
+  if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Attendance...'}</div>;
 
   return (
     <div className="attendance-page">

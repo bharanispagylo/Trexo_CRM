@@ -9,6 +9,8 @@ import Attendance from './pages/HR/Attendance';
 import Projects from './pages/Operations/Projects';
 import Teams from './pages/Operations/Teams';
 import Tasks from './pages/Operations/Tasks';
+import Estimations from './pages/Operations/Estimations';
+import Clients from './pages/Operations/Clients';
 import Users from './pages/Administration/Users';
 import Roles from './pages/Administration/Roles';
 import AddUser from './pages/Administration/AddUser';
@@ -163,6 +165,8 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
           }}
         />
       );
+      case 'estimations': return <Estimations user={user} />;
+      case 'clients': return <Clients user={user} />;
       case 'teams': return <Teams user={user} />;
       case 'tasks': return (
         <Tasks 
@@ -197,6 +201,8 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'leave': return { title: 'Leave Requests', back: 'HR', id: 'Leave' };
       case 'attendance': return { title: 'Attendance Logs', back: 'HR', id: 'Attendance' };
       case 'projects': return { title: 'Project Portfolio', back: 'Operations', id: 'Projects' };
+      case 'estimations': return { title: 'Estimations', back: 'Operations', id: 'Estimations' };
+      case 'clients': return { title: 'Client Management', back: 'Operations', id: 'Clients' };
       case 'teams': return { title: 'Team Structure', back: 'Operations', id: 'Teams' };
       case 'tasks': return isTaskDetailOpen
         ? { title: 'Task Details', back: 'Tasks', id: 'TaskDetails' }
@@ -241,6 +247,8 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             {can('tasks', 'view') && <NavItem id="tasks" label="Tasks" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>} />}
             {can('teams', 'view') && <NavItem id="teams" label="Teams" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>} />}
             {can('projects', 'view') && <NavItem id="projects" label="Projects" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>} />}
+            <NavItem id="estimations" label="Estimations" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>} />
+            <NavItem id="clients" label="Clients" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>} />
           </div>
 
           {(can('employees', 'view') || can('users', 'view') || can('roles', 'view') || user?.role?.toLowerCase() === 'admin') && (

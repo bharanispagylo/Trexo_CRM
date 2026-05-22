@@ -84,7 +84,10 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
         taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')
       };
     }
-    return defaults;
+    return {
+      ...defaults,
+      taskNo: `TSK-${Math.floor(Math.random() * 900000) + 100000}`
+    };
   });
 
   const [activeTab, setActiveTab] = useState('general');
@@ -98,6 +101,14 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState('');
+  const [workLogs, setWorkLogs] = useState([]);
+  const [workLogForm, setWorkLogForm] = useState({
+    logDate: new Date().toISOString().split('T')[0],
+    hoursWorked: '',
+    description: '',
+    isBilled: false
+  });
+  const [workLogSaving, setWorkLogSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [commentAttachment, setCommentAttachment] = useState(null);
   const [commentUploading, setCommentUploading] = useState(false);
@@ -120,6 +131,12 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
   const fetchComments = useCallback(() => {
     if (isEdit && task?.id) {
       api.get(`/tasks/${task.id}/comments`).then(setComments).catch(console.error);
+    }
+  }, [isEdit, task?.id]);
+
+  const fetchWorkLogs = useCallback(() => {
+    if (isEdit && task?.id) {
+      api.get(`/tasks/${task.id}/worklogs`).then(setWorkLogs).catch(console.error);
     }
   }, [isEdit, task?.id]);
 
@@ -173,6 +190,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
 
   useEffect(() => {
     fetchComments();
+    fetchWorkLogs();
     api.get('/users').then(data => {
       const names = data.map(u => u.fullName || `${u.firstName} ${u.lastName}`.trim());
       setUsers(names);
@@ -183,7 +201,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
     api.get('/projects').then(data => {
       setProjects(data || []);
     }).catch(console.error);
-  }, [task, isEdit, fetchComments]);
+  }, [task, isEdit, fetchComments, fetchWorkLogs]);
 
   const handleCommentFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -341,6 +359,50 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
     }
   };
   
+  const handleAddWorkLog = async () => {
+    if (!workLogForm.hoursWorked || !workLogForm.logDate) {
+      alert("Please fill in Date and Hours.", "warning", "Required");
+      return;
+    }
+    setWorkLogSaving(true);
+    try {
+      await api.post(`/tasks/${task.id}/worklogs`, {
+        userId: currentUser?.id,
+        logDate: workLogForm.logDate,
+        hoursWorked: workLogForm.hoursWorked,
+        description: workLogForm.description,
+        isBilled: workLogForm.isBilled
+      });
+      fetchWorkLogs();
+      setWorkLogForm({
+        logDate: new Date().toISOString().split('T')[0],
+        hoursWorked: '',
+        description: '',
+        isBilled: false
+      });
+      alert('Work log added successfully!', 'success', 'Saved');
+    } catch (err) {
+      alert('Failed to add work log: ' + err.message, 'error', 'Error');
+    } finally {
+      setWorkLogSaving(false);
+    }
+  };
+
+  const handleDeleteWorkLog = async (logId) => {
+    confirm("Delete this work log?", async () => {
+      setWorkLogSaving(true);
+      try {
+        await api.delete(`/worklogs/${logId}`);
+        fetchWorkLogs();
+        alert('Work log deleted', 'success', 'Deleted');
+      } catch (err) {
+        alert('Delete failed', 'error', 'Error');
+      } finally {
+        setWorkLogSaving(false);
+      }
+    }, 'Delete Log');
+  };
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const submit = () => {
     const newErrors = {};
@@ -738,12 +800,26 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
             >
               Attachments
             </button>
+            {isEdit && (
+              <button 
+                className={`saas-tab-header-btn ${activeTab === 'worklogs' ? 'active' : ''}`}
+                onClick={() => setActiveTab('worklogs')}
+              >
+                Work Logs
+              </button>
+            )}
           </div>
 
           {/* Tab Content */}
           <div className="saas-tab-pane-content">
             {activeTab === 'general' && (
-              <div className="saas-details-grid animate-fade-in">
+              <>
+              <div className="saas-details-cards-container" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '2rem' }}>
+                
+                {/* ── CARD 1: TASK INFORMATION ── */}
+                <div className="saas-detail-card" style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#0f172a', marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>Task Information</h3>
+                  <div className="saas-details-grid animate-fade-in">
                 {/* Task ID */}
                 <div className="saas-details-row">
                   <span className="field-icon-box"><IconTaskNo /></span>
@@ -834,7 +910,13 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                     )}
                   </span>
                 </div>
+                </div>
+                </div>
 
+                {/* ── CARD 2: PROJECT & ASSIGNMENT ── */}
+                <div className="saas-detail-card" style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#0f172a', marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>Project & Assignment</h3>
+                  <div className="saas-details-grid animate-fade-in">
                 {/* Status */}
                 <div className="saas-details-row">
                   <span className="field-icon-box"><IconStatus /></span>
@@ -906,7 +988,16 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                     {isEditing ? (
                       <select 
                         value={form.projectName || ''} 
-                        onChange={e => set('projectName', e.target.value)} 
+                        onChange={e => {
+                          const projName = e.target.value;
+                          const proj = projects.find(p => p.name === projName);
+                          setForm(f => ({ 
+                            ...f, 
+                            projectName: projName, 
+                            projectId: proj ? proj.id : null, 
+                            clientId: proj ? proj.clientId : null 
+                          }));
+                        }} 
                         className={`saas-grid-select ${errors.projectName ? 'error' : ''}`}
                       >
                         <option value="">-- Select Project --</option>
@@ -1006,7 +1097,13 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                     )}
                   </span>
                 </div>
+                </div>
+                </div>
 
+                {/* ── CARD 3: TIMELINE & DELIVERY ── */}
+                <div className="saas-detail-card" style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#0f172a', marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>Timeline & Attachments</h3>
+                  <div className="saas-details-grid animate-fade-in">
                 {/* Assigned Date */}
                 <div className="saas-details-row">
                   <span className="field-icon-box"><IconCalendar /></span>
@@ -1123,7 +1220,29 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   </span>
                 </div>
               </div>
-            )}
+            </div>
+          </div>
+          
+          {isEditing && (
+            <div className="form-actions" style={{ justifyContent: 'flex-end', borderTop: 'none', background: 'transparent', boxShadow: 'none' }}>
+              <button className="saas-btn-nav saas-btn-secondary" onClick={() => {
+                if (!task || !task.id) {
+                  onClose();
+                } else {
+                  setForm(task);
+                  setIsEditing(false);
+                }
+              }}>
+                Cancel
+              </button>
+              <button className="saas-btn-nav saas-btn-primary" onClick={submit}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                {isEdit ? 'Save Changes' : 'Create Task'}
+              </button>
+            </div>
+          )}
+          </>
+        )}
 
             {activeTab === 'billing' && (
               <div className="saas-billing-pane animate-fade-in" style={{ padding: '1.5rem 2rem' }}>
@@ -1247,6 +1366,77 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                     <div style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: '600', marginTop: '0.5rem' }}>
                       {errors.billing}
                     </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'worklogs' && (
+              <div className="saas-details-grid animate-fade-in" style={{ display: 'block' }}>
+                <div style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.95rem' }}>Add New Work Log</h4>
+                  <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <label className="saas-field-label">Date</label>
+                      <input type="date" className="saas-input" value={workLogForm.logDate} onChange={e => setWorkLogForm({...workLogForm, logDate: e.target.value})} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label className="saas-field-label">Hours</label>
+                      <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} />
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', paddingBottom: '8px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>
+                        <input type="checkbox" checked={workLogForm.isBilled} onChange={e => setWorkLogForm({...workLogForm, isBilled: e.target.checked})} style={{ width: '16px', height: '16px', accentColor: '#2563eb' }} />
+                        Mark as Billed
+                      </label>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label className="saas-field-label">Description (Optional)</label>
+                    <input type="text" className="saas-input" placeholder="What did you work on?" value={workLogForm.description} onChange={e => setWorkLogForm({...workLogForm, description: e.target.value})} />
+                  </div>
+                  <button className="saas-btn-primary" onClick={handleAddWorkLog} disabled={workLogSaving}>
+                    {workLogSaving ? 'Saving...' : 'Add Work Log'}
+                  </button>
+                </div>
+
+                <div>
+                  <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.95rem' }}>Recent Work Logs</h4>
+                  {workLogs.length === 0 ? (
+                    <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No work logs found for this task.</p>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr style={{ background: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
+                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Date</th>
+                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>User</th>
+                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Hours</th>
+                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Description</th>
+                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Billed</th>
+                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {workLogs.map(log => (
+                          <tr key={log.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                            <td style={{ padding: '0.75rem' }}>{formatDate(log.logDate)}</td>
+                            <td style={{ padding: '0.75rem' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
+                            <td style={{ padding: '0.75rem', fontWeight: 600, color: '#0f172a' }}>{log.hoursWorked}h</td>
+                            <td style={{ padding: '0.75rem', color: '#475569' }}>{log.description || '-'}</td>
+                            <td style={{ padding: '0.75rem' }}>
+                              <span style={{ padding: '2px 6px', borderRadius: '4px', background: log.isBilled ? '#dcfce7' : '#f1f5f9', color: log.isBilled ? '#166534' : '#64748b', fontSize: '0.75rem', fontWeight: 600 }}>
+                                {log.isBilled ? 'Yes' : 'No'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.75rem' }}>
+                              <button style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   )}
                 </div>
               </div>
@@ -1685,6 +1875,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const isTeamLeadOrAdmin = user?.role?.toLowerCase() === 'team lead' || user?.role?.toLowerCase() === 'admin';
   const [tasks, setTasks]       = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [viewMode, setViewMode] = useState('list'); 
   const [subTab, setSubTab]     = useState(isTeamLeadOrAdmin ? 'all' : 'my'); 
   const [dragOver, setDragOver] = useState(null);
@@ -1778,27 +1969,38 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
   // ── INSERT/UPDATE ──
   const handleSaveTask = async (taskData) => {
+    setIsSaving(true);
     try {
       if (taskData.id) {
         await api.put(`/tasks/${taskData.id}`, taskData);
+        alert('Task updated successfully!', 'success', 'Success');
       } else {
         await api.post('/tasks', taskData);
+        alert('Task created successfully!', 'success', 'Success');
         setView('board');
       }
       fetchTasks();
     } catch (error) {
       console.error('Save error:', error);
       alert('Failed to save task: ' + error.message, 'error', 'Error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   // ── DELETE ──
   const handleDeleteTask = async (id) => {
+    setIsSaving(true);
     try {
       await api.delete(`/tasks/${id}`);
+      alert('Task deleted successfully.', 'success', 'Deleted');
       fetchTasks();
+      setView('board');
     } catch (error) {
       console.error('Delete error:', error);
+      alert('Failed to delete task.', 'error', 'Error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1832,6 +2034,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   });
 
 
+  if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Tasks...'}</div>;
 
   if (view === 'detail') {
     return (
@@ -1900,10 +2103,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
 
 
-      {loading && <p>Loading tasks...</p>}
-
       {/* ── Views ── */}
-      {!loading && viewMode === 'kanban' && (
+      {viewMode === 'kanban' && (
         <div className="kanban-board">
           {COLUMNS.map(col => (
             <KanbanColumn
@@ -1925,7 +2126,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
       )}
 
-      {!loading && viewMode === 'list' && (
+      {viewMode === 'list' && (
         <div className="list-view">
           <table className="list-table">
             <thead>

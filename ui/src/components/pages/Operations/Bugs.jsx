@@ -14,6 +14,7 @@ export default function Bugs() {
   const [status, setStatus] = useState('Open');
   const [imageFile, setImageFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { alert } = useAlert();
 
   useEffect(() => {
@@ -86,6 +87,7 @@ export default function Bugs() {
         status,
         imageUrl: imageUrl,
       });
+      alert('Bug reported successfully!', 'success', 'Success');
       setShowModal(false);
       setTitle('');
       setDescription('');
@@ -97,17 +99,25 @@ export default function Bugs() {
       alert('Failed to add bug via API.', 'error', 'Error');
     } finally {
       setUploading(false);
+      setIsSaving(false);
     }
   };
 
   const updateBugStatus = async (id, newStatus) => {
+    setIsSaving(true);
     try {
       await api.put(`/bugs/${id}`, { status: newStatus });
+      alert(`Bug status updated to ${newStatus}`, 'success', 'Success');
       fetchBugs();
     } catch (error) {
       console.error('Error updating bug:', error);
+      alert('Failed to update bug status.', 'error', 'Error');
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  if (loading || isSaving || uploading) return <div className="loading-screen">{(isSaving || uploading) ? 'Saving...' : 'Loading Bugs...'}</div>;
 
   return (
     <div className="bugs-root">

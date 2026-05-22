@@ -7,6 +7,7 @@ import { useAlert } from '../../../context/AlertContext';
 export default function Employee() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ 
     id: '', 
@@ -48,6 +49,7 @@ export default function Employee() {
       alert("Please fill out all mandatory fields: Full Name and Role.", 'warning', 'Required Fields');
       return;
     }
+    setIsSaving(true);
     try {
       await api.post('/employees', {
         id: form.id || `EMP-${Date.now().toString().slice(-3)}`,
@@ -60,25 +62,35 @@ export default function Employee() {
         projectName: form.projectName || '-',
         projectStatus: form.projectStatus
       });
+      alert('Employee profile added successfully!', 'success', 'Success');
       setForm({ id: '', name: '', role: '', phoneNo: '', emergencyNo: '', status: 'Active', type: 'Employee', projectName: '', projectStatus: 'Inactive' });
       setShowForm(false);
       fetchEmployees();
     } catch (error) {
       console.error('Insert error:', error);
       alert('Failed to add employee: ' + error.message, 'error', 'Error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleDelete = async (id) => {
     confirm('Delete this employee record? This cannot be undone.', async () => {
+      setIsSaving(true);
       try {
         await api.delete(`/employees/${id}`);
+        alert('Employee record deleted successfully.', 'success', 'Deleted');
         fetchEmployees();
       } catch (error) {
         console.error('Delete error:', error);
+        alert('Failed to delete employee.', 'error', 'Error');
+      } finally {
+        setIsSaving(false);
       }
     }, 'Delete Employee');
   };
+
+  if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Employees...'}</div>;
 
   return (
     <div className="employee-page page-container">
@@ -181,9 +193,7 @@ export default function Employee() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr><td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: '#94A3B8' }}>Syncing data...</td></tr>
-            ) : employees.length === 0 ? (
+            {employees.length === 0 ? (
               <tr><td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: '#94A3B8' }}>No records found.</td></tr>
             ) : (
               employees.map(emp => (

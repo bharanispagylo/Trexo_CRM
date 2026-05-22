@@ -6,6 +6,7 @@ import { useAlert } from '../../../context/AlertContext';
 export default function Teams() {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', lead: '', members: '' });
   const { can } = usePermissions();
@@ -28,20 +29,26 @@ export default function Teams() {
   // ── INSERT into API ──
   const handleAdd = async () => {
     if (!form.name.trim()) return;
+    setIsSaving(true);
     try {
       await api.post('/teams', {
         name: form.name,
         lead: form.lead,
         members: parseInt(form.members) || 0,
       });
+      alert('Team created successfully!', 'success', 'Success');
       setForm({ name: '', lead: '', members: '' });
       setShowForm(false);
       fetchTeams();
     } catch (error) {
       console.error('Insert error:', error);
       alert('Failed to create team: ' + error.message, 'error', 'Error');
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Teams...'}</div>;
 
   return (
     <div className="page-container app-container">
@@ -82,9 +89,7 @@ export default function Teams() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr><td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>Loading...</td></tr>
-            ) : teams.length === 0 ? (
+            {teams.length === 0 ? (
               <tr><td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>No teams found.</td></tr>
             ) : (
               teams.map(team => (

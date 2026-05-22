@@ -5,6 +5,7 @@ import { useAlert } from '../../../context/AlertContext';
 export default function Salary() {
   const [payrolls, setPayrolls] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ id: '', month: '', emps: '', total: '', status: 'Draft' });
   const { alert } = useAlert();
@@ -26,6 +27,7 @@ export default function Salary() {
   // ── INSERT into API ──
   const handleAdd = async () => {
     if (!form.month.trim()) return;
+    setIsSaving(true);
     try {
       await api.post('/salaries', {
         id: form.id || `PR-${Date.now().toString().slice(-3)}`,
@@ -34,14 +36,19 @@ export default function Salary() {
         total: form.total,
         status: form.status,
       });
+      alert('Payroll processed successfully!', 'success', 'Success');
       setForm({ id: '', month: '', emps: '', total: '', status: 'Draft' });
       setShowForm(false);
       fetchPayrolls();
     } catch (error) {
       console.error('Insert error:', error);
       alert('Failed to add payroll: ' + error.message, 'error', 'Error');
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Salary Data...'}</div>;
 
   return (
     <div className="page-container app-container">
@@ -86,9 +93,7 @@ export default function Salary() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>Loading...</td></tr>
-            ) : payrolls.length === 0 ? (
+            {payrolls.length === 0 ? (
               <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>No payrolls found.</td></tr>
             ) : (
               payrolls.map(pr => (

@@ -27,6 +27,7 @@ export default function Roles() {
   const [roles, setRoles] = useState(['Admin']);
   const [selectedRole, setSelectedRole] = useState('Admin');
   const [loading, setLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
@@ -47,6 +48,7 @@ export default function Roles() {
   });
 
   const fetchPermissions = async () => {
+    setLoading(true);
     try {
       const data = await api.get('/roles/permissions');
       if (data) {
@@ -66,6 +68,8 @@ export default function Roles() {
       }
     } catch (err) {
       console.error('Fetch error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -75,7 +79,7 @@ export default function Roles() {
 
   const handleSave = async () => {
     if (!isEditing) return;
-    setLoading(true);
+    setIsSaving(true);
     try {
       await api.post('/roles/permissions', {
         role: selectedRole,
@@ -86,8 +90,9 @@ export default function Roles() {
       await fetchPermissions();
     } catch (err) {
       alert('Save failed: ' + err.message, 'error', 'Save Failed');
+    } finally {
+      setIsSaving(false);
     }
-    setLoading(false);
   };
 
   const togglePerm = (modId, actId, level) => {
@@ -144,13 +149,18 @@ export default function Roles() {
   const handleDeleteRole = async (roleToDelete) => {
     if (roleToDelete === 'Admin') return;
     confirm(`Permanently delete the "${roleToDelete}" role? This cannot be undone.`, async () => {
+      setIsSaving(true);
       try {
         await api.delete(`/roles/permissions/${roleToDelete}`);
+        alert(`Role "${roleToDelete}" deleted successfully.`, 'success', 'Deleted');
         setRoles(prev => prev.filter(r => r !== roleToDelete));
         if (selectedRole === roleToDelete) setSelectedRole('Admin');
       } catch (err) {
+        alert('Delete failed: ' + err.message, 'error', 'Error');
         setRoles(prev => prev.filter(r => r !== roleToDelete));
         if (selectedRole === roleToDelete) setSelectedRole('Admin');
+      } finally {
+        setIsSaving(false);
       }
     }, 'Delete Role');
   };
@@ -164,7 +174,7 @@ export default function Roles() {
       return;
     }
 
-    setLoading(true);
+    setIsSaving(true);
     try {
       const defaultData = createDefaultPerms();
       await api.post('/roles/permissions', {
@@ -184,11 +194,15 @@ export default function Roles() {
       setNewRoleName('');
       setShowCreateModal(false);
       setIsEditing(true);
+      alert('Role created successfully!', 'success', 'Success');
     } catch (err) {
       alert('Creation failed: ' + err.message, 'error', 'Error');
+    } finally {
+      setIsSaving(false);
     }
-    setLoading(false);
   };
+
+  if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Roles...'}</div>;
 
   return (
     <div className="roles-page">

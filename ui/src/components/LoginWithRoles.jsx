@@ -382,7 +382,6 @@ const recentEmps = [
   { name: "Karthik Selvam", role: "DevOps Engineer",   dept: "Engineering", joined: "15 Apr 2025", status: "Active",   av: "KS" },
 ];
 
-<<<<<<< HEAD
 const depts = [
   { name: "Engineering", count: 420, pct: 33, color: "bg-blue-500" },
   { name: "Sales",       count: 210, pct: 16, color: "bg-emerald-500" },
@@ -391,86 +390,6 @@ const depts = [
   { name: "Marketing",   count: 180, pct: 14, color: "bg-amber-500" },
   { name: "Others",      count: 231, pct: 18, color: "bg-slate-400" },
 ];
-=======
-        const employees = Array.isArray(employeesData) ? employeesData : [];
-        const leaves = Array.isArray(leavesData) ? leavesData : [];
-
-        const total = employees.length;
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-
-        let newJoinersCount = 0;
-        let activeCount = 0;
-        const deptCounts = {};
-
-        employees.forEach(emp => {
-          if ((emp.status || 'Active') === 'Active') activeCount++;
-
-          if (emp.joinedDate || emp.createdAt) {
-            const d = new Date(emp.joinedDate || emp.createdAt);
-            if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-              newJoinersCount++;
-            }
-          }
-
-          const dpt = emp.dept || 'Others';
-          deptCounts[dpt] = (deptCounts[dpt] || 0) + 1;
-        });
-
-        // Compute On Leave Today (Basic approximation based on Approved leaves that overlap today)
-        const todayStr = new Date().toISOString().split('T')[0];
-        let onLeaveCount = 0;
-        leaves.forEach(l => {
-          if (l.status === 'Approved' && l.dates) {
-            if (l.dates.includes(todayStr) || l.dates.includes(new Date().toLocaleDateString('en-GB'))) {
-              onLeaveCount++;
-            }
-          }
-        });
-
-        setStats({
-          totalEmployees: total,
-          activeThisMonth: activeCount,
-          newJoiners: newJoinersCount,
-          onLeaveToday: onLeaveCount
-        });
-
-        // Recent emps
-        const sorted = [...employees].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
-        setRecentEmps(sorted.map(e => ({
-          name: e.name || `${e.firstName || ''} ${e.lastName || ''}`.trim(),
-          role: e.designation || e.role || 'Employee',
-          dept: e.dept || 'Others',
-          joined: (e.joinedDate || e.createdAt) ? new Date(e.joinedDate || e.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
-          status: e.status || 'Active',
-          av: (e.name || e.firstName || 'U').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()
-        })));
-
-        // Depts
-        const colors = ["bg-blue-500", "bg-emerald-500", "bg-violet-500", "bg-rose-500", "bg-amber-500", "bg-slate-400"];
-        const deptArr = Object.entries(deptCounts).map(([name, count], i) => ({
-          name,
-          count,
-          pct: Math.round((count / (total || 1)) * 100),
-          color: colors[i % colors.length]
-        })).sort((a, b) => b.count - a.count);
-
-        setDepts(deptArr);
-
-      } catch (err) {
-        console.error("Dashboard data fetch error:", err);
-      }
-    };
-    fetchData();
-  }, []);
-
-  const adminStatsDisplay = [
-    { label: "Total Employees", value: stats.totalEmployees, change: "", up: true, icon: Icons.Users, grad: "from-blue-600 to-blue-400" },
-    { label: "Active This Month", value: stats.activeThisMonth, change: "", up: true, icon: Icons.CheckCircle, grad: "from-emerald-600 to-emerald-400" },
-    { label: "New Joiners", value: stats.newJoiners, change: "", up: true, icon: Icons.UserPlus, grad: "from-violet-600 to-violet-400" },
-    { label: "On Leave Today", value: stats.onLeaveToday, change: "", up: false, icon: Icons.CalendarOff, grad: "from-amber-500 to-amber-400" },
-  ];
->>>>>>> 1208a21a1af8bbb4bd9be503c554722f01b18ee4
 
 function AdminDashboard({ user, onLogout }) {
   return (
@@ -534,29 +453,12 @@ function AdminDashboard({ user, onLogout }) {
               <button className="panel-link">View All →</button>
             </div>
             <div className="list-group">
-<<<<<<< HEAD
               {recentEmps.map((e, i) => (
                 <div key={i} className="list-item">
                   <Avatar initials={e.av} size="sm" />
                   <div className="list-item-info">
                     <div className="list-item-title">{e.name}</div>
                     <div className="list-item-sub">{e.role}</div>
-=======
-              {recentEmps.length === 0 ? (
-                <p style={{ color: '#94a3b8', padding: '1rem' }}>No employees found.</p>
-              ) : (
-                recentEmps.map((e, i) => (
-                  <div key={i} className="list-item">
-                    <Avatar initials={e.av} size="sm" />
-                    <div className="list-item-info">
-                      <div className="list-item-title">{e.name}</div>
-                      <div className="list-item-sub">{e.role}</div>
-                    </div>
-                    <div className="list-item-date">{e.joined}</div>
-                    <span className={`status-badge ${e.status === "Active" ? "status-badge-active" : "status-badge-leave"}`}>
-                      {e.status}
-                    </span>
->>>>>>> 1208a21a1af8bbb4bd9be503c554722f01b18ee4
                   </div>
                   <div className="list-item-date">{e.joined}</div>
                   <span className={`status-badge ${e.status === "Active" ? "status-badge-active" : "status-badge-leave"}`}>
@@ -571,26 +473,11 @@ function AdminDashboard({ user, onLogout }) {
           <div className="panel-card panel-card-col-2">
             <h2 className="panel-title" style={{ marginBottom: "1rem" }}>Department Breakdown</h2>
             <div className="dept-list">
-<<<<<<< HEAD
               {depts.map((d, i) => (
                 <div key={i}>
                   <div className="dept-header">
                     <span className="dept-name">{d.name}</span>
                     <span className="dept-stats">{d.count} · {d.pct}%</span>
-=======
-              {depts.length === 0 ? (
-                <p style={{ color: '#94a3b8' }}>No data available.</p>
-              ) : (
-                depts.map((d, i) => (
-                  <div key={i}>
-                    <div className="dept-header">
-                      <span className="dept-name">{d.name}</span>
-                      <span className="dept-stats">{d.count} · {d.pct}%</span>
-                    </div>
-                    <div className="progress-bg">
-                      <div className={`progress-bar ${d.color}`} style={{ width: `${d.pct}%` }} />
-                    </div>
->>>>>>> 1208a21a1af8bbb4bd9be503c554722f01b18ee4
                   </div>
                   <div className="progress-bg">
                     <div className={`progress-bar ${d.color}`} style={{ width: `${d.pct}%` }} />
@@ -606,17 +493,10 @@ function AdminDashboard({ user, onLogout }) {
           <h2 className="panel-title" style={{ marginBottom: "1rem" }}>Admin Quick Actions</h2>
           <div className="quick-actions-grid">
             {[
-<<<<<<< HEAD
               { icon: "➕", label: "Add Employee",   color: "action-blue" },
               { icon: "", label: "Leave Requests", color: "action-amber" },
               { icon: "", label: "Reports",        color: "action-violet" },
               { icon: "", label: "KYC Review",     color: "action-rose" },
-=======
-              { icon: Icons.Plus, label: "Add Employee", color: "action-blue", tab: "employees" },
-              { icon: Icons.FileText, label: "Leave Requests", color: "action-amber", tab: "leave" },
-              { icon: Icons.BarChart, label: "Reports", color: "action-violet", tab: "reports" },
-              { icon: Icons.ShieldCheck, label: "KYC Review", color: "action-rose", tab: "users" },
->>>>>>> 1208a21a1af8bbb4bd9be503c554722f01b18ee4
             ].map((a, i) => (
               <button key={i} className={`action-btn ${a.color}`}>
                 <span>{a.icon}</span> {a.label}
@@ -701,13 +581,8 @@ function EmployeeDashboard({ user, onLogout, setActiveTab }) {
             {/* Stats */}
             <div className="emp-stats-grid">
               {[
-<<<<<<< HEAD
                 { label: "Days Present", value: attendanceCount, icon: "📅", color: "icon-blue" },
                 { label: "Leave Balance", value: leaveBalance,  icon: "🏖️", color: "icon-amber" },
-=======
-                { label: "Days Present", value: attendanceCount, icon: Icons.CalendarCheck, color: "icon-blue" },
-                { label: "Leave Balance", value: leaveBalance, icon: Icons.Coffee, color: "icon-amber" },
->>>>>>> 1208a21a1af8bbb4bd9be503c554722f01b18ee4
               ].map((s, i) => (
                 <div key={i} className="emp-stat-card">
                   <div className={`emp-stat-icon ${s.color}`}>{s.icon}</div>

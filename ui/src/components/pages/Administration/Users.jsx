@@ -8,6 +8,7 @@ export default function Users({ onAddUser, onEditUser }) {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState(['Admin', 'Employee']);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [selectedRoleFilter, setSelectedRoleFilter] = useState('All');
   const { can } = usePermissions();
   const { alert, confirm } = useAlert();
@@ -43,6 +44,8 @@ export default function Users({ onAddUser, onEditUser }) {
   const filteredUsers = selectedRoleFilter === 'All' 
     ? users 
     : users.filter(u => (u.role || 'Employee').toLowerCase() === selectedRoleFilter.toLowerCase());
+
+  if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Users...'}</div>;
 
   return (
     <div className="users-page page-container">
@@ -83,9 +86,7 @@ export default function Users({ onAddUser, onEditUser }) {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr><td colSpan="8" className="status-cell">Loading users...</td></tr>
-            ) : filteredUsers.length === 0 ? (
+            {filteredUsers.length === 0 ? (
               <tr><td colSpan="8" className="status-cell">No users found.</td></tr>
             ) : filteredUsers.map(u => (
               <tr key={u.id}>
@@ -128,11 +129,15 @@ export default function Users({ onAddUser, onEditUser }) {
                       title="Delete User"
                       onClick={() => {
                         confirm('Are you sure you want to delete this user? This action cannot be undone.', async () => {
+                          setIsSaving(true);
                           try {
                             await api.delete(`/users/${u.id}`);
+                            alert('User deleted successfully.', 'success', 'Deleted');
                             fetchUsers();
                           } catch (error) {
                             alert('Delete failed: ' + error.message, 'error', 'Delete Failed');
+                          } finally {
+                            setIsSaving(false);
                           }
                         }, 'Delete User');
                       }}

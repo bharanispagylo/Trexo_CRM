@@ -7,6 +7,7 @@ import { useAlert } from '../../../context/AlertContext';
 export default function Leave({ user }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [currentView, setCurrentView] = useState('list'); // 'list' or 'form'
   const [stats, setStats] = useState({
     medical: { used: 0, total: 10 },
@@ -92,6 +93,7 @@ export default function Leave({ user }) {
       alert("Please fill in start date, end date and reason.", 'warning', 'Required Fields');
       return;
     }
+    setIsSaving(true);
     try {
       await api.post('/leaves', {
         name: user.fullName || user.firstName || user.name,
@@ -102,22 +104,32 @@ export default function Leave({ user }) {
         attachments: form.attachments,
         status: 'Pending',
       });
+      alert('Leave request submitted successfully!', 'success', 'Success');
       setForm({ type: 'Full Day', days: 1, startDate: '', endDate: '', reason: '', attachments: '' });
       setCurrentView('list');
       fetchLeaves();
     } catch (error) {
       alert('Failed to submit: ' + error.message, 'error', 'Submission Failed');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleAction = async (id, action) => {
+    setIsSaving(true);
     try {
       await api.put(`/leaves/${id}`, { status: action });
+      alert(`Leave request ${action.toLowerCase()} successfully!`, 'success', 'Success');
       fetchLeaves();
     } catch (error) {
       console.error('Update error:', error);
+      alert('Failed to update leave request.', 'error', 'Error');
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Leaves...'}</div>;
 
   return (
     <div className="leave-page">
@@ -246,9 +258,7 @@ export default function Leave({ user }) {
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
-                  <tr><td colSpan="7" className="table-loading">Loading...</td></tr>
-                ) : requests.length === 0 ? (
+                {requests.length === 0 ? (
                   <tr><td colSpan="7" className="table-empty">No leave requests found.</td></tr>
                 ) : (
                   requests.map(req => (

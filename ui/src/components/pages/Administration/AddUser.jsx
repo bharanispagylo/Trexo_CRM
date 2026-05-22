@@ -113,6 +113,8 @@ export default function AddUser({ onBack }) {
 
 
 
+  if (loading || uploading) return <div className="loading-screen">{loading ? 'Saving User...' : 'Uploading Image...'}</div>;
+
   return (
     <div className="add-user-page">
       <div className="page-header">

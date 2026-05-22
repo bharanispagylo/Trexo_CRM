@@ -105,6 +105,8 @@ export default function EditUser({ userToEdit, onBack }) {
 
 
 
+  if (loading || uploading) return <div className="loading-screen">{loading ? 'Saving Updates...' : 'Uploading Image...'}</div>;
+
   return (
     <div className="add-user-page">
       <div className="page-header">

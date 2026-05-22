@@ -8,6 +8,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [projects, setProjects] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [users, setUsers] = useState([]);
+  const [clients, setClients] = useState([]);
   const [selectedEmployeeToAdd, setSelectedEmployeeToAdd] = useState('');
   const [createMemberForm, setCreateMemberForm] = useState({ name: '', role: '', status: 'Active' });
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -15,6 +16,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [showEditMemberModal, setShowEditMemberModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [currentView, setCurrentView] = useState('list'); // 'list' or 'detail'
   const [selectedProject, setSelectedProject] = useState(null);
@@ -84,14 +86,16 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [projData, empData, userData] = await Promise.all([
+      const [projData, empData, userData, clientData] = await Promise.all([
         api.get('/projects'),
         api.get('/employees'),
-        api.get('/users')
+        api.get('/users'),
+        api.get('/clients')
       ]);
       setProjects(projData || []);
       setEmployees(empData || []);
       setUsers(userData || []);
+      setClients(clientData || []);
       
       // Update selected project if we are in detail view
       if (selectedProject) {
@@ -328,17 +332,20 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
   // ── LIST HANDLERS ──
   const handleAdd = async () => {
-    if (!form.name?.trim() || !form.client?.trim() || !form.description?.trim()) {
+    if (!form.name?.trim() || !form.clientId?.trim() || !form.description?.trim()) {
       alert("Please fill out all mandatory fields: Project Name, Client, and Description.", 'warning', 'Required Fields');
       return;
     }
+    setIsSaving(true);
     try {
       if (form.id) {
         await api.put(`/projects/${form.id}`, form);
+        alert('Project updated successfully!', 'success', 'Success');
       } else {
         await api.post('/projects', form);
+        alert('Project created successfully!', 'success', 'Success');
       }
-      setForm({ name: '', status: 'Active', description: '', client: '', estimatedHours: 0, actualHours: 0, billableHours: 0 });
+      setForm({ name: '', status: 'Active', description: '', client: '', clientId: '', estimatedHours: 0, actualHours: 0, billableHours: 0 });
       setShowForm(false);
       fetchData();
       
@@ -349,16 +356,23 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     } catch (error) {
       console.error('Save error:', error);
       alert('Failed to save project', 'error', 'Error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleRemove = async (id) => {
     confirm('Remove this project? This action cannot be undone.', async () => {
+      setIsSaving(true);
       try {
         await api.delete(`/projects/${id}`);
+        alert('Project deleted successfully.', 'success', 'Deleted');
         fetchData();
       } catch (error) {
         console.error('Delete error:', error);
+        alert('Failed to delete project', 'error', 'Error');
+      } finally {
+        setIsSaving(false);
       }
     }, 'Delete Project');
   };
@@ -426,30 +440,33 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       return;
     }
     
-    const payload = {
-      title: taskFormFields.title,
-      description: taskFormFields.description,
-      assignees: taskFormFields.assignees,
-      status: taskFormFields.status,
-      priority: taskFormFields.priority,
-      startDate: taskFormFields.startDate ? new Date(taskFormFields.startDate) : null,
-      dueDate: taskFormFields.dueDate ? new Date(taskFormFields.dueDate) : null,
-      taskListId: selectedTaskListId,
-      projectName: selectedProject.name
-    };
-
+    setIsSaving(true);
     try {
-      if (taskFormType === 'create') {
-        await api.post('/tasks', payload);
-      } else {
+      const payload = {
+        ...taskFormFields,
+        projectId: selectedProject.id,
+        projectName: selectedProject.name,
+        clientId: selectedProject.clientId,
+        taskListId: selectedTaskListId
+      };
+
+      if (taskFormType === 'edit' && editingTask) {
         await api.put(`/tasks/${editingTask.id}`, payload);
+        alert('Task updated successfully!', 'success', 'Success');
+      } else {
+        await api.post('/tasks', payload);
+        alert('Task created successfully!', 'success', 'Success');
       }
+
       setShowTaskFormModal(false);
+      setTaskFormFields({ title: '', assignees: '', status: 'To Do', priority: 'Medium', startDate: '', dueDate: '', description: '' });
       setEditingTask(null);
       fetchData();
     } catch (error) {
       console.error('Save task error:', error);
       alert('Failed to save task', 'error', 'Error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -498,29 +515,30 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       alert('Query title is required.', 'warning', 'Required');
       return;
     }
-
-    const payload = {
-      title: queryFormFields.title,
-      description: queryFormFields.description,
-      sentTo: queryFormFields.sentTo || null,
-      status: queryFormFields.status,
-      solved: Boolean(queryFormFields.solved),
-      priority: queryFormFields.priority,
-      projectId: selectedProject.id
-    };
-
+    setIsSaving(true);
     try {
-      if (queryFormType === 'create') {
-        await api.post('/project-queries', payload);
-      } else {
+      const payload = {
+        ...queryFormFields,
+        projectId: selectedProject.id
+      };
+
+      if (queryFormType === 'edit' && editingQuery) {
         await api.put(`/project-queries/${editingQuery.id}`, payload);
+        alert('Query updated successfully!', 'success', 'Success');
+      } else {
+        await api.post('/project-queries', payload);
+        alert('Query created successfully!', 'success', 'Success');
       }
+
       setShowQueryModal(false);
+      setQueryFormFields({ title: '', description: '', sentTo: '', status: 'Open', solved: false, priority: 'Medium' });
       setEditingQuery(null);
       fetchData();
     } catch (error) {
       console.error('Save query error:', error);
       alert('Failed to save query', 'error', 'Error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -550,7 +568,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         </div>
         <div className="saas-field">
           <label className="saas-label">Client *</label>
-          <input className="saas-input" placeholder="e.g. Spagylo Technologies" value={form.client} onChange={e => setForm({...form, client: e.target.value})} />
+          <select className="saas-select" value={form.clientId || ''} onChange={e => {
+            const selectedClient = clients.find(c => c.id === e.target.value);
+            setForm({...form, clientId: e.target.value, client: selectedClient ? selectedClient.name : ''});
+          }}>
+            <option value="">Select a Client</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
         </div>
         <div className="saas-field" style={{ gridColumn: 'span 2' }}>
           <label className="saas-label">Description *</label>
@@ -2512,6 +2536,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       setSelectedProjectIds(prev => prev.filter(pid => pid !== id));
     }
   };
+
+  if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Projects...'}</div>;
 
   return (
     <div className="projects-page page-container" style={{ padding: '2rem 3rem' }}>
