@@ -112,23 +112,23 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
     }
   };
 
-  const filteredTasks = searchQuery.trim() 
-    ? allTasks.filter(t => 
-        (t.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-        (t.description || '').toLowerCase().includes(searchQuery.toLowerCase())
-      ) 
+  const filteredTasks = searchQuery.trim()
+    ? allTasks.filter(t =>
+      (t.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (t.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+    )
     : [];
 
-  const filteredProjects = searchQuery.trim() 
-    ? allProjects.filter(p => 
-        (p.name || '').toLowerCase().includes(searchQuery.toLowerCase())
-      ) 
+  const filteredProjects = searchQuery.trim()
+    ? allProjects.filter(p =>
+      (p.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+    )
     : [];
 
-  const filteredUsers = searchQuery.trim() 
-    ? allUsers.filter(u => 
-        (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase().includes(searchQuery.toLowerCase())
-      ) 
+  const filteredUsers = searchQuery.trim()
+    ? allUsers.filter(u =>
+      (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase().includes(searchQuery.toLowerCase())
+    )
     : [];
 
   const handleItemClick = (type, item) => {
@@ -154,10 +154,10 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'leave': return <Leave user={user} />;
       case 'attendance': return <Attendance user={user} />;
       case 'projects': return (
-        <Projects 
-          user={user} 
-          initialSelectedProject={searchSelectedProject} 
-          onClearInitialProject={() => setSearchSelectedProject(null)} 
+        <Projects
+          user={user}
+          initialSelectedProject={searchSelectedProject}
+          onClearInitialProject={() => setSearchSelectedProject(null)}
           onNavigateToTasks={(taskData) => {
             setSearchSelectedTask(taskData);
             setIsTaskDetailOpen(true);
@@ -169,10 +169,10 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'clients': return <Clients user={user} />;
       case 'teams': return <Teams user={user} />;
       case 'tasks': return (
-        <Tasks 
-          user={user} 
-          initialSelectedTask={searchSelectedTask} 
-          onClearInitialTask={() => setSearchSelectedTask(null)} 
+        <Tasks
+          user={user}
+          initialSelectedTask={searchSelectedTask}
+          onClearInitialTask={() => setSearchSelectedTask(null)}
           onDetailViewChange={(open) => setIsTaskDetailOpen(open)}
         />
       );
@@ -226,9 +226,9 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
   const header = getHeaderInfo();
   console.log(user?.role);
-    const initials = (name) => name ? name.split(' ').map(w => w[0]).join('').toUpperCase() : '?';
+  const initials = (name) => name ? name.split(' ').map(w => w[0]).join('').toUpperCase() : '?';
 
-    return (
+  return (
     <div className="saas-dashboard-layout">
       {/* SIDEBAR */}
       <aside className="saas-sidebar-nav">
@@ -286,223 +286,221 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       {/* MAIN CONTENT AREA */}
       <div className="saas-main-area">
         <header className="saas-main-header">
-           <div className="saas-header-left-breadcrumbs-group">
-               <button className="saas-hamburger-btn">
-                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-               </button>
-               <div className="saas-breadcrumbs">
-                  <span className="saas-breadcrumb-item">{header.back}</span>
-                  <span className="saas-breadcrumb-separator">&gt;</span>
-                  <span className="saas-breadcrumb-item active">{header.title}</span>
-               </div>
+          <div className="saas-header-left-breadcrumbs-group">
+            <button className="saas-hamburger-btn">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+            <div className="saas-breadcrumbs">
+              <span className="saas-breadcrumb-item">{header.back}</span>
+              <span className="saas-breadcrumb-separator">&gt;</span>
+              <span className="saas-breadcrumb-item active">{header.title}</span>
             </div>
-            <div style={{ display: 'none' }}>
-              <button className="saas-back-link" onClick={() => setActiveTab('overview')}>← {header.back}</button>
-              <div className="saas-header-meta">
-                 <span className="saas-ticket-id">#{header.id}</span>
-                 <h1 className="saas-header-title">{header.title}</h1>
-                 <button className="saas-star-btn">☆</button>
-              </div></div>
-           <div className="saas-header-center-search" ref={searchContainerRef} style={{ position: 'relative' }}>
-               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-               <input 
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  onFocus={handleSearchFocus}
-                  placeholder="Search here..." 
-               />
-               <span className="saas-search-kbd">Ctrl + /</span>
+          </div>
+          <div style={{ display: 'none' }}>
+            <button className="saas-back-link" onClick={() => setActiveTab('overview')}>← {header.back}</button>
+            <div className="saas-header-meta">
+              <span className="saas-ticket-id">#{header.id}</span>
+              <h1 className="saas-header-title">{header.title}</h1>
+              <button className="saas-star-btn">☆</button>
+            </div></div>
+          <div className="saas-header-center-search" ref={searchContainerRef} style={{ position: 'relative' }}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onFocus={handleSearchFocus}
+              placeholder="Search here..."
+            />
+            <span className="saas-search-kbd">Ctrl + /</span>
 
-               {showSearchResults && searchQuery.trim() && (
-                  <div className="saas-search-results-overlay">
-                     {filteredTasks.length === 0 && filteredProjects.length === 0 && filteredUsers.length === 0 && (
-                        <div className="no-comments-placeholder" style={{ padding: '1rem', fontSize: '0.85rem' }}>No results found for "{searchQuery}"</div>
-                     )}
-
-                     {filteredTasks.length > 0 && (
-                        <div className="saas-search-category">
-                           <div className="saas-search-category-title">Tasks</div>
-                           {filteredTasks.slice(0, 5).map(t => (
-                              <div key={t.id} className="saas-search-item" onClick={() => handleItemClick('task', t)}>
-                                 <div className="saas-search-item-icon">#</div>
-                                 <div className="saas-search-item-content">
-                                    <div className="saas-search-item-title">{t.title}</div>
-                                    <div className="saas-search-item-subtitle">{t.status} • {t.priority}</div>
-                                 </div>
-                              </div>
-                           ))}
+            {showSearchResults && searchQuery.trim() && (
+              <div className="saas-search-results-overlay">
+                {filteredTasks.length === 0 && filteredProjects.length === 0 && filteredUsers.length === 0 && (
+                  <div className="no-comments-placeholder" style={{ padding: '1rem', fontSize: '0.85rem' }}>No results found for "{searchQuery}"</div>
+                )}                {filteredTasks.length > 0 && (
+                  <div className="saas-search-category">
+                    <div className="saas-search-category-title">Tasks</div>
+                    {filteredTasks.slice(0, 5).map(t => (
+                      <div key={t.id} className="saas-search-item" onClick={() => handleItemClick('task', t)}>
+                        <div className="saas-search-item-icon">#</div>
+                        <div className="saas-search-item-content">
+                          <div className="saas-search-item-title">{t.title}</div>
+                          <div className="saas-search-item-subtitle">{t.status} • {t.priority}</div>
                         </div>
-                     )}
-
-                     {filteredProjects.length > 0 && (
-                        <div className="saas-search-category">
-                           <div className="saas-search-category-title">Projects</div>
-                           {filteredProjects.slice(0, 5).map(p => (
-                              <div key={p.id} className="saas-search-item" onClick={() => handleItemClick('project', p)}>
-                                 <div className="saas-search-item-icon project-icon">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                                 </div>
-                                 <div className="saas-search-item-content">
-                                    <div className="saas-search-item-title">{p.name}</div>
-                                    <div className="saas-search-item-subtitle">{p.status}</div>
-                                 </div>
-                              </div>
-                           ))}
-                        </div>
-                     )}
-
-                     {filteredUsers.length > 0 && (
-                        <div className="saas-search-category">
-                           <div className="saas-search-category-title">Users & Employees</div>
-                           {filteredUsers.slice(0, 5).map(u => (
-                              <div key={u.id} className="saas-search-item" onClick={() => handleItemClick('user', u)}>
-                                 <div className="saas-search-item-icon user-icon">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                 </div>
-                                 <div className="saas-search-item-content">
-                                    <div className="saas-search-item-title">{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`}</div>
-                                    <div className="saas-search-item-subtitle">{u.role || 'Member'}</div>
-                                 </div>
-                              </div>
-                           ))}
-                        </div>
-                     )}
+                      </div>
+                    ))}
                   </div>
-               )}
-            </div>
+                )}
 
-            <div className="saas-header-right">
-              {/* Action Icons Group */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                {/* Notification Bell Icon */}
-                <div style={{ position: 'relative' }} ref={notificationDropdownRef}>
-                  <button 
-                    className="saas-header-icon-btn notification-btn" 
-                    title="Notifications"
-                    onClick={() => setIsNotificationDropdownOpen(!isNotificationDropdownOpen)}
-                  >
-                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-                     {notifications.filter(n => !n.isRead).length > 0 && (
-                       <span className="notification-badge">{notifications.filter(n => !n.isRead).length}</span>
-                     )}
-                  </button>
+                {filteredProjects.length > 0 && (
+                  <div className="saas-search-category">
+                    <div className="saas-search-category-title">Projects</div>
+                    {filteredProjects.slice(0, 5).map(p => (
+                      <div key={p.id} className="saas-search-item" onClick={() => handleItemClick('project', p)}>
+                        <div className="saas-search-item-icon project-icon">
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                        </div>
+                        <div className="saas-search-item-content">
+                          <div className="saas-search-item-title">{p.name}</div>
+                          <div className="saas-search-item-subtitle">{p.status}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-                  {isNotificationDropdownOpen && (
-                    <div className="saas-notification-dropdown">
-                      <div className="saas-notification-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderBottom: '1px solid #f1f5f9' }}>
-                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700', color: '#0f172a' }}>Notifications</h4>
-                        <span onClick={handleMarkAllAsRead} style={{ cursor: 'pointer', color: '#0066FF', fontSize: '0.75rem', fontWeight: 600 }}>Mark all read</span>
+                {filteredUsers.length > 0 && (
+                  <div className="saas-search-category">
+                    <div className="saas-search-category-title">Users & Employees</div>
+                    {filteredUsers.slice(0, 5).map(u => (
+                      <div key={u.id} className="saas-search-item" onClick={() => handleItemClick('user', u)}>
+                        <div className="saas-search-item-icon user-icon">
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        </div>
+                        <div className="saas-search-item-content">
+                          <div className="saas-search-item-title">{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`}</div>
+                          <div className="saas-search-item-subtitle">{u.role || 'Member'}</div>
+                        </div>
                       </div>
-                      <div className="saas-notification-list" style={{ maxHeight: '350px', overflowY: 'auto' }}>
-                        {notifications.length === 0 ? (
-                          <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>No notifications</div>
-                        ) : (
-                          notifications.map(n => (
-                            <div key={n.id} className={`saas-notification-item ${!n.isRead ? 'unread' : ''}`} onClick={() => handleMarkAsRead(n.id)} style={{ padding: '1rem', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: !n.isRead ? '#f0f9ff' : 'white', transition: 'background 0.2s' }}>
-                              <div style={{ fontWeight: !n.isRead ? 700 : 600, color: '#0f172a', fontSize: '0.85rem' }}>{n.title}</div>
-                              <div style={{ color: '#475569', fontSize: '0.8rem', marginTop: '0.25rem', lineHeight: '1.4' }}>{n.message}</div>
-                              <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: '0.5rem', fontWeight: '500' }}>{new Date(n.createdAt).toLocaleString()}</div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
+            )}
+          </div>
 
-              {/* Modern Rajesh Kumar style User Profile */}
-              <div 
-                className="saas-user-profile-header" 
-                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                style={{ cursor: 'pointer', position: 'relative' }}
-                ref={profileDropdownRef}
-              >
-                <div className="saas-user-avatar">
-                  {user?.profileImage ? (
-                    <img src={user.profileImage} alt="Profile" className="header-avatar-img" />
-                  ) : (
-                    <div className="header-avatar-placeholder">
-                      {initials(user?.fullName || user?.name || user?.role || 'User')}
-                    </div>
+          <div className="saas-header-right">
+            {/* Action Icons Group */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              {/* Notification Bell Icon */}
+              <div style={{ position: 'relative' }} ref={notificationDropdownRef}>
+                <button
+                  className="saas-header-icon-btn notification-btn"
+                  title="Notifications"
+                  onClick={() => setIsNotificationDropdownOpen(!isNotificationDropdownOpen)}
+                >
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                  {notifications.filter(n => !n.isRead).length > 0 && (
+                    <span className="notification-badge">{notifications.filter(n => !n.isRead).length}</span>
                   )}
-                </div>
-                <div className="saas-user-info">
-                  <span className="saas-user-name">{user?.fullName || user?.name || user?.role || 'User'}</span>
-                  <span className="saas-user-email">{user?.role || 'Admin'}</span>
-                </div>
-                <span className="saas-profile-chevron" style={{ transform: isProfileDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </span>
-                
-                {/* Dropdown Menu */}
-                {isProfileDropdownOpen && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 10px)',
-                    right: 0,
-                    width: '200px',
-                    background: 'white',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-                    zIndex: 100,
-                    padding: '0.5rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.25rem'
-                  }}>
-                    <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #f1f5f9', marginBottom: '0.25rem' }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{user?.fullName || user?.firstName}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{user?.email}</div>
+                </button>
+
+                {isNotificationDropdownOpen && (
+                  <div className="saas-notification-dropdown">
+                    <div className="saas-notification-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderBottom: '1px solid #f1f5f9' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700', color: '#0f172a' }}>Notifications</h4>
+                      <span onClick={handleMarkAllAsRead} style={{ cursor: 'pointer', color: '#0066FF', fontSize: '0.75rem', fontWeight: 600 }}>Mark all read</span>
                     </div>
-                    <button 
-                      onClick={onLogout}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        width: '100%',
-                        padding: '0.5rem 0.75rem',
-                        background: '#fee2e2',
-                        color: '#b91c1c',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '0.85rem',
-                        fontWeight: '600',
-                        textAlign: 'left'
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                        <polyline points="16 17 21 12 16 7"></polyline>
-                        <line x1="21" y1="12" x2="9" y2="12"></line>
-                      </svg>
-                      Sign Out
-                    </button>
+                    <div className="saas-notification-list" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                      {notifications.length === 0 ? (
+                        <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>No notifications</div>
+                      ) : (
+                        notifications.map(n => (
+                          <div key={n.id} className={`saas-notification-item ${!n.isRead ? 'unread' : ''}`} onClick={() => handleMarkAsRead(n.id)} style={{ padding: '1rem', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: !n.isRead ? '#f0f9ff' : 'white', transition: 'background 0.2s' }}>
+                            <div style={{ fontWeight: !n.isRead ? 700 : 600, color: '#0f172a', fontSize: '0.85rem' }}>{n.title}</div>
+                            <div style={{ color: '#475569', fontSize: '0.8rem', marginTop: '0.25rem', lineHeight: '1.4' }}>{n.message}</div>
+                            <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: '0.5rem', fontWeight: '500' }}>{new Date(n.createdAt).toLocaleString()}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
             </div>
-            <div style={{ display: 'none' }}>
-              <div className="saas-user-profile-header">
-                <div className="saas-user-info">
-                  <span className="saas-user-name">{user?.fullName || user?.name || user?.role || 'User'}</span>
-                  <span className="saas-user-email">{user?.email || ''}</span>
-                </div>
-                <div className="saas-user-avatar">
-                  {user?.profileImage ? (
-                    <img src={user.profileImage} alt="Profile" className="header-avatar-img" />
-                  ) : (
-                    <div className="header-avatar-placeholder">
-                      {initials(user?.fullName || user?.name || user?.role || 'User')}
-                    </div>
-                  )}
-                </div>
 
-              </div></div>
-        
+            {/* Modern Rajesh Kumar style User Profile */}
+            <div
+              className="saas-user-profile-header"
+              onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+              style={{ cursor: 'pointer', position: 'relative' }}
+              ref={profileDropdownRef}
+            >
+              <div className="saas-user-avatar">
+                {user?.profileImage ? (
+                  <img src={user.profileImage} alt="Profile" className="header-avatar-img" />
+                ) : (
+                  <div className="header-avatar-placeholder">
+                    {initials(user?.fullName || user?.name || user?.role || 'User')}
+                  </div>
+                )}
+              </div>
+              <div className="saas-user-info">
+                <span className="saas-user-name">{user?.fullName || user?.name || user?.role || 'User'}</span>
+                <span className="saas-user-email">{user?.role || 'Admin'}</span>
+              </div>
+              <span className="saas-profile-chevron" style={{ transform: isProfileDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+
+              {/* Dropdown Menu */}
+              {isProfileDropdownOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 10px)',
+                  right: 0,
+                  width: '200px',
+                  background: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                  zIndex: 100,
+                  padding: '0.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.25rem'
+                }}>
+                  <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #f1f5f9', marginBottom: '0.25rem' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{user?.fullName || user?.firstName}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{user?.email}</div>
+                  </div>
+                  <button
+                    onClick={onLogout}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      width: '100%',
+                      padding: '0.5rem 0.75rem',
+                      background: '#fee2e2',
+                      color: '#b91c1c',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: '600',
+                      textAlign: 'left'
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                      <polyline points="16 17 21 12 16 7"></polyline>
+                      <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          <div style={{ display: 'none' }}>
+            <div className="saas-user-profile-header">
+              <div className="saas-user-info">
+                <span className="saas-user-name">{user?.fullName || user?.name || user?.role || 'User'}</span>
+                <span className="saas-user-email">{user?.email || ''}</span>
+              </div>
+              <div className="saas-user-avatar">
+                {user?.profileImage ? (
+                  <img src={user.profileImage} alt="Profile" className="header-avatar-img" />
+                ) : (
+                  <div className="header-avatar-placeholder">
+                    {initials(user?.fullName || user?.name || user?.role || 'User')}
+                  </div>
+                )}
+              </div>
+
+            </div></div>
+
         </header>
 
         <div className="saas-page-content">

@@ -73,8 +73,12 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
       taskType: 'Feature',
       projectName: '',
       isBillable: false,
-      approvedHours: 0,
-      actualHours: 0,
+      estimatedHours: '',
+      approvedHours: '',
+      actualHours: '',
+      actualHoursStr: '00:00',
+      approvedHoursStr: '00:00',
+      taskListId: '',
       attachments: ''
     };
     if (task) {
@@ -92,6 +96,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
 
   const [activeTab, setActiveTab] = useState('general');
   const [users, setUsers] = useState([]);
+  const [clients, setClients] = useState([]);
   const [taskLists, setTaskLists] = useState([]);
   const [projects, setProjects] = useState([]);
   const [errors, setErrors] = useState({});
@@ -195,6 +200,9 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
       const names = data.map(u => u.fullName || `${u.firstName} ${u.lastName}`.trim());
       setUsers(names);
     }).catch(console.error);
+    api.get('/clients').then(data => {
+      setClients(data || []);
+    }).catch(console.error);
     api.get('/task-lists').then(data => {
       setTaskLists(data || []);
     }).catch(console.error);
@@ -206,16 +214,13 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
   useEffect(() => {
     if (workLogs.length > 0) {
       const totalHours = workLogs.reduce((acc, log) => acc + (Number(log.hoursWorked) || 0), 0);
-      const billedHours = workLogs.filter(log => log.isBilled).reduce((acc, log) => acc + (Number(log.hoursWorked) || 0), 0);
       
       setForm(prev => {
-        if (prev.actualHours !== totalHours || prev.approvedHours !== billedHours) {
+        if (prev.actualHours !== totalHours) {
           return {
             ...prev,
             actualHours: totalHours,
-            actualHoursStr: decimalToTimeStr(totalHours),
-            approvedHours: billedHours,
-            approvedHoursStr: decimalToTimeStr(billedHours)
+            actualHoursStr: decimalToTimeStr(totalHours)
           };
         }
         return prev;
@@ -947,6 +952,73 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                 <div className="saas-detail-card" style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                   <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#0f172a', marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>Project & Assignment</h3>
                   <div className="saas-details-grid animate-fade-in">
+                {/* Client */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                  </span>
+                  <span className="field-label-text">Client</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
+                      <select 
+                        value={form.clientId || ''} 
+                        onChange={e => {
+                          const cId = e.target.value;
+                          setForm(f => ({ ...f, clientId: cId, projectName: '', projectId: null }));
+                        }} 
+                        className="saas-grid-select"
+                      >
+                        <option value="">-- Select Client --</option>
+                        {clients.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="saas-project-link-text">
+                        {clients.find(c => c.id === form.clientId)?.name || '-'}
+                      </span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Project */}
+                <div className="saas-details-row">
+                  <span className="field-icon-box"><IconProject /></span>
+                  <span className="field-label-text">Project{isEditing ? ' *' : ''}</span>
+                  <span className="field-colon-sep">:</span>
+                  <span className="field-value-text">
+                    {isEditing ? (
+                      <select 
+                        value={form.projectName || ''} 
+                        onChange={e => {
+                          const projName = e.target.value;
+                          const proj = projects.find(p => p.name === projName);
+                          setForm(f => ({ 
+                            ...f, 
+                            projectName: projName, 
+                            projectId: proj ? proj.id : null, 
+                            clientId: proj ? proj.clientId : f.clientId 
+                          }));
+                        }} 
+                        className={`saas-grid-select ${errors.projectName ? 'error' : ''}`}
+                      >
+                        <option value="">-- Select Project --</option>
+                        {projects.filter(p => !form.clientId || p.clientId === form.clientId).map(proj => (
+                          <option key={proj.id} value={proj.name}>
+                            {proj.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="saas-project-link-text">{form.projectName || '-'}</span>
+                    )}
+                    {errors.projectName && <div className="grid-error-msg">{errors.projectName}</div>}
+                  </span>
+                </div>
+
                 {/* Status */}
                 <div className="saas-details-row">
                   <span className="field-icon-box"><IconStatus /></span>
@@ -1006,41 +1078,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                         <span className="assignee-name-label">{form.assignees || 'Unassigned'}</span>
                       </div>
                     )}
-                  </span>
-                </div>
-
-                {/* Project */}
-                <div className="saas-details-row">
-                  <span className="field-icon-box"><IconProject /></span>
-                  <span className="field-label-text">Project{isEditing ? ' *' : ''}</span>
-                  <span className="field-colon-sep">:</span>
-                  <span className="field-value-text">
-                    {isEditing ? (
-                      <select 
-                        value={form.projectName || ''} 
-                        onChange={e => {
-                          const projName = e.target.value;
-                          const proj = projects.find(p => p.name === projName);
-                          setForm(f => ({ 
-                            ...f, 
-                            projectName: projName, 
-                            projectId: proj ? proj.id : null, 
-                            clientId: proj ? proj.clientId : null 
-                          }));
-                        }} 
-                        className={`saas-grid-select ${errors.projectName ? 'error' : ''}`}
-                      >
-                        <option value="">-- Select Project --</option>
-                        {projects.map(proj => (
-                          <option key={proj.id} value={proj.name}>
-                            {proj.name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="saas-project-link-text">{form.projectName || 'Spagylo CRM Development'}</span>
-                    )}
-                    {errors.projectName && <div className="grid-error-msg">{errors.projectName}</div>}
                   </span>
                 </div>
 
@@ -1414,15 +1451,9 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                       <label className="saas-field-label">Hours</label>
                       <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} />
                     </div>
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', paddingBottom: '8px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>
-                        <input type="checkbox" checked={workLogForm.isBilled} onChange={e => setWorkLogForm({...workLogForm, isBilled: e.target.checked})} style={{ width: '16px', height: '16px', accentColor: '#2563eb' }} />
-                        Mark as Billed
-                      </label>
-                    </div>
                   </div>
                   <div style={{ marginBottom: '1rem' }}>
-                    <label className="saas-field-label">Description (Optional)</label>
+                    <label className="saas-field-label">Description</label>
                     <input type="text" className="saas-input" placeholder="What did you work on?" value={workLogForm.description} onChange={e => setWorkLogForm({...workLogForm, description: e.target.value})} />
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -1454,7 +1485,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                           <th style={{ padding: '0.75rem', fontWeight: 600 }}>User</th>
                           <th style={{ padding: '0.75rem', fontWeight: 600 }}>Hours</th>
                           <th style={{ padding: '0.75rem', fontWeight: 600 }}>Description</th>
-                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Billed</th>
                           <th style={{ padding: '0.75rem', fontWeight: 600 }}>Action</th>
                         </tr>
                       </thead>
@@ -1465,11 +1495,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                             <td style={{ padding: '0.75rem' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
                             <td style={{ padding: '0.75rem', fontWeight: 600, color: '#0f172a' }}>{log.hoursWorked}h</td>
                             <td style={{ padding: '0.75rem', color: '#475569' }}>{log.description || '-'}</td>
-                            <td style={{ padding: '0.75rem' }}>
-                              <span style={{ padding: '2px 6px', borderRadius: '4px', background: log.isBilled ? '#dcfce7' : '#f1f5f9', color: log.isBilled ? '#166534' : '#64748b', fontSize: '0.75rem', fontWeight: 600 }}>
-                                {log.isBilled ? 'Yes' : 'No'}
-                              </span>
-                            </td>
                             <td style={{ padding: '0.75rem' }}>
                               <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button title="Edit" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer' }} onClick={() => {
@@ -1496,6 +1521,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                 </div>
               </div>
             )}
+
 
             {activeTab === 'attachments' && (
               <div className="saas-attachments-pane animate-fade-in" style={{ padding: '1.5rem 0' }}>
@@ -2085,7 +2111,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     const assignees = t.assignees ? t.assignees.split(',').map(a => a.trim().toLowerCase()) : [];
     const myName = (user?.fullName || user?.name || '').trim().toLowerCase();
     
-    return assignees.includes(myName);
+    const isMainAssignee = assignees.includes(myName);
+    
+    return isMainAssignee;
   });
 
 
@@ -2213,13 +2241,15 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                       <td>{task.status}</td>
                       <td><span className={`card-priority ${pm.cls}`} style={{display:'inline-block'}}>{task.priority}</span></td>
                       <td>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}</td>
-                      <td>{task.assignees || '-'}</td>
+                      <td>
+                        {task.assignees || '-'}
+                      </td>
                       <td>{task.approvedHours || 0}</td>
                       <td>{task.actualHours || 0}</td>
 
                       {(can('tasks', 'edit') || can('tasks', 'delete')) && (
                         <td style={{ textAlign: 'right' }}>
-                          {(getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && (user?.fullName || user?.name) && (task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))) && (
+                          {(getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
                             <>
                               <button className="list-view-btn" onClick={(e) => { e.stopPropagation(); openTaskDetail(task, false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981', marginRight: '0.75rem' }} title="View Task">
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
@@ -2229,7 +2259,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                               </button>
                             </>
                           )}
-                          {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && (task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))) && (
+                          {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
                             <button className="list-delete-btn" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Delete Task">
                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             </button>
