@@ -196,7 +196,8 @@
   background: white;
   border: 1px solid var(--saas-border);
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
 
@@ -293,3 +294,61 @@
 }
 
 .saas-action-btn:hover { background: #FEF2F2; }
+
+/* Responsive media queries for Directory / Employee page */
+@media (max-width: 1024px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .employee-page.page-container {
+    padding: 1rem;
+  }
+  
+  .saas-tabs {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+    border-bottom: none;
+    margin-bottom: 1.5rem;
+  }
+  
+  .saas-tabs > div {
+    display: flex;
+    justify-content: flex-start;
+    border-bottom: 1px solid var(--saas-border);
+  }
+  
+  .saas-btn-add {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .saas-form-card {
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .saas-btn-submit, .saas-btn-cancel {
+    width: 100%;
+    text-align: center;
+    padding: 0.75rem;
+  }
+  
+  .saas-table th, .saas-table td {
+    padding: 0.75rem 1rem;
+  }
+}

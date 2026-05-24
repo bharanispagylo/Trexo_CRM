@@ -45,8 +45,17 @@ export default function Leave({ user }) {
       // Calculate Stats for non-admins (those with Self view level)
       if (getLevel('leave', 'view') === 'Self') {
         const approved = filtered.filter(l => l.status === 'Approved');
-        const medicalUsed = approved.filter(l => l.type === 'Medical').reduce((sum, l) => sum + (l.days || 0), 0);
-        const casualUsed = approved.filter(l => l.type === 'Casual Leave').reduce((sum, l) => sum + (l.days || 0), 0);
+        const medicalUsed = approved.filter(l => 
+          l.type === 'Medical' || 
+          l.type?.toLowerCase().includes('sick')
+        ).reduce((sum, l) => sum + (l.days || 0), 0);
+
+        const casualUsed = approved.filter(l => 
+          l.type === 'Casual Leave' || 
+          l.type?.toLowerCase().includes('casual') || 
+          l.type?.toLowerCase().includes('caual') || 
+          l.type?.toLowerCase().includes('causal')
+        ).reduce((sum, l) => sum + (l.days || 0), 0);
         
         setStats({
           medical: { used: medicalUsed, total: 10 },
@@ -222,11 +231,13 @@ export default function Leave({ user }) {
                   <div className="saas-field">
                     <label className="saas-label">Leave Type</label>
                     <select className="saas-select" value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
-                      <option>Full Day</option>
-                      <option>Half Day - First Session</option>
-                      <option>Half Day - Second Session</option>
-                      <option>Medical</option>
-                      <option>Casual Leave</option>
+                      <option value="Full Day">Full Day</option>
+                      <option value="Full Day First Half">Full Day First Half</option>
+                      <option value="Full Day Second Half">Full Day Second Half</option>
+                      <option value="Sick Leave First Half">Sick Leave First Half</option>
+                      <option value="Sick Leave Second Half">Sick Leave Second Half</option>
+                      <option value="Casual Leave First Half">Casual Leave First Half</option>
+                      <option value="Casual Leave Second Half">Casual Leave Second Half</option>
                     </select>
                   </div>
                   <div className="saas-field">

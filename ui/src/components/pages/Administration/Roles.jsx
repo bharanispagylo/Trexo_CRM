@@ -14,7 +14,6 @@ const MODULES = [
   { id: 'attendance', label: 'Attendance' },
   { id: 'leave', label: 'Leave' },
   { id: 'tasks', label: 'Tasks' },
-  { id: 'teams', label: 'Teams' },
   { id: 'employees', label: 'Employees' },
   { id: 'users', label: 'Users' },
   { id: 'projects', label: 'Projects' },

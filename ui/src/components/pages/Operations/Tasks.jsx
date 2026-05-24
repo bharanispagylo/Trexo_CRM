@@ -21,6 +21,78 @@ const PRIORITY_META = {
   'Medium':   { cls: 'pri-medium' },
   'Low':      { cls: 'pri-low' },
 };
+const TAGS = ['Engineering', 'Design', 'Marketing', 'Sales', 'QA', 'HR', 'Operations'];
+
+const STATUS_HEADER_META = {
+  'To Do':         { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', symbol: '●' },
+  'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', symbol: '●' },
+  'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', symbol: '●' },
+  'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', symbol: '●' },
+  'Prod Deployed': { bg: '#ea580c', fg: '#ffffff', dotColor: '#fde68a', symbol: '●' },
+  'Prod Verified': { bg: '#0d9488', fg: '#ffffff', dotColor: '#bbf7d0', symbol: '●' },
+  'Delivered':     { bg: '#16a34a', fg: '#ffffff', dotColor: '#99f6e4', symbol: '✓' },
+};
+
+const PRIORITY_FLAGS = {
+  'Critical': { color: '#ef4444', label: 'Critical' },
+  'High':     { color: '#f59e0b', label: 'High' },
+  'Medium':   { color: '#3b82f6', label: 'Medium' },
+  'Low':      { color: '#94a3b8', label: 'Low' },
+};
+
+const getStatusString = (statusVal) => {
+  if (!statusVal) return 'To Do';
+  if (typeof statusVal === 'string') return statusVal;
+  if (typeof statusVal === 'object') {
+    return statusVal.id || statusVal.label || statusVal.name || statusVal.value || 'To Do';
+  }
+  return String(statusVal);
+};
+
+const PriorityFlag = ({ priority }) => {
+  const meta = PRIORITY_FLAGS[priority] || PRIORITY_FLAGS['Medium'];
+  return (
+    <svg 
+      viewBox="0 0 24 24" 
+      width="14" 
+      height="14" 
+      fill="currentColor" 
+      style={{ color: meta.color, display: 'inline-block', flexShrink: 0 }}
+      title={`Priority: ${meta.label}`}
+    >
+      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+      <line x1="4" y1="22" x2="4" y2="15"></line>
+    </svg>
+  );
+};
+
+const formatRelativeDueDate = (dateStr) => {
+  if (!dateStr) return null;
+  const dueDate = new Date(dateStr);
+  if (isNaN(dueDate.getTime())) return null;
+  
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  dueDate.setHours(0,0,0,0);
+  
+  const diffTime = dueDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) {
+    const absoluteDays = Math.abs(diffDays);
+    if (absoluteDays === 1) return { text: 'Yesterday', isOverdue: true };
+    return { text: `${absoluteDays} days ago`, isOverdue: true };
+  } else if (diffDays === 0) {
+    return { text: 'Today', isOverdue: false, isToday: true };
+  } else if (diffDays === 1) {
+    return { text: 'Tomorrow', isOverdue: false };
+  } else {
+    return { 
+      text: dueDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }), 
+      isOverdue: false 
+    };
+  }
+};
 
 const initials = (name) => name ? name.split(' ').map(w => w[0]).join('').toUpperCase() : '?';
 
@@ -85,6 +157,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
       return {
         ...defaults,
         ...task,
+        status: getStatusString(task.status),
         taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')
       };
     }
@@ -93,6 +166,16 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
       taskNo: `TSK-${Math.floor(Math.random() * 900000) + 100000}`
     };
   });
+  useEffect(() => {
+    if (task) {
+      setForm(prev => ({
+        ...prev,
+        ...task,
+        status: getStatusString(task.status),
+        taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')
+      }));
+    }
+  }, [task]);
 
   const [activeTab, setActiveTab] = useState('general');
   const [users, setUsers] = useState([]);
@@ -439,6 +522,15 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
   };
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const handleInlineSave = async (updatedForm) => {
+    try {
+      const { comments, taskList, ...payload } = updatedForm;
+      await onSave(payload, true);
+    } catch (err) {
+      console.error('Failed inline save:', err);
+      setForm(form);
+    }
+  };
   const submit = () => {
     const newErrors = {};
     const titleRegex = /^.{3,100}$/;
@@ -802,9 +894,9 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
             ) : (
               <span></span>
             )}
-            <div className={`saas-status-badge status-${form.status.toLowerCase().replace(' ', '-')}`}>
+            <div className={`saas-status-badge status-${getStatusString(form.status).toLowerCase().replace(' ', '-')}`}>
               <span className="status-dot">●</span>
-              {form.status}
+              {getStatusString(form.status)}
             </div>
           </div>
 
@@ -823,12 +915,14 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
             >
               General
             </button>
-            <button 
-              className={`saas-tab-header-btn ${activeTab === 'billing' ? 'active' : ''}`}
-              onClick={() => setActiveTab('billing')}
-            >
-              Billing
-            </button>
+            {!['employee', 'intern', 'guest', 'team lead'].includes(currentUser?.role?.toLowerCase()) && (
+              <button 
+                className={`saas-tab-header-btn ${activeTab === 'billing' ? 'active' : ''}`}
+                onClick={() => setActiveTab('billing')}
+              >
+                Billing
+              </button>
+            )}
             <button 
               className={`saas-tab-header-btn ${activeTab === 'attachments' ? 'active' : ''}`}
               onClick={() => setActiveTab('attachments')}
@@ -862,7 +956,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   <span className="field-colon-sep">:</span>
                   <span className="field-value-text font-bold">
                     {isEditing ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '400px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
                         <input 
                           type="text" 
                           value={form.taskNo || ''} 
@@ -905,7 +999,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   <span className="field-colon-sep">:</span>
                   <span className="field-value-text">
                     {isEditing ? (
-                      <div style={{ width: '100%', maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                         <textarea 
                           value={form.description} 
                           onChange={e => set('description', e.target.value)} 
@@ -939,8 +1033,8 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                         {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
                     ) : (
-                      <span className={`saas-priority-pill pill-${form.priority.toLowerCase()}`}>
-                        {form.priority}
+                      <span className={`saas-priority-pill pill-${(form.priority || 'Medium').toLowerCase()}`}>
+                        {form.priority || 'Medium'}
                       </span>
                     )}
                   </span>
@@ -960,27 +1054,23 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   <span className="field-label-text">Client</span>
                   <span className="field-colon-sep">:</span>
                   <span className="field-value-text">
-                    {isEditing ? (
-                      <select 
-                        value={form.clientId || ''} 
-                        onChange={e => {
-                          const cId = e.target.value;
-                          setForm(f => ({ ...f, clientId: cId, projectName: '', projectId: null }));
-                        }} 
-                        className="saas-grid-select"
-                      >
-                        <option value="">-- Select Client --</option>
-                        {clients.map(c => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="saas-project-link-text">
-                        {clients.find(c => c.id === form.clientId)?.name || '-'}
-                      </span>
-                    )}
+                    <select 
+                      value={form.clientId || ''} 
+                      onChange={e => {
+                        const cId = e.target.value;
+                        const updated = { ...form, clientId: cId, projectName: '', projectId: null };
+                        setForm(updated);
+                        if (!isEditing) handleInlineSave(updated);
+                      }} 
+                      className="saas-grid-select"
+                    >
+                      <option value="">-- Select Client --</option>
+                      {clients.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
                   </span>
                 </div>
 
@@ -990,31 +1080,29 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   <span className="field-label-text">Project{isEditing ? ' *' : ''}</span>
                   <span className="field-colon-sep">:</span>
                   <span className="field-value-text">
-                    {isEditing ? (
-                      <select 
-                        value={form.projectName || ''} 
-                        onChange={e => {
-                          const projName = e.target.value;
-                          const proj = projects.find(p => p.name === projName);
-                          setForm(f => ({ 
-                            ...f, 
-                            projectName: projName, 
-                            projectId: proj ? proj.id : null, 
-                            clientId: proj ? proj.clientId : f.clientId 
-                          }));
-                        }} 
-                        className={`saas-grid-select ${errors.projectName ? 'error' : ''}`}
-                      >
-                        <option value="">-- Select Project --</option>
-                        {projects.filter(p => !form.clientId || p.clientId === form.clientId).map(proj => (
-                          <option key={proj.id} value={proj.name}>
-                            {proj.name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="saas-project-link-text">{form.projectName || '-'}</span>
-                    )}
+                    <select 
+                      value={form.projectName || ''} 
+                      onChange={e => {
+                        const projName = e.target.value;
+                        const proj = projects.find(p => p.name === projName);
+                        const updated = { 
+                          ...form, 
+                          projectName: projName, 
+                          projectId: proj ? proj.id : null, 
+                          clientId: proj ? proj.clientId : form.clientId 
+                        };
+                        setForm(updated);
+                        if (!isEditing) handleInlineSave(updated);
+                      }} 
+                      className={`saas-grid-select ${errors.projectName ? 'error' : ''}`}
+                    >
+                      <option value="">-- Select Project --</option>
+                      {projects.filter(p => !form.clientId || p.clientId === form.clientId).map(proj => (
+                        <option key={proj.id} value={proj.name}>
+                          {proj.name}
+                        </option>
+                      ))}
+                    </select>
                     {errors.projectName && <div className="grid-error-msg">{errors.projectName}</div>}
                   </span>
                 </div>
@@ -1025,27 +1113,22 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   <span className="field-label-text">Status</span>
                   <span className="field-colon-sep">:</span>
                   <span className="field-value-text">
-                    {isEditing ? (
-                      <select 
-                        value={form.status} 
-                        onChange={e => {
-                          const newStatus = e.target.value;
-                          const updates = { status: newStatus };
-                          if (newStatus === 'Delivered' && !form.deliveredDate) {
-                            updates.deliveredDate = new Date().toISOString();
-                          }
-                          setForm(f => ({ ...f, ...updates }));
-                        }} 
-                        className="saas-grid-select"
-                      >
-                        {COLUMNS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
-                      </select>
-                    ) : (
-                      <div className="saas-status-inline-select">
-                        <span>{form.status}</span>
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                      </div>
-                    )}
+                    <select 
+                      value={form.status} 
+                      onChange={e => {
+                        const newStatus = e.target.value;
+                        const updates = { status: newStatus };
+                        if (newStatus === 'Delivered' && !form.deliveredDate) {
+                          updates.deliveredDate = new Date().toISOString();
+                        }
+                        const updated = { ...form, ...updates };
+                        setForm(updated);
+                        if (!isEditing) handleInlineSave(updated);
+                      }} 
+                      className="saas-grid-select"
+                    >
+                      {COLUMNS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
+                    </select>
                   </span>
                 </div>
 
@@ -1055,29 +1138,29 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   <span className="field-label-text">Assignee</span>
                   <span className="field-colon-sep">:</span>
                   <span className="field-value-text">
-                    {isEditing ? (
-                      <div className="assignee-edit-container">
-                        <select 
-                          value={form.assignees || ''} 
-                          onChange={e => set('assignees', e.target.value)} 
-                          className="saas-grid-select"
-                        >
-                          <option value="">Select Assignee...</option>
-                          {(form.projectName && projects.find(p => p.name === form.projectName)?.members 
-                              ? projects.find(p => p.name === form.projectName).members.split(',').map(m => m.trim()).filter(Boolean) 
-                              : users).map(u => (
-                            <option key={u} value={u}>{u}</option>
-                          ))}
-                        </select>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%' }}>
+                      <div className={`assignee-avatar-circle ${getAvatarColor(form.assignees || 'Unassigned')}`} style={{ flexShrink: 0 }}>
+                        {initials(form.assignees || 'Unassigned')}
                       </div>
-                    ) : (
-                      <div className="assignee-view-container">
-                        <div className={`assignee-avatar-circle ${getAvatarColor(form.assignees || 'Unassigned')}`}>
-                          {initials(form.assignees || 'Unassigned')}
-                        </div>
-                        <span className="assignee-name-label">{form.assignees || 'Unassigned'}</span>
-                      </div>
-                    )}
+                      <select 
+                        value={form.assignees || ''} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          const updated = { ...form, assignees: val };
+                          setForm(updated);
+                          if (!isEditing) handleInlineSave(updated);
+                        }} 
+                        className="saas-grid-select"
+                        style={{ flex: 1 }}
+                      >
+                        <option value="">Select Assignee...</option>
+                        {(form.projectName && projects.find(p => p.name === form.projectName)?.members 
+                            ? projects.find(p => p.name === form.projectName).members.split(',').map(m => m.trim()).filter(Boolean) 
+                            : users).map(u => (
+                          <option key={u} value={u}>{u}</option>
+                        ))}
+                      </select>
+                    </div>
                   </span>
                 </div>
 
@@ -1096,24 +1179,23 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   <span className="field-label-text">Task List</span>
                   <span className="field-colon-sep">:</span>
                   <span className="field-value-text">
-                    {isEditing ? (
-                      <select
-                        value={form.taskListId || ''}
-                        onChange={e => set('taskListId', e.target.value || null)}
-                        className="saas-grid-select"
-                      >
-                        <option value="">-- Select Task List --</option>
-                        {taskLists.filter((tl, index, self) => index === self.findIndex((t) => t.name.toLowerCase() === tl.name.toLowerCase())).map(tl => (
-                          <option key={tl.id} value={tl.id}>
-                            {tl.name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span style={{ fontWeight: '500', color: '#334155' }}>
-                        {taskLists.find(tl => tl.id === form.taskListId)?.name || (form.taskListId ? form.taskListId : '-')}
-                      </span>
-                    )}
+                    <select
+                      value={form.taskListId || ''}
+                      onChange={e => {
+                        const val = e.target.value || null;
+                        const updated = { ...form, taskListId: val };
+                        setForm(updated);
+                        if (!isEditing) handleInlineSave(updated);
+                      }}
+                      className="saas-grid-select"
+                    >
+                      <option value="">-- Select Task List --</option>
+                      {taskLists.filter((tl, index, self) => index === self.findIndex((t) => t.name.toLowerCase() === tl.name.toLowerCase())).map(tl => (
+                        <option key={tl.id} value={tl.id}>
+                          {tl.name}
+                        </option>
+                      ))}
+                    </select>
                   </span>
                 </div>
 
@@ -1123,19 +1205,20 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   <span className="field-label-text">Tag</span>
                   <span className="field-colon-sep">:</span>
                   <span className="field-value-text">
-                    {isEditing ? (
-                      <input 
-                        type="text" 
-                        value={form.tag || ''} 
-                        onChange={e => set('tag', e.target.value)} 
-                        className="saas-grid-input"
-                        placeholder="e.g. Engineering, Design..."
-                      />
-                    ) : (
-                      <span className={`card-tag tag-${(form.tag || 'engineering').toLowerCase()}`} style={{ display: 'inline-block', marginTop: '0', padding: '0.2rem 0.6rem', fontSize: '0.75rem' }}>
-                        {form.tag || 'Engineering'}
-                      </span>
-                    )}
+                    <select
+                      value={form.tag || 'Engineering'}
+                      onChange={e => {
+                        const val = e.target.value;
+                        const updated = { ...form, tag: val };
+                        setForm(updated);
+                        if (!isEditing) handleInlineSave(updated);
+                      }}
+                      className="saas-grid-select"
+                    >
+                      {TAGS.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
                   </span>
                 </div>
 
@@ -1145,23 +1228,22 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   <span className="field-label-text">Task Type</span>
                   <span className="field-colon-sep">:</span>
                   <span className="field-value-text">
-                    {isEditing ? (
-                      <select 
-                        value={form.taskType || 'Feature'} 
-                        onChange={e => set('taskType', e.target.value)} 
-                        className="saas-grid-select"
-                      >
-                        <option value="Feature">Feature</option>
-                        <option value="Bug">Bug</option>
-                        <option value="Enhancement">Enhancement</option>
-                        <option value="Documentation">Documentation</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    ) : (
-                      <span style={{ fontWeight: '500', color: '#334155' }}>
-                        {form.taskType || 'Feature'}
-                      </span>
-                    )}
+                    <select 
+                      value={form.taskType || 'Feature'} 
+                      onChange={e => {
+                        const val = e.target.value;
+                        const updated = { ...form, taskType: val };
+                        setForm(updated);
+                        if (!isEditing) handleInlineSave(updated);
+                      }} 
+                      className="saas-grid-select"
+                    >
+                      <option value="Feature">Feature</option>
+                      <option value="Bug">Bug</option>
+                      <option value="Enhancement">Enhancement</option>
+                      <option value="Documentation">Documentation</option>
+                      <option value="Other">Other</option>
+                    </select>
                   </span>
                 </div>
                 </div>
@@ -1311,7 +1393,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
           </>
         )}
 
-            {activeTab === 'billing' && (
+            {activeTab === 'billing' && !['employee', 'intern', 'guest', 'team lead'].includes(currentUser?.role?.toLowerCase()) && (
               <div className="saas-billing-pane animate-fade-in" style={{ padding: '1.5rem 2rem' }}>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '2rem', color: '#0f172a' }}>
                   Billing Information
@@ -1386,7 +1468,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                                 }));
                               }}
                               className="saas-grid-input"
-                              style={{ maxWidth: '250px' }}
                               placeholder="e.g. 40:00"
                             />
                           ) : (
@@ -1416,7 +1497,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                                 }));
                               }}
                               className="saas-grid-input"
-                              style={{ maxWidth: '250px' }}
                               placeholder="e.g. 32:30"
                             />
                           ) : (
@@ -1863,48 +1943,101 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
 function TaskCard({ task, onDragStart, onClick, onDelete, currentUser }) {
   const { getLevel } = usePermissions();
   const { confirm: showConfirm } = useAlert();
-  const pm = PRIORITY_META[task.priority] || PRIORITY_META['Medium'];
   const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
+  const relativeDate = formatRelativeDueDate(task.dueDate);
 
   return (
     <div
-      className="task-card"
+      className="task-card-clickup animate-fade-in"
       draggable={true}
       onDragStart={e => onDragStart(e, task.id)}
       onClick={() => onClick(task)}
     >
-
-      <div className="card-top">
-        <span className={`card-tag tag-${task.tag?.toLowerCase() || 'engineering'}`}>{task.tag || 'Engineering'}</span>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (currentUser?.fullName || currentUser?.name) && assignees.map(a => a.toLowerCase()).includes((currentUser?.fullName || currentUser?.name).toLowerCase()))) && (
-            <button className="card-view-btn delete-icon" title="Delete Task" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => onDelete(task.id), 'Delete Task'); }}>
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#ef4444" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </button>
-          )}
-
-          <button className="card-view-btn" title="View Full Details">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+      <div className="card-clickup-header">
+        <span className="card-clickup-title">{task.title || 'Untitled Task'}</span>
+        
+        {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (currentUser?.fullName || currentUser?.name) && assignees.map(a => a.toLowerCase()).includes((currentUser?.fullName || currentUser?.name).toLowerCase()))) && (
+          <button 
+            className="card-clickup-delete-btn" 
+            title="Delete Task" 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              showConfirm('Delete this task?', () => onDelete(task.id), 'Delete Task'); 
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           </button>
-        </div>
+        )}
       </div>
 
-
-      <p className="card-title">{task.title}</p>
-      
-      <div className="card-bottom">
-        <div className="card-avatars">
-          {assignees.slice(0,3).map(a => {
-            const avCls = getAvatarColor(a);
-            return <div key={a} className={`card-avatar ${avCls}`} title={a}>{initials(a)}</div>;
-          })}
-          {assignees.length > 3 && <div className="card-avatar av-blue">+{assignees.length - 3}</div>}
+      {task.description && task.description.trim() && (
+        <div className="card-clickup-description-indicator" title="Task description available">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="21" y1="10" x2="3" y2="10"></line>
+            <line x1="21" y1="6" x2="3" y2="6"></line>
+            <line x1="21" y1="14" x2="3" y2="14"></line>
+            <line x1="21" y1="18" x2="3" y2="18"></line>
+          </svg>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <div className="card-comment-indicator">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      )}
+
+      <div className="card-clickup-meta">
+        <div className="card-clickup-left">
+          {/* Overlapping Assignees */}
+          <div className="card-clickup-avatars">
+            {assignees.length === 0 ? (
+              <div className="card-clickup-avatar-empty" title="Unassigned">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </div>
+            ) : (
+              <>
+                {assignees.slice(0, 3).map(a => {
+                  const avCls = getAvatarColor(a);
+                  return (
+                    <div key={a} className={`card-clickup-avatar ${avCls}`} title={a}>
+                      {initials(a)}
+                    </div>
+                  );
+                })}
+                {assignees.length > 3 && (
+                  <div className="card-clickup-avatar av-blue" title={`${assignees.length - 3} more`}>
+                    +{assignees.length - 3}
+                  </div>
+                )}
+              </>
+            )}
           </div>
-          <span className={`card-priority ${pm.cls}`}>{task.priority}</span>
+
+          {/* Due date */}
+          <div className={`card-clickup-meta-item ${relativeDate ? (relativeDate.isOverdue ? 'overdue' : (relativeDate.isToday ? 'today' : '')) : 'empty'}`} title={task.dueDate ? `Due date: ${new Date(task.dueDate).toLocaleDateString()}` : 'No due date'}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            {relativeDate && <span className="meta-text">{relativeDate.text}</span>}
+          </div>
+
+          {/* Priority flag */}
+          <div className="card-clickup-meta-item priority" title={`Priority: ${task.priority || 'Medium'}`}>
+            <PriorityFlag priority={task.priority} />
+            <span className="meta-text">{task.priority}</span>
+          </div>
+
+          {/* Tag */}
+          {task.tag && (
+            <div className="card-clickup-meta-item tag" title={`Tag: ${task.tag}`}>
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                <line x1="7" y1="7" x2="7.01" y2="7"></line>
+              </svg>
+              <span className="meta-text">{task.tag}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1912,25 +2045,33 @@ function TaskCard({ task, onDragStart, onClick, onDelete, currentUser }) {
 }
 
 // ── Kanban Column ──────────────────────────────────────────
-function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave, isDragOver, onTaskClick, onDelete, currentUser }) {
+function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave, isDragOver, onTaskClick, onDelete, currentUser, onAddTaskClick }) {
+  const meta = STATUS_HEADER_META[col.label] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', symbol: '●' };
 
   return (
     <div
-      className={`kanban-col ${col.color} ${isDragOver ? 'drag-over' : ''}`}
+      className={`kanban-col-clickup ${isDragOver ? 'drag-over' : ''}`}
       onDragOver={onDragOver}
       onDrop={onDrop}
       onDragLeave={onDragLeave}
     >
-      <div className="col-header">
-        <span className="col-label">{col.label}</span>
-        <span className="col-count">{tasks.length}</span>
+      <div className="col-clickup-header">
+        <div className="col-clickup-badge" style={{ backgroundColor: meta.bg, color: meta.fg }}>
+          <span className="col-clickup-symbol" style={{ color: meta.dotColor }}>{meta.symbol}</span>
+          <span className="col-clickup-label">{col.label.toUpperCase()}</span>
+          <span className="col-clickup-count">{tasks.length}</span>
+        </div>
+        
+        <div className="col-clickup-actions">
+          <button className="col-clickup-action-btn" title="Add Task" onClick={() => onAddTaskClick(col.id)}>+</button>
+        </div>
       </div>
 
       {isDragOver && <div className="drop-indicator">Drop here</div>}
 
-      <div className="col-cards">
+      <div className="col-clickup-cards">
         {tasks.length === 0 && !isDragOver && (
-          <div className="col-empty">No tasks yet.</div>
+          <div className="col-clickup-empty">No tasks yet.</div>
         )}
         {tasks.map(task => (
           <TaskCard
@@ -1942,8 +2083,11 @@ function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave
             currentUser={currentUser}
           />
         ))}
-
       </div>
+
+      <button className="col-clickup-add-task-btn" onClick={() => onAddTaskClick(col.id)}>
+        <span style={{ fontSize: '1.1rem', marginRight: '0.25rem' }}>+</span> Add Task
+      </button>
     </div>
   );
 }
@@ -1964,6 +2108,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   
   const [view, setView] = useState('board'); // 'board' or 'detail'
   const [selectedTask, setSelectedTask] = useState(null);
+  const [collapsedGroups, setCollapsedGroups] = useState({});
+  const toggleGroup = (key) => {
+    setCollapsedGroups(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   useEffect(() => {
     if (initialSelectedTask) {
@@ -2049,23 +2197,24 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   };
 
   // ── INSERT/UPDATE ──
-  const handleSaveTask = async (taskData) => {
-    setIsSaving(true);
+  const handleSaveTask = async (taskData, silent = false) => {
+    if (!silent) setIsSaving(true);
     try {
       if (taskData.id) {
         await api.put(`/tasks/${taskData.id}`, taskData);
-        alert('Task updated successfully!', 'success', 'Success');
+        if (!silent) alert('Task updated successfully!', 'success', 'Success');
       } else {
         await api.post('/tasks', taskData);
         alert('Task created successfully!', 'success', 'Success');
         setView('board');
       }
-      fetchTasks();
+      const data = await api.get('/tasks');
+      setTasks(data || []);
     } catch (error) {
       console.error('Save error:', error);
       alert('Failed to save task: ' + error.message, 'error', 'Error');
     } finally {
-      setIsSaving(false);
+      if (!silent) setIsSaving(false);
     }
   };
 
@@ -2085,8 +2234,19 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     }
   };
 
-  const openNewTask = () => {
-    setSelectedTask(null);
+  const openNewTask = (presetStatus = 'To Do', presetProject = '') => {
+    setSelectedTask({
+      status: presetStatus,
+      projectName: presetProject,
+      priority: 'Medium',
+      title: '',
+      description: '',
+      assignees: '',
+      isBillable: false,
+      tag: 'Engineering',
+      taskType: 'Feature'
+    });
+    setTaskDetailMode(true);
     setView('detail');
   };
 
@@ -2202,6 +2362,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
               onTaskClick={openTaskDetail}
               onDelete={handleDeleteTask}
               currentUser={user}
+              onAddTaskClick={openNewTask}
             />
 
           ))}
@@ -2209,75 +2370,204 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
       )}
 
-      {viewMode === 'list' && (
-        <div className="list-view">
-          <table className="list-table">
-            <thead>
-              <tr>
-                <th>Task Title</th>
-                <th>Status</th>
-                <th>Priority</th>
-                <th>Due Date</th>
-                <th>Assignees</th>
-                <th>Billable Hrs</th>
-                <th>Actual Hrs</th>
+      {viewMode === 'list' && (() => {
+        // Group tasks by project name, and then by status
+        const grouped = {};
+        filteredTasks.forEach(task => {
+          const proj = task.projectName || 'General / Unassigned';
+          const status = task.status || 'To Do';
+          if (!grouped[proj]) grouped[proj] = {};
+          if (!grouped[proj][status]) grouped[proj][status] = [];
+          grouped[proj][status].push(task);
+        });
 
+        const projectsList = Object.keys(grouped).sort();
 
-                {(can('tasks', 'edit') || can('tasks', 'delete')) && <th style={{ textAlign: 'right' }}>Actions</th>}
-              </tr>
+        if (filteredTasks.length === 0) {
+          return (
+            <div className="clickup-list-empty">
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <p>No tasks found.</p>
+            </div>
+          );
+        }
 
+        return (
+          <div className="clickup-list-view">
+            {projectsList.map(proj => {
+              const isProjCollapsed = !!collapsedGroups[proj];
+              const projStatuses = COLUMNS.filter(col => grouped[proj][col.id] && grouped[proj][col.id].length > 0);
+              
+              return (
+                <div key={proj} className="clickup-project-group">
+                  <div 
+                    className="clickup-project-header" 
+                    onClick={() => toggleGroup(proj)}
+                  >
+                    <span className="clickup-project-toggle">
+                      {isProjCollapsed ? '▶' : '▼'}
+                    </span>
+                    <span className="clickup-project-folder-icon">📁</span>
+                    <span className="clickup-project-title">{proj}</span>
+                  </div>
 
+                  {!isProjCollapsed && (
+                    <div className="clickup-project-content">
+                      {projStatuses.map(col => {
+                        const statusKey = `${proj}-${col.id}`;
+                        const isStatusCollapsed = !!collapsedGroups[statusKey];
+                        const statusTasks = grouped[proj][col.id] || [];
+                        const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', symbol: '●' };
 
-            </thead>
-            <tbody>
-              {filteredTasks.length === 0 ? (
-                <tr><td colSpan="6" style={{textAlign:'center'}}>No tasks found.</td></tr>
-              ) : (
-                filteredTasks.map(task => {
-                  const pm = PRIORITY_META[task.priority] || PRIORITY_META['Medium'];
-                  return (
-                    <tr key={task.id} onClick={() => openTaskDetail(task, false)}>
-                      <td style={{ fontWeight: 600 }}>{task.title}</td>
-                      <td>{task.status}</td>
-                      <td><span className={`card-priority ${pm.cls}`} style={{display:'inline-block'}}>{task.priority}</span></td>
-                      <td>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}</td>
-                      <td>
-                        {task.assignees || '-'}
-                      </td>
-                      <td>{task.approvedHours || 0}</td>
-                      <td>{task.actualHours || 0}</td>
-
-                      {(can('tasks', 'edit') || can('tasks', 'delete')) && (
-                        <td style={{ textAlign: 'right' }}>
-                          {(getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
-                            <>
-                              <button className="list-view-btn" onClick={(e) => { e.stopPropagation(); openTaskDetail(task, false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981', marginRight: '0.75rem' }} title="View Task">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        return (
+                          <div key={col.id} className="clickup-status-group">
+                            <div className="clickup-status-header">
+                              <div className="clickup-status-left" onClick={() => toggleGroup(statusKey)}>
+                                <span className="clickup-status-toggle">
+                                  {isStatusCollapsed ? '▶' : '▼'}
+                                </span>
+                                <div className="clickup-status-badge" style={{ backgroundColor: meta.bg, color: meta.fg }}>
+                                  <span className="clickup-status-symbol" style={{ color: meta.dotColor }}>{meta.symbol}</span>
+                                  <span className="clickup-status-label">{col.label.toUpperCase()}</span>
+                                  <span className="clickup-status-count">{statusTasks.length}</span>
+                                </div>
+                              </div>
+                              <button 
+                                className="clickup-status-add-btn" 
+                                title="Add Task in status"
+                                onClick={() => openNewTask(col.id, proj === 'General / Unassigned' ? '' : proj)}
+                              >
+                                +
                               </button>
-                              <button className="list-edit-btn" onClick={(e) => { e.stopPropagation(); openTaskDetail(task, true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', marginRight: '0.75rem' }} title="Edit Task">
-                                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                              </button>
-                            </>
-                          )}
-                          {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
-                            <button className="list-delete-btn" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Delete Task">
-                               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                            </button>
-                          )}
-                        </td>
-                      )}
+                            </div>
 
-
-                    </tr>
-
-
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                            {!isStatusCollapsed && (
+                              <div className="clickup-table-wrapper">
+                                <table className="clickup-table">
+                                  <thead>
+                                    <tr>
+                                      <th className="th-name">NAME</th>
+                                      <th className="th-assignee">ASSIGNEE</th>
+                                      <th className="th-due">DUE DATE</th>
+                                      <th className="th-priority">PRIORITY</th>
+                                      <th className="th-hours">HOURS</th>
+                                      <th className="th-actions"></th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {statusTasks.map(task => {
+                                      const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
+                                      const relativeDate = formatRelativeDueDate(task.dueDate);
+                                      return (
+                                        <tr 
+                                          key={task.id} 
+                                          className="clickup-row" 
+                                          onClick={() => openTaskDetail(task, false)}
+                                        >
+                                          <td className="td-name">
+                                            <span 
+                                              className="status-checkbox-dot" 
+                                              style={{ 
+                                                color: meta.dotColor,
+                                                borderColor: meta.dotColor
+                                              }}
+                                              title={`Status: ${task.status}`}
+                                            >
+                                              {meta.symbol === '✓' ? '✓' : '○'}
+                                            </span>
+                                            <span className="task-title-text">{task.title || 'Untitled Task'}</span>
+                                          </td>
+                                          <td className="td-assignee" onClick={e => e.stopPropagation()}>
+                                            <div className="clickup-avatars-list">
+                                              {assignees.length === 0 ? (
+                                                <div className="clickup-avatar-empty" title="Unassigned">
+                                                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                                    <circle cx="12" cy="7" r="4"></circle>
+                                                  </svg>
+                                                </div>
+                                              ) : (
+                                                assignees.slice(0, 3).map(a => {
+                                                  const avCls = getAvatarColor(a);
+                                                  return (
+                                                    <div key={a} className={`clickup-avatar ${avCls}`} title={a}>
+                                                      {initials(a)}
+                                                    </div>
+                                                  );
+                                                })
+                                              )}
+                                              {assignees.length > 3 && (
+                                                <div className="clickup-avatar av-blue" title={`${assignees.length - 3} more`}>
+                                                  +{assignees.length - 3}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </td>
+                                          <td className="td-due">
+                                            <div className={`clickup-due-badge ${relativeDate ? (relativeDate.isOverdue ? 'overdue' : (relativeDate.isToday ? 'today' : '')) : ''}`}>
+                                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                                              </svg>
+                                              <span className="due-text">{relativeDate ? relativeDate.text : '-'}</span>
+                                            </div>
+                                          </td>
+                                          <td className="td-priority">
+                                            <div className="clickup-priority-wrapper">
+                                              <PriorityFlag priority={task.priority} />
+                                              <span className="priority-text">{task.priority || 'Medium'}</span>
+                                            </div>
+                                          </td>
+                                          <td className="td-hours">
+                                            <span className="hours-badge" title="Actual vs Estimated Hours">
+                                              {task.actualHours || 0}h / {task.approvedHours || 0}h
+                                            </span>
+                                          </td>
+                                          <td className="td-actions" onClick={e => e.stopPropagation()}>
+                                            <div className="row-action-buttons">
+                                              {(getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
+                                                <button className="row-act-btn edit" onClick={() => openTaskDetail(task, true)} title="Edit Task">
+                                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                </button>
+                                              )}
+                                              {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
+                                                <button className="row-act-btn delete" onClick={() => showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task')} title="Delete Task">
+                                                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                </button>
+                                              )}
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                    {/* Inline Add Task row */}
+                                    <tr className="clickup-add-row" onClick={() => openNewTask(col.id, proj === 'General / Unassigned' ? '' : proj)}>
+                                      <td colSpan="6">
+                                        <span className="add-task-icon">+</span>
+                                        <span className="add-task-text">Add Task</span>
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
     </div>
   );
 }
