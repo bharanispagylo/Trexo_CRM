@@ -20,12 +20,32 @@ import Reports from './pages/Administration/Reports';
 
 
 export default function DashboardLayout({ user, onLogout, renderOverview }) {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => {
+    const path = window.location.pathname.substring(1);
+    return path || 'overview';
+  });
   const [userToEdit, setUserToEdit] = useState(null);
   const { can, loading } = usePermissions();
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.substring(1);
+      setActiveTab(path || 'overview');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    const currentPath = window.location.pathname.substring(1) || 'overview';
+    if (activeTab !== currentPath) {
+      const newUrl = activeTab === 'overview' ? '/' : `/${activeTab}`;
+      window.history.pushState(null, '', newUrl);
+    }
+  }, [activeTab]);
 
   // Notifications State
   const [notifications, setNotifications] = useState([]);

@@ -33,7 +33,7 @@ function Avatar({ initials, image, size = "md", ring = false }) {
 // ══════════════════════════════════════════════════════════
 //  LOGIN PAGE
 // ══════════════════════════════════════════════════════════
-function LoginPage({ onLogin, onRegisterClick }) {
+function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
@@ -146,7 +146,10 @@ function LoginPage({ onLogin, onRegisterClick }) {
           </div>
 
           <div className="input-group input-group-mb-lg">
-            <label className="input-label">Password</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+              <label className="input-label" style={{ marginBottom: 0 }}>Password</label>
+              <button type="button" onClick={onForgotPasswordClick} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.8rem', cursor: 'pointer', padding: 0, fontWeight: 500 }}>Forgot password?</button>
+            </div>
             <div style={{ position: "relative" }}>
               <input
                 type={showPwd ? "text" : "password"}
@@ -357,6 +360,140 @@ function RegisterPage({ onRegister, onLoginClick }) {
           <div className="auth-switch-prompt">
             <span className="auth-switch-text">Already have an account? </span>
             <button className="auth-switch-btn" onClick={onLoginClick}>Sign in</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════
+//  FORGOT PASSWORD PAGE
+// ══════════════════════════════════════════════════════════
+function ForgotPasswordPage({ onBackToLogin }) {
+  const [email, setEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const handleReset = async () => {
+    setError("");
+    setMessage("");
+    if (!email || !newPassword) { setError("Please enter email and new password."); return; }
+    setLoading(true);
+    try {
+      const res = await api.post('/forgot-password', { email, newPassword });
+      setMessage(res.message || "Password has been successfully reset.");
+      setEmail("");
+      setNewPassword("");
+    } catch (err) {
+      setError(err.message || "Failed to process request. Email might not exist.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="login-container app-container">
+      {/* Left panel */}
+      <div className="login-left-panel">
+        <div className="login-bg-gradient" />
+        <div className="login-bg-pattern" />
+        <div className="login-bg-glow-1" />
+        <div className="login-bg-glow-2" />
+
+        <div className="logo-container">
+          <div className="logo-icon">O</div>
+          <div>
+            <div className="logo-text">OfficeCRM</div>
+            <div className="logo-subtext">Employee Management Portal</div>
+          </div>
+        </div>
+
+        <div className="login-center-content">
+          <div className="login-badge">Account Recovery</div>
+          <h2 className="login-title">
+            Forgot Password?<br />
+            <span className="login-title-highlight">We've got you.</span><br />
+            Secure reset.
+          </h2>
+          <p className="login-desc">
+            Enter your email address and a new password to instantly securely reset your account access.
+          </p>
+        </div>
+        <div className="login-footer">© 2026 OfficeCRM · All rights reserved</div>
+      </div>
+
+      {/* Right panel */}
+      <div className="login-right-panel">
+        <div className="mobile-logo">
+          <div className="logo-icon logo-icon-sm">O</div>
+          <div className="logo-text logo-text-lg">OfficeCRM</div>
+        </div>
+
+        <div className="login-form-container">
+          <h1 className="login-heading">Reset Password</h1>
+          <p className="login-subheading">Create a new password for your account</p>
+
+          {error && (
+            <div className="error-message">
+              <span>⚠️</span> {error}
+            </div>
+          )}
+          
+          {message && (
+            <div style={{ padding: '0.75rem', background: '#dcfce7', color: '#166534', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>✅</span> {message}
+            </div>
+          )}
+
+          <div className="input-group">
+            <label className="input-label">Email Address</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleReset()}
+              placeholder="you@officecrm.in"
+              className="input-field"
+            />
+          </div>
+
+          <div className="input-group input-group-mb-lg">
+            <label className="input-label">New Password</label>
+            <div style={{ position: "relative" }}>
+              <input
+                type={showPwd ? "text" : "password"}
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleReset()}
+                placeholder="Enter new password"
+                className="input-field input-field-pwd"
+              />
+              <button
+                onClick={() => setShowPwd(v => !v)}
+                className="pwd-toggle-btn"
+              >{showPwd ? "👁️" : "🔒"}</button>
+            </div>
+          </div>
+
+          <button
+            onClick={handleReset}
+            disabled={loading}
+            className="btn-primary"
+          >
+            {loading ? (
+              <><span className="spinner"></span> Resetting...</>
+            ) : (
+              <><span></span> Reset Password</>
+            )}
+          </button>
+
+          <div className="auth-switch-prompt">
+            <span className="auth-switch-text">Remember your password? </span>
+            <button className="auth-switch-btn" onClick={onBackToLogin}>Back to login</button>
           </div>
         </div>
       </div>
@@ -707,6 +844,7 @@ export default function LoginWithRoles() {
     }
   });
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isForgotPwd, setIsForgotPwd] = useState(false);
 
   const handleLogin = (u) => {
     setUser(u);
@@ -722,7 +860,10 @@ export default function LoginWithRoles() {
     if (isRegistering) {
       return <RegisterPage onRegister={handleLogin} onLoginClick={() => setIsRegistering(false)} />;
     }
-    return <LoginPage onLogin={handleLogin} onRegisterClick={() => setIsRegistering(true)} />;
+    if (isForgotPwd) {
+      return <ForgotPasswordPage onBackToLogin={() => setIsForgotPwd(false)} />;
+    }
+    return <LoginPage onLogin={handleLogin} onRegisterClick={() => setIsRegistering(true)} onForgotPasswordClick={() => setIsForgotPwd(true)} />;
   }
   if (user.role?.toLowerCase() === "admin") {
     return (
