@@ -165,6 +165,29 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+app.post('/api/forgot-password', async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+    if (!email || !newPassword) return res.status(400).json({ error: 'Email and new password are required' });
+    
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    await prisma.user.update({
+      where: { email },
+      data: { password: newPassword }
+    });
+    
+    console.log(`Password reset directly for: ${email}`);
+    res.json({ message: 'Password has been successfully reset.' });
+  } catch (error) {
+    console.error('POST /api/forgot-password error:', error);
+    res.status(500).json({ error: 'Failed to process request', details: error.message });
+  }
+});
+
 
 app.put('/api/users/:id', async (req, res) => {
   try {
