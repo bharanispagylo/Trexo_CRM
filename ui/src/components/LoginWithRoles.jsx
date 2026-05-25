@@ -367,34 +367,10 @@ function RegisterPage({ onRegister, onLoginClick }) {
 // ══════════════════════════════════════════════════════════
 //  ADMIN DASHBOARD
 // ══════════════════════════════════════════════════════════
-const adminStats = [
-  { label: "Total Employees", value: "", change: "", up: true,  icon: "", grad: "from-blue-600 to-blue-400" },
-  { label: "Active This Month", value: "", change: "", up: true,  icon: "", grad: "from-emerald-600 to-emerald-400" },
-  { label: "New Joiners",       value: "",    change: "", up: true,  icon: "", grad: "from-violet-600 to-violet-400" },
-  { label: "On Leave Today",    value: "",    change: "", up: false, icon: "", grad: "from-amber-500 to-amber-400" },
-];
-
-const recentEmps = [
-  { name: "Arjun Krishnan", role: "Backend Developer", dept: "Engineering", joined: "02 May 2025", status: "Active",   av: "AK" },
-  { name: "Priya Nair",     role: "UI/UX Designer",    dept: "Design",      joined: "28 Apr 2025", status: "Active",   av: "PN" },
-  { name: "Rahul Mehta",    role: "HR Manager",        dept: "HR",          joined: "25 Apr 2025", status: "Active",   av: "RK" },
-  { name: "Sana Shaikh",    role: "QA Engineer",       dept: "Quality",     joined: "20 Apr 2025", status: "On Leave", av: "MS" },
-  { name: "Karthik Selvam", role: "DevOps Engineer",   dept: "Engineering", joined: "15 Apr 2025", status: "Active",   av: "KS" },
-];
-
-const depts = [
-  { name: "Engineering", count: 420, pct: 33, color: "bg-blue-500" },
-  { name: "Sales",       count: 210, pct: 16, color: "bg-emerald-500" },
-  { name: "Design",      count: 145, pct: 11, color: "bg-violet-500" },
-  { name: "HR",          count: 98,  pct: 8,  color: "bg-rose-500" },
-  { name: "Marketing",   count: 180, pct: 14, color: "bg-amber-500" },
-  { name: "Others",      count: 231, pct: 18, color: "bg-slate-400" },
-];
 
 function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
   const [tasks, setTasks] = useState({ today: [], upcoming: [], backlog: [] });
   const [usersData, setUsersData] = useState([]);
-  const [deptData, setDeptData] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -430,18 +406,6 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
         setTasks({ today: todayTasks, upcoming: upcomingTasks, backlog: backlogTasks });
         setUsersData(allUsers || []);
 
-        // Calculate dynamic departments
-        const deptCounts = {};
-        (allUsers || []).forEach(u => {
-          const d = u.dept || 'Others';
-          deptCounts[d] = (deptCounts[d] || 0) + 1;
-        });
-        const total = (allUsers || []).length || 1;
-        const deptsArray = Object.entries(deptCounts).map(([name, count], i) => {
-          const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-rose-500', 'bg-amber-500', 'bg-slate-400'];
-          return { name, count, pct: Math.round((count/total)*100), color: colors[i % colors.length] };
-        }).sort((a,b) => b.count - a.count);
-        setDeptData(deptsArray);
 
       } catch (err) {
         console.error('Failed to fetch dashboard data', err);
@@ -613,9 +577,6 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
 //  EMPLOYEE DASHBOARD
 // ══════════════════════════════════════════════════════════
 function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
-  const [recentLeaves, setRecentLeaves] = useState([]);
-  const [attendanceCount, setAttendanceCount] = useState(0);
-  const [leaveBalance, setLeaveBalance] = useState(15);
   const [tasks, setTasks] = useState({ today: [], upcoming: [], backlog: [] });
 
   useEffect(() => {
@@ -624,18 +585,18 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
         const userName = (user.fullName || user.firstName || '').trim().toLowerCase();
 
         // 1. Fetch Attendance
-        const allAttendance = await api.get('/attendance');
-        const myAttendanceCount = (allAttendance || []).filter(a => a.name?.trim().toLowerCase() === userName).length;
-        setAttendanceCount(myAttendanceCount);
+        // const allAttendance = await api.get('/attendance');
+        // const myAttendanceCount = (allAttendance || []).filter(a => a.name?.trim().toLowerCase() === userName).length;
+        // setAttendanceCount(myAttendanceCount);
 
         // 2. Fetch Leaves
-        const allLeaves = await api.get('/leaves');
-        const myLeaves = (allLeaves || []).filter(l => l.name?.trim().toLowerCase() === userName);
-        setRecentLeaves(myLeaves.slice(0, 5));
+        // const allLeaves = await api.get('/leaves');
+        // const myLeaves = (allLeaves || []).filter(l => l.name?.trim().toLowerCase() === userName);
+        // setRecentLeaves(myLeaves.slice(0, 5));
 
-        const myApprovedLeaves = myLeaves.filter(l => l.status === 'Approved');
-        const usedDays = myApprovedLeaves.reduce((sum, l) => sum + (l.days || 0), 0);
-        setLeaveBalance(15 - usedDays);
+        // const myApprovedLeaves = myLeaves.filter(l => l.status === 'Approved');
+        // const usedDays = myApprovedLeaves.reduce((sum, l) => sum + (l.days || 0), 0);
+        // setLeaveBalance(15 - usedDays);
 
         // 3. Fetch Tasks
         const allTasks = await api.get('/tasks');
