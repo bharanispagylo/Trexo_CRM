@@ -115,6 +115,7 @@ model Estimation {
   taskName        String   @map("task_name")
   description     String?  @db.Text
   estimatedHours  Float    @default(0) @map("estimated_hours")
+  client          String?
   clientId        String?  @map("client_id")
   clientRef       Client?  @relation(fields: [clientId], references: [id])
   projectId       String?  @map("project_id")
