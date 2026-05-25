@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
 import { useAlert } from '../../../context/AlertContext';
-import './Projects.css'; // Reuse Projects styling
+import './Clients.css';
 
 export default function Clients({ user }) {
   const [clients, setClients] = useState([]);
@@ -90,13 +90,13 @@ export default function Clients({ user }) {
   const agencies = clients.filter(c => c.clientType === 'Agency');
 
   return (
-    <div className="saas-module-container">
-      <div className="module-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+    <div className="clients-page-container">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem', maxWidth: '1000px' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>Client Management</h2>
         
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <select 
-            className="saas-select" 
+            className="clients-select" 
             style={{ width: 'auto', padding: '0.5rem 1rem' }} 
             value={filterType} 
             onChange={(e) => { setFilterType(e.target.value); if(e.target.value !== 'Agency Client') setFilterAgency('All'); }}
@@ -108,55 +108,55 @@ export default function Clients({ user }) {
           </select>
           
           {filterType === 'Agency Client' && (
-            <select className="saas-select" style={{ width: 'auto', padding: '0.5rem 1rem' }} value={filterAgency} onChange={(e) => setFilterAgency(e.target.value)}>
+            <select className="clients-select" style={{ width: 'auto', padding: '0.5rem 1rem' }} value={filterAgency} onChange={(e) => setFilterAgency(e.target.value)}>
               <option value="All">All Agencies</option>
               {agencies.map(ag => <option key={ag.id} value={ag.id}>{ag.name}</option>)}
             </select>
           )}
 
-          <button className="saas-btn-primary" onClick={() => openForm()}>+ New Client</button>
+          <button className="clients-btn-submit" onClick={() => openForm()}>+ New Client</button>
         </div>
       </div>
 
       {showForm && (
-        <div className="saas-form-card" style={{ marginBottom: '2rem' }}>
-          <div className="form-header">
-            <h3 className="form-title">{form.id ? 'Edit Client' : 'Add New Client'}</h3>
-            <button className="action-btn" onClick={() => setShowForm(false)}>✕</button>
+        <div className="clients-form-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800' }}>{form.id ? 'Edit Client' : 'Add New Client'}</h3>
+            <button className="client-action-btn" onClick={() => setShowForm(false)}>✕</button>
           </div>
-          <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-            <div className="saas-field">
-              <label className="saas-label">Name *</label>
-              <input className="saas-input" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Client Name" />
+          <div className="clients-form-grid">
+            <div className="clients-field">
+              <label className="clients-label">Name *</label>
+              <input className="clients-input" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Client Name" />
             </div>
-            <div className="saas-field">
-              <label className="saas-label">Company</label>
-              <input className="saas-input" value={form.company} onChange={e => setForm({...form, company: e.target.value})} placeholder="Company Name" />
+            <div className="clients-field">
+              <label className="clients-label">Company</label>
+              <input className="clients-input" value={form.company} onChange={e => setForm({...form, company: e.target.value})} placeholder="Company Name" />
             </div>
-            <div className="saas-field">
-              <label className="saas-label">Email</label>
-              <input className="saas-input" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="Email Address" />
+            <div className="clients-field">
+              <label className="clients-label">Email</label>
+              <input className="clients-input" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="Email Address" />
             </div>
-            <div className="saas-field">
-              <label className="saas-label">Phone</label>
-              <input className="saas-input" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="Phone Number" />
+            <div className="clients-field">
+              <label className="clients-label">Phone</label>
+              <input className="clients-input" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="Phone Number" />
             </div>
-            <div className="saas-field" style={{ gridColumn: 'span 2' }}>
-              <label className="saas-label">Address</label>
-              <input className="saas-input" value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder="Full Address" />
+            <div className="clients-field full-width" style={{ gridColumn: 'span 2' }}>
+              <label className="clients-label">Address</label>
+              <input className="clients-input" value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder="Full Address" />
             </div>
-            <div className="saas-field">
-              <label className="saas-label">Client Type</label>
-              <select className="saas-select" value={form.clientType || 'Direct'} onChange={e => setForm({...form, clientType: e.target.value, parentAgencyId: e.target.value !== 'Agency Client' ? null : form.parentAgencyId})}>
+            <div className="clients-field">
+              <label className="clients-label">Client Type</label>
+              <select className="clients-select" value={form.clientType || 'Direct'} onChange={e => setForm({...form, clientType: e.target.value, parentAgencyId: e.target.value !== 'Agency Client' ? null : form.parentAgencyId})}>
                 <option value="Direct">Direct Client</option>
                 <option value="Agency">Agency</option>
                 <option value="Agency Client">Agency Client (Sub-client)</option>
               </select>
             </div>
             {form.clientType === 'Agency Client' && (
-              <div className="saas-field">
-                <label className="saas-label">Parent Agency</label>
-                <select className="saas-select" value={form.parentAgencyId || ''} onChange={e => setForm({...form, parentAgencyId: e.target.value})}>
+              <div className="clients-field">
+                <label className="clients-label">Parent Agency</label>
+                <select className="clients-select" value={form.parentAgencyId || ''} onChange={e => setForm({...form, parentAgencyId: e.target.value})}>
                   <option value="">Select Parent Agency...</option>
                   {clients.filter(c => c.clientType === 'Agency').map(agency => (
                     <option key={agency.id} value={agency.id}>{agency.name}</option>
@@ -164,23 +164,23 @@ export default function Clients({ user }) {
                 </select>
               </div>
             )}
-            <div className="saas-field">
-              <label className="saas-label">Status</label>
-              <select className="saas-select" value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
+            <div className="clients-field">
+              <label className="clients-label">Status</label>
+              <select className="clients-select" value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
               </select>
             </div>
           </div>
-          <div className="form-actions" style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-            <button className="saas-btn-submit" onClick={handleSave}>Save</button>
-            <button className="saas-btn-cancel" onClick={() => setShowForm(false)} style={{ background: 'white', border: '1px solid #e2e8f0', padding: '0.65rem 1.25rem', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
+          <div className="clients-form-actions" style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem' }}>
+            <button className="clients-btn-submit" onClick={handleSave}>Save</button>
+            <button className="clients-btn-cancel" onClick={() => setShowForm(false)}>Cancel</button>
           </div>
         </div>
       )}
 
-      <div className="saas-table-container">
-        <table className="saas-table">
+      <div className="clients-table-container">
+        <table className="clients-table">
           <thead>
             <tr>
               <th>Name</th>
@@ -188,7 +188,7 @@ export default function Clients({ user }) {
               <th>Contact</th>
               <th>Type</th>
               <th>Status</th>
-              <th>Actions</th>
+              <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -197,15 +197,11 @@ export default function Clients({ user }) {
                 <td><strong>{client.name}</strong></td>
                 <td>{client.company || '-'}</td>
                 <td>
-                  <div style={{ fontSize: '0.85rem' }}>{client.email || '-'}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{client.phone || '-'}</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>{client.email || '-'}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>{client.phone || '-'}</div>
                 </td>
                 <td>
-                  <span style={{ 
-                    padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold',
-                    backgroundColor: client.clientType === 'Agency' ? '#e0e7ff' : client.clientType === 'Agency Client' ? '#f3e8ff' : '#f1f5f9',
-                    color: client.clientType === 'Agency' ? '#4338ca' : client.clientType === 'Agency Client' ? '#7e22ce' : '#475569'
-                  }}>
+                  <span className={`client-type-pill ${client.clientType === 'Agency' ? 'agency' : client.clientType === 'Agency Client' ? 'subclient' : 'direct'}`}>
                     {client.clientType || 'Direct'}
                   </span>
                   {client.clientType === 'Agency Client' && client.parentAgencyId && (
@@ -215,23 +211,19 @@ export default function Clients({ user }) {
                   )}
                 </td>
                 <td>
-                  <span style={{ 
-                    padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold',
-                    backgroundColor: client.status === 'Active' ? '#dcfce7' : '#f1f5f9',
-                    color: client.status === 'Active' ? '#16a34a' : '#64748b'
-                  }}>
+                  <span className={`client-status-pill ${client.status === 'Active' ? 'active' : 'inactive'}`}>
                     {client.status}
                   </span>
                 </td>
-                <td>
-                  <button className="action-btn" onClick={() => openForm(client)}>Edit</button>
-                  <button className="action-btn" onClick={() => handleDelete(client.id)} style={{ color: '#ef4444', marginLeft: '0.5rem' }}>Delete</button>
+                <td style={{ textAlign: 'right' }}>
+                  <button className="client-action-btn" onClick={() => openForm(client)}>Edit</button>
+                  <button className="client-action-btn delete" onClick={() => handleDelete(client.id)}>Delete</button>
                 </td>
               </tr>
             ))}
             {clients.length === 0 && (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>No clients found.</td>
+                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>No clients found.</td>
               </tr>
             )}
           </tbody>

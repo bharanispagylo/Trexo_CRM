@@ -7,6 +7,7 @@ import Salary from './pages/HR/Salary';
 import Leave from './pages/HR/Leave';
 import Attendance from './pages/HR/Attendance';
 import Projects from './pages/Operations/Projects';
+import TrackTeam from './pages/Operations/TrackTeam';
 import Tasks from './pages/Operations/Tasks';
 import Estimations from './pages/Operations/Estimations';
 import Clients from './pages/Operations/Clients';
@@ -182,6 +183,15 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
           });
         }
         return <Clients user={user} />;
+      case 'track-team':
+        if (user?.role?.toLowerCase() !== 'admin') {
+          return renderOverview(setActiveTab, (taskData) => {
+            setSearchSelectedTask(taskData);
+            setIsTaskDetailOpen(true);
+            setActiveTab('tasks');
+          });
+        }
+        return <TrackTeam user={user} />;
       case 'tasks': return (
         <Tasks
           user={user}
@@ -221,6 +231,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'leave': return { title: 'Leave Requests', back: 'HR', id: 'Leave' };
       case 'attendance': return { title: 'Attendance Logs', back: 'HR', id: 'Attendance' };
       case 'projects': return { title: 'Project Portfolio', back: 'Operations', id: 'Projects' };
+      case 'track-team': return { title: 'Track your Team', back: 'Operations', id: 'TrackTeam' };
       case 'estimations': return { title: 'Estimations', back: 'Operations', id: 'Estimations' };
       case 'clients': return { title: 'Client Management', back: 'Operations', id: 'Clients' };
       case 'tasks': return isTaskDetailOpen
@@ -265,6 +276,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
           <div className="saas-nav-group">
             {can('tasks', 'view') && <NavItem id="tasks" label="Tasks" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>} />}
             {can('projects', 'view') && <NavItem id="projects" label="Projects" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>} />}
+            {user?.role?.toLowerCase() === 'admin' && <NavItem id="track-team" label="Track your Team" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>} />}
             {!['employee', 'intern', 'guest', 'team lead'].includes(user?.role?.toLowerCase()) && <NavItem id="estimations" label="Estimations" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>} />}
             {user?.role?.toLowerCase() === 'admin' && <NavItem id="clients" label="Clients" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>} />}
           </div>

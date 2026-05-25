@@ -1,0 +1,347 @@
+/* Estimations.css - Modern Premium Estimation Page Styles */
+
+.estimations-page {
+  animation: estimationsFadeIn 0.3s ease-out;
+  padding: 2rem 3rem;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+@keyframes estimationsFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.estimations-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  max-width: 1000px;
+}
+
+.estimations-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.estimations-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.1);
+}
+
+.estimations-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 0.25rem 0;
+  letter-spacing: -0.02em;
+}
+
+.estimations-subtitle {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Button style overrides for Estimations */
+.estimations-btn-primary {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+  transition: all 0.2s;
+}
+
+.estimations-btn-primary:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px -1px rgba(37, 99, 235, 0.3);
+}
+
+/* Modern Form Cards */
+.estimations-form-card {
+  max-width: 800px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 2.25rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 10px 15px -3px rgba(0, 0, 0, 0.03);
+  margin-bottom: 2rem;
+  animation: estimationsFadeIn 0.25s ease-out;
+}
+
+.estimations-form-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 1.75rem 0;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 0.75rem;
+}
+
+.estimations-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.estimations-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.estimations-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.estimations-input,
+.estimations-select {
+  width: 100%;
+  max-width: 320px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #1e293b;
+  background: #fff;
+  transition: all 0.15s ease-in-out;
+}
+
+.estimations-textarea {
+  width: 100%;
+  max-width: 660px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #1e293b;
+  background: #fff;
+  transition: all 0.15s ease-in-out;
+  grid-column: span 2;
+  min-height: 80px;
+  resize: vertical;
+}
+
+.estimations-input:focus,
+.estimations-select:focus,
+.estimations-textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.estimations-input.error,
+.estimations-select.error {
+  border-color: #ef4444;
+}
+
+.estimations-error-text {
+  font-size: 0.75rem;
+  color: #ef4444;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.estimations-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 1.5rem;
+}
+
+.estimations-btn-secondary {
+  background: white;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.estimations-btn-secondary:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+/* Modern Tables */
+.estimations-table-container {
+  max-width: 1000px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01), 0 10px 15px -3px rgba(0, 0, 0, 0.02);
+}
+
+.estimations-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.estimations-table th {
+  padding: 1rem 1.25rem;
+  background: #f8fafc;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.estimations-table td {
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  font-weight: 500;
+}
+
+.estimations-table tr:last-child td {
+  border-bottom: none;
+}
+
+.estimations-table tr:hover td {
+  background: #f8fafc;
+}
+
+/* Status Pill */
+.estimations-status-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.estimations-status-pill.pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.estimations-status-pill.converted {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+/* Action button configurations */
+.estimations-action-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.estimations-action-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.estimations-action-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.estimations-action-btn.convert:hover {
+  color: #16a34a;
+  background: #f0fdf4;
+}
+
+.estimations-action-btn.delete:hover {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+/* Empty State Styling */
+.estimations-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem 2rem;
+  text-align: center;
+}
+
+.estimations-empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.estimations-empty-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #475569;
+  margin: 0 0 0.5rem 0;
+}
+
+.estimations-empty-desc {
+  font-size: 0.85rem;
+  color: #64748b;
+  max-width: 320px;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+}
+
+.estimations-btn-outline {
+  background: white;
+  border: 1px solid #cbd5e1;
+  color: #2563eb;
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  transition: all 0.15s;
+}
+
+.estimations-btn-outline:hover {
+  background: #f0f7ff;
+  border-color: #bfdbfe;
+}

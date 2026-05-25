@@ -41,6 +41,15 @@ prisma.$connect()
     } catch (e) {
       console.warn('[Self-Healing] Column delivered_date addition warning:', e.message);
     }
+    try {
+      await prisma.task.deleteMany({ where: { clientId: '' } });
+      await prisma.project.deleteMany({ where: { clientId: '' } });
+      await prisma.estimation.deleteMany({ where: { clientId: '' } });
+      await prisma.client.deleteMany({ where: { id: '' } });
+      console.log('[Self-Healing] Cleared all database records with empty client ID.');
+    } catch (e) {
+      console.warn('[Self-Healing] Database clean empty client ID warning:', e.message);
+    }
   })
   .catch(console.error);
 
@@ -81,6 +90,14 @@ const sanitizeTaskData = (taskData) => {
 app.use(cors());
 app.use(express.json());
 
+// Clean up empty string ID on POST requests so that default generator works
+app.use((req, res, next) => {
+  if (req.method === 'POST' && req.body && req.body.id === '') {
+    delete req.body.id;
+  }
+  next();
+});
+
 // Request logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
@@ -90,6 +107,74 @@ app.use((req, res, next) => {
 // Root route to check API status
 app.get('/', (req, res) => {
   res.json({ message: 'Trexo CRM API is running successfully!' });
+});
+
+// Database diagnostics and auto-repair route
+app.get('/api/test-db', async (req, res) => {
+  const { PrismaClient } = require('@prisma/client');
+  const fs = require('fs');
+  const path = require('path');
+  
+  const passwords = ['HqL98s0QqVLKVHAe', 'DlaRoWDaVFjrwlpx'];
+  const hosts = [
+    'aws-1-ap-south-1.pooler.supabase.com',
+    'db.xdtvtcavumzblzsxbuyb.supabase.co'
+  ];
+  const ports = [5432, 6543];
+  
+  let results = [];
+  let workingUrl = null;
+  
+  for (const host of hosts) {
+    for (const port of ports) {
+      for (const pwd of passwords) {
+        const pgbouncer = port === 6543 ? '?pgbouncer=true&connection_limit=1' : '';
+        const url = `postgresql://postgres.xdtvtcavumzblzsxbuyb:${pwd}@${host}:${port}/postgres${pgbouncer}`;
+        
+        results.push(`Testing URL: postgresql://postgres.xdtvtcavumzblzsxbuyb:***@${host}:${port}/postgres${pgbouncer}`);
+        
+        const tempPrisma = new PrismaClient({
+          datasources: {
+            db: { url }
+          }
+        });
+        
+        try {
+          await tempPrisma.$connect();
+          await tempPrisma.$queryRaw`SELECT 1`;
+          results.push(`  -> SUCCESS! Connected to database successfully.`);
+          workingUrl = url;
+          await tempPrisma.$disconnect();
+          break;
+        } catch (err) {
+          results.push(`  -> FAILED: ${err.message}`);
+          try { await tempPrisma.$disconnect(); } catch (e) {}
+        }
+      }
+      if (workingUrl) break;
+    }
+    if (workingUrl) break;
+  }
+  
+  if (workingUrl) {
+    results.push(`\n[Auto-Fix] Found working connection URL! Updating .env file...`);
+    try {
+      const envPath = path.join(__dirname, '.env');
+      let envContent = fs.readFileSync(envPath, 'utf8');
+      
+      envContent = envContent.replace(/DATABASE_URL\s*=\s*["'].*?["']/g, `DATABASE_URL="${workingUrl}"`);
+      envContent = envContent.replace(/DATABASE_URL\s*=\s*[^\s]+/g, `DATABASE_URL="${workingUrl}"`);
+      
+      fs.writeFileSync(envPath, envContent);
+      results.push(`[Auto-Fix] .env file successfully updated! Please restart the backend server.`);
+    } catch (e) {
+      results.push(`[Auto-Fix] Failed to update .env: ${e.message}`);
+    }
+  } else {
+    results.push(`\n[Auto-Fix] No working connection combination found. Please verify if your Supabase database is paused or if there is a network firewall blocking outbound connections to ports 5432/6543.`);
+  }
+  
+  res.send(`<pre>${results.join('\n')}</pre>`);
 });
 
 // --- ROUTES ---
