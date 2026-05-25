@@ -15,12 +15,7 @@ const COLUMNS = [
 ];
 
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
-const PRIORITY_META = {
-  'Critical': { cls: 'pri-critical' },
-  'High':     { cls: 'pri-high' },
-  'Medium':   { cls: 'pri-medium' },
-  'Low':      { cls: 'pri-low' },
-};
+
 const TAGS = ['Engineering', 'Design', 'Marketing', 'Sales', 'QA', 'HR', 'Operations'];
 
 const STATUS_HEADER_META = {
