@@ -81,8 +81,9 @@
   text-transform: uppercase;
 }
 
-.saas-input, .saas-select, .saas-textarea {
+.saas-input, .saas-select {
   width: 100%;
+  max-width: 320px;
   padding: 0.7rem 1rem;
   border-radius: 9px;
   border: 1px solid var(--saas-border);
@@ -92,9 +93,17 @@
 }
 
 .saas-textarea {
+  width: 100%;
+  max-width: 660px;
   grid-column: span 2;
   min-height: 80px;
   resize: vertical;
+  padding: 0.7rem 1rem;
+  border-radius: 9px;
+  border: 1px solid var(--saas-border);
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: white;
 }
 
 /* Members Chips */

@@ -1199,28 +1199,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   </span>
                 </div>
 
-                {/* Tag */}
-                <div className="saas-details-row">
-                  <span className="field-icon-box"><IconTag /></span>
-                  <span className="field-label-text">Tag</span>
-                  <span className="field-colon-sep">:</span>
-                  <span className="field-value-text">
-                    <select
-                      value={form.tag || 'Engineering'}
-                      onChange={e => {
-                        const val = e.target.value;
-                        const updated = { ...form, tag: val };
-                        setForm(updated);
-                        if (!isEditing) handleInlineSave(updated);
-                      }}
-                      className="saas-grid-select"
-                    >
-                      {TAGS.map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                  </span>
-                </div>
 
                 {/* Task Type */}
                 <div className="saas-details-row">
@@ -1801,7 +1779,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                       background: '#f8fafc',
                       borderTop: '1px solid #e2e8f0'
                     }}>
-                      <span>📂</span> End of list
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: '#94a3b8' }}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg> End of list
                     </div>
                   )}
 
@@ -1839,8 +1817,9 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                 marginBottom: '0.5rem',
                 fontSize: '0.8rem'
               }} className="animate-fade-in">
-                <span style={{ fontWeight: '600', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '240px' }}>
-                  📎 {commentAttachment.name}
+                <span style={{ fontWeight: '600', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '240px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                  {commentAttachment.name}
                 </span>
                 <button 
                   type="button" 
@@ -1876,9 +1855,9 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                     className="comment-emoji-icon" 
                     title="Insert Emoji"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    style={{ cursor: 'pointer', userSelect: 'none', fontSize: '1rem', opacity: 0.6, position: 'static' }}
+                    style={{ cursor: 'pointer', userSelect: 'none', opacity: 0.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    😊
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
                   </span>
                   
                   {/* Paperclip button */}
@@ -1886,9 +1865,9 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                     className="comment-paperclip-icon" 
                     title="Attach File to Comment"
                     onClick={() => commentFileInputRef.current && commentFileInputRef.current.click()}
-                    style={{ cursor: 'pointer', userSelect: 'none', fontSize: '1rem', opacity: 0.6 }}
+                    style={{ cursor: 'pointer', userSelect: 'none', opacity: 0.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    📎
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                   </span>
 
                   {showEmojiPicker && (
@@ -2091,6 +2070,226 @@ function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave
     </div>
   );
 }
+
+const parseDate = (dStr) => {
+  if (!dStr) return null;
+  const d = new Date(dStr);
+  if (isNaN(d.getTime())) return null;
+  return d;
+};
+
+const getLocalDateString = (d) => {
+  if (!d) return null;
+  const dateObj = new Date(d);
+  if (isNaN(dateObj.getTime())) return null;
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const date = String(dateObj.getDate()).padStart(2, '0');
+  return `${y}-${m}-${date}`;
+};
+
+const compareLocalDays = (d1, d2) => {
+  if (!d1 || !d2) return 0;
+  const y1 = d1.getFullYear();
+  const m1 = d1.getMonth();
+  const date1 = d1.getDate();
+  const y2 = d2.getFullYear();
+  const m2 = d2.getMonth();
+  const date2 = d2.getDate();
+  if (y1 !== y2) return y1 > y2 ? 1 : -1;
+  if (m1 !== m2) return m1 > m2 ? 1 : -1;
+  if (date1 !== date2) return date1 > date2 ? 1 : -1;
+  return 0;
+};
+
+const categorizeTask = (task, today) => {
+  const start = parseDate(task.startDate);
+  const delivery = parseDate(task.dueDate);
+  const delivered = parseDate(task.deliveredDate);
+
+  // If delivered is set and it's in the past or today:
+  if (delivered && compareLocalDays(delivered, today) <= 0) {
+    if (compareLocalDays(delivered, today) === 0) {
+      return 'today';
+    } else {
+      return 'backlog';
+    }
+  }
+
+  // If not delivered OR delivered is in the future:
+  if (start && compareLocalDays(start, today) > 0) {
+    return 'upcoming';
+  }
+  if (delivery && compareLocalDays(delivery, today) < 0) {
+    return 'backlog';
+  }
+  if (!start && !delivery) {
+    return 'backlog';
+  }
+  if (start && compareLocalDays(start, today) <= 0) {
+    return 'today';
+  }
+  if (!start && delivery && compareLocalDays(delivery, today) >= 0) {
+    return 'today';
+  }
+
+  return 'backlog';
+};
+
+function TaskCardWithDates({ task, onDragStart, onClick, onDelete, currentUser }) {
+  const { getLevel } = usePermissions();
+  const { confirm: showConfirm } = useAlert();
+  const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
+  
+  const formatDateForCard = (dateStr) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  };
+
+  const startVal = formatDateForCard(task.startDate);
+  const deliveryVal = formatDateForCard(task.dueDate);
+  const deliveredVal = formatDateForCard(task.deliveredDate);
+
+  return (
+    <div
+      className="task-card-clickup animate-fade-in"
+      draggable={true}
+      onDragStart={e => onDragStart(e, task.id)}
+      onClick={() => onClick(task)}
+      style={{ borderLeft: task.priority === 'Critical' ? '4px solid #ef4444' : task.priority === 'High' ? '4px solid #f59e0b' : '1px solid #e2e8f0' }}
+    >
+      <div className="card-clickup-header">
+        <span className="card-clickup-title">{task.title || 'Untitled Task'}</span>
+        
+        {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (currentUser?.fullName || currentUser?.name) && assignees.map(a => a.toLowerCase()).includes((currentUser?.fullName || currentUser?.name).toLowerCase()))) && (
+          <button 
+            className="card-clickup-delete-btn" 
+            title="Delete Task" 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              showConfirm('Delete this task?', () => onDelete(task.id), 'Delete Task'); 
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        )}
+      </div>
+
+      {task.description && task.description.trim() && (
+        <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.5rem', textOverflow: 'ellipsis', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3 }}>
+          {task.description}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', margin: '0.4rem 0', padding: '0.4rem 0.5rem', background: '#f8fafc', borderRadius: '6px', border: '1px solid #f1f5f9', fontSize: '0.72rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span style={{ color: '#64748b' }}>Start:</span>
+          <span style={{ fontWeight: 600, color: startVal ? '#334155' : '#94a3b8' }}>{startVal || 'Not started'}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span style={{ color: '#64748b' }}>Delivery (Due):</span>
+          <span style={{ fontWeight: 600, color: deliveryVal ? '#334155' : '#94a3b8' }}>{deliveryVal || 'No deadline'}</span>
+        </div>
+        {deliveredVal && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a' }}>
+            <span>Delivered:</span>
+            <span style={{ fontWeight: 700 }}>{deliveredVal}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="card-clickup-meta" style={{ marginTop: '0.2rem', paddingTop: '0.4rem' }}>
+        <div className="card-clickup-left">
+          <div className="card-clickup-avatars">
+            {assignees.length === 0 ? (
+              <div className="card-clickup-avatar-empty" title="Unassigned">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </div>
+            ) : (
+              <>
+                {assignees.slice(0, 3).map(a => {
+                  const avCls = getAvatarColor(a);
+                  return (
+                    <div key={a} className={`card-clickup-avatar ${avCls}`} title={a}>
+                      {initials(a)}
+                    </div>
+                  );
+                })}
+                {assignees.length > 3 && (
+                  <div className="card-clickup-avatar av-blue" title={`${assignees.length - 3} more`}>
+                    +{assignees.length - 3}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="card-clickup-meta-item priority" title={`Priority: ${task.priority || 'Medium'}`}>
+            <PriorityFlag priority={task.priority} />
+            <span className="meta-text">{task.priority}</span>
+          </div>
+
+          {task.projectName && (
+            <div className="card-clickup-meta-item tag" title={`Project: ${task.projectName}`}>
+              <span className="meta-text" style={{ maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.projectName}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScheduleColumn({ title, count, tasks, onDragStart, onDrop, onDragOver, onDragLeave, isDragOver, onTaskClick, onDelete, currentUser, onAddTaskClick, colorMeta }) {
+  return (
+    <div
+      className={`kanban-col-clickup ${isDragOver ? 'drag-over' : ''}`}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragLeave={onDragLeave}
+      style={{ flex: '1 1 300px', minWidth: '290px' }}
+    >
+      <div className="col-clickup-header">
+        <div className="col-clickup-badge" style={{ backgroundColor: colorMeta.bg, color: colorMeta.fg }}>
+          <span className="col-clickup-symbol" style={{ color: colorMeta.dotColor }}>●</span>
+          <span className="col-clickup-label">{title.toUpperCase()}</span>
+          <span className="col-clickup-count">{count}</span>
+        </div>
+        <div className="col-clickup-actions">
+          <button className="col-clickup-action-btn" title="Add Task" onClick={onAddTaskClick}>+</button>
+        </div>
+      </div>
+
+      {isDragOver && <div className="drop-indicator">Drop here</div>}
+
+      <div className="col-clickup-cards">
+        {tasks.length === 0 && !isDragOver && (
+          <div className="col-clickup-empty">No tasks in this category.</div>
+        )}
+        {tasks.map(task => (
+          <TaskCardWithDates
+            key={task.id}
+            task={task}
+            onDragStart={onDragStart}
+            onClick={onTaskClick}
+            onDelete={onDelete}
+            currentUser={currentUser}
+          />
+        ))}
+      </div>
+
+      <button className="col-clickup-add-task-btn" onClick={onAddTaskClick}>
+        <span style={{ fontSize: '1.1rem', marginRight: '0.25rem' }}>+</span> Add Task
+      </button>
+    </div>
+  );
+}
+
 
 
 // ══════════════════════════════════════════════════════════
@@ -2333,6 +2532,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           <div className="view-toggle">
             <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>List</button>
             <button className={viewMode === 'kanban' ? 'active' : ''} onClick={() => setViewMode('kanban')}>Kanban</button>
+            <button className={viewMode === 'schedule' ? 'active' : ''} onClick={() => setViewMode('schedule')}>Schedule</button>
           </div>
           {can('tasks', 'create') && (
             <button className="kanban-new-btn" onClick={openNewTask}>
@@ -2345,6 +2545,147 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       </div>
 
 
+
+      {/* ── Views ── */}
+      {viewMode === 'schedule' && (() => {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        const backlogTasks = [];
+        const todayTasks = [];
+        const upcomingTasks = [];
+
+        filteredTasks.forEach(task => {
+          const category = categorizeTask(task, today);
+          if (category === 'today') {
+            todayTasks.push(task);
+          } else if (category === 'upcoming') {
+            upcomingTasks.push(task);
+          } else {
+            backlogTasks.push(task);
+          }
+        });
+
+        const handleScheduleDrop = async (e, category) => {
+          e.preventDefault();
+          const id = dragId.current;
+          if (id !== null) {
+            const todayStr = getLocalDateString(new Date());
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowStr = getLocalDateString(tomorrow);
+
+            let updateData = {};
+            if (category === 'backlog') {
+              updateData = { startDate: null, dueDate: null };
+            } else if (category === 'today') {
+              updateData = { startDate: new Date(todayStr).toISOString() };
+              const t = tasks.find(x => x.id === id);
+              if (t && t.dueDate) {
+                const due = parseDate(t.dueDate);
+                const todayVal = new Date();
+                if (due && compareLocalDays(due, todayVal) < 0) {
+                  updateData.dueDate = new Date(todayStr).toISOString();
+                }
+              }
+            } else if (category === 'upcoming') {
+              updateData = { startDate: new Date(tomorrowStr).toISOString() };
+            }
+
+            setTasks(ts => ts.map(t => t.id === id ? { ...t, ...updateData } : t));
+            try {
+              await api.put(`/tasks/${id}`, updateData);
+            } catch (error) {
+              console.error('Schedule update error:', error);
+              fetchTasks();
+            }
+          }
+          dragId.current = null;
+          setDragOver(null);
+        };
+
+        const scheduleColumns = [
+          {
+            id: 'backlog',
+            title: 'Backlog Tasks',
+            tasks: backlogTasks,
+            colorMeta: { bg: '#fff7ed', fg: '#c2410c', dotColor: '#ea580c' },
+            onAddTask: () => openNewTask('To Do')
+          },
+          {
+            id: 'today',
+            title: "Today's Tasks",
+            tasks: todayTasks,
+            colorMeta: { bg: '#eff6ff', fg: '#1d4ed8', dotColor: '#3b82f6' },
+            onAddTask: () => {
+              const todayStr = getLocalDateString(new Date());
+              setSelectedTask({
+                status: 'To Do',
+                projectName: '',
+                priority: 'Medium',
+                title: '',
+                description: '',
+                assignees: '',
+                isBillable: false,
+                tag: 'Engineering',
+                taskType: 'Feature',
+                startDate: new Date(todayStr).toISOString(),
+                dueDate: new Date(todayStr).toISOString()
+              });
+              setTaskDetailMode(true);
+              setView('detail');
+            }
+          },
+          {
+            id: 'upcoming',
+            title: 'Upcoming Tasks',
+            tasks: upcomingTasks,
+            colorMeta: { bg: '#f5f3ff', fg: '#6d28d9', dotColor: '#8b5cf6' },
+            onAddTask: () => {
+              const tomorrow = new Date();
+              tomorrow.setDate(tomorrow.getDate() + 1);
+              const tomorrowStr = getLocalDateString(tomorrow);
+              setSelectedTask({
+                status: 'To Do',
+                projectName: '',
+                priority: 'Medium',
+                title: '',
+                description: '',
+                assignees: '',
+                isBillable: false,
+                tag: 'Engineering',
+                taskType: 'Feature',
+                startDate: new Date(tomorrowStr).toISOString()
+              });
+              setTaskDetailMode(true);
+              setView('detail');
+            }
+          }
+        ];
+
+        return (
+          <div className="kanban-board schedule-board">
+            {scheduleColumns.map(col => (
+              <ScheduleColumn
+                key={col.id}
+                title={col.title}
+                count={col.tasks.length}
+                tasks={col.tasks}
+                onDragStart={handleDragStart}
+                onDrop={e => handleScheduleDrop(e, col.id)}
+                onDragOver={e => handleDragOver(e, col.id)}
+                onDragLeave={handleDragLeave}
+                isDragOver={dragOver === col.id}
+                onTaskClick={openTaskDetail}
+                onDelete={handleDeleteTask}
+                currentUser={user}
+                onAddTaskClick={col.onAddTask}
+                colorMeta={col.colorMeta}
+              />
+            ))}
+          </div>
+        );
+      })()}
 
       {/* ── Views ── */}
       {viewMode === 'kanban' && (
@@ -2411,7 +2752,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                     <span className="clickup-project-toggle">
                       {isProjCollapsed ? '▶' : '▼'}
                     </span>
-                    <span className="clickup-project-folder-icon">📁</span>
+                    <span className="clickup-project-folder-icon" style={{ display: 'inline-flex', alignItems: 'center', marginRight: '6px', color: '#64748b', verticalAlign: 'middle' }}>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                    </span>
                     <span className="clickup-project-title">{proj}</span>
                   </div>
 

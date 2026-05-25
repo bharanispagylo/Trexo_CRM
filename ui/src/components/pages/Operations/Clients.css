@@ -1,0 +1,209 @@
+/* Clients.css - Custom Styling for Client Management */
+
+.clients-page-container {
+  padding: 2rem 3rem;
+  background: #f8fafc;
+  min-height: 100vh;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.clients-form-card {
+  max-width: 800px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 10px 15px -3px rgba(0, 0, 0, 0.03);
+  margin-bottom: 2rem;
+  animation: fadeIn 0.25s ease-out;
+}
+
+/* Reduced width container and removed list box border */
+.clients-table-container {
+  max-width: 1000px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.clients-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.clients-table th {
+  padding: 1rem;
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.clients-table td {
+  padding: 1.1rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #334155;
+  font-weight: 500;
+}
+
+.clients-table tr:hover td {
+  background: #f1f5f9;
+}
+
+.clients-table tr:last-child td {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+/* Form Styles */
+.clients-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.clients-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.clients-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.clients-input,
+.clients-select {
+  width: 100%;
+  max-width: 320px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #1e293b;
+  background: #fff;
+  transition: all 0.15s ease-in-out;
+}
+
+.clients-field.full-width .clients-input {
+  max-width: 660px;
+}
+
+.clients-input:focus,
+.clients-select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.clients-btn-submit {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.65rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+}
+
+.clients-btn-submit:hover {
+  background: #1d4ed8;
+}
+
+.clients-btn-cancel {
+  background: white;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.clients-btn-cancel:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+/* Badges & Actions */
+.client-type-pill {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.client-type-pill.agency {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+.client-type-pill.subclient {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+.client-type-pill.direct {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.client-status-pill {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.client-status-pill.active {
+  background: #dcfce7;
+  color: #16a34a;
+}
+.client-status-pill.inactive {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.client-action-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.client-action-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.client-action-btn.delete {
+  color: #ef4444;
+}
+
+.client-action-btn.delete:hover {
+  background: #fef2f2;
+}

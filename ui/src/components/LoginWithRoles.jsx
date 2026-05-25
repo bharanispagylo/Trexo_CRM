@@ -406,25 +406,57 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        const todayTime = today.getTime();
         const todayTasks = [];
         const upcomingTasks = [];
         const backlogTasks = [];
 
         (allTasks || []).forEach(task => {
           if (task.status === 'Delivered' || task.status === 'Prod Verified') return;
-          const todayTime = today.getTime();
-          if (task.dueDate) {
+          
+          // 1. Backlog Tasks: if deliveredDate or dueDate is in the past
+          let isBacklog = false;
+          if (task.deliveredDate) {
+             const d = new Date(task.deliveredDate);
+             d.setHours(0, 0, 0, 0);
+             if (d.getTime() < todayTime) {
+                isBacklog = true;
+             }
+          } else if (task.dueDate) {
              const d = new Date(task.dueDate);
              d.setHours(0, 0, 0, 0);
-             const time = d.getTime();
-             if (time < todayTime) backlogTasks.push(task);
-             else if (time === todayTime) todayTasks.push(task);
-             else upcomingTasks.push(task);
+             if (d.getTime() < todayTime) {
+                isBacklog = true;
+             }
+          }
+          
+          if (isBacklog) {
+             backlogTasks.push(task);
+             return;
+          }
+
+          // 2. Today Tasks: based on assignedDate
+          let isToday = false;
+          if (task.assignedDate) {
+             const a = new Date(task.assignedDate);
+             a.setHours(0, 0, 0, 0);
+             if (a.getTime() === todayTime) {
+                isToday = true;
+             }
           } else {
+             // Fallback to createdAt if assignedDate is not set
              const c = new Date(task.createdAt || Date.now());
              c.setHours(0, 0, 0, 0);
-             if (c.getTime() === todayTime) todayTasks.push(task);
-             else upcomingTasks.push(task);
+             if (c.getTime() === todayTime) {
+                isToday = true;
+             }
+          }
+
+          if (isToday) {
+             todayTasks.push(task);
+          } else {
+             // 3. Upcoming Tasks: remaining tasks
+             upcomingTasks.push(task);
           }
         });
         setTasks({ today: todayTasks, upcoming: upcomingTasks, backlog: backlogTasks });
@@ -522,86 +554,19 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
       </header>
 
       <main className="main-content">
-        {/* Welcome */}
-        <div className="welcome-banner">
-          <div>
-            <div className="welcome-sub">Welcome back,</div>
-            <h1 className="welcome-title">{user.fullName || user.firstName} </h1>
-            <p className="welcome-desc">
-              <span className="role-tag-badge">{(user.role || 'Admin').toUpperCase()}</span> · {user.dept || 'Administration'} · {user.title || 'Administrator'}
-            </p>
-          </div>
-
-          <Avatar
-            initials={user.firstName?.charAt(0) || user.fullName?.charAt(0) || "U"}
-            image={user.profileImage}
-            size="lg"
-            ring
-          />
-        </div>
-
-        {/* Task Cards Section MOVED TO TOP */}
+        {/* Task Cards Section */}
         <h2 className="panel-title" style={{ marginTop: "1rem", marginBottom: "1rem" }}>Task Overview</h2>
-        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
-          {renderTaskCard("Today's Tasks", tasks.today, "today")}
-          {renderTaskCard("Upcoming Tasks", tasks.upcoming, "upcoming")}
-          {renderTaskCard("Backlog Tasks", tasks.backlog, "backlog")}
-        </div>
-
-        {/* Stats */}
-        <div className="stats-grid">
-          {dynamicStats.map((s, i) => (
-            <div key={i} className="stat-card">
-              <div className="stat-header">
-                <div className="stat-icon" style={{ background: s.grad.includes('blue') ? 'linear-gradient(to bottom right, #2563eb, #60a5fa)' : s.grad.includes('emerald') ? 'linear-gradient(to bottom right, #059669, #34d399)' : s.grad.includes('violet') ? 'linear-gradient(to bottom right, #7c3aed, #a78bfa)' : 'linear-gradient(to bottom right, #f59e0b, #fbbf24)' }}>{s.icon}</div>
-                <span className={`stat-change ${s.up ? "stat-change-up" : "stat-change-down"}`}>{s.change}</span>
-              </div>
-              <div className="stat-value">{s.value}</div>
-              <div className="stat-label">{s.label}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <div style={{ flex: '2 1 60%', minWidth: '300px', display: 'flex' }}>
+              {renderTaskCard("Today's Tasks", tasks.today, "today")}
             </div>
-          ))}
-        </div>
-
-        {/* Table + Depts */}
-        <div className="content-grid">
-          {/* Recent Employees */}
-          <div className="panel-card panel-card-col-3" style={{ gridColumn: 'span 3' }}>
-            <div className="panel-header">
-              <h2 className="panel-title">Recent Employees</h2>
-              <button className="panel-link" onClick={() => setActiveTab('employee')}>View All →</button>
-            </div>
-            <div className="list-group">
-              {dynamicRecentEmps.map((e, i) => (
-                <div key={i} className="list-item">
-                  <Avatar initials={e.av} size="sm" />
-                  <div className="list-item-info">
-                    <div className="list-item-title">{e.name}</div>
-                    <div className="list-item-sub">{e.role}</div>
-                  </div>
-                  <div className="list-item-date">{e.joined}</div>
-                  <span className={`status-badge ${e.status === "Active" ? "status-badge-active" : "status-badge-leave"}`}>
-                    {e.status}
-                  </span>
-                </div>
-              ))}
+            <div style={{ flex: '1 1 30%', minWidth: '250px', display: 'flex' }}>
+              {renderTaskCard("Upcoming Tasks", tasks.upcoming, "upcoming")}
             </div>
           </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="quick-actions-panel">
-          <h2 className="panel-title" style={{ marginBottom: "1rem" }}>Admin Quick Actions</h2>
-          <div className="quick-actions-grid">
-            {[
-              { icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>, label: "Add Employee",   color: "action-blue" },
-              { icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>, label: "Leave Requests", color: "action-amber" },
-              { icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>, label: "Reports",        color: "action-violet" },
-              { icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>, label: "KYC Review",     color: "action-rose" },
-            ].map((a, i) => (
-              <button key={i} className={`action-btn ${a.color}`}>
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{a.icon}</span> {a.label}
-              </button>
-            ))}
+          <div style={{ width: '100%', display: 'flex' }}>
+            {renderTaskCard("Backlog Tasks", tasks.backlog, "backlog")}
           </div>
         </div>
       </main>
@@ -639,10 +604,27 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
 
         // 3. Fetch Tasks
         const allTasks = await api.get('/tasks');
-        const myTasks = allTasks.filter(t => (t.assignees || '').toLowerCase().includes(userName));
+        
+        // Robust assignee matching
+        const myTasks = allTasks.filter(t => {
+          if (!t.assignees) return false;
+          const assigneesList = t.assignees.split(',').map(s => s.trim().toLowerCase());
+          const cleanName = userName.replace(/[^a-z0-9]/g, '');
+          const cleanEmail = (user.email || '').toLowerCase().trim();
+          const cleanEmailPrefix = cleanEmail.split('@')[0].replace(/[^a-z0-9]/g, '');
+
+          return assigneesList.some(assignee => {
+            const cleanAssignee = assignee.replace(/[^a-z0-9]/g, '');
+            if (assignee === cleanEmail) return true;
+            if (cleanAssignee === cleanEmailPrefix) return true;
+            if (cleanAssignee.includes(cleanName) || cleanName.includes(cleanAssignee)) return true;
+            return false;
+          });
+        });
         
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        const todayTime = today.getTime();
 
         const todayTasks = [];
         const upcomingTasks = [];
@@ -650,19 +632,50 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
 
         myTasks.forEach(task => {
           if (task.status === 'Delivered' || task.status === 'Prod Verified') return; // ignore completed
-          const todayTime = today.getTime();
-          if (task.dueDate) {
+          
+          // 1. Backlog Tasks: if deliveredDate or dueDate is in the past
+          let isBacklog = false;
+          if (task.deliveredDate) {
+             const d = new Date(task.deliveredDate);
+             d.setHours(0, 0, 0, 0);
+             if (d.getTime() < todayTime) {
+                isBacklog = true;
+             }
+          } else if (task.dueDate) {
              const d = new Date(task.dueDate);
              d.setHours(0, 0, 0, 0);
-             const time = d.getTime();
-             if (time < todayTime) backlogTasks.push(task);
-             else if (time === todayTime) todayTasks.push(task);
-             else upcomingTasks.push(task);
+             if (d.getTime() < todayTime) {
+                isBacklog = true;
+             }
+          }
+          
+          if (isBacklog) {
+             backlogTasks.push(task);
+             return;
+          }
+
+          // 2. Today Tasks: based on assignedDate
+          let isToday = false;
+          if (task.assignedDate) {
+             const a = new Date(task.assignedDate);
+             a.setHours(0, 0, 0, 0);
+             if (a.getTime() === todayTime) {
+                isToday = true;
+             }
           } else {
+             // Fallback to createdAt if assignedDate is not set
              const c = new Date(task.createdAt || Date.now());
              c.setHours(0, 0, 0, 0);
-             if (c.getTime() === todayTime) todayTasks.push(task);
-             else upcomingTasks.push(task);
+             if (c.getTime() === todayTime) {
+                isToday = true;
+             }
+          }
+
+          if (isToday) {
+             todayTasks.push(task);
+          } else {
+             // 3. Upcoming Tasks: remaining tasks
+             upcomingTasks.push(task);
           }
         });
         setTasks({ today: todayTasks, upcoming: upcomingTasks, backlog: backlogTasks });
@@ -719,50 +732,20 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
       </header>
 
       <main className="main-content main-content-emp">
-        {/* Welcome Banner */}
-        <div className="welcome-banner welcome-banner-emp">
-          <div>
-            <div className="welcome-sub welcome-sub-emp">Welcome back,</div>
-            <h1 className="welcome-title">{user.fullName || user.firstName} </h1>
-            <p className="welcome-desc welcome-desc-emp">
-              <span className="role-tag-badge">{(user.role || 'Employee').toUpperCase()}</span> · {user.title || user.designation} · {user.dept || 'Engineering'}
-            </p>
-          </div>
-
-          <Avatar
-            initials={user.firstName?.charAt(0) || user.fullName?.charAt(0) || "U"}
-            image={user.profileImage}
-            size="lg"
-            ring
-          />
-        </div>
-
-        {/* Task Cards Section MOVED TO TOP */}
+        {/* Task Cards Section */}
         <div style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
           <h3 className="tasks-title" style={{ marginBottom: '1rem' }}>My Tasks</h3>
-          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-            {renderTaskCard("Today's Tasks", tasks.today, "today")}
-            {renderTaskCard("Upcoming Tasks", tasks.upcoming, "upcoming")}
-            {renderTaskCard("Backlog Tasks", tasks.backlog, "backlog")}
-          </div>
-        </div>
-
-        {/* Info row */}
-        <div className="emp-grid" style={{ gridTemplateColumns: '1fr' }}>
-          <div className="emp-content">
-            {/* Quick actions */}
-            <div className="quick-actions-panel">
-              <h3 className="tasks-title" style={{ marginBottom: '1rem' }}>Self Service</h3>
-              <div className="emp-actions-grid">
-                <button className="action-btn action-btn-sm action-amber" onClick={() => setActiveTab('leave')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                  Apply for Leave
-                </button>
-                <button className="action-btn action-btn-sm action-blue" onClick={() => setActiveTab('attendance')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                  My Attendance
-                </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+              <div style={{ flex: '2 1 60%', minWidth: '300px', display: 'flex' }}>
+                {renderTaskCard("Today's Tasks", tasks.today, "today")}
               </div>
+              <div style={{ flex: '1 1 30%', minWidth: '250px', display: 'flex' }}>
+                {renderTaskCard("Upcoming Tasks", tasks.upcoming, "upcoming")}
+              </div>
+            </div>
+            <div style={{ width: '100%', display: 'flex' }}>
+              {renderTaskCard("Backlog Tasks", tasks.backlog, "backlog")}
             </div>
           </div>
         </div>

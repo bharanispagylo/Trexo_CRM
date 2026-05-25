@@ -332,7 +332,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
   // ── LIST HANDLERS ──
   const handleAdd = async () => {
-    if (!form.name?.trim() || !form.clientId?.trim() || !form.description?.trim()) {
+    if (!form.name?.trim() || !form.client?.trim() || !form.description?.trim()) {
       alert("Please fill out all mandatory fields: Project Name, Client, and Description.", 'warning', 'Required Fields');
       return;
     }
@@ -568,13 +568,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         </div>
         <div className="saas-field">
           <label className="saas-label">Client *</label>
-          <select className="saas-select" value={form.clientId || ''} onChange={e => {
-            const selectedClient = clients.find(c => c.id === e.target.value);
-            setForm({...form, clientId: e.target.value, client: selectedClient ? selectedClient.name : ''});
-          }}>
-            <option value="">Select a Client</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <input 
+            className="saas-input" 
+            placeholder="e.g. Acme Corp" 
+            value={form.client || ''} 
+            onChange={e => setForm({...form, client: e.target.value})} 
+          />
         </div>
         <div className="saas-field" style={{ gridColumn: 'span 2' }}>
           <label className="saas-label">Description *</label>
@@ -1044,6 +1043,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                   status: selectedProject.status || 'Active',
                   description: selectedProject.description || '',
                   client: selectedProject.client || '',
+                  clientId: selectedProject.clientId || '',
                   estimatedHours: selectedProject.estimatedHours || 0,
                   actualHours: selectedProject.actualHours || 0,
                   billableHours: selectedProject.billableHours || 0
@@ -1253,12 +1253,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 // View A: List of Task Categories
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>Task Details</h3>
+                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>Task List</h3>
                     {can('projects', 'create') && (
                       <div className="add-list-inline" style={{ marginTop: 0, display: 'flex', gap: '0.5rem' }}>
                         <input 
                           className="saas-input" 
-                          placeholder="New Task Name..." 
+                          placeholder="New Task List..." 
                           style={{ width: '200px', height: '36px', fontSize: '0.85rem', padding: '0 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none' }}
                           value={newListName}
                           onChange={e => setNewListName(e.target.value)}
@@ -1268,13 +1268,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                           style={{ padding: '0 1rem', height: '36px', fontSize: '0.8rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
                           onClick={handleAddList}
                         >
-                          + Add Task
+                          + Add Task List
                         </button>
                       </div>
                     )}
                   </div>
 
-                  <div className="task-lists-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '600px' }}>
+                  <div className="task-lists-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxWidth: '420px' }}>
                     {(selectedProject.taskLists || []).map(list => {
                       const isEditing = editingListId === list.id;
 
@@ -1286,8 +1286,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                             justifyContent: 'space-between', 
                             alignItems: 'center', 
                             background: 'white', 
-                            padding: '1.25rem 1.5rem', 
-                            borderRadius: '12px', 
+                            padding: '0.6rem 1rem', 
+                            borderRadius: '8px', 
                             border: '1px solid #e2e8f0', 
                             cursor: isEditing ? 'default' : 'pointer', 
                             transition: 'all 0.2s ease',
@@ -1328,32 +1328,32 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                   }
                                 }}
                                 autoFocus
-                                style={{ height: '36px', fontSize: '0.9rem', flex: 1, padding: '0 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                style={{ height: '30px', fontSize: '0.85rem', flex: 1, padding: '0 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                               />
                               <button
                                 onClick={() => handleRenameList(list.id)}
-                                style={{ background: '#0066FF', color: 'white', border: 'none', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                style={{ background: '#0066FF', color: 'white', border: 'none', borderRadius: '6px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                                 title="Save"
                               >
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
                               </button>
                               <button
                                 onClick={() => { setEditingListId(null); setEditingListName(''); }}
-                                style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                                 title="Cancel"
                               >
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                               </button>
                             </div>
                           ) : (
                             <>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                <span style={{ fontSize: '1.05rem', fontWeight: '700', color: '#0f172a' }}>{list.name}</span>
-                                <span style={{ fontSize: '0.9rem', color: '#2563eb', background: '#eff6ff', padding: '0.15rem 0.6rem', borderRadius: '20px', fontWeight: '700' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{ fontSize: '0.92rem', fontWeight: '700', color: '#0f172a' }}>{list.name}</span>
+                                <span style={{ fontSize: '0.75rem', color: '#2563eb', background: '#eff6ff', padding: '0.1rem 0.4rem', borderRadius: '20px', fontWeight: '700' }}>
                                   ({(list.tasks || []).length})
                                 </span>
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }} onClick={(e) => e.stopPropagation()}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
                                 {/* Rename icon button */}
                                 {can('projects', 'edit') && (
                                   <button
@@ -1366,14 +1366,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                     onMouseEnter={(e) => e.currentTarget.style.color = '#0066FF'}
                                     onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
                                   >
-                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                   </button>
                                 )}
 
                                 {/* Delete list button */}
                                 {can('projects', 'delete') && (
                                   <button 
-                                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.1rem', transition: 'color 0.2s', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.9rem', transition: 'color 0.2s', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
                                     title="Delete Category"
                                     onClick={() => {
                                       confirm(`Delete "${list.name}" list and all its tasks?`, () => handleRemoveList(list.id), 'Delete Category');
@@ -1384,7 +1384,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                     ✕
                                   </button>
                                 )}
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#64748b" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#64748b" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
                               </div>
                             </>
                           )}
@@ -2559,7 +2559,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <option value="On Hold">On Hold</option>
             <option value="Pending">Pending</option>
           </select>
-          <button style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={() => setShowForm(true)}>
+          <button style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={() => {
+            setForm({ name: '', status: 'Active', description: '', client: '', clientId: '', estimatedHours: 0, actualHours: 0, billableHours: 0 });
+            setShowForm(true);
+          }}>
             + Add Project
           </button>
         </div>
