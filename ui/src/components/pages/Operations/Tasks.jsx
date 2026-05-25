@@ -16,7 +16,7 @@ const COLUMNS = [
 
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 
-const TAGS = ['Engineering', 'Design', 'Marketing', 'Sales', 'QA', 'HR', 'Operations'];
+
 
 const STATUS_HEADER_META = {
   'To Do':         { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', symbol: '●' },
@@ -597,9 +597,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
   const IconProject = () => (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
   );
-  const IconTag = () => (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
-  );
+
   const IconType = () => (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
   );

@@ -8,7 +8,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [projects, setProjects] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [users, setUsers] = useState([]);
-  const [clients, setClients] = useState([]);
+
   const [selectedEmployeeToAdd, setSelectedEmployeeToAdd] = useState('');
   const [createMemberForm, setCreateMemberForm] = useState({ name: '', role: '', status: 'Active' });
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -86,16 +86,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [projData, empData, userData, clientData] = await Promise.all([
+      const [projData, empData, userData] = await Promise.all([
         api.get('/projects'),
         api.get('/employees'),
-        api.get('/users'),
-        api.get('/clients')
+        api.get('/users')
       ]);
       setProjects(projData || []);
       setEmployees(empData || []);
       setUsers(userData || []);
-      setClients(clientData || []);
       
       // Update selected project if we are in detail view
       if (selectedProject) {

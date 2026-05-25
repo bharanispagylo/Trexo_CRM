@@ -370,15 +370,12 @@ function RegisterPage({ onRegister, onLoginClick }) {
 
 function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
   const [tasks, setTasks] = useState({ today: [], upcoming: [], backlog: [] });
-  const [usersData, setUsersData] = useState([]);
+
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [allTasks, allUsers] = await Promise.all([
-          api.get('/tasks'),
-          api.get('/users').catch(() => [])
-        ]);
+        const allTasks = await api.get('/tasks');
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -436,7 +433,7 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
           }
         });
         setTasks({ today: todayTasks, upcoming: upcomingTasks, backlog: backlogTasks });
-        setUsersData(allUsers || []);
+
 
 
       } catch (err) {
@@ -476,28 +473,9 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
     </div>
   );
 
-  const totalEmployees = usersData.length;
-  const newJoiners = usersData.filter(u => {
-    if (!u.createdAt) return false;
-    const created = new Date(u.createdAt);
-    const now = new Date();
-    return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
-  }).length;
 
-  const dynamicStats = [
-    { label: "Total Employees", value: totalEmployees, change: "+2", up: true,  icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>, grad: "from-blue-600 to-blue-400" },
-    { label: "Active This Month", value: totalEmployees, change: "+1", up: true,  icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>, grad: "from-emerald-600 to-emerald-400" },
-    { label: "New Joiners",       value: newJoiners,    change: "Current month", up: true,  icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>, grad: "from-violet-600 to-violet-400" },
-  ];
 
-  const dynamicRecentEmps = usersData.slice().sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 5).map(u => ({
-    name: u.fullName || `${u.firstName || ''} ${u.lastName || ''}`,
-    role: u.role || 'Employee',
-    dept: u.dept || 'Engineering',
-    joined: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Unknown',
-    status: 'Active',
-    av: (u.firstName?.charAt(0) || u.fullName?.charAt(0) || 'U').toUpperCase()
-  }));
+
 
   return (
     <div className="dashboard-container app-container">

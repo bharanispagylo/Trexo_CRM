@@ -5,7 +5,7 @@ import './Estimations.css';
 
 export default function Estimations({ user }) {
   const [estimations, setEstimations] = useState([]);
-  const [clients, setClients] = useState([]);
+
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -18,13 +18,11 @@ export default function Estimations({ user }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [estData, clientData, projData] = await Promise.all([
+      const [estData, projData] = await Promise.all([
         api.get('/estimations'),
-        api.get('/clients'),
         api.get('/projects')
       ]);
       setEstimations(estData || []);
-      setClients(clientData || []);
       setProjects(projData || []);
     } catch (err) {
       console.error('Failed to fetch estimations data:', err);
