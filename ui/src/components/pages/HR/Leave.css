@@ -433,3 +433,302 @@
   color: #94a3b8;
   font-style: italic;
 }
+
+/* Modern Form Layout and Styling */
+.leave-form-container {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fadeIn 0.35s ease-out;
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+.leave-form-header {
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.leave-form-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.leave-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem 1.25rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.leave-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.leave-form-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.leave-form-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.leave-form-label .required-dot {
+  color: #ef4444;
+}
+
+.leave-form-input,
+.leave-form-select,
+.leave-form-textarea {
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  border: 1.5px solid #e2e8f0;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: #1e293b;
+  background-color: #f8fafc;
+  outline: none;
+  transition: all 0.2s ease-in-out;
+}
+
+.leave-form-input:focus,
+.leave-form-select:focus,
+.leave-form-textarea:focus {
+  border-color: #2563eb;
+  background-color: white;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.leave-form-input:hover,
+.leave-form-select:hover,
+.leave-form-textarea:hover {
+  border-color: #cbd5e1;
+}
+
+.leave-form-input:focus:hover,
+.leave-form-select:focus:hover,
+.leave-form-textarea:focus:hover {
+  border-color: #2563eb;
+}
+
+/* Calculated field specific styling */
+.leave-form-input.calculated-value {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+  font-weight: 700;
+  cursor: not-allowed;
+}
+
+/* Validation warnings */
+.date-warning-msg {
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Drag & Drop/Custom Upload button */
+.attachment-upload-area {
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.attachment-upload-area:hover {
+  border-color: #2563eb;
+  background-color: #eff6ff;
+}
+
+.attachment-upload-area.uploading {
+  border-color: #94a3b8;
+  background-color: #f1f5f9;
+  cursor: not-allowed;
+}
+
+.upload-icon {
+  color: #64748b;
+  transition: transform 0.2s ease-in-out;
+}
+
+.attachment-upload-area:hover .upload-icon {
+  color: #2563eb;
+  transform: translateY(-2px);
+}
+
+.upload-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.upload-subtext {
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+/* Custom attachment tags */
+.attachment-chip {
+  background: #f1f5f9;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid #e2e8f0;
+  transition: all 0.15s ease;
+}
+
+.attachment-chip:hover {
+  background: #e2e8f0;
+}
+
+.attachment-chip a {
+  color: #2563eb;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.attachment-chip a:hover {
+  text-decoration: underline;
+}
+
+.attachment-delete-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #ef4444;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.attachment-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Action button styles */
+.leave-form-actions {
+  padding: 1rem 1.5rem;
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.btn-discard {
+  padding: 0.5rem 1.25rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #475569;
+  background: white;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-discard:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+.btn-submit-premium {
+  padding: 0.5rem 1.5rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: white;
+  background: #2563eb;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+  transition: all 0.2s;
+}
+
+.btn-submit-premium:hover {
+  background: #1d4ed8;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-submit-premium:active {
+  transform: translateY(0);
+}
+
+/* Back button */
+.back-history-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: white;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.back-history-btn:hover {
+  background: #f8fafc;
+  color: #1e293b;
+  border-color: #94a3b8;
+}
+
+/* Small Period badge for list view */
+.td-period-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #475569;
+  background-color: #f1f5f9;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  text-transform: uppercase;
+}

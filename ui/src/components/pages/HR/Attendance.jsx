@@ -59,17 +59,43 @@ export default function Attendance({ user }) {
   };
 
 
+  const [usersList, setUsersList] = useState([]);
+  const [manualFormName, setManualFormName] = useState(user.fullName || user.firstName || user.name || '');
+
   const [manualForm, setManualForm] = useState({
     date: new Date().toISOString().split('T')[0],
     checkIn: '09:00',
     checkOut: '18:00',
-    empId: user.id || '',
+    empId: user.empId || user.id || '',
     role: user.role || '',
     destination: '',
     breakTime: '',
     totalWorkingHrs: '',
     outTimeHrs: ''
   });
+
+  useEffect(() => {
+    if (view === 'manual') {
+      setManualForm({
+        date: new Date().toISOString().split('T')[0],
+        checkIn: '09:00',
+        checkOut: '18:00',
+        empId: user.empId || user.id || '',
+        role: user.role || '',
+        destination: '',
+        breakTime: '',
+        totalWorkingHrs: '',
+        outTimeHrs: ''
+      });
+      setManualFormName(user.fullName || user.firstName || user.name || '');
+      
+      if (user.role === 'Admin') {
+        api.get('/users')
+          .then(res => setUsersList(res || []))
+          .catch(err => console.error('Failed to fetch users:', err));
+      }
+    }
+  }, [view, user]);
 
   const handleManualAdd = async () => {
     if (!manualForm.date || !manualForm.empId?.trim() || !manualForm.checkIn || !manualForm.checkOut) {
@@ -87,7 +113,7 @@ export default function Attendance({ user }) {
       };
 
       await api.post('/attendance', {
-        name: user.fullName || user.firstName || user.name,
+        name: manualFormName,
         empId: manualForm.empId,
         role: manualForm.role,
         destination: manualForm.destination,
@@ -127,7 +153,44 @@ export default function Attendance({ user }) {
             <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <label style={{ fontWeight: 700, fontSize: '0.85rem', color: '#475569' }}>Employee ID *</label>
-                <input type="text" value={manualForm.empId} onChange={e => setManualForm({...manualForm, empId: e.target.value})} style={{ padding: '0.75rem', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none' }} />
+                {user.role === 'Admin' ? (
+                  <select
+                    value={usersList.find(u => u.empId === manualForm.empId || u.id === manualForm.empId)?.id || ''}
+                    onChange={e => {
+                      const selected = usersList.find(u => u.id === e.target.value);
+                      if (selected) {
+                        setManualForm({
+                          ...manualForm,
+                          empId: selected.empId || selected.id,
+                          role: selected.role || selected.designation || 'Employee'
+                        });
+                        setManualFormName(selected.fullName || `${selected.firstName} ${selected.lastName}`.trim());
+                      } else {
+                        setManualForm({
+                          ...manualForm,
+                          empId: '',
+                          role: ''
+                        });
+                        setManualFormName('');
+                      }
+                    }}
+                    style={{ padding: '0.75rem', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', background: 'white' }}
+                  >
+                    <option value="">-- Select Employee --</option>
+                    {usersList.map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.fullName || `${u.firstName} ${u.lastName}`.trim()} ({u.empId || 'No ID'})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input 
+                    type="text" 
+                    value={manualForm.empId} 
+                    readOnly 
+                    style={{ padding: '0.75rem', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', backgroundColor: '#f8fafc', color: '#64748b' }} 
+                  />
+                )}
               </div>
               <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <label style={{ fontWeight: 700, fontSize: '0.85rem', color: '#475569' }}>Role</label>
@@ -231,9 +294,19 @@ export default function Attendance({ user }) {
                     <span className="date-month">{new Date(att.date).toLocaleDateString('en-US', { month: 'short' })}</span>
                   </div>
                   <div className="item-details">
+                    <div className="item-row" style={{ fontWeight: 700, color: '#1e293b', marginBottom: '4px' }}>
+                      <span>{att.name || 'Employee'}</span>
+                      <span style={{ marginLeft: '6px', fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>({att.empId || 'No ID'})</span>
+                    </div>
                     <div className="item-row">
                       <span className="time-label">Check In:</span>
                       <span className="time-value">{att.checkIn}</span>
+                      {att.checkOut && (
+                        <>
+                          <span className="time-label" style={{ marginLeft: '12px' }}>Check Out:</span>
+                          <span className="time-value">{att.checkOut}</span>
+                        </>
+                      )}
                     </div>
                     <div className="item-row" style={{ marginTop: '4px' }}>
                       <span className="time-label" style={{ color: '#2563eb' }}>Details:</span>

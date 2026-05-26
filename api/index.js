@@ -1,3 +1,19 @@
+const fs = require('fs');
+const path = require('path');
+
+process.on('uncaughtException', (err) => {
+  const logMessage = `[${new Date().toISOString()}] Uncaught Exception: ${err.message}\n${err.stack}\n\n`;
+  fs.appendFileSync(path.join(__dirname, 'crash.log'), logMessage);
+  console.error(logMessage);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  const logMessage = `[${new Date().toISOString()}] Unhandled Rejection: ${reason}\n\n`;
+  fs.appendFileSync(path.join(__dirname, 'crash.log'), logMessage);
+  console.error(logMessage);
+});
+
 if (!process.env.VERCEL) {
   try {
     console.log('[Startup] Generating Prisma Client...');
@@ -82,6 +98,17 @@ const sanitizeTaskData = (taskData) => {
   Object.keys(taskData).forEach(key => {
     if (key in prisma.task.fields) {
       sanitized[key] = taskData[key];
+    }
+  });
+  return sanitized;
+};
+
+const sanitizeLeaveData = (leaveData) => {
+  const allowedKeys = ['name', 'type', 'period', 'days', 'dates', 'reason', 'status', 'attachments'];
+  const sanitized = {};
+  Object.keys(leaveData).forEach(key => {
+    if (allowedKeys.includes(key)) {
+      sanitized[key] = leaveData[key];
     }
   });
   return sanitized;
@@ -401,16 +428,10 @@ app.get('/api/leaves', async (req, res) => {
 app.post('/api/leaves', async (req, res) => {
   try {
     console.log('POST /api/leaves body:', req.body);
-    const { id, createdAt, attachments, ...leaveData } = req.body;
-    
-    // Pass attachments only if it's explicitly handled or added to schema.
-    // It's safe to pass if the backend restarted and ran db push,
-    // but just to be safe and prevent the 500 error we filter unknown keys.
-    const finalData = { ...leaveData };
-    if (attachments) finalData.attachments = attachments;
+    const sanitized = sanitizeLeaveData(req.body);
 
     const leave = await prisma.leave.create({
-      data: finalData
+      data: sanitized
     });
     notifyAdmins(`New Leave Request`, `${leave.employeeName || leave.name} requested leave.`);
     res.json(leave);
@@ -422,10 +443,10 @@ app.post('/api/leaves', async (req, res) => {
 
 app.put('/api/leaves/:id', async (req, res) => {
   try {
-    const { id, createdAt, ...updateData } = req.body;
+    const sanitized = sanitizeLeaveData(req.body);
     const leave = await prisma.leave.update({
       where: { id: req.params.id },
-      data: updateData
+      data: sanitized
     });
     createNotification([leave.employeeName], `Leave Updated`, `Your leave request status is now: ${leave.status}`);
     res.json(leave);
