@@ -7,6 +7,7 @@ export default function Estimations({ user }) {
   const [estimations, setEstimations] = useState([]);
 
   const [projects, setProjects] = useState([]);
+  const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -18,12 +19,14 @@ export default function Estimations({ user }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [estData, projData] = await Promise.all([
+      const [estData, projData, clientData] = await Promise.all([
         api.get('/estimations'),
-        api.get('/projects')
+        api.get('/projects'),
+        api.get('/clients')
       ]);
       setEstimations(estData || []);
       setProjects(projData || []);
+      setClients(clientData || []);
     } catch (err) {
       console.error('Failed to fetch estimations data:', err);
     } finally {
@@ -136,7 +139,17 @@ export default function Estimations({ user }) {
               </div>
               <div className="estimations-field">
                 <label className="estimations-label">Client *</label>
-                <input className={`estimations-input ${errors.client ? 'error' : ''}`} placeholder="e.g. Acme Corp" value={form.client || ''} onChange={e => setForm({...form, client: e.target.value})} />
+                <select 
+                  className={`estimations-select ${errors.client ? 'error' : ''}`} 
+                  value={form.clientId || ''} 
+                  onChange={e => {
+                    const clientObj = clients.find(c => c.id === e.target.value);
+                    setForm({...form, clientId: clientObj?.id || null, client: clientObj?.name || ''});
+                  }}
+                >
+                  <option value="">Select a Client</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
                 {errors.client && <span className="estimations-error-text">{errors.client}</span>}
               </div>
               <div className="estimations-field">

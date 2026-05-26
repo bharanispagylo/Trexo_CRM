@@ -8,6 +8,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [projects, setProjects] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [users, setUsers] = useState([]);
+  const [clients, setClients] = useState([]);
 
   const [selectedEmployeeToAdd, setSelectedEmployeeToAdd] = useState('');
   const [createMemberForm, setCreateMemberForm] = useState({ name: '', role: '', status: 'Active' });
@@ -86,14 +87,16 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [projData, empData, userData] = await Promise.all([
+      const [projData, empData, userData, clientData] = await Promise.all([
         api.get('/projects'),
         api.get('/employees'),
-        api.get('/users')
+        api.get('/users'),
+        api.get('/clients')
       ]);
       setProjects(projData || []);
       setEmployees(empData || []);
       setUsers(userData || []);
+      setClients(clientData || []);
       
       // Update selected project if we are in detail view
       if (selectedProject) {
@@ -566,12 +569,17 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         </div>
         <div className="saas-field">
           <label className="saas-label">Client *</label>
-          <input 
-            className="saas-input" 
-            placeholder="e.g. Acme Corp" 
-            value={form.client || ''} 
-            onChange={e => setForm({...form, client: e.target.value})} 
-          />
+          <select 
+            className="saas-select" 
+            value={form.clientId || ''} 
+            onChange={e => {
+              const clientObj = clients.find(c => c.id === e.target.value);
+              setForm({...form, clientId: clientObj?.id || null, client: clientObj?.name || ''});
+            }}
+          >
+            <option value="">Select a Client</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
         </div>
         <div className="saas-field" style={{ gridColumn: 'span 2' }}>
           <label className="saas-label">Description *</label>

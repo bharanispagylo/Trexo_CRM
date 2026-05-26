@@ -3127,5 +3127,699 @@
   font-family: inherit;
 }
 
+/* ── ClickUp Inline Add Row ─────────────────────────── */
+.clickup-inline-add-row {
+  background: #f0f7ff;
+  border-bottom: 1px solid #bfdbfe;
+  animation: fadeInEffect 0.15s ease-out;
+}
+
+.clickup-inline-add-row td {
+  padding: 0.45rem 0.6rem !important;
+}
+
+.clickup-inline-add-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.clickup-inline-title-input {
+  flex: 1;
+  border: 1.5px solid #93c5fd;
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.84rem;
+  font-family: inherit;
+  font-weight: 500;
+  color: #1e293b;
+  background: #ffffff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+  transition: border-color 0.15s ease;
+}
+
+.clickup-inline-title-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+
+.clickup-inline-title-input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.clickup-inline-save-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(37,99,235,0.3);
+}
+
+.clickup-inline-save-btn:hover {
+  background: #1d4ed8;
+}
+
+.clickup-inline-cancel-btn {
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.clickup-inline-cancel-btn:hover {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+/* ── Inline row per-cell styling ────────────────────── */
+.clickup-inline-add-row td {
+  padding: 0.4rem 0.6rem !important;
+  vertical-align: middle;
+}
+
+.clickup-inline-select {
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.78rem;
+  font-family: inherit;
+  color: #334155;
+  background: #fff;
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+}
+
+.clickup-inline-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.1);
+}
+
+.clickup-inline-date {
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.78rem;
+  font-family: inherit;
+  color: #334155;
+  background: #fff;
+  outline: none;
+  width: 100%;
+}
+
+.clickup-inline-date:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.1);
+}
+
+/* ── Task Detail Modal (centered popup) ───────────────── */
+.task-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: drawerFadeIn 0.18s ease;
+  padding: 1rem;
+}
+
+@keyframes drawerFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.task-drawer-panel {
+  width: 97vw;
+  max-width: 1600px;
+  height: 96vh;
+  max-height: none;
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22), 0 4px 16px rgba(0, 0, 0, 0.1);
+  animation: modalPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes modalPopIn {
+  from { opacity: 0; transform: scale(0.96) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Make TaskDetailView fill the modal properly */
+.task-drawer-panel .saas-task-page {
+  min-height: 100%;
+  height: 100%;
+  overflow-y: auto;
+}
 
 
+/* ══════════════════════════════════════════════
+   ClickUp-Style Status-Grouped List View  (cu-*)
+   ══════════════════════════════════════════════ */
+
+.cu-list-root {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+/* ── Section ── */
+.cu-status-section {
+  border-bottom: 1px solid #f1f5f9;
+}
+.cu-status-section:last-child {
+  border-bottom: none;
+}
+
+/* ── Section Header ── */
+.cu-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: #fafbfc;
+  border-bottom: 1px solid #f1f5f9;
+  user-select: none;
+}
+
+.cu-section-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+}
+
+.cu-section-chevron {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  width: 12px;
+  flex-shrink: 0;
+}
+
+.cu-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.cu-section-count {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #94a3b8;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 0.05rem 0.45rem;
+}
+
+.cu-section-right {
+  display: flex;
+  align-items: center;
+}
+
+.cu-section-add-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.cu-section-add-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* ── Table ── */
+.cu-table-wrapper { overflow-x: auto; }
+
+.cu-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  table-layout: fixed;
+}
+
+.cu-thead-row { border-bottom: 1px solid #f1f5f9; }
+
+.cu-th {
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.45rem 0.75rem;
+  text-align: left;
+  background: #fafbfc;
+  white-space: nowrap;
+}
+
+.cu-th-name     { width: 38%; }
+.cu-th-assignee { width: 12%; text-align: center; }
+.cu-th-project  { width: 14%; }
+.cu-th-due      { width: 13%; text-align: center; }
+.cu-th-priority { width: 11%; text-align: center; }
+.cu-th-hours    { width: 8%;  text-align: center; }
+.cu-th-actions  { width: 4%; }
+
+/* ── Rows ── */
+.cu-row {
+  cursor: pointer;
+  transition: background 0.1s;
+  border-bottom: 1px solid #f8fafc;
+}
+.cu-row:hover { background: #f8fafc; }
+
+.cu-td {
+  padding: 0.45rem 0.75rem;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cu-td-name {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.cu-status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.cu-task-title {
+  font-weight: 500;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cu-row:hover .cu-task-title { color: #2563eb; }
+
+.cu-task-id {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  background: #f1f5f9;
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  flex-shrink: 0;
+}
+
+/* ── Assignee avatars ── */
+.cu-td-assignee { text-align: center; }
+.cu-avatars {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cu-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: white;
+  margin-left: -5px;
+  border: 1.5px solid white;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+.cu-avatar:first-child { margin-left: 0; }
+.cu-avatar-empty {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px dashed #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cbd5e1;
+  background: #f8fafc;
+}
+
+/* ── Project badge ── */
+.cu-project-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Due date badge ── */
+.cu-td-due { text-align: center; }
+.cu-due-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  padding: 0.12rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid transparent;
+}
+.cu-due-badge.overdue {
+  color: #ea580c;
+  background: #ffedd5;
+  border-color: #fed7aa;
+}
+.cu-due-badge.today {
+  color: #2563eb;
+  background: #dbeafe;
+  border-color: #bfdbfe;
+}
+
+/* ── Priority badge ── */
+.cu-td-priority { text-align: center; }
+.cu-priority-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 4px;
+  padding: 0.12rem 0.4rem;
+}
+
+/* ── Hours ── */
+.cu-td-hours { text-align: center; }
+.cu-hours {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 600;
+  background: #f1f5f9;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.cu-empty-cell { color: #cbd5e1; font-size: 0.8rem; }
+
+/* ── Row action buttons ── */
+.cu-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  opacity: 0;
+  transition: opacity 0.12s;
+  justify-content: flex-end;
+}
+.cu-row:hover .cu-row-actions { opacity: 1; }
+
+.cu-act-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+}
+.cu-act-btn:hover { color: #2563eb; background: #dbeafe; }
+.cu-act-btn.danger:hover { color: #ef4444; background: #fee2e2; }
+
+/* ── Add row ── */
+.cu-add-row { cursor: pointer; transition: background 0.1s; }
+.cu-add-row:hover { background: #f8fafc; }
+.cu-add-row td {
+  padding: 0.45rem 0.75rem !important;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.cu-add-row:hover td { color: #2563eb; }
+.cu-add-icon { font-size: 1rem; line-height: 1; }
+.cu-add-text { font-family: inherit; }
+
+/* ── Inline add row ── */
+.cu-inline-row {
+  background: #f0f7ff;
+  border-bottom: 1px solid #bfdbfe;
+  animation: fadeInEffect 0.15s ease-out;
+}
+.cu-inline-row .cu-td { padding: 0.4rem 0.75rem !important; }
+
+.cu-inline-input {
+  flex: 1;
+  border: 1.5px solid #93c5fd;
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.82rem;
+  font-family: inherit;
+  font-weight: 500;
+  color: #1e293b;
+  background: #fff;
+  outline: none;
+  min-width: 0;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+}
+.cu-inline-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+.cu-inline-input::placeholder { color: #94a3b8; font-weight: 400; }
+
+.cu-inline-sel, .cu-inline-date {
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  padding: 0.2rem 0.35rem;
+  font-size: 0.75rem;
+  font-family: inherit;
+  color: #334155;
+  background: #fff;
+  outline: none;
+  width: 100%;
+}
+.cu-inline-sel:focus, .cu-inline-date:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.1);
+}
+
+/* ══════════════════════════════════════════════
+   3-Panel Tasks Layout
+   ══════════════════════════════════════════════ */
+
+.tasks-3col-layout {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  min-height: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* ── Left Navigation Sidebar ── */
+.tasks-left-nav {
+  width: 220px;
+  min-width: 200px;
+  max-width: 240px;
+  flex-shrink: 0;
+  background: #fafbfc;
+  border-right: 1px solid #e2e8f0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 1rem;
+}
+
+.tln-header {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  padding: 0.85rem 0.9rem 0.5rem;
+}
+
+/* All Tasks row */
+.tln-all-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.42rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  border-radius: 0;
+  transition: background 0.12s, color 0.12s;
+  user-select: none;
+}
+.tln-all-item:hover { background: #f1f5f9; color: #1e293b; }
+.tln-all-item.active {
+  background: #eff6ff;
+  color: #2563eb;
+  border-right: 2px solid #2563eb;
+}
+
+/* Project block */
+.tln-project-block { display: flex; flex-direction: column; }
+
+.tln-project-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  user-select: none;
+}
+.tln-project-row:hover { background: #f1f5f9; color: #1e293b; }
+.tln-project-row.active {
+  background: #eff6ff;
+  color: #2563eb;
+  border-right: 2px solid #2563eb;
+}
+
+.tln-chevron {
+  font-size: 0.6rem;
+  color: #94a3b8;
+  width: 10px;
+  flex-shrink: 0;
+}
+
+.tln-proj-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Task Lists */
+.tln-lists {
+  display: flex;
+  flex-direction: column;
+  padding-left: 0.5rem;
+}
+
+.tln-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.9rem 0.35rem 1.5rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  user-select: none;
+  border-left: 2px solid transparent;
+}
+.tln-list-item:hover { background: #f1f5f9; color: #1e293b; }
+.tln-list-item.active {
+  background: #eff6ff;
+  color: #2563eb;
+  border-left: 2px solid #2563eb;
+  font-weight: 700;
+}
+
+.tln-list-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tln-count {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 0.05rem 0.4rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.tln-all-item.active .tln-count,
+.tln-project-row.active .tln-count,
+.tln-list-item.active .tln-count {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.tln-empty-lists {
+  padding: 0.25rem 0.9rem 0.25rem 2rem;
+  font-size: 0.72rem;
+  color: #cbd5e1;
+  font-style: italic;
+}
+
+/* ── Main Content Area ── */
+.tasks-main-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.tasks-main-content .kanban-root {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 1rem 1rem;
+}
