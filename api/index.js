@@ -1031,7 +1031,7 @@ app.post('/api/estimations', async (req, res) => {
     const estimationNo = `EST-${String(count + 1).padStart(4, '0')}`;
     
     // Clean up input fields to match prisma
-    const { clientId, projectId, estimatedHours, ...rest } = req.body;
+    const { id, createdAt, updatedAt, projectRef, clientRef, taskRef, taskId, clientId, projectId, estimatedHours, ...rest } = req.body;
     
     const estimation = await prisma.estimation.create({
       data: {
@@ -1050,7 +1050,7 @@ app.post('/api/estimations', async (req, res) => {
 
 app.put('/api/estimations/:id', async (req, res) => {
   try {
-    const { clientId, projectId, estimatedHours, ...rest } = req.body;
+    const { id, createdAt, updatedAt, projectRef, clientRef, taskRef, taskId, clientId, projectId, estimatedHours, ...rest } = req.body;
     
     const estimation = await prisma.estimation.update({
       where: { id: req.params.id },
