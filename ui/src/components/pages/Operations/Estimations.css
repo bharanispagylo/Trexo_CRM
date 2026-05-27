@@ -130,6 +130,7 @@
   color: #1e293b;
   background: #fff;
   transition: all 0.15s ease-in-out;
+  box-sizing: border-box;
 }
 
 .estimations-textarea {

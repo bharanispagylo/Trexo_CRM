@@ -45,7 +45,18 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       const newUrl = activeTab === 'overview' ? '/' : `/${activeTab}`;
       window.history.pushState(null, '', newUrl);
     }
-  }, [activeTab]);
+    
+    // Auto-redirect if they try to access a page they don't have permission for
+    if (!loading) {
+      if (activeTab === 'projects' && !can('projects', 'view') && user?.role?.toLowerCase() !== 'admin') {
+        setActiveTab('overview');
+      } else if (activeTab === 'users' && !can('users', 'view') && user?.role?.toLowerCase() !== 'admin') {
+        setActiveTab('overview');
+      } else if (activeTab === 'clients' && !can('clients', 'view') && user?.role?.toLowerCase() !== 'admin') {
+        setActiveTab('overview');
+      }
+    }
+  }, [activeTab, loading, can, user]);
 
   // Notifications State
   const [notifications, setNotifications] = useState([]);
@@ -173,7 +184,15 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'salary': return <Salary user={user} />;
       case 'leave': return <Leave user={user} />;
       case 'attendance': return <Attendance user={user} />;
-      case 'projects': return (
+      case 'projects': 
+        if (!can('projects', 'view') && user?.role?.toLowerCase() !== 'admin') {
+          return renderOverview(setActiveTab, (taskData) => {
+            setSearchSelectedTask(taskData);
+            setIsTaskDetailOpen(true);
+            setActiveTab('tasks');
+          });
+        }
+        return (
         <Projects
           user={user}
           initialSelectedProject={searchSelectedProject}

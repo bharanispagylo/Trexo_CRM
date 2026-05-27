@@ -854,6 +854,7 @@ export default function LoginWithRoles() {
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('crm_user');
+    window.history.pushState(null, '', '/');
   };
 
   if (!user) {

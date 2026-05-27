@@ -257,10 +257,7 @@ export default function Reports({ user }) {
         </div>
       </div>
 
-      <div className="reports-info-banner">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-        This report shows only delivered tasks for the selected {reportType === 'monthly' ? 'month' : 'date range'}.
-      </div>
+
 
       <div className="reports-table-container">
           <table className="reports-table">
@@ -315,22 +312,7 @@ export default function Reports({ user }) {
           </table>
       </div>
 
-      <div className="reports-bottom-note">
-        <div className="note-icon">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#eab308" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-        </div>
-        <div className="note-content">
-          <span className="note-title">Note</span>
-          {reportType === 'monthly' ? (
-            <span className="note-text">Monthly report includes only tasks delivered within the selected month only.</span>
-          ) : (
-            <div className="note-text" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <span>• Only tasks with "Delivered" status are included in this custom report.</span>
-              <span>• Date range is inclusive of the start and end dates.</span>
-            </div>
-          )}
-        </div>
-      </div>
+
     </div>
   );
 }

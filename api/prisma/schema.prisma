@@ -199,8 +199,6 @@ model Task {
   status      String?  @default("To Do")
   priority    String?  @default("Medium")
   tag         String?
-  startDate   DateTime?
-  endDate     DateTime?
   assignedDate DateTime?
   deliveredDate DateTime? @map("delivered_date")
   isBillable  Boolean  @default(false)

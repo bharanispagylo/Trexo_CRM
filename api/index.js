@@ -236,7 +236,7 @@ app.get('/api/users', async (req, res) => {
 
 app.post('/api/users', async (req, res) => {
   try {
-    const { fullName, firstName, lastName, ...rest } = req.body;
+    const { fullName, firstName, lastName, workLogs, ...rest } = req.body;
     
     // Determine names
     let finalFullName = fullName || `${firstName || ''} ${lastName || ''}`.trim();
@@ -314,7 +314,7 @@ app.post('/api/forgot-password', async (req, res) => {
 
 app.put('/api/users/:id', async (req, res) => {
   try {
-    const { fullName, firstName, lastName, ...rest } = req.body;
+    const { fullName, firstName, lastName, workLogs, ...rest } = req.body;
     
     let updateData = { ...rest };
     
@@ -541,7 +541,7 @@ app.get('/api/projects', async (req, res) => {
 
 app.post('/api/projects', async (req, res) => {
   try {
-    const { estimatedHours, actualHours, billableHours, taskLists, ...rest } = req.body;
+    const { estimatedHours, actualHours, billableHours, taskLists, queries, attachments, clientRef, tasks, estimations, ...rest } = req.body;
     const data = { ...rest };
     if (estimatedHours !== undefined) data.estimatedHours = parseFloat(estimatedHours) || 0;
     if (actualHours !== undefined) data.actualHours = parseFloat(actualHours) || 0;
@@ -560,7 +560,7 @@ app.post('/api/projects', async (req, res) => {
 
 app.put('/api/projects/:id', async (req, res) => {
   try {
-    const { estimatedHours, actualHours, billableHours, taskLists, ...rest } = req.body;
+    const { estimatedHours, actualHours, billableHours, taskLists, queries, attachments, clientRef, tasks, estimations, ...rest } = req.body;
     const data = { ...rest };
     if (estimatedHours !== undefined) data.estimatedHours = parseFloat(estimatedHours) || 0;
     if (actualHours !== undefined) data.actualHours = parseFloat(actualHours) || 0;
@@ -605,8 +605,9 @@ app.get('/api/task-lists', async (req, res) => {
 
 app.post('/api/task-lists', async (req, res) => {
   try {
+    const { tasks, project, ...rest } = req.body;
     const taskList = await prisma.taskList.create({
-      data: req.body
+      data: rest
     });
     res.json(taskList);
   } catch (error) {
@@ -627,10 +628,10 @@ app.delete('/api/task-lists/:id', async (req, res) => {
 
 app.put('/api/task-lists/:id', async (req, res) => {
   try {
-    const { name } = req.body;
+    const { tasks, project, ...rest } = req.body;
     const taskList = await prisma.taskList.update({
       where: { id: req.params.id },
-      data: { name }
+      data: rest
     });
     res.json(taskList);
   } catch (error) {
@@ -679,7 +680,7 @@ app.post('/api/tasks', async (req, res) => {
     let { id, comments, createdAt, ...taskData } = req.body;
     
     // Sanitize and convert dates
-    ['dueDate', 'startDate', 'endDate', 'assignedDate', 'deliveredDate'].forEach(key => {
+    ['dueDate', 'assignedDate', 'deliveredDate'].forEach(key => {
       if (taskData[key]) {
         const d = new Date(taskData[key]);
         if (!isNaN(d.getTime())) {
@@ -715,7 +716,7 @@ app.put('/api/tasks/:id', async (req, res) => {
     let { id, createdAt, comments, ...taskData } = req.body;
     
     // Sanitize and convert dates
-    ['dueDate', 'startDate', 'endDate', 'assignedDate', 'deliveredDate'].forEach(key => {
+    ['dueDate', 'assignedDate', 'deliveredDate'].forEach(key => {
       if (taskData[key]) {
         const d = new Date(taskData[key]);
         if (!isNaN(d.getTime())) {
@@ -806,12 +807,10 @@ app.post('/api/tasks/:id/worklogs', async (req, res) => {
 
     const allLogs = await prisma.workLog.findMany({ where: { taskId: req.params.id } });
     const totalHours = allLogs.reduce((sum, l) => sum + l.hoursWorked, 0);
-    const billedHours = allLogs.filter(l => l.isBilled).reduce((sum, l) => sum + l.hoursWorked, 0);
     await prisma.task.update({
       where: { id: req.params.id },
       data: { 
-        actualHours: totalHours,
-        approvedHours: billedHours
+        actualHours: totalHours
       }
     });
 
@@ -837,12 +836,10 @@ app.put('/api/worklogs/:logId', async (req, res) => {
 
     const allLogs = await prisma.workLog.findMany({ where: { taskId: log.taskId } });
     const totalHours = allLogs.reduce((sum, l) => sum + l.hoursWorked, 0);
-    const billedHours = allLogs.filter(l => l.isBilled).reduce((sum, l) => sum + l.hoursWorked, 0);
     await prisma.task.update({
       where: { id: log.taskId },
       data: { 
-        actualHours: totalHours,
-        approvedHours: billedHours
+        actualHours: totalHours
       }
     });
 
@@ -862,12 +859,10 @@ app.delete('/api/worklogs/:logId', async (req, res) => {
     
     const allLogs = await prisma.workLog.findMany({ where: { taskId: log.taskId } });
     const totalHours = allLogs.reduce((sum, l) => sum + l.hoursWorked, 0);
-    const billedHours = allLogs.filter(l => l.isBilled).reduce((sum, l) => sum + l.hoursWorked, 0);
     await prisma.task.update({
       where: { id: log.taskId },
       data: { 
-        actualHours: totalHours,
-        approvedHours: billedHours
+        actualHours: totalHours
       }
     });
 
@@ -1012,8 +1007,9 @@ app.get('/api/clients', async (req, res) => {
 
 app.post('/api/clients', async (req, res) => {
   try {
+    const { projects, tasks, estimations, parentAgency, agencyClients, ...rest } = req.body;
     const client = await prisma.client.create({
-      data: req.body
+      data: rest
     });
     res.json(client);
   } catch (error) {
@@ -1023,9 +1019,10 @@ app.post('/api/clients', async (req, res) => {
 
 app.put('/api/clients/:id', async (req, res) => {
   try {
+    const { projects, tasks, estimations, parentAgency, agencyClients, ...rest } = req.body;
     const client = await prisma.client.update({
       where: { id: req.params.id },
-      data: req.body
+      data: rest
     });
     res.json(client);
   } catch (error) {
@@ -1063,7 +1060,7 @@ app.post('/api/estimations', async (req, res) => {
     const estimationNo = `EST-${String(count + 1).padStart(4, '0')}`;
     
     // Clean up input fields to match prisma
-    const { clientId, projectId, estimatedHours, ...rest } = req.body;
+    const { id, createdAt, updatedAt, projectRef, clientRef, taskRef, taskId, clientId, projectId, estimatedHours, ...rest } = req.body;
     
     const estimation = await prisma.estimation.create({
       data: {
@@ -1082,7 +1079,7 @@ app.post('/api/estimations', async (req, res) => {
 
 app.put('/api/estimations/:id', async (req, res) => {
   try {
-    const { clientId, projectId, estimatedHours, ...rest } = req.body;
+    const { id, createdAt, updatedAt, projectRef, clientRef, taskRef, taskId, clientId, projectId, estimatedHours, ...rest } = req.body;
     
     const estimation = await prisma.estimation.update({
       where: { id: req.params.id },
@@ -1120,18 +1117,34 @@ app.post('/api/estimations/:id/convert', async (req, res) => {
     if (!estimation) return res.status(404).json({ error: 'Estimation not found' });
     if (estimation.status === 'Converted') return res.status(400).json({ error: 'Already converted' });
 
+    const { projectId, assignees, assignedDate, dueDate, priority, taskListId, taskType } = req.body;
+
+    let finalProjectId = projectId || estimation.projectId;
+    let finalProjectName = estimation.projectRef ? estimation.projectRef.name : null;
+
+    if (projectId && projectId !== estimation.projectId) {
+      const proj = await prisma.project.findUnique({ where: { id: projectId } });
+      if (proj) {
+        finalProjectName = proj.name;
+      }
+    }
+
     // Create the task based on estimation
     const task = await prisma.task.create({
       data: {
         title: estimation.taskName,
         description: estimation.description,
-        projectName: estimation.projectRef ? estimation.projectRef.name : null,
-        projectId: estimation.projectId,
+        projectName: finalProjectName,
+        projectId: finalProjectId,
         clientId: estimation.clientId,
         estimatedHours: estimation.estimatedHours,
         status: 'To Do',
-        priority: 'Medium',
-        taskType: 'Feature'
+        priority: priority || 'Medium',
+        taskType: taskType || 'Feature',
+        assignees: assignees || null,
+        assignedDate: assignedDate ? new Date(assignedDate) : null,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        taskListId: taskListId || null,
       }
     });
 
@@ -1202,15 +1215,12 @@ app.get('/api/reports/monthly', async (req, res) => {
         taskMap[taskId] = {
           ...log.task,
           actualHours: 0,
-          approvedHours: 0, // In this context, approvedHours could be "Billed Hours"
+          approvedHours: log.task.approvedHours, // Use task's manually entered billable hours
           workLogPeriodString: `${month}/${year}`,
           deliveredDate: log.logDate // using logDate as reference
         };
       }
       taskMap[taskId].actualHours += log.hoursWorked;
-      if (log.isBilled) {
-        taskMap[taskId].approvedHours += log.hoursWorked;
-      }
     });
 
     res.json(Object.values(taskMap));
@@ -1268,14 +1278,11 @@ app.get('/api/reports/range', async (req, res) => {
         taskMap[taskId] = {
           ...log.task,
           actualHours: 0,
-          approvedHours: 0, // Billed Hours
+          approvedHours: log.task.approvedHours, // Use task's manually entered billable hours
           deliveredDate: log.logDate
         };
       }
       taskMap[taskId].actualHours += log.hoursWorked;
-      if (log.isBilled) {
-        taskMap[taskId].approvedHours += log.hoursWorked;
-      }
     });
 
     res.json(Object.values(taskMap));

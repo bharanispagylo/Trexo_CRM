@@ -1,0 +1,1486 @@
+﻿diff --git a/ui/src/components/pages/Operations/Tasks.jsx b/ui/src/components/pages/Operations/Tasks.jsx
+index 6aae3b2..d60ed7c 100644
+--- a/ui/src/components/pages/Operations/Tasks.jsx
++++ b/ui/src/components/pages/Operations/Tasks.jsx
+@@ -19,13 +19,13 @@ const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
+ 
+ 
+ const STATUS_HEADER_META = {
+-  'To Do':         { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', symbol: 'ΓùÅ' },
+-  'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', symbol: 'ΓùÅ' },
+-  'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', symbol: 'ΓùÅ' },
+-  'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', symbol: 'ΓùÅ' },
+-  'Prod Deployed': { bg: '#ea580c', fg: '#ffffff', dotColor: '#fde68a', symbol: 'ΓùÅ' },
+-  'Prod Verified': { bg: '#0d9488', fg: '#ffffff', dotColor: '#bbf7d0', symbol: 'ΓùÅ' },
+-  'Delivered':     { bg: '#16a34a', fg: '#ffffff', dotColor: '#99f6e4', symbol: 'Γ£ô' },
++  'To Do':         { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false },
++  'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', isDone: false },
++  'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', isDone: false },
++  'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', isDone: false },
++  'Prod Deployed': { bg: '#ea580c', fg: '#ffffff', dotColor: '#fde68a', isDone: false },
++  'Prod Verified': { bg: '#0d9488', fg: '#ffffff', dotColor: '#bbf7d0', isDone: false },
++  'Delivered':     { bg: '#16a34a', fg: '#ffffff', dotColor: '#99f6e4', isDone: true  },
+ };
+ 
+ const PRIORITY_FLAGS = {
+@@ -116,7 +116,7 @@ const timeStrToDecimal = (timeStr) => {
+ };
+ 
+ 
+-// ΓöÇΓöÇ Task Detail View (Separate Page) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++// ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ Task Detail View (Separate Page) ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼
+ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialEditMode = false }) {
+ 
+   const isEdit = !!(task && task.id);
+@@ -174,8 +174,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
+ 
+   const [activeTab, setActiveTab] = useState('general');
+   const [users, setUsers] = useState([]);
+-  const [clients, setClients] = useState([]);
+-  const [taskLists, setTaskLists] = useState([]);
+   const [projects, setProjects] = useState([]);
+   const [errors, setErrors] = useState({});
+ 
+@@ -278,12 +276,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
+       const names = data.map(u => u.fullName || `${u.firstName} ${u.lastName}`.trim());
+       setUsers(names);
+     }).catch(console.error);
+-    api.get('/clients').then(data => {
+-      setClients(data || []);
+-    }).catch(console.error);
+-    api.get('/task-lists').then(data => {
+-      setTaskLists(data || []);
+-    }).catch(console.error);
++
+     api.get('/projects').then(data => {
+       setProjects(data || []);
+     }).catch(console.error);
+@@ -576,15 +569,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
+   };
+ 
+   // SVGs for Fields
+-  const IconTaskNo = () => (
+-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="13" y2="17"></line></svg>
+-  );
+-  const IconTitle = () => (
+-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+-  );
+-  const IconDesc = () => (
+-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><line x1="21" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg>
+-  );
++
+   const IconPriority = () => (
+     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"></polygon><circle cx="12" cy="12" r="3"></circle></svg>
+   );
+@@ -598,15 +583,11 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
+     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+   );
+ 
+-  const IconType = () => (
+-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+-  );
++
+   const IconCalendar = () => (
+     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+   );
+-  const IconPaperclip = () => (
+-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+-  );
++
+ 
+   const getAttachmentMetadata = (url, index) => {
+     if (!url) return null;
+@@ -643,43 +624,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
+     };
+   };
+ 
+-  const renderAttachmentFile = (url) => {
+-    if (!url) return null;
+-    const isBase64 = url.startsWith('data:');
+-    let fileName = 'Attachment File';
+-    let isPdf = false;
+-    
+-    if (!isBase64) {
+-      fileName = url.split('/').pop() || 'file';
+-      isPdf = fileName.toLowerCase().endsWith('.pdf');
+-    } else {
+-      const mimeMatch = url.match(/data:([^;]+);/);
+-      const mimeType = mimeMatch ? mimeMatch[1] : '';
+-      isPdf = mimeType.includes('pdf');
+-      const ext = mimeType.split('/')[1] || 'bin';
+-      fileName = `attachment_file.${ext}`;
+-    }
+-    const iconColor = isPdf ? '#ef4444' : '#22c55e';
+-    const iconBg = isPdf ? '#fef2f2' : '#f0fdf4';
+-    
+-    return (
+-      <div className="attachment-file-pill" key={url}>
+-        <span className="file-icon-box" style={{ background: iconBg, color: iconColor }}>
+-          {isPdf ? 'PDF' : 'IMG'}
+-        </span>
+-        <a href={url} target="_blank" rel="noopener noreferrer" className="file-name-link">
+-          {fileName.length > 20 ? fileName.slice(0, 17) + '...' : fileName}
+-        </a>
+-        {isEditing && (
+-          <button type="button" className="remove-file-btn" onClick={() => {
+-            const current = form.attachments ? form.attachments.split(',') : [];
+-            const filtered = current.filter(u => u !== url).join(',');
+-            set('attachments', filtered);
+-          }}>Γ£ò</button>
+-        )}
+-      </div>
+-    );
+-  };
++
+ 
+   const commentTree = [];
+   const commentMap = {};
+@@ -736,9 +681,10 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
+                   if (popup) popup.style.display = 'none';
+                 }}
+               >
+-                <span className="comment-action-btn-link" style={{ cursor: 'pointer' }} onClick={() => handleReact(c.id, '≡ƒæì')}>Like</span>
++                <span className="comment-action-btn-link" style={{ cursor: 'pointer' }} onClick={() => handleReact(c.id,'≡ƒæì')}>≡ƒæì</span>
++
+                 <div className="reaction-picker-popup" style={{ display: 'none', position: 'absolute', bottom: '100%', left: '0', background: 'white', padding: '0.25rem 0.5rem', borderRadius: '24px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', gap: '0.5rem', zIndex: 10, border: '1px solid #e2e8f0', marginBottom: '4px' }}>
+-                   {['≡ƒæì', 'Γ¥ñ∩╕Å', '≡ƒÿé', '≡ƒÄë', '≡ƒæÇ'].map(emoji => (
++                   {['≡ƒæì', 'Γ¥ñ∩╕Å', '≡ƒÿè', '≡ƒæÅ', '≡ƒÿ«'].map(emoji => (
+                      <span key={emoji} style={{ cursor: 'pointer', fontSize: '1rem', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} onClick={(e) => { e.stopPropagation(); handleReact(c.id, emoji); }}>{emoji}</span>
+                    ))}
+                 </div>
+@@ -881,27 +827,23 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
+         {/* Left Side Content Pane */}
+         <div className="saas-content-pane">
+           {/* Header area with ID & Status */}
+-          <div className="saas-detail-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+-            {(form.taskNo || form.id) ? (
+-              <span className="saas-id-tag">#{form.taskNo || `TSK-${form.id.substring(0, 6).toUpperCase()}`}</span>
++          <div className="saas-detail-title-block" style={{ marginBottom: '1.5rem', marginTop: '0.5rem' }}>
++            {isEditing ? (
++              <input 
++                type="text" 
++                value={form.title} 
++                onChange={e => set('title', e.target.value)} 
++                className="saas-title-input"
++                placeholder="Task Title"
++                style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem', fontSize: '1.75rem', fontWeight: '800' }}
++              />
+             ) : (
+-              <span></span>
++              <h1 className="saas-detail-title" style={{ fontSize: '1.75rem', fontWeight: '800', margin: 0 }}>{form.title || 'Untitled Task'}</h1>
+             )}
+-            <div className={`saas-status-badge status-${getStatusString(form.status).toLowerCase().replace(' ', '-')}`}>
+-              <span className="status-dot">ΓùÅ</span>
+-              {getStatusString(form.status)}
+-            </div>
+-          </div>
+-
+-          <div className="saas-detail-title-block">
+-            <h1 className="saas-detail-title">{form.title || ''}</h1>
+-            <p className="saas-detail-subtitle">
+-              {form.description || ''}
+-            </p>
+           </div>
+ 
+           {/* Tabs */}
+-          <div className="saas-tabs-header-row">
++          <div className="saas-tabs-header-row" style={{ marginBottom: '1.5rem' }}>
+             <button 
+               className={`saas-tab-header-btn ${activeTab === 'general' ? 'active' : ''}`}
+               onClick={() => setActiveTab('general')}
+@@ -936,412 +878,82 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
+           <div className="saas-tab-pane-content">
+             {activeTab === 'general' && (
+               <>
+-              <div className="saas-details-cards-container" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '2rem' }}>
++              <div className="saas-meta-grid animate-fade-in" style={{ paddingBottom: '2rem' }}>
+                 
+-                {/* ΓöÇΓöÇ CARD 1: TASK INFORMATION ΓöÇΓöÇ */}
+-                <div className="saas-detail-card" style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+-                  <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#0f172a', marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>Task Information</h3>
+-                  <div className="saas-details-grid animate-fade-in">
+-                {/* Task ID */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box"><IconTaskNo /></span>
+-                  <span className="field-label-text">Task ID</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text font-bold">
+-                    {isEditing ? (
+-                      <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+-                        <input 
+-                          type="text" 
+-                          value={form.taskNo || ''} 
+-                          onChange={e => set('taskNo', e.target.value)} 
+-                          className={`saas-grid-input ${errors.taskNo ? 'error' : ''}`}
+-                          placeholder="e.g. TSK-100"
+-                        />
+-                        {errors.taskNo && <div className="grid-error-msg">{errors.taskNo}</div>}
+-                      </div>
+-                    ) : (
+-                      <span>{form.taskNo || (form.id ? `#TSK-${form.id.substring(0, 6).toUpperCase()}` : '-')}</span>
+-                    )}
+-                  </span>
+-                </div>
+-
+-                {/* Task Title */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box"><IconTitle /></span>
+-                  <span className="field-label-text">Task Title{isEditing ? ' *' : ''}</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text">
+-                    {isEditing ? (
+-                      <input 
+-                        type="text" 
+-                        value={form.title} 
+-                        onChange={e => set('title', e.target.value)} 
+-                        className={`saas-grid-input ${errors.title ? 'error' : ''}`}
+-                      />
+-                    ) : (
+-                      <span className="font-semibold">{form.title}</span>
+-                    )}
+-                    {errors.title && <div className="grid-error-msg">{errors.title}</div>}
+-                  </span>
+-                </div>
+-
+-                {/* Task Description */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box"><IconDesc /></span>
+-                  <span className="field-label-text">Task Description</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text">
+-                    {isEditing ? (
+-                      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+-                        <textarea 
+-                          value={form.description} 
+-                          onChange={e => set('description', e.target.value)} 
+-                          className="saas-grid-textarea"
+-                          maxLength={1000}
+-                          placeholder="Provide details about the task..."
+-                          style={{ margin: 0 }}
+-                        />
+-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#64748b' }}>
+-                          <span>{(form.description || '').length} / 1000 characters</span>
+-                        </div>
+-                      </div>
+-                    ) : (
+-                      <span>{form.description || '-'}</span>
+-                    )}
+-                  </span>
+-                </div>
+-
+-                {/* Priority */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box"><IconPriority /></span>
+-                  <span className="field-label-text">Priority</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text">
+-                    {isEditing ? (
+-                      <select 
+-                        value={form.priority} 
+-                        onChange={e => set('priority', e.target.value)} 
+-                        className="saas-grid-select"
+-                      >
+-                        {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+-                      </select>
+-                    ) : (
+-                      <span className={`saas-priority-pill pill-${(form.priority || 'Medium').toLowerCase()}`}>
+-                        {form.priority || 'Medium'}
+-                      </span>
+-                    )}
+-                  </span>
+-                </div>
+-                </div>
+-                </div>
+-
+-                {/* ΓöÇΓöÇ CARD 2: PROJECT & ASSIGNMENT ΓöÇΓöÇ */}
+-                <div className="saas-detail-card" style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+-                  <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#0f172a', marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>Project & Assignment</h3>
+-                  <div className="saas-details-grid animate-fade-in">
+-                {/* Client */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box">
+-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+-                  </span>
+-                  <span className="field-label-text">Client</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text">
+-                    <select 
+-                      value={form.clientId || ''} 
+-                      onChange={e => {
+-                        const cId = e.target.value;
+-                        const updated = { ...form, clientId: cId, projectName: '', projectId: null };
+-                        setForm(updated);
+-                        if (!isEditing) handleInlineSave(updated);
+-                      }} 
+-                      className="saas-grid-select"
+-                    >
+-                      <option value="">-- Select Client --</option>
+-                      {clients.map(c => (
+-                        <option key={c.id} value={c.id}>
+-                          {c.name}
+-                        </option>
+-                      ))}
++                {/* Row 1: Status & Assignees */}
++                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
++                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconStatus /> Status</span>
++                  <span className="saas-meta-value">
++                    <select value={form.status} onChange={e => { const updated = { ...form, status: e.target.value }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }}>
++                      {COLUMNS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
+                     </select>
+                   </span>
+-                </div>
+-
+-                {/* Project */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box"><IconProject /></span>
+-                  <span className="field-label-text">Project{isEditing ? ' *' : ''}</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text">
+-                    <select 
+-                      value={form.projectName || ''} 
+-                      onChange={e => {
+-                        const projName = e.target.value;
+-                        const proj = projects.find(p => p.name === projName);
+-                        const updated = { 
+-                          ...form, 
+-                          projectName: projName, 
+-                          projectId: proj ? proj.id : null, 
+-                          clientId: proj ? proj.clientId : form.clientId 
+-                        };
+-                        setForm(updated);
+-                        if (!isEditing) handleInlineSave(updated);
+-                      }} 
+-                      className={`saas-grid-select ${errors.projectName ? 'error' : ''}`}
+-                    >
+-                      <option value="">-- Select Project --</option>
+-                      {projects.filter(p => !form.clientId || p.clientId === form.clientId).map(proj => (
+-                        <option key={proj.id} value={proj.name}>
+-                          {proj.name}
+-                        </option>
+-                      ))}
++                  
++                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconAssignee /> Assignee</span>
++                  <span className="saas-meta-value">
++                    <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }}>
++                      <option value="">Empty</option>
++                      {(form.projectName && projects.find(p => p.name === form.projectName)?.members ? projects.find(p => p.name === form.projectName).members.split(',').map(m => m.trim()).filter(Boolean) : users).map(u => <option key={u} value={u}>{u}</option>)}
+                     </select>
+-                    {errors.projectName && <div className="grid-error-msg">{errors.projectName}</div>}
+                   </span>
+                 </div>
+ 
+-                {/* Status */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box"><IconStatus /></span>
+-                  <span className="field-label-text">Status</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text">
+-                    <select 
+-                      value={form.status} 
+-                      onChange={e => {
+-                        const newStatus = e.target.value;
+-                        const updates = { status: newStatus };
+-                        if (newStatus === 'Delivered' && !form.deliveredDate) {
+-                          updates.deliveredDate = new Date().toISOString();
+-                        }
+-                        const updated = { ...form, ...updates };
+-                        setForm(updated);
+-                        if (!isEditing) handleInlineSave(updated);
+-                      }} 
+-                      className="saas-grid-select"
+-                    >
+-                      {COLUMNS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
+-                    </select>
++                {/* Row 2: Dates */}
++                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
++                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Start Date</span>
++                  <span className="saas-meta-value">
++                    <input type="date" value={form.startDate ? new Date(form.startDate).toISOString().split('T')[0] : ''} onChange={e => set('startDate', e.target.value)} className="saas-grid-input" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontSize: '0.85rem' }} title="Start Date" />
+                   </span>
+-                </div>
+-
+-                {/* Assignee */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box"><IconAssignee /></span>
+-                  <span className="field-label-text">Assignee</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text">
+-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%' }}>
+-                      <div className={`assignee-avatar-circle ${getAvatarColor(form.assignees || 'Unassigned')}`} style={{ flexShrink: 0 }}>
+-                        {initials(form.assignees || 'Unassigned')}
+-                      </div>
+-                      <select 
+-                        value={form.assignees || ''} 
+-                        onChange={e => {
+-                          const val = e.target.value;
+-                          const updated = { ...form, assignees: val };
+-                          setForm(updated);
+-                          if (!isEditing) handleInlineSave(updated);
+-                        }} 
+-                        className="saas-grid-select"
+-                        style={{ flex: 1 }}
+-                      >
+-                        <option value="">Select Assignee...</option>
+-                        {(form.projectName && projects.find(p => p.name === form.projectName)?.members 
+-                            ? projects.find(p => p.name === form.projectName).members.split(',').map(m => m.trim()).filter(Boolean) 
+-                            : users).map(u => (
+-                          <option key={u} value={u}>{u}</option>
+-                        ))}
+-                      </select>
+-                    </div>
++                  
++                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Due Date</span>
++                  <span className="saas-meta-value">
++                    <input type="date" value={form.dueDate ? new Date(form.dueDate).toISOString().split('T')[0] : ''} onChange={e => set('dueDate', e.target.value)} className="saas-grid-input" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontSize: '0.85rem' }} title="Due Date" />
+                   </span>
+                 </div>
+ 
+-                {/* Task List */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box">
+-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+-                      <line x1="8" y1="6" x2="21" y2="6"></line>
+-                      <line x1="8" y1="12" x2="21" y2="12"></line>
+-                      <line x1="8" y1="18" x2="21" y2="18"></line>
+-                      <line x1="3" y1="6" x2="3.01" y2="6"></line>
+-                      <line x1="3" y1="12" x2="3.01" y2="12"></line>
+-                      <line x1="3" y1="18" x2="3.01" y2="18"></line>
+-                    </svg>
++                {/* Row 2b: Delivery Date & Priority */}
++                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
++                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Delivered Date</span>
++                  <span className="saas-meta-value">
++                    <input type="date" value={form.deliveredDate ? new Date(form.deliveredDate).toISOString().split('T')[0] : ''} onChange={e => set('deliveredDate', e.target.value)} className="saas-grid-input" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontSize: '0.85rem' }} title="Delivered Date" />
+                   </span>
+-                  <span className="field-label-text">Task List</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text">
+-                    <select
+-                      value={form.taskListId || ''}
+-                      onChange={e => {
+-                        const val = e.target.value || null;
+-                        const updated = { ...form, taskListId: val };
+-                        setForm(updated);
+-                        if (!isEditing) handleInlineSave(updated);
+-                      }}
+-                      className="saas-grid-select"
+-                    >
+-                      <option value="">-- Select Task List --</option>
+-                      {taskLists.filter((tl, index, self) => index === self.findIndex((t) => t.name.toLowerCase() === tl.name.toLowerCase())).map(tl => (
+-                        <option key={tl.id} value={tl.id}>
+-                          {tl.name}
+-                        </option>
+-                      ))}
++                  
++                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconPriority /> Priority</span>
++                  <span className="saas-meta-value">
++                    <select value={form.priority} onChange={e => set('priority', e.target.value)} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }}>
++                      <option value="">Empty</option>
++                      {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                     </select>
+                   </span>
+                 </div>
+ 
+-
+-                {/* Task Type */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box"><IconType /></span>
+-                  <span className="field-label-text">Task Type</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text">
+-                    <select 
+-                      value={form.taskType || 'Feature'} 
+-                      onChange={e => {
+-                        const val = e.target.value;
+-                        const updated = { ...form, taskType: val };
+-                        setForm(updated);
+-                        if (!isEditing) handleInlineSave(updated);
+-                      }} 
+-                      className="saas-grid-select"
+-                    >
+-                      <option value="Feature">Feature</option>
+-                      <option value="Bug">Bug</option>
+-                      <option value="Enhancement">Enhancement</option>
+-                      <option value="Documentation">Documentation</option>
+-                      <option value="Other">Other</option>
++                {/* Row 3: Project */}
++                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
++                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconProject /> Project</span>
++                  <span className="saas-meta-value">
++                    <select value={form.projectName || ''} onChange={e => { const proj = projects.find(p => p.name === e.target.value); const updated = { ...form, projectName: e.target.value, projectId: proj ? proj.id : null }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className={`saas-grid-select ${errors.projectName ? 'error' : ''}`} style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }}>
++                      <option value="">Empty</option>
++                      {projects.map(proj => <option key={proj.id} value={proj.name}>{proj.name}</option>)}
+                     </select>
+                   </span>
+-                </div>
+-                </div>
+-                </div>
+-
+-                {/* ΓöÇΓöÇ CARD 3: TIMELINE & DELIVERY ΓöÇΓöÇ */}
+-                <div className="saas-detail-card" style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+-                  <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#0f172a', marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>Timeline & Attachments</h3>
+-                  <div className="saas-details-grid animate-fade-in">
+-                {/* Assigned Date */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box"><IconCalendar /></span>
+-                  <span className="field-label-text">Assigned Date</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text">
+-                    {isEditing ? (
+-                      <input 
+-                        type="date" 
+-                        value={form.assignedDate ? new Date(form.assignedDate).toISOString().split('T')[0] : ''} 
+-                        onChange={e => set('assignedDate', e.target.value)} 
+-                        className="saas-grid-input"
+-                      />
+-                    ) : (
+-                      <span>{formatDate(form.assignedDate)}</span>
+-                    )}
+-                  </span>
+-                </div>
+-
+-                {/* Start Date */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box"><IconCalendar /></span>
+-                  <span className="field-label-text">Start Date</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text">
+-                    {isEditing ? (
+-                      <input 
+-                        type="date" 
+-                        value={form.startDate ? new Date(form.startDate).toISOString().split('T')[0] : ''} 
+-                        onChange={e => set('startDate', e.target.value)} 
+-                        className="saas-grid-input"
+-                      />
+-                    ) : (
+-                      <span>{formatDate(form.startDate)}</span>
+-                    )}
+-                  </span>
+-                </div>
+-
+-                {/* Internal Completion Date */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box"><IconCalendar /></span>
+-                  <span className="field-label-text">Internal Completion Date</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text">
+-                    {isEditing ? (
+-                      <input 
+-                        type="date" 
+-                        value={form.endDate ? new Date(form.endDate).toISOString().split('T')[0] : ''} 
+-                        onChange={e => set('endDate', e.target.value)} 
+-                        className="saas-grid-input"
+-                      />
+-                    ) : (
+-                      <span>{formatDate(form.endDate)}</span>
+-                    )}
+-                  </span>
+-                </div>
+-
+-                {/* Delivery Date */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box"><IconCalendar /></span>
+-                  <span className="field-label-text">Delivery Date</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text">
+-                    {isEditing ? (
+-                      <input 
+-                        type="date" 
+-                        value={form.dueDate ? new Date(form.dueDate).toISOString().split('T')[0] : ''} 
+-                        onChange={e => set('dueDate', e.target.value)} 
+-                        className="saas-grid-input"
+-                      />
+-                    ) : (
+-                      <span>{formatDate(form.dueDate)}</span>
+-                    )}
+-                  </span>
++                  
++                  <span className="saas-meta-label"></span>
++                  <span className="saas-meta-value"></span>
+                 </div>
+ 
+-                {/* Delivered Date */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box"><IconCalendar /></span>
+-                  <span className="field-label-text">Delivered Date</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text">
+-                    {isEditing ? (
+-                      <input 
+-                        type="date" 
+-                        value={form.deliveredDate ? new Date(form.deliveredDate).toISOString().split('T')[0] : ''} 
+-                        onChange={e => set('deliveredDate', e.target.value)} 
+-                        className="saas-grid-input"
+-                      />
+-                    ) : (
+-                      <span>{formatDate(form.deliveredDate)}</span>
+-                    )}
+-                  </span>
+-                </div>
++                <div className="saas-meta-divider" style={{ borderBottom: '1px solid #f1f5f9', margin: '1.5rem 0' }}></div>
+ 
+-                {/* Upload Attachments */}
+-                <div className="saas-details-row">
+-                  <span className="field-icon-box"><IconPaperclip /></span>
+-                  <span className="field-label-text">Upload Attachments</span>
+-                  <span className="field-colon-sep">:</span>
+-                  <span className="field-value-text">
+-                    <div className="attachments-list-grid">
+-                      {form.attachments && form.attachments.split(',').map(url => renderAttachmentFile(url))}
+-                      
+-                      <button 
+-                        type="button"
+-                        className="add-file-pill-btn" 
+-                        onClick={() => fileInputRef.current && fileInputRef.current.click()}
+-                        disabled={uploading}
+-                      >
+-                        <span className="plus-sign">+</span> {uploading ? 'Uploading...' : 'Add File'}
+-                      </button>
++                <div style={{ padding: '0.5rem 0' }}>
++                  {isEditing ? (
++                    <textarea value={form.description} onChange={e => set('description', e.target.value)} className="saas-grid-textarea" style={{ minHeight: '120px', width: '100%', border: 'none', background: '#f8fafc', outline: 'none', fontSize: '0.95rem', padding: '1rem', borderRadius: '8px' }} placeholder="Add description, or write with AI..." />
++                  ) : (
++                    <div style={{ color: form.description ? '#334155' : '#94a3b8', whiteSpace: 'pre-wrap', fontSize: '0.95rem', minHeight: '60px', cursor: 'text', padding: '0.5rem' }} onClick={() => setIsEditing(true)}>
++                      {form.description || 'Add description, or write with AI...'}
+                     </div>
+-                  </span>
++                  )}
+                 </div>
++
+               </div>
+-            </div>
+-          </div>
+           
+           {isEditing && (
+             <div className="form-actions" style={{ justifyContent: 'flex-end', borderTop: 'none', background: 'transparent', boxShadow: 'none' }}>
+@@ -1827,7 +1439,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
+                     padding: '0 0.2rem'
+                   }}
+                 >
+-                  Γ£ò
++                  Γ£ö
+                 </button>
+               </div>
+             )}
+@@ -1877,7 +1489,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
+                       boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                       zIndex: 10
+                     }}>
+-                      {['≡ƒÿè', '≡ƒæì', '≡ƒÄë', 'Γ¥ñ∩╕Å', '≡ƒÜÇ', '≡ƒæÇ', '≡ƒöÑ', '≡ƒæÅ'].map(emoji => (
++                      {['≡ƒÿì', '≡ƒæì', '≡ƒæÅ', 'Γ¥ñ∩╕Å', '≡ƒÿ«'].map(emoji => (
+                         <span 
+                           key={emoji}
+                           onClick={() => {
+@@ -1911,7 +1523,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
+   );
+ }
+ 
+-// ΓöÇΓöÇ Task Card (Kanban) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++// ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ Task Card (Kanban) ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼
+ function TaskCard({ task, onDragStart, onClick, onDelete, currentUser }) {
+   const { getLevel } = usePermissions();
+   const { confirm: showConfirm } = useAlert();
+@@ -2016,9 +1628,9 @@ function TaskCard({ task, onDragStart, onClick, onDelete, currentUser }) {
+   );
+ }
+ 
+-// ΓöÇΓöÇ Kanban Column ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++// ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ Kanban Column ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼
+ function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave, isDragOver, onTaskClick, onDelete, currentUser, onAddTaskClick }) {
+-  const meta = STATUS_HEADER_META[col.label] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', symbol: 'ΓùÅ' };
++  const meta = STATUS_HEADER_META[col.label] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
+ 
+   return (
+     <div
+@@ -2029,7 +1641,6 @@ function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave
+     >
+       <div className="col-clickup-header">
+         <div className="col-clickup-badge" style={{ backgroundColor: meta.bg, color: meta.fg }}>
+-          <span className="col-clickup-symbol" style={{ color: meta.dotColor }}>{meta.symbol}</span>
+           <span className="col-clickup-label">{col.label.toUpperCase()}</span>
+           <span className="col-clickup-count">{tasks.length}</span>
+         </div>
+@@ -2249,7 +1860,7 @@ function ScheduleColumn({ title, count, tasks, onDragStart, onDrop, onDragOver,
+     >
+       <div className="col-clickup-header">
+         <div className="col-clickup-badge" style={{ backgroundColor: colorMeta.bg, color: colorMeta.fg }}>
+-          <span className="col-clickup-symbol" style={{ color: colorMeta.dotColor }}>ΓùÅ</span>
++          <span className="col-clickup-symbol" style={{ width: "8px", height: "8px", borderRadius: "50%", background: colorMeta.dotColor, display: "inline-block" }}></span>
+           <span className="col-clickup-label">{title.toUpperCase()}</span>
+           <span className="col-clickup-count">{count}</span>
+         </div>
+@@ -2285,9 +1896,9 @@ function ScheduleColumn({ title, count, tasks, onDragStart, onDrop, onDragOver,
+ 
+ 
+ 
+-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
++// ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É
+ //  MAIN TASKS COMPONENT
+-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
++// ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬ó├âΓÇÜ├é┬É
+ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, onDetailViewChange }) {
+   const isTeamLeadOrAdmin = user?.role?.toLowerCase() === 'team lead' || user?.role?.toLowerCase() === 'admin';
+   const [tasks, setTasks]       = useState([]);
+@@ -2297,18 +1908,30 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
+   const [subTab, setSubTab]     = useState(isTeamLeadOrAdmin ? 'all' : 'my'); 
+   const [dragOver, setDragOver] = useState(null);
+   const [taskDetailMode, setTaskDetailMode] = useState(false); // false=view, true=edit
+-  
+-  const [view, setView] = useState('board'); // 'board' or 'detail'
+-  const [selectedTask, setSelectedTask] = useState(null);
++  const setView = () => {};
++  const setSelectedTask = () => {};
++
+   const [collapsedGroups, setCollapsedGroups] = useState({});
++  // Inline add state
++  const [inlineAdd, setInlineAdd] = useState(null);
++  const [inlineTitle, setInlineTitle] = useState('');
++  const [inlineAssignee, setInlineAssignee] = useState('');
++  const [inlinePriority, setInlinePriority] = useState('Medium');
++  const [inlineDueDate, setInlineDueDate] = useState('');
++  const inlineInputRef = useRef(null);
++  // Side drawer state
++  const [drawerOpen, setDrawerOpen] = useState(false);
++  const [drawerTask, setDrawerTask] = useState(null);
++  const [listUsers, setListUsers] = useState([]);
+   const toggleGroup = (key) => {
+     setCollapsedGroups(prev => ({ ...prev, [key]: !prev[key] }));
+   };
+ 
+   useEffect(() => {
+     if (initialSelectedTask) {
+-      setSelectedTask(initialSelectedTask);
+-      setView('detail');
++      setDrawerTask(initialSelectedTask);
++      setDrawerOpen(true);
++      setTaskDetailMode(false);
+       if (onClearInitialTask) onClearInitialTask();
+     }
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+@@ -2316,15 +1939,44 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
+ 
+   useEffect(() => {
+     if (onDetailViewChange) {
+-      onDetailViewChange(view === 'detail');
++      onDetailViewChange(drawerOpen);
+     }
+-  }, [view, onDetailViewChange]);
++  }, [drawerOpen, onDetailViewChange]);
++
++  useEffect(() => {
++    api.get('/users').then(data => setListUsers(data || [])).catch(console.error);
++  }, []);
++
++  // Sidebar: projects + task lists
++  const [taskProjects, setTaskProjects] = useState([]);
++  const [taskListsData, setTaskListsData] = useState([]);
++  const [selectedListId, setSelectedListId] = useState(null);
++  const [selectedProjId, setSelectedProjId] = useState(null);
++  const [expandedProj, setExpandedProj] = useState({});
++
++  useEffect(() => {
++    api.get('/projects').then(data => {
++      setTaskProjects(data || []);
++      // Auto-expand all projects
++      const exp = {};
++      (data || []).forEach(p => { exp[p.id] = true; });
++      setExpandedProj(exp);
++    }).catch(console.error);
++    api.get('/task-lists').then(data => setTaskListsData(data || [])).catch(console.error);
++  }, []);
++
++  const toggleProjExpand = (id) => setExpandedProj(prev => ({ ...prev, [id]: !prev[id] }));
++
++  // Derive names for breadcrumb
++  const selectedProj = taskProjects.find(p => p.id === selectedProjId);
++  const selectedList = taskListsData.find(l => l.id === selectedListId);
++  const selectedListProj = selectedListId ? taskProjects.find(p => p.id === selectedList?.projectId) : null;
+ 
+   const dragId = useRef(null);
+   const { can, getLevel } = usePermissions();
+   const { alert, confirm: showConfirm } = useAlert();
+ 
+-  // ΓöÇΓöÇ FETCH from API ΓöÇΓöÇ
++  // ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ FETCH from API ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼
+   const fetchTasks = async () => {
+     setLoading(true);
+     try {
+@@ -2338,7 +1990,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
+ 
+   useEffect(() => { fetchTasks(); }, []);
+ 
+-  // ΓöÇΓöÇ Drag handlers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++  // ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ Drag handlers ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼
+   const handleDragStart = (e, id) => {
+     dragId.current = id;
+     e.dataTransfer.effectAllowed = 'move';
+@@ -2388,7 +2040,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
+     document.querySelectorAll('.task-card').forEach(el => el.classList.remove('dragging'));
+   };
+ 
+-  // ΓöÇΓöÇ INSERT/UPDATE ΓöÇΓöÇ
++  // ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ INSERT/UPDATE ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼
+   const handleSaveTask = async (taskData, silent = false) => {
+     if (!silent) setIsSaving(true);
+     try {
+@@ -2410,7 +2062,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
+     }
+   };
+ 
+-  // ΓöÇΓöÇ DELETE ΓöÇΓöÇ
++  // ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ DELETE ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼
+   const handleDeleteTask = async (id) => {
+     setIsSaving(true);
+     try {
+@@ -2427,66 +2079,197 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
+   };
+ 
+   const openNewTask = (presetStatus = 'To Do', presetProject = '') => {
+-    setSelectedTask({
+-      status: presetStatus,
+-      projectName: presetProject,
+-      priority: 'Medium',
+-      title: '',
+-      description: '',
+-      assignees: '',
+-      isBillable: false,
+-      tag: 'Engineering',
+-      taskType: 'Feature'
+-    });
++    setDrawerTask({ status: presetStatus, projectName: presetProject, priority: 'Medium', title: '', description: '', assignees: '', isBillable: false, tag: 'Engineering', taskType: 'Feature' });
+     setTaskDetailMode(true);
+-    setView('detail');
++    setDrawerOpen(true);
++  };
++
++  const closeDrawer = () => { setDrawerOpen(false); setDrawerTask(null); };
++
++  const openInlineAdd = (proj, statusId) => {
++    setInlineAdd({ proj, statusId });
++    setInlineTitle(''); setInlineAssignee(''); setInlinePriority('Medium'); setInlineDueDate('');
++    setTimeout(() => inlineInputRef.current?.focus(), 50);
++  };
++
++  const closeInlineAdd = () => {
++    setInlineAdd(null);
++    setInlineTitle(''); setInlineAssignee(''); setInlinePriority('Medium'); setInlineDueDate('');
++  };
++
++  const submitInlineAdd = async () => {
++    const title = inlineTitle.trim();
++    if (!title) { closeInlineAdd(); return; }
++    const { proj, statusId } = inlineAdd;
++    setIsSaving(true);
++    try {
++      await api.post('/tasks', {
++        title, status: statusId,
++        projectName: proj === 'General / Unassigned' ? '' : proj,
++        priority: inlinePriority || 'Medium',
++        assignees: inlineAssignee || '',
++        dueDate: inlineDueDate ? new Date(inlineDueDate).toISOString() : null,
++        tag: 'Engineering', taskType: 'Feature', isBillable: false, description: ''
++      });
++      const data = await api.get('/tasks');
++      setTasks(data || []);
++      closeInlineAdd();
++    } catch (err) { console.error('Inline add failed:', err); }
++    finally { setIsSaving(false); }
+   };
+ 
+   const openTaskDetail = (task, editMode = false) => {
+-    setSelectedTask(task);
++    setDrawerTask(task);
+     setTaskDetailMode(editMode);
+-    setView('detail');
++    setDrawerOpen(true);
+   };
+ 
+-
++  const getTaskProjectId = (t) => {
++    if (t.taskListId) {
++      const list = taskListsData.find(l => l.id === t.taskListId);
++      if (list && list.projectId) return list.projectId;
++    }
++    if (t.projectId) {
++      const p = taskProjects.find(p => p.id === t.projectId);
++      if (p) return p.id;
++    }
++    if (t.projectName) {
++      const p = taskProjects.find(p => p.name === t.projectName);
++      if (p) return p.id;
++    }
++    return null;
++  };
+ 
+   const filteredTasks = tasks.filter(t => {
++    // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ Sidebar filter: by selected list or project ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++    if (selectedListId) {
++      if (t.taskListId !== selectedListId) return false;
++    } else if (selectedProjId) {
++      if (selectedProjId === 'unassigned') {
++        const hasProject = taskProjects.some(p => p.id === t.projectId || p.name === t.projectName || (!t.projectId && !t.projectName && t.taskListId && taskListsData.some(l => l.id === t.taskListId && l.projectId === p.id)));
++        return !hasProject;
++      }
++      if (t.projectId) {
++        if (t.projectId !== selectedProjId) return false;
++      } else if (t.projectName) {
++        if (t.projectName !== selectedProj?.name) return false;
++      } else if (t.taskListId) {
++        const pLists = taskListsData.filter(l => l.projectId === selectedProjId);
++        const pListIds = new Set(pLists.map(l => l.id));
++        if (!pListIds.has(t.taskListId)) return false;
++      } else {
++        return false;
++      }
++    }
++
+     const level = getLevel('tasks', 'view');
+     const editLevel = getLevel('tasks', 'edit');
+     const deleteLevel = getLevel('tasks', 'delete');
+-    
+     const hasAllAccess = level === 'All' || editLevel === 'All' || deleteLevel === 'All' || isTeamLeadOrAdmin;
+-    
+     if (hasAllAccess && subTab === 'all') return true;
+-    
+-    // For 'my' tab or 'Self' level:
+     const assignees = t.assignees ? t.assignees.split(',').map(a => a.trim().toLowerCase()) : [];
+     const myName = (user?.fullName || user?.name || '').trim().toLowerCase();
+-    
+-    const isMainAssignee = assignees.includes(myName);
+-    
+-    return isMainAssignee;
++    return assignees.includes(myName);
+   });
+ 
+ 
+   if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Tasks...'}</div>;
+ 
+-  if (view === 'detail') {
+-    return (
+-      <TaskDetailView
+-        task={selectedTask}
+-        onSave={handleSaveTask}
+-        onDelete={handleDeleteTask}
+-        onClose={() => setView('board')}
+-        currentUser={user}
+-        initialEditMode={taskDetailMode}
+-      />
++  // Breadcrumb title
++  const pageTitle = selectedList
++    ? `${selectedListProj?.name || ''} / ${selectedList.name}`
+ 
+-    );
+-  }
++    : selectedProj ? selectedProj.name
++    : subTab === 'my' ? 'My Assignments' : 'All Tasks';
+ 
+   return (
+-    <div className="kanban-root" onDragEnd={handleDragEnd}>
++    <div className="tasks-3col-layout">
++
++      {/* ├â┬ó├óΓé¼┬ó├é┬É├â┬ó├óΓé¼┬ó├é┬É LEFT SIDEBAR ├â┬ó├óΓé¼┬ó├é┬É├â┬ó├óΓé¼┬ó├é┬É */}
++      <div className="tasks-left-nav">
++        <div className="tln-header">Projects</div>
++
++        {/* All Tasks */}
++        <div
++          className={`tln-all-item ${!selectedListId && !selectedProjId ? 'active' : ''}`}
++          onClick={() => { setSelectedListId(null); setSelectedProjId(null); }}
++        >
++          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
++          All Tasks
++          <span className="tln-count">{tasks.length}</span>
++        </div>
++
++        {/* Projects tree */}
++        {taskProjects.map(proj => {
++          const projLists = taskListsData.filter(l => l.projectId === proj.id);
++          const projTaskCount = tasks.filter(t => getTaskProjectId(t) === proj.id).length;
++          const isExpanded = !!expandedProj[proj.id];
++          const isProjSelected = selectedProjId === proj.id && !selectedListId;
++
++          return (
++            <div key={proj.id} className="tln-project-block">
++              <div
++                className={`tln-project-row ${isProjSelected ? 'active' : ''}`}
++                onClick={() => {
++                  setSelectedListId(null);
++                  setSelectedProjId(isProjSelected ? null : proj.id);
++                  toggleProjExpand(proj.id);
++                }}
++              >
++                <span className="tln-chevron"><svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isExpanded ? 'none' : 'rotate(-90deg)', transition: 'transform 0.2s', color: '#94a3b8' }}><path d="M0 0l5 6 5-6z"/></svg></span>
++                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
++                <span className="tln-proj-name">{proj.name}</span>
++                <span className="tln-count">{projTaskCount}</span>
++              </div>
++
++              {isExpanded && projLists.length > 0 && (
++                <div className="tln-lists">
++                  {projLists.map(list => {
++                    const listCount = tasks.filter(t => t.taskListId === list.id).length;
++                    const isListSelected = selectedListId === list.id;
++                    return (
++                      <div
++                        key={list.id}
++                        className={`tln-list-item ${isListSelected ? 'active' : ''}`}
++                        onClick={(e) => { e.stopPropagation(); setSelectedListId(list.id); setSelectedProjId(null); }}
++                      >
++                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
++                        <span className="tln-list-name">{list.name}</span>
++                        <span className="tln-count">{listCount}</span>
++                      </div>
++                    );
++                  })}
++                </div>
++              )}
++
++              {isExpanded && projLists.length === 0 && (
++                <div className="tln-empty-lists">No lists yet</div>
++              )}
++            </div>
++          );
++        })}
++        {(() => {
++           const unassignedTasks = tasks.filter(t => getTaskProjectId(t) === null);
++           if (unassignedTasks.length === 0) return null;
++           return (
++             <div className="tln-project-block">
++               <div
++                 className={`tln-project-row ${selectedProjId === 'unassigned' ? 'active' : ''}`}
++                 onClick={() => { setSelectedListId(null); setSelectedProjId('unassigned'); }}
++               >
++                 <span className="tln-chevron" style={{ visibility: 'hidden' }}><svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor"><path d="M0 0l5 6 5-6z"/></svg></span>
++                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
++                 <span className="tln-proj-name">Unassigned / Other</span>
++                 <span className="tln-count">{unassignedTasks.length}</span>
++               </div>
++             </div>
++           );
++        })()}
++      </div>
++
++      {/* ├â┬ó├óΓé¼┬ó├é┬É├â┬ó├óΓé¼┬ó├é┬É MAIN CONTENT ├â┬ó├óΓé¼┬ó├é┬É├â┬ó├óΓé¼┬ó├é┬É */}
++      <div className="tasks-main-content">
++      <div className="kanban-root" onDragEnd={handleDragEnd}>
+       {(getLevel('tasks', 'view') === 'All' || getLevel('tasks', 'edit') === 'All' || getLevel('tasks', 'delete') === 'All' || isTeamLeadOrAdmin) && (
+         <div className="saas-tabs" style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '2rem' }}>
+           <button 
+@@ -2516,10 +2299,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
+ 
+ 
+ 
+-      {/* ΓöÇΓöÇ Header ΓöÇΓöÇ */}
++      {/* ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ Header ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ */}
+       <div className="kanban-header">
+         <div className="kanban-header-left">
+-          <h1 className="kanban-title">{subTab === 'my' ? 'My Assignments' : 'All Tasks'}</h1>
++          <h1 className="kanban-title">{pageTitle}</h1>
+         </div>
+         <div className="kanban-controls">
+           <div className="view-toggle">
+@@ -2539,7 +2322,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
+ 
+ 
+ 
+-      {/* ΓöÇΓöÇ Views ΓöÇΓöÇ */}
++      {/* ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ Views ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ */}
+       {viewMode === 'schedule' && (() => {
+         const today = new Date();
+         today.setHours(0,0,0,0);
+@@ -2680,7 +2463,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
+         );
+       })()}
+ 
+-      {/* ΓöÇΓöÇ Views ΓöÇΓöÇ */}
++      {/* ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ Views ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ */}
+       {viewMode === 'kanban' && (
+         <div className="kanban-board">
+           {COLUMNS.map(col => (
+@@ -2705,197 +2488,173 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
+       )}
+ 
+       {viewMode === 'list' && (() => {
+-        // Group tasks by project name, and then by status
+-        const grouped = {};
++        // ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ ClickUp-style: group by STATUS only ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼
++        const byStatus = {};
++        COLUMNS.forEach(col => { byStatus[col.id] = []; });
+         filteredTasks.forEach(task => {
+-          const proj = task.projectName || 'General / Unassigned';
+-          const status = task.status || 'To Do';
+-          if (!grouped[proj]) grouped[proj] = {};
+-          if (!grouped[proj][status]) grouped[proj][status] = [];
+-          grouped[proj][status].push(task);
++          const st = task.status || 'To Do';
++          if (!byStatus[st]) byStatus[st] = [];
++          byStatus[st].push(task);
+         });
+ 
+-        const projectsList = Object.keys(grouped).sort();
+-
+-        if (filteredTasks.length === 0) {
+-          return (
+-            <div className="clickup-list-empty">
+-              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.5">
+-                <circle cx="12" cy="12" r="10"></circle>
+-                <line x1="12" y1="8" x2="12" y2="12"></line>
+-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+-              </svg>
+-              <p>No tasks found.</p>
+-            </div>
+-          );
+-        }
+-
+         return (
+-          <div className="clickup-list-view">
+-            {projectsList.map(proj => {
+-              const isProjCollapsed = !!collapsedGroups[proj];
+-              const projStatuses = COLUMNS.filter(col => grouped[proj][col.id] && grouped[proj][col.id].length > 0);
+-              
++          <div className="cu-list-root">
++            {COLUMNS.map(col => {
++              const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
++              const statusTasks = byStatus[col.id] || [];
++              const isCollapsed = !!collapsedGroups[col.id];
++              const isInline = inlineAdd && inlineAdd.statusId === col.id;
++
+               return (
+-                <div key={proj} className="clickup-project-group">
+-                  <div 
+-                    className="clickup-project-header" 
+-                    onClick={() => toggleGroup(proj)}
+-                  >
+-                    <span className="clickup-project-toggle">
+-                      {isProjCollapsed ? 'Γû╢' : 'Γû╝'}
+-                    </span>
+-                    <span className="clickup-project-folder-icon" style={{ display: 'inline-flex', alignItems: 'center', marginRight: '6px', color: '#64748b', verticalAlign: 'middle' }}>
+-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+-                    </span>
+-                    <span className="clickup-project-title">{proj}</span>
++                <div key={col.id} className="cu-status-section">
++                  {/* Section Header */}
++                  <div className="cu-section-header">
++                    <div className="cu-section-left" onClick={() => toggleGroup(col.id)}>
++                      <span className="cu-section-chevron">
++                        <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
++                      </span>
++                      <span className="cu-status-pill" style={{ background: meta.bg, color: meta.fg }}>
++                        <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: meta.dotColor, display: "inline-block", marginRight: "6px", flexShrink: 0 }}></span>
++                        {col.label.toUpperCase()}
++                      </span>
++                      <span className="cu-section-count">{statusTasks.length}</span>
++                    </div>
++                    <div className="cu-section-right">
++                      {can('tasks', 'create') && (
++                        <button className="cu-section-add-btn" title={`Add task to ${col.label}`}
++                          onClick={() => openInlineAdd(inlineAdd?.proj || '', col.id)}>+</button>
++                      )}
++                    </div>
+                   </div>
+ 
+-                  {!isProjCollapsed && (
+-                    <div className="clickup-project-content">
+-                      {projStatuses.map(col => {
+-                        const statusKey = `${proj}-${col.id}`;
+-                        const isStatusCollapsed = !!collapsedGroups[statusKey];
+-                        const statusTasks = grouped[proj][col.id] || [];
+-                        const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', symbol: 'ΓùÅ' };
+-
+-                        return (
+-                          <div key={col.id} className="clickup-status-group">
+-                            <div className="clickup-status-header">
+-                              <div className="clickup-status-left" onClick={() => toggleGroup(statusKey)}>
+-                                <span className="clickup-status-toggle">
+-                                  {isStatusCollapsed ? 'Γû╢' : 'Γû╝'}
+-                                </span>
+-                                <div className="clickup-status-badge" style={{ backgroundColor: meta.bg, color: meta.fg }}>
+-                                  <span className="clickup-status-symbol" style={{ color: meta.dotColor }}>{meta.symbol}</span>
+-                                  <span className="clickup-status-label">{col.label.toUpperCase()}</span>
+-                                  <span className="clickup-status-count">{statusTasks.length}</span>
++                  {/* Task Table */}
++                  {!isCollapsed && (
++                    <div className="cu-table-wrapper">
++                      <table className="cu-table">
++                        <thead>
++                          <tr className="cu-thead-row">
++                            <th className="cu-th cu-th-name">NAME</th>
++                            <th className="cu-th cu-th-assignee">ASSIGNEE</th>
++                            <th className="cu-th cu-th-project">PROJECT</th>
++                            <th className="cu-th cu-th-due">DUE DATE</th>
++                            <th className="cu-th cu-th-priority">PRIORITY</th>
++                            <th className="cu-th cu-th-hours">HOURS</th>
++                            <th className="cu-th cu-th-actions"></th>
++                          </tr>
++                        </thead>
++                        <tbody>
++                          {statusTasks.map(task => {
++                            const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
++                            const relDate = formatRelativeDueDate(task.dueDate);
++                            return (
++                              <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
++                                <td className="cu-td cu-td-name">
++                                  <span className="cu-status-dot" style={{ color: meta.dotColor, borderColor: meta.dotColor }}>
++                                  <span className="cu-status-dot" style={{ background: meta.dotColor, borderColor: meta.dotColor }}></span>
++                                  </span>
++                                  <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
++                                  {task.taskNo && <span className="cu-task-id">{task.taskNo}</span>}
++                                </td>
++                                <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
++                                  <div className="cu-avatars">
++                                    {assignees.length === 0 ? (
++                                      <div className="cu-avatar-empty" title="Unassigned">
++                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
++                                      </div>
++                                    ) : assignees.slice(0, 3).map(a => (
++                                      <div key={a} className={`cu-avatar ${getAvatarColor(a)}`} title={a}>{initials(a)}</div>
++                                    ))}
++                                    {assignees.length > 3 && <div className="cu-avatar av-blue">+{assignees.length - 3}</div>}
++                                  </div>
++                                </td>
++                                <td className="cu-td cu-td-project">
++                                  {task.projectName ? (
++                                    <span className="cu-project-badge">{task.projectName}</span>
++                                  ) : <span className="cu-empty-cell">-</span>}
++                                </td>
++                                <td className="cu-td cu-td-due">
++                                  {relDate ? (
++                                    <span className={`cu-due-badge ${relDate.isOverdue ? 'overdue' : relDate.isToday ? 'today' : ''}`}>
++                                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
++                                      {relDate.text}
++                                    </span>
++                                  ) : <span className="cu-empty-cell">-</span>}
++                                </td>
++                                <td className="cu-td cu-td-priority">
++                                  <span className="cu-priority-badge">
++                                    <PriorityFlag priority={task.priority} />
++                                    <span>{task.priority || 'Medium'}</span>
++                                  </span>
++                                </td>
++                                <td className="cu-td cu-td-hours">
++                                  <span className="cu-hours">{task.actualHours || 0}h / {task.approvedHours || 0}h</span>
++                                </td>
++                                <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
++                                  <div className="cu-row-actions">
++                                    {(getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
++                                      <button className="cu-act-btn" onClick={() => openTaskDetail(task, true)} title="Edit">
++                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
++                                      </button>
++                                    )}
++                                    {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
++                                      <button className="cu-act-btn danger" onClick={() => showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task')} title="Delete">
++                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
++                                      </button>
++                                    )}
++                                  </div>
++                                </td>
++                              </tr>
++                            );
++                          })}
++
++                          {/* ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ Inline Add Row ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ */}
++                          {isInline ? (
++                            <tr className="cu-inline-row">
++                              <td className="cu-td cu-td-name">
++                                <span className="cu-status-dot" style={{ background: meta.dotColor, width: "10px", height: "10px", borderRadius: "50%", display: "inline-block", flexShrink: 0 }}></span>
++                                <input ref={inlineInputRef} className="cu-inline-input" placeholder="Task name"
++                                  value={inlineTitle} onChange={e => setInlineTitle(e.target.value)}
++                                  onKeyDown={e => { if (e.key === 'Enter') submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }} autoFocus />
++                              </td>
++                              <td className="cu-td cu-td-assignee">
++                                <select className="cu-inline-sel" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
++                                  <option value="">-</option>
++                                  {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim(); return <option key={u.id} value={n}>{n}</option>; })}
++                                </select>
++                              </td>
++                              <td className="cu-td cu-td-project"><span className="cu-empty-cell">-</span></td>
++                              <td className="cu-td cu-td-due">
++                                <input type="date" className="cu-inline-date" value={inlineDueDate} onChange={e => setInlineDueDate(e.target.value)} />
++                              </td>
++                              <td className="cu-td cu-td-priority">
++                                <select className="cu-inline-sel" value={inlinePriority} onChange={e => setInlinePriority(e.target.value)}>
++                                  {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
++                                </select>
++                              </td>
++                              <td className="cu-td cu-td-hours"><span className="cu-empty-cell">-</span></td>
++                              <td className="cu-td cu-td-actions">
++                                <div className="cu-row-actions" style={{ opacity: 1 }}>
++                                  <button className="cu-act-btn" onClick={submitInlineAdd} title="Save (Enter)">
++                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
++                                  </button>
++                                  <button className="cu-act-btn danger" onClick={closeInlineAdd} title="Cancel (Esc)">
++                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
++                                  </button>
+                                 </div>
+-                              </div>
+-                              <button 
+-                                className="clickup-status-add-btn" 
+-                                title="Add Task in status"
+-                                onClick={() => openNewTask(col.id, proj === 'General / Unassigned' ? '' : proj)}
+-                              >
+-                                +
+-                              </button>
+-                            </div>
+-
+-                            {!isStatusCollapsed && (
+-                              <div className="clickup-table-wrapper">
+-                                <table className="clickup-table">
+-                                  <thead>
+-                                    <tr>
+-                                      <th className="th-name">NAME</th>
+-                                      <th className="th-assignee">ASSIGNEE</th>
+-                                      <th className="th-due">DUE DATE</th>
+-                                      <th className="th-priority">PRIORITY</th>
+-                                      <th className="th-hours">HOURS</th>
+-                                      <th className="th-actions"></th>
+-                                    </tr>
+-                                  </thead>
+-                                  <tbody>
+-                                    {statusTasks.map(task => {
+-                                      const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
+-                                      const relativeDate = formatRelativeDueDate(task.dueDate);
+-                                      return (
+-                                        <tr 
+-                                          key={task.id} 
+-                                          className="clickup-row" 
+-                                          onClick={() => openTaskDetail(task, false)}
+-                                        >
+-                                          <td className="td-name">
+-                                            <span 
+-                                              className="status-checkbox-dot" 
+-                                              style={{ 
+-                                                color: meta.dotColor,
+-                                                borderColor: meta.dotColor
+-                                              }}
+-                                              title={`Status: ${task.status}`}
+-                                            >
+-                                              {meta.symbol === 'Γ£ô' ? 'Γ£ô' : 'Γùï'}
+-                                            </span>
+-                                            <span className="task-title-text">{task.title || 'Untitled Task'}</span>
+-                                          </td>
+-                                          <td className="td-assignee" onClick={e => e.stopPropagation()}>
+-                                            <div className="clickup-avatars-list">
+-                                              {assignees.length === 0 ? (
+-                                                <div className="clickup-avatar-empty" title="Unassigned">
+-                                                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5">
+-                                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+-                                                    <circle cx="12" cy="7" r="4"></circle>
+-                                                  </svg>
+-                                                </div>
+-                                              ) : (
+-                                                assignees.slice(0, 3).map(a => {
+-                                                  const avCls = getAvatarColor(a);
+-                                                  return (
+-                                                    <div key={a} className={`clickup-avatar ${avCls}`} title={a}>
+-                                                      {initials(a)}
+-                                                    </div>
+-                                                  );
+-                                                })
+-                                              )}
+-                                              {assignees.length > 3 && (
+-                                                <div className="clickup-avatar av-blue" title={`${assignees.length - 3} more`}>
+-                                                  +{assignees.length - 3}
+-                                                </div>
+-                                              )}
+-                                            </div>
+-                                          </td>
+-                                          <td className="td-due">
+-                                            <div className={`clickup-due-badge ${relativeDate ? (relativeDate.isOverdue ? 'overdue' : (relativeDate.isToday ? 'today' : '')) : ''}`}>
+-                                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+-                                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+-                                                <line x1="16" y1="2" x2="16" y2="6"></line>
+-                                                <line x1="8" y1="2" x2="8" y2="6"></line>
+-                                                <line x1="3" y1="10" x2="21" y2="10"></line>
+-                                              </svg>
+-                                              <span className="due-text">{relativeDate ? relativeDate.text : '-'}</span>
+-                                            </div>
+-                                          </td>
+-                                          <td className="td-priority">
+-                                            <div className="clickup-priority-wrapper">
+-                                              <PriorityFlag priority={task.priority} />
+-                                              <span className="priority-text">{task.priority || 'Medium'}</span>
+-                                            </div>
+-                                          </td>
+-                                          <td className="td-hours">
+-                                            <span className="hours-badge" title="Actual vs Estimated Hours">
+-                                              {task.actualHours || 0}h / {task.approvedHours || 0}h
+-                                            </span>
+-                                          </td>
+-                                          <td className="td-actions" onClick={e => e.stopPropagation()}>
+-                                            <div className="row-action-buttons">
+-                                              {(getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
+-                                                <button className="row-act-btn edit" onClick={() => openTaskDetail(task, true)} title="Edit Task">
+-                                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+-                                                </button>
+-                                              )}
+-                                              {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
+-                                                <button className="row-act-btn delete" onClick={() => showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task')} title="Delete Task">
+-                                                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+-                                                </button>
+-                                              )}
+-                                            </div>
+-                                          </td>
+-                                        </tr>
+-                                      );
+-                                    })}
+-                                    {/* Inline Add Task row */}
+-                                    <tr className="clickup-add-row" onClick={() => openNewTask(col.id, proj === 'General / Unassigned' ? '' : proj)}>
+-                                      <td colSpan="6">
+-                                        <span className="add-task-icon">+</span>
+-                                        <span className="add-task-text">Add Task</span>
+-                                      </td>
+-                                    </tr>
+-                                  </tbody>
+-                                </table>
+-                              </div>
+-                            )}
+-                          </div>
+-                        );
+-                      })}
++                              </td>
++                            </tr>
++                          ) : (
++                            can('tasks', 'create') && (
++                              <tr className="cu-add-row" onClick={() => openInlineAdd('', col.id)}>
++                                <td colSpan="7">
++                                  <span className="cu-add-icon">+</span>
++                                  <span className="cu-add-text">Add Task</span>
++                                </td>
++                              </tr>
++                            )
++                          )}
++                        </tbody>
++                      </table>
+                     </div>
+                   )}
+                 </div>
+@@ -2904,6 +2663,29 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
+           </div>
+         );
+       })()}
++
++      {/* ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ Side Drawer ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ */}
++
++      {/* ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ Side Drawer ├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼├â╞Æ├é┬ó├â┬ó├óΓÇÜ┬¼├é┬¥├â┬ó├óΓé¼┼í├é┬¼ */}
++      {drawerOpen && (
++        <div className="task-drawer-overlay" onClick={e => { if (e.target === e.currentTarget) closeDrawer(); }}>
++          <div className="task-drawer-panel">
++            <TaskDetailView
++              task={drawerTask}
++              onSave={async (taskData, silent) => {
++                await handleSaveTask(taskData, silent);
++                if (!silent) closeDrawer();
++              }}
++              onDelete={async (id) => { await handleDeleteTask(id); closeDrawer(); }}
++              onClose={closeDrawer}
++              currentUser={user}
++              initialEditMode={taskDetailMode}
++            />
++          </div>
++        </div>
++      )}
++      </div>
++      </div>
+     </div>
+   );
+ }

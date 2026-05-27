@@ -17,8 +17,8 @@ export default function Employee() {
     emergencyNo: '',
     status: 'Active',
     type: 'Employee',
-    projectName: '',
-    projectStatus: 'Inactive'
+    email: '',
+    password: ''
   });
   const { can } = usePermissions();
   const { alert, confirm } = useAlert();
@@ -51,19 +51,43 @@ export default function Employee() {
     }
     setIsSaving(true);
     try {
+      const empId = form.id || `EMP-${Date.now().toString().slice(-3)}`;
+      
+      // 1. Create Employee Profile
       await api.post('/employees', {
-        id: form.id || `EMP-${Date.now().toString().slice(-3)}`,
+        id: empId,
         name: form.name,
         role: form.role,
         phoneNo: form.phoneNo,
         emergencyNo: form.emergencyNo,
         status: form.status,
-        type: form.type,
-        projectName: form.projectName || '-',
-        projectStatus: form.projectStatus
+        type: form.type
       });
-      alert('Employee profile added successfully!', 'success', 'Success');
-      setForm({ id: '', name: '', role: '', phoneNo: '', emergencyNo: '', status: 'Active', type: 'Employee', projectName: '', projectStatus: 'Inactive' });
+
+      // 2. Create User Account automatically
+      if (form.email && form.password) {
+        try {
+          await api.post('/users', {
+            firstName: form.name.split(' ')[0],
+            lastName: form.name.split(' ').slice(1).join(' '),
+            email: form.email,
+            password: form.password,
+            role: 'Employee',
+            empId: empId
+          });
+        } catch (err) {
+          console.error("User creation failed during employee creation", err);
+          alert('Employee created, but User account failed (Email might already exist).', 'warning', 'Partial Success');
+          setForm({ id: '', name: '', role: '', phoneNo: '', emergencyNo: '', status: 'Active', type: 'Employee', email: '', password: '' });
+          setShowForm(false);
+          fetchEmployees();
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      alert('Employee profile and User account created successfully!', 'success', 'Success');
+      setForm({ id: '', name: '', role: '', phoneNo: '', emergencyNo: '', status: 'Active', type: 'Employee', email: '', password: '' });
       setShowForm(false);
       fetchEmployees();
     } catch (error) {
@@ -151,24 +175,21 @@ export default function Employee() {
                 <option value="Inactive">Inactive</option>
               </select>
             </div>
-          </div>
-
-          <div className="form-section-divider">
-            <h4 className="section-subtitle">Project Assignment</h4>
-            <div className="form-grid">
-              <div className="saas-field">
-                <label className="saas-label">Project Name</label>
-                <input className="saas-input" placeholder="e.g. Inventar" value={form.projectName} onChange={e => setForm({...form, projectName: e.target.value})} />
-              </div>
-              <div className="saas-field">
-                <label className="saas-label">Project Status</label>
-                <select className="saas-select" value={form.projectStatus} onChange={e => setForm({...form, projectStatus: e.target.value})}>
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </div>
+            
+            <div className="form-section-divider" style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
+              <h4 className="section-subtitle">Login Account (Optional)</h4>
+            </div>
+            <div className="saas-field">
+              <label className="saas-label">Login Email</label>
+              <input className="saas-input" type="email" placeholder="employee@officecrm.in" value={form.email || ''} onChange={e => setForm({...form, email: e.target.value})} />
+            </div>
+            <div className="saas-field">
+              <label className="saas-label">Login Password</label>
+              <input className="saas-input" type="password" placeholder="Set a temporary password" value={form.password || ''} onChange={e => setForm({...form, password: e.target.value})} />
             </div>
           </div>
+
+
 
           <div className="form-actions">
             <button className="saas-btn-submit" onClick={handleAdd}>Save Profile</button>
@@ -187,7 +208,6 @@ export default function Employee() {
               <th>Role</th>
               <th>Contact Info</th>
               <th>Emergency</th>
-              <th>Project</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -220,14 +240,6 @@ export default function Employee() {
                   </td>
                   <td>
                     <span className="emp-main-text" style={{ color: '#EF4444', fontWeight: 600 }}>{emp.emergencyNo || '-'}</span>
-                  </td>
-                  <td>
-                    <div className="project-box">
-                       <span className="project-name">{emp.projectName || '-'}</span>
-                       <span className={`project-status ${emp.projectStatus?.toLowerCase() || 'inactive'}`}>
-                         {emp.projectStatus || 'Inactive'}
-                       </span>
-                    </div>
                   </td>
                   <td>
                     <span className={`saas-status-pill status-${emp.status.toLowerCase().replace(' ', '-')}`}>
