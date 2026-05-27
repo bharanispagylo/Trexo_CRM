@@ -159,33 +159,43 @@ export default function TrackTeam({ user }) {
               No employees currently registered.
             </div>
           ) : (
-            <div className="team-grid-container">
-              {employees.map(emp => (
-                <div key={emp.id} className="team-card-modern">
-                  <div className="member-profile-block">
-                    <div className="member-avatar-lg">
-                      {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                    </div>
-
-                    <div className="member-meta-info">
-                      <span className="member-name-text">{emp.name}</span>
-                      <span className="role-tag-mini">{emp.role}</span>
-                    </div>
-                  </div>
-
-                  <div className="member-action-btn-group">
-                    <button 
-                      className="member-action-btn" 
-                      title="View Assigned Tasks"
-                      onClick={() => setSelectedMember(emp)}
-                      style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'center', padding: '0.6rem', fontWeight: '600', gap: '0.5rem' }}
-                    >
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                      View Tasks
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <div className="team-list-container">
+              <table className="team-list-table">
+                <thead>
+                  <tr>
+                    <th>Member</th>
+                    <th>Role</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employees.map(emp => (
+                    <tr key={emp.id}>
+                      <td>
+                        <div className="td-member-info">
+                          <div className="member-avatar-sm">
+                            {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                          </div>
+                          <span className="member-name-text">{emp.name}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="role-tag-mini">{emp.role}</span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button 
+                          className="member-action-btn-sm" 
+                          title="View Assigned Tasks"
+                          onClick={() => setSelectedMember(emp)}
+                        >
+                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                          View Tasks
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

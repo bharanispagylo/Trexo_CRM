@@ -23,13 +23,8 @@ if (!process.env.VERCEL) {
     console.error('[Startup] Prisma generate warning:', err.message);
   }
 
-  try {
-    console.log('[Startup] Pushing database schema (db push)...');
-    require('child_process').execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
-    console.log('[Startup] Database schema successfully pushed!');
-  } catch (err) {
-    console.error('[Startup] Prisma db push warning/error:', err.message);
-  }
+  // NOTE: db push (port 5432 direct) is skipped - handled by self-healing block below via pooler (port 6543)
+  // To manually sync schema, use: Supabase Dashboard → SQL Editor
 }
 
 const express = require('express');
@@ -45,18 +40,34 @@ const PORT = process.env.PORT || 5000;
 prisma.$connect()
   .then(async () => {
     console.log('[Self-Healing] Database connected, verifying columns...');
-    try {
-      await prisma.$executeRawUnsafe('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS task_no TEXT;');
-      console.log('[Self-Healing] Column task_no verified/added successfully.');
-    } catch (e) {
-      console.warn('[Self-Healing] Column task_no addition warning:', e.message);
+
+    // All columns that may be missing from the tasks table due to schema drift
+    const taskColumnFixes = [
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS task_no TEXT;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS delivered_date TIMESTAMP;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS "startDate" TIMESTAMP;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS "endDate" TIMESTAMP;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS "assignedDate" TIMESTAMP;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS task_type TEXT;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS tag TEXT;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS "isBillable" BOOLEAN DEFAULT false;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS estimated_hours FLOAT DEFAULT 0;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS "approvedHours" FLOAT DEFAULT 0;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS "actualHours" FLOAT DEFAULT 0;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS attachments TEXT;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS "taskListId" TEXT;',
+    ];
+
+    for (const sql of taskColumnFixes) {
+      try {
+        await prisma.$executeRawUnsafe(sql);
+        const colName = sql.match(/ADD COLUMN IF NOT EXISTS "?(\w+)"?/i)?.[1];
+        console.log(`[Self-Healing] Column ${colName} verified/added successfully.`);
+      } catch (e) {
+        console.warn(`[Self-Healing] Warning for: ${sql.substring(0, 60)}...`, e.message);
+      }
     }
-    try {
-      await prisma.$executeRawUnsafe('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS delivered_date TIMESTAMP;');
-      console.log('[Self-Healing] Column delivered_date verified/added successfully.');
-    } catch (e) {
-      console.warn('[Self-Healing] Column delivered_date addition warning:', e.message);
-    }
+
     try {
       await prisma.task.deleteMany({ where: { clientId: '' } });
       await prisma.project.deleteMany({ where: { clientId: '' } });
