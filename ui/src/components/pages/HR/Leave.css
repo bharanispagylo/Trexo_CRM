@@ -5,7 +5,7 @@
 }
 
 .leave-content-wrapper {
-  max-width: 1100px;
+  max-width: 950px;
   margin: 0 auto;
 }
 
@@ -13,30 +13,31 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
 .header-text h2 {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: #1e293b;
 }
 
 .header-text p {
-  margin: 0.25rem 0 0;
+  margin: 0.2rem 0 0;
   color: #64748b;
   font-weight: 500;
+  font-size: 0.85rem;
 }
 
 .apply-btn {
   background: #2563eb;
   color: white;
   border: none;
-  padding: 0.8rem 1.5rem;
-  border-radius: 12px;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -55,14 +56,14 @@
 .leave-stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .leave-stat-card {
   background: white;
-  padding: 1.5rem;
-  border-radius: 20px;
+  padding: 1rem;
+  border-radius: 16px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
@@ -70,12 +71,12 @@
 .card-top {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 1.25rem;
+  gap: 0.2rem;
+  margin-bottom: 1rem;
 }
 
 .leave-type-label {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
@@ -83,13 +84,13 @@
 }
 
 .leave-count-text {
-  font-size: 1.2rem;
+  font-size: 1.05rem;
   color: #1e293b;
   font-weight: 500;
 }
 
 .leave-count-text b {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: 800;
   color: #0f172a;
 }
@@ -321,14 +322,14 @@
 
 .leave-history-card {
   background: white;
-  border-radius: 24px;
+  border-radius: 16px;
   border: 1px solid #e2e8f0;
   overflow: hidden;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 .history-header {
-  padding: 1.5rem 2rem;
+  padding: 1rem 1.5rem;
   display: flex;
   justify-content: center;
   border-bottom: 1px solid #f1f5f9;
@@ -337,7 +338,7 @@
 
 .history-header h3 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 800;
   color: #1e293b;
   text-align: center;
@@ -350,10 +351,10 @@
 }
 
 .leave-table th {
-  padding: 1.25rem 2rem;
+  padding: 0.8rem 1.25rem;
   background: #f8fafc;
   color: #64748b;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -361,9 +362,9 @@
 }
 
 .leave-table td {
-  padding: 1.25rem 2rem;
+  padding: 0.8rem 1.25rem;
   border-bottom: 1px solid #f1f5f9;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: #1e293b;
   vertical-align: middle;
 }
@@ -371,26 +372,26 @@
 .td-user {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .user-initials {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   background: #f1f5f9;
   color: #2563eb;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 800;
 }
 
 .status-pill {
-  padding: 0.35rem 0.75rem;
+  padding: 0.25rem 0.5rem;
   border-radius: 20px;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 800;
   text-transform: capitalize;
 }
@@ -409,9 +410,9 @@
   background: #dcfce7;
   color: #15803d;
   border: 1px solid #bbf7d0;
-  padding: 0.35rem 0.75rem;
+  padding: 0.25rem 0.5rem;
   border-radius: 8px;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -420,9 +421,9 @@
   background: #fef2f2;
   color: #b91c1c;
   border: 1px solid #fee2e2;
-  padding: 0.35rem 0.75rem;
+  padding: 0.25rem 0.5rem;
   border-radius: 8px;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -437,18 +438,18 @@
 /* Modern Form Layout and Styling */
 .leave-form-container {
   background: white;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation: fadeIn 0.35s ease-out;
-  max-width: 650px;
+  max-width: 550px;
   margin: 0 auto;
 }
 
 .leave-form-header {
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1.25rem;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   border-bottom: 1px solid #e2e8f0;
   display: flex;
@@ -458,7 +459,7 @@
 
 .leave-form-title {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 800;
   color: #0f172a;
   display: flex;
@@ -469,14 +470,14 @@
 .leave-form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1rem 1.25rem;
-  padding: 1.25rem 1.5rem;
+  gap: 0.75rem 1rem;
+  padding: 1rem 1.25rem;
 }
 
 .leave-form-field {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.3rem;
 }
 
 .leave-form-field.full-width {
@@ -484,7 +485,7 @@
 }
 
 .leave-form-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: #475569;
   text-transform: uppercase;
@@ -501,11 +502,11 @@
 .leave-form-input,
 .leave-form-select,
 .leave-form-textarea {
-  padding: 0.6rem 0.9rem;
-  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
   border: 1.5px solid #e2e8f0;
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #1e293b;
   background-color: #f8fafc;
   outline: none;
@@ -648,7 +649,7 @@
 
 /* Action button styles */
 .leave-form-actions {
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1.25rem;
   background-color: #f8fafc;
   border-top: 1px solid #e2e8f0;
   display: flex;
@@ -657,13 +658,13 @@
 }
 
 .btn-discard {
-  padding: 0.5rem 1.25rem;
+  padding: 0.4rem 1rem;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #475569;
   background: white;
   border: 1.5px solid #cbd5e1;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -675,13 +676,13 @@
 }
 
 .btn-submit-premium {
-  padding: 0.5rem 1.5rem;
+  padding: 0.4rem 1.25rem;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: white;
   background: #2563eb;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
   transition: all 0.2s;
