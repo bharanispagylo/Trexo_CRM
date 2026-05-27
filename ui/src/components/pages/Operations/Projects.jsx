@@ -11,7 +11,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [clients, setClients] = useState([]);
 
   const [selectedEmployeeToAdd, setSelectedEmployeeToAdd] = useState('');
-  const [createMemberForm, setCreateMemberForm] = useState({ name: '', role: '', status: 'Active' });
+  const [createMemberForm, setCreateMemberForm] = useState({ name: '', role: '', status: 'Active', type: 'Employee', phoneNo: '', emergencyNo: '' });
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showCreateMemberModal, setShowCreateMemberModal] = useState(false);
   const [showEditMemberModal, setShowEditMemberModal] = useState(false);
@@ -38,9 +38,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     assignees: '',
     status: 'To Do',
     priority: 'Medium',
-    startDate: '',
+    assignedDate: '',
     dueDate: '',
-    description: ''
+    deliveredDate: '',
+    description: '',
+    taskType: 'Feature'
   });
   const [showQueryModal, setShowQueryModal] = useState(false);
   const [queryFormType, setQueryFormType] = useState('create'); // 'create' or 'edit'
@@ -123,36 +125,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     }
   };
 
-  // Auto-seed default task categories if they don't exist in the database for this project
-  useEffect(() => {
-    if (selectedProject && !loading) {
-      const defaultLists = ['UI/UX', 'Frontend', 'Backend', 'Functional', 'Future Work'];
-      const existingNames = (selectedProject.taskLists || []).map(l => l.name);
-      
-      const seedMissing = async () => {
-        let createdAny = false;
-        for (const name of defaultLists) {
-          if (!existingNames.some(existingName => existingName.toLowerCase() === name.toLowerCase())) {
-            try {
-              await api.post('/task-lists', {
-                name,
-                projectId: selectedProject.id
-              });
-              createdAny = true;
-            } catch (err) {
-              console.error(`Failed to seed task list: ${name}`, err);
-            }
-          }
-        }
-        if (createdAny) {
-          fetchData();
-        }
-      };
-      
-      seedMissing();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProject, loading]);
 
   // ── DETAIL VIEW HANDLERS ──
   const toggleMemberDetail = async (empName) => {
@@ -234,9 +206,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         name: createMemberForm.name,
         role: createMemberForm.role || 'Member',
         status: createMemberForm.status || 'Active',
+        phoneNo: createMemberForm.phoneNo || '',
+        emergencyNo: createMemberForm.emergencyNo || '',
+        type: createMemberForm.type || 'Employee',
         projectName: selectedProject.name,
-        projectStatus: 'Active',
-        type: 'Employee'
+        projectStatus: 'Active'
       });
 
       const currentMembers = (selectedProject.members || '')
@@ -413,9 +387,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       assignees: '',
       status: 'To Do',
       priority: 'Medium',
-      startDate: '',
+      assignedDate: '',
       dueDate: '',
-      description: ''
+      deliveredDate: '',
+      description: '',
+      taskType: 'Feature'
     });
     setShowTaskFormModal(true);
   };
@@ -428,9 +404,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       assignees: task.assignees || '',
       status: task.status || 'To Do',
       priority: task.priority || 'Medium',
-      startDate: formatDateForInput(task.startDate),
+      assignedDate: formatDateForInput(task.assignedDate),
       dueDate: formatDateForInput(task.dueDate),
-      description: task.description || ''
+      deliveredDate: formatDateForInput(task.deliveredDate),
+      description: task.description || '',
+      taskType: task.taskType || 'Feature'
     });
     setShowTaskFormModal(true);
   };
@@ -460,7 +438,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       }
 
       setShowTaskFormModal(false);
-      setTaskFormFields({ title: '', assignees: '', status: 'To Do', priority: 'Medium', startDate: '', dueDate: '', description: '' });
+      setTaskFormFields({ title: '', assignees: '', status: 'To Do', priority: 'Medium', assignedDate: '', dueDate: '', deliveredDate: '', description: '', taskType: 'Feature' });
       setEditingTask(null);
       fetchData();
     } catch (error) {
@@ -674,23 +652,50 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div className="saas-field">
-                <label className="saas-label">Start Date</label>
+                <label className="saas-label">Assigned Date</label>
                 <input
                   type="date"
                   className="saas-input"
-                  value={taskFormFields.startDate}
-                  onChange={e => setTaskFormFields({ ...taskFormFields, startDate: e.target.value })}
+                  value={taskFormFields.assignedDate}
+                  onChange={e => setTaskFormFields({ ...taskFormFields, assignedDate: e.target.value })}
                 />
               </div>
 
               <div className="saas-field">
-                <label className="saas-label">Due Date</label>
+                <label className="saas-label">Delivery Date</label>
                 <input
                   type="date"
                   className="saas-input"
                   value={taskFormFields.dueDate}
                   onChange={e => setTaskFormFields({ ...taskFormFields, dueDate: e.target.value })}
                 />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="saas-field">
+                <label className="saas-label">Delivered Date</label>
+                <input
+                  type="date"
+                  className="saas-input"
+                  value={taskFormFields.deliveredDate}
+                  onChange={e => setTaskFormFields({ ...taskFormFields, deliveredDate: e.target.value })}
+                />
+              </div>
+
+              <div className="saas-field">
+                <label className="saas-label">Task Type</label>
+                <select
+                  className="saas-select"
+                  value={taskFormFields.taskType}
+                  onChange={e => setTaskFormFields({ ...taskFormFields, taskType: e.target.value })}
+                >
+                  <option value="Feature">Feature</option>
+                  <option value="Bug">Bug</option>
+                  <option value="Enhancement">Enhancement</option>
+                  <option value="Documentation">Documentation</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
             </div>
 
@@ -1805,6 +1810,36 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                           placeholder="e.g. Developer"
                           value={createMemberForm.role}
                           onChange={e => setCreateMemberForm({ ...createMemberForm, role: e.target.value })}
+                        />
+                      </div>
+                      <div className="saas-field">
+                        <label className="saas-label">Type</label>
+                        <select
+                          className="saas-select"
+                          value={createMemberForm.type}
+                          onChange={e => setCreateMemberForm({ ...createMemberForm, type: e.target.value })}
+                        >
+                          <option value="Employee">Employee</option>
+                          <option value="Contractor">Contractor</option>
+                          <option value="Intern">Intern</option>
+                        </select>
+                      </div>
+                      <div className="saas-field">
+                        <label className="saas-label">Phone No</label>
+                        <input
+                          className="saas-input"
+                          placeholder="e.g. +91 9876543210"
+                          value={createMemberForm.phoneNo}
+                          onChange={e => setCreateMemberForm({ ...createMemberForm, phoneNo: e.target.value })}
+                        />
+                      </div>
+                      <div className="saas-field">
+                        <label className="saas-label">Emergency No</label>
+                        <input
+                          className="saas-input"
+                          placeholder="e.g. +91 9000000000"
+                          value={createMemberForm.emergencyNo}
+                          onChange={e => setCreateMemberForm({ ...createMemberForm, emergencyNo: e.target.value })}
                         />
                       </div>
                       <div className="saas-field">

@@ -4,6 +4,28 @@ import './Tasks.css';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useAlert } from '../../../context/AlertContext';
 
+function PromptModal({ isOpen, title, onSave, onCancel }) {
+  const [value, setValue] = useState('');
+  useEffect(() => { if (isOpen) setValue(''); }, [isOpen]);
+  
+  if (!isOpen) return null;
+  return (
+    <div className="task-drawer-overlay" style={{ zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', width: '400px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+        <h3 style={{ margin: '0 0 1rem 0', color: '#1e293b', fontSize: '1.1rem' }}>{title}</h3>
+        <input 
+          type="text" autoFocus className="saas-input" style={{ width: '100%', marginBottom: '1.5rem' }} 
+          value={value} onChange={e => setValue(e.target.value)} 
+          onKeyDown={e => { if (e.key === 'Enter') onSave(value); }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+          <button className="saas-btn-cancel" onClick={onCancel}>Cancel</button>
+          <button className="saas-btn-submit" onClick={() => onSave(value)}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 const COLUMNS = [
   { id: 'To Do',         label: 'To Do',         color: 'col-todo' },
   { id: 'In Progress',   label: 'In Progress',   color: 'col-progress' },
@@ -153,7 +175,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
         ...defaults,
         ...task,
         status: getStatusString(task.status),
-        taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')
+        taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : `TSK-${Math.floor(Math.random() * 900000) + 100000}`)
       };
     }
     return {
@@ -167,7 +189,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
         ...prev,
         ...task,
         status: getStatusString(task.status),
-        taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')
+        taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : `TSK-${Math.floor(Math.random() * 900000) + 100000}`)
       }));
     }
   }, [task]);
@@ -178,6 +200,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
   const [taskLists, setTaskLists] = useState([]);
   const [projects, setProjects] = useState([]);
   const [errors, setErrors] = useState({});
+  const [promptState, setPromptState] = useState({ isOpen: false, title: '', onSubmit: null });
 
 
   const [comments, setComments] = useState([]);
@@ -290,21 +313,27 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
   }, [task, isEdit, fetchComments, fetchWorkLogs]);
 
   useEffect(() => {
-    if (workLogs.length > 0) {
-      const totalHours = workLogs.reduce((acc, log) => acc + (Number(log.hoursWorked) || 0), 0);
-      
-      setForm(prev => {
-        if (prev.actualHours !== totalHours) {
-          return {
-            ...prev,
-            actualHours: totalHours,
-            actualHoursStr: decimalToTimeStr(totalHours)
-          };
+    const totalHours = workLogs.reduce((acc, log) => acc + (Number(log.hoursWorked) || 0), 0);
+    
+    setForm(prev => {
+      if (prev.actualHours !== totalHours) {
+        const updatedForm = {
+          ...prev,
+          actualHours: totalHours,
+          actualHoursStr: decimalToTimeStr(totalHours)
+        };
+        
+        // Auto-save actualHours to the backend for existing tasks
+        if (task && task.id) {
+          const { comments, taskList, attachments, ...payload } = updatedForm;
+          api.put(`/tasks/${task.id}`, payload).catch(err => console.error('Failed to sync actualHours:', err));
         }
-        return prev;
-      });
-    }
-  }, [workLogs]);
+        
+        return updatedForm;
+      }
+      return prev;
+    });
+  }, [workLogs, task]);
 
   const handleCommentFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -550,12 +579,12 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
+      alert(firstError, 'warning', 'Validation Error');
       return;
     }
 
     setErrors({});
-
-
 
     // Sanitize data for API
     const { comments, taskList, ...payload } = form;
@@ -871,14 +900,12 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
             >
               Attachments
             </button>
-            {isEdit && (
-              <button 
-                className={`saas-tab-header-btn ${activeTab === 'worklogs' ? 'active' : ''}`}
-                onClick={() => setActiveTab('worklogs')}
-              >
-                Work Logs
-              </button>
-            )}
+            <button 
+              className={`saas-tab-header-btn ${activeTab === 'worklogs' ? 'active' : ''}`}
+              onClick={() => setActiveTab('worklogs')}
+            >
+              Work Logs
+            </button>
           </div>
 
           {/* Tab Content */}
@@ -910,19 +937,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Assigned Date</span>
                   <span className="saas-meta-value">
                     <input type="date" value={form.assignedDate ? new Date(form.assignedDate).toISOString().split('T')[0] : ''} onChange={e => set('assignedDate', e.target.value)} className="saas-grid-input" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontSize: '0.85rem' }} title="Assigned Date" />
-                  </span>
-                  
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Start Date</span>
-                  <span className="saas-meta-value">
-                    <input type="date" value={form.startDate ? new Date(form.startDate).toISOString().split('T')[0] : ''} onChange={e => set('startDate', e.target.value)} className="saas-grid-input" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontSize: '0.85rem' }} title="Start Date" />
-                  </span>
-                </div>
-
-                {/* Row 2b: Dates (2) */}
-                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Int. Completion</span>
-                  <span className="saas-meta-value">
-                    <input type="date" value={form.endDate ? new Date(form.endDate).toISOString().split('T')[0] : ''} onChange={e => set('endDate', e.target.value)} className="saas-grid-input" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontSize: '0.85rem' }} title="Internal Completion Date" />
                   </span>
                   
                   <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Delivery Date</span>
@@ -962,7 +976,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
 
                   <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconProject /> Project</span>
                   <span className="saas-meta-value">
-                    <select value={form.projectName || ''} onChange={e => { const proj = projects.find(p => p.name === e.target.value); const updated = { ...form, projectName: e.target.value, projectId: proj ? proj.id : null }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className={`saas-grid-select ${errors.projectName ? 'error' : ''}`} style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }}>
+                    <select value={form.projectName || ''} onChange={e => { const proj = projects.find(p => p.name === e.target.value); const updated = { ...form, projectName: e.target.value, projectId: proj ? proj.id : null, taskListId: null }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className={`saas-grid-select ${errors.projectName ? 'error' : ''}`} style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }}>
                       <option value="">Empty</option>
                       {projects.map(proj => <option key={proj.id} value={proj.name}>{proj.name}</option>)}
                     </select>
@@ -976,9 +990,34 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                     Task List
                   </span>
                   <span className="saas-meta-value">
-                    <select value={form.taskListId || ''} onChange={e => { const updated = { ...form, taskListId: e.target.value || null }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }}>
-                      <option value="">Empty</option>
-                      {taskLists.filter((tl, index, self) => index === self.findIndex((t) => t.name.toLowerCase() === tl.name.toLowerCase())).map(tl => <option key={tl.id} value={tl.id}>{tl.name}</option>)}
+                    <select value={form.taskListId || ''} onChange={async (e) => { 
+                        if (e.target.value === 'NEW') {
+                          setPromptState({
+                            isOpen: true,
+                            title: 'Enter new Task List name:',
+                            onSubmit: async (listName) => {
+                              if (listName && listName.trim()) {
+                                try {
+                                  const res = await api.post('/task-lists', { name: listName.trim(), projectId: form.projectId });
+                                  setTaskLists(prev => [...prev, res]);
+                                  const updated = { ...form, taskListId: res.id };
+                                  setForm(updated);
+                                  if (!isEditing) handleInlineSave(updated);
+                                } catch(err) {
+                                  alert('Failed to create Task List', 'error', 'Error');
+                                }
+                              }
+                            }
+                          });
+                          return;
+                        }
+                        const updated = { ...form, taskListId: e.target.value || null }; 
+                        setForm(updated); 
+                        if (!isEditing) handleInlineSave(updated); 
+                      }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }} disabled={!form.projectId}>
+                      <option value="">{form.projectId ? "Empty" : "Select Project First"}</option>
+                      {form.projectId && taskLists.filter(tl => tl.projectId === form.projectId).map(tl => <option key={tl.id} value={tl.id}>{tl.name}</option>)}
+                      {form.projectId && <option value="NEW" style={{ fontWeight: 'bold', color: '#3b82f6' }}>+ Create New Task List</option>}
                     </select>
                   </span>
                   
@@ -1159,8 +1198,15 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
 
             {activeTab === 'worklogs' && (
               <div className="saas-details-grid animate-fade-in" style={{ display: 'block' }}>
-                <div style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.95rem' }}>Add New Work Log</h4>
+                {!isEdit ? (
+                  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                    <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginBottom: '1rem', opacity: 0.5 }}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <p style={{ margin: 0, fontSize: '0.95rem' }}>Please create and save the task first before adding work logs.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.95rem' }}>Add New Work Log</h4>
                   <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                     <div style={{ flex: 1 }}>
                       <label className="saas-field-label">Date</label>
@@ -1238,6 +1284,8 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                     </table>
                   )}
                 </div>
+                </>
+                )}
               </div>
             )}
 
@@ -1575,6 +1623,13 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
           </div>
         </div>
       </div>
+      
+      <PromptModal
+        isOpen={promptState.isOpen}
+        title={promptState.title}
+        onSave={promptState.onSubmit}
+        onCancel={() => setPromptState({ isOpen: false, title: '', onSubmit: null })}
+      />
     </div>
   );
 }
@@ -1964,6 +2019,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const [subTab, setSubTab]     = useState(isTeamLeadOrAdmin ? 'all' : 'my'); 
   const [dragOver, setDragOver] = useState(null);
   const [taskDetailMode, setTaskDetailMode] = useState(false); // false=view, true=edit
+  const [promptState, setPromptState] = useState({ isOpen: false, title: '', onSubmit: null });
   const setView = () => {};
   const setSelectedTask = () => {};
 
@@ -2134,16 +2190,67 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     }
   };
 
-  const openNewTask = (presetStatus = 'To Do', presetProject = '') => {
-    setDrawerTask({ status: presetStatus, projectName: presetProject, priority: 'Medium', title: '', description: '', assignees: '', isBillable: false, tag: 'Engineering', taskType: 'Feature' });
+  const openNewTask = (eOrStatus) => {
+    const isEvent = typeof eOrStatus === 'object' && eOrStatus !== null && eOrStatus.nativeEvent;
+    const status = isEvent ? 'To Do' : (typeof eOrStatus === 'string' ? eOrStatus : 'To Do');
+
+    let defaultProjectName = '';
+    let defaultProjectId = null;
+    let defaultTaskListId = null;
+
+    if (selectedListId) {
+      defaultTaskListId = selectedListId;
+      const listObj = taskListsData.find(l => l.id === selectedListId);
+      if (listObj && listObj.projectId) {
+        defaultProjectId = listObj.projectId;
+        const proj = taskProjects.find(p => p.id === listObj.projectId);
+        if (proj) defaultProjectName = proj.name;
+      }
+    } else if (selectedProjId && selectedProjId !== 'unassigned') {
+      defaultProjectId = selectedProjId;
+      const proj = taskProjects.find(p => p.id === selectedProjId);
+      if (proj) defaultProjectName = proj.name;
+    }
+
+    setDrawerTask({ 
+      status: status, 
+      projectName: defaultProjectName, 
+      projectId: defaultProjectId,
+      taskListId: defaultTaskListId,
+      priority: 'Medium', 
+      title: '', 
+      description: '', 
+      assignees: '', 
+      isBillable: false, 
+      tag: 'Engineering', 
+      taskType: 'Feature' 
+    });
     setTaskDetailMode(true);
     setDrawerOpen(true);
   };
 
   const closeDrawer = () => { setDrawerOpen(false); setDrawerTask(null); };
 
-  const openInlineAdd = (proj, statusId) => {
-    setInlineAdd({ proj, statusId });
+  const openInlineAdd = (_, statusId) => {
+    let defaultProjectName = '';
+    let defaultProjectId = null;
+    let defaultTaskListId = null;
+
+    if (selectedListId) {
+      defaultTaskListId = selectedListId;
+      const listObj = taskListsData.find(l => l.id === selectedListId);
+      if (listObj && listObj.projectId) {
+        defaultProjectId = listObj.projectId;
+        const proj = taskProjects.find(p => p.id === listObj.projectId);
+        if (proj) defaultProjectName = proj.name;
+      }
+    } else if (selectedProjId && selectedProjId !== 'unassigned') {
+      defaultProjectId = selectedProjId;
+      const proj = taskProjects.find(p => p.id === selectedProjId);
+      if (proj) defaultProjectName = proj.name;
+    }
+
+    setInlineAdd({ projName: defaultProjectName, projId: defaultProjectId, taskListId: defaultTaskListId, statusId });
     setInlineTitle(''); setInlineAssignee(''); setInlinePriority('Medium'); setInlineDueDate('');
     setTimeout(() => inlineInputRef.current?.focus(), 50);
   };
@@ -2156,12 +2263,14 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const submitInlineAdd = async () => {
     const title = inlineTitle.trim();
     if (!title) { closeInlineAdd(); return; }
-    const { proj, statusId } = inlineAdd;
+    const { projName, projId, taskListId, statusId } = inlineAdd;
     setIsSaving(true);
     try {
       await api.post('/tasks', {
         title, status: statusId,
-        projectName: proj === 'General / Unassigned' ? '' : proj,
+        projectName: projName,
+        projectId: projId,
+        taskListId: taskListId,
         priority: inlinePriority || 'Medium',
         assignees: inlineAssignee || '',
         dueDate: inlineDueDate ? new Date(inlineDueDate).toISOString() : null,
@@ -2228,6 +2337,26 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     return assignees.includes(myName);
   });
 
+  const accessibleTasks = tasks.filter(t => {
+    const level = getLevel('tasks', 'view');
+    const editLevel = getLevel('tasks', 'edit');
+    const deleteLevel = getLevel('tasks', 'delete');
+    const hasAllAccess = level === 'All' || editLevel === 'All' || deleteLevel === 'All' || isTeamLeadOrAdmin;
+    if (hasAllAccess && subTab === 'all') return true;
+    const assignees = t.assignees ? t.assignees.split(',').map(a => a.trim().toLowerCase()) : [];
+    const myName = (user?.fullName || user?.name || '').trim().toLowerCase();
+    return assignees.includes(myName);
+  });
+
+  const accessibleProjects = taskProjects.filter(p => {
+    const level = getLevel('tasks', 'view');
+    const editLevel = getLevel('tasks', 'edit');
+    const deleteLevel = getLevel('tasks', 'delete');
+    const hasAllAccess = level === 'All' || editLevel === 'All' || deleteLevel === 'All' || isTeamLeadOrAdmin;
+    if (hasAllAccess && subTab === 'all') return true;
+    return accessibleTasks.some(t => getTaskProjectId(t) === p.id);
+  });
+
 
   if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Tasks...'}</div>;
 
@@ -2243,7 +2372,32 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
       {/* Ã¢â€¢ÂÃ¢â€¢Â LEFT SIDEBAR Ã¢â€¢ÂÃ¢â€¢Â */}
       <div className="tasks-left-nav">
-        <div className="tln-header">Projects</div>
+        <div className="tln-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Projects
+          {can('projects', 'create') && (
+            <button 
+              style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: '0 4px' }}
+              title="Create New Project"
+              onClick={async () => {
+                setPromptState({
+                  isOpen: true,
+                  title: 'Enter new Project Name:',
+                  onSubmit: async (name) => {
+                    if (name && name.trim()) {
+                      try {
+                        await api.post('/projects', { name: name.trim(), status: 'Active' });
+                        const data = await api.get('/projects');
+                        setTaskProjects(data || []);
+                      } catch (e) {
+                        alert('Failed to create project', 'error', 'Error');
+                      }
+                    }
+                  }
+                });
+              }}
+            >+</button>
+          )}
+        </div>
 
         {/* All Tasks */}
         <div
@@ -2252,13 +2406,13 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         >
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
           All Tasks
-          <span className="tln-count">{tasks.length}</span>
+          <span className="tln-count">{accessibleTasks.length}</span>
         </div>
 
         {/* Projects tree */}
-        {taskProjects.map(proj => {
+        {accessibleProjects.map(proj => {
           const projLists = taskListsData.filter(l => l.projectId === proj.id);
-          const projTaskCount = tasks.filter(t => getTaskProjectId(t) === proj.id).length;
+          const projTaskCount = accessibleTasks.filter(t => getTaskProjectId(t) === proj.id).length;
           const isExpanded = !!expandedProj[proj.id];
           const isProjSelected = selectedProjId === proj.id && !selectedListId;
 
@@ -2275,13 +2429,36 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 <span className="tln-chevron"><svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isExpanded ? 'none' : 'rotate(-90deg)', transition: 'transform 0.2s', color: '#94a3b8' }}><path d="M0 0l5 6 5-6z"/></svg></span>
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                 <span className="tln-proj-name">{proj.name}</span>
+                <button 
+                  style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '0 4px', fontSize: '1rem', marginRight: '4px' }}
+                  title="Add Task List"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    setPromptState({
+                      isOpen: true,
+                      title: `Enter new Task List name for ${proj.name}:`,
+                      onSubmit: async (listName) => {
+                        if (listName && listName.trim()) {
+                          try {
+                            await api.post('/task-lists', { name: listName.trim(), projectId: proj.id });
+                            const updated = await api.get('/task-lists');
+                            setTaskListsData(updated || []);
+                            if (!isExpanded) toggleProjExpand(proj.id);
+                          } catch (err) {
+                            alert('Failed to create Task List', 'error', 'Error');
+                          }
+                        }
+                      }
+                    });
+                  }}
+                >+</button>
                 <span className="tln-count">{projTaskCount}</span>
               </div>
 
               {isExpanded && projLists.length > 0 && (
                 <div className="tln-lists">
                   {projLists.map(list => {
-                    const listCount = tasks.filter(t => t.taskListId === list.id).length;
+                    const listCount = accessibleTasks.filter(t => t.taskListId === list.id).length;
                     const isListSelected = selectedListId === list.id;
                     return (
                       <div
@@ -2305,7 +2482,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           );
         })}
         {(() => {
-           const unassignedTasks = tasks.filter(t => getTaskProjectId(t) === null);
+           const unassignedTasks = accessibleTasks.filter(t => getTaskProjectId(t) === null);
            if (unassignedTasks.length === 0) return null;
            return (
              <div className="tln-project-block">
@@ -2592,9 +2769,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                             <th className="cu-th cu-th-name">NAME</th>
                             <th className="cu-th cu-th-assignee">ASSIGNEE</th>
                             <th className="cu-th cu-th-project">PROJECT</th>
-                            <th className="cu-th cu-th-due">DUE DATE</th>
+                            <th className="cu-th cu-th-list">TASK LIST</th>
+                            <th className="cu-th cu-th-delivery">DELIVERY DATE</th>
                             <th className="cu-th cu-th-priority">PRIORITY</th>
-                            <th className="cu-th cu-th-hours">HOURS</th>
                             <th className="cu-th cu-th-actions"></th>
                           </tr>
                         </thead>
@@ -2628,7 +2805,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                     <span className="cu-project-badge">{task.projectName}</span>
                                   ) : <span className="cu-empty-cell">-</span>}
                                 </td>
-                                <td className="cu-td cu-td-due">
+
+                                <td className="cu-td cu-td-list">
+                                  {task.taskListId && taskListsData.length ? (taskListsData.find(l => l.id === task.taskListId)?.name || '-') : <span className="cu-empty-cell">-</span>}
+                                </td>
+                                <td className="cu-td cu-td-delivery">
                                   {relDate ? (
                                     <span className={`cu-due-badge ${relDate.isOverdue ? 'overdue' : relDate.isToday ? 'today' : ''}`}>
                                       <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
@@ -2641,9 +2822,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                     <PriorityFlag priority={task.priority} />
                                     <span>{task.priority || 'Medium'}</span>
                                   </span>
-                                </td>
-                                <td className="cu-td cu-td-hours">
-                                  <span className="cu-hours">{task.actualHours || 0}h / {task.approvedHours || 0}h</span>
                                 </td>
                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
                                   <div className="cu-row-actions">
@@ -2679,7 +2857,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                 </select>
                               </td>
                               <td className="cu-td cu-td-project"><span className="cu-empty-cell">-</span></td>
-                              <td className="cu-td cu-td-due">
+                              <td className="cu-td cu-td-list"><span className="cu-empty-cell">-</span></td>
+                              <td className="cu-td cu-td-delivery">
                                 <input type="date" className="cu-inline-date" value={inlineDueDate} onChange={e => setInlineDueDate(e.target.value)} />
                               </td>
                               <td className="cu-td cu-td-priority">
@@ -2687,7 +2866,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                   {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
                                 </select>
                               </td>
-                              <td className="cu-td cu-td-hours"><span className="cu-empty-cell">-</span></td>
                               <td className="cu-td cu-td-actions">
                                 <div className="cu-row-actions" style={{ opacity: 1 }}>
                                   <button className="cu-act-btn" onClick={submitInlineAdd} title="Save (Enter)">
@@ -2741,6 +2919,13 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         </div>
       )}
       </div>
+      
+      <PromptModal
+        isOpen={promptState.isOpen}
+        title={promptState.title}
+        onSave={promptState.onSubmit}
+        onCancel={() => setPromptState({ isOpen: false, title: '', onSubmit: null })}
+      />
       </div>
     </div>
   );

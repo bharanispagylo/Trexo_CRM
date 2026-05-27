@@ -3412,12 +3412,12 @@
   white-space: nowrap;
 }
 
-.cu-th-name     { width: 38%; }
-.cu-th-assignee { width: 12%; text-align: center; }
-.cu-th-project  { width: 14%; }
-.cu-th-due      { width: 13%; text-align: center; }
-.cu-th-priority { width: 11%; text-align: center; }
-.cu-th-hours    { width: 8%;  text-align: center; }
+.cu-th-name     { width: 35%; }
+.cu-th-assignee { width: 10%; text-align: center; }
+.cu-th-project  { width: 16%; }
+.cu-th-list     { width: 15%; }
+.cu-th-delivery { width: 10%; text-align: center; }
+.cu-th-priority { width: 10%; text-align: center; }
 .cu-th-actions  { width: 4%; }
 
 /* ── Rows ── */
@@ -3519,8 +3519,8 @@
   white-space: nowrap;
 }
 
-/* ── Due date badge ── */
-.cu-td-due { text-align: center; }
+/* ── Delivery date badge ── */
+.cu-td-delivery { text-align: center; }
 .cu-due-badge {
   display: inline-flex;
   align-items: center;

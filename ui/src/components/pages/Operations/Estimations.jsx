@@ -8,25 +8,33 @@ export default function Estimations({ user }) {
 
   const [projects, setProjects] = useState([]);
   const [clients, setClients] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [taskLists, setTaskLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ taskName: '', description: '', client: '', clientId: '', projectId: '', estimatedHours: 0 });
   const [errors, setErrors] = useState({});
+  const [convertModal, setConvertModal] = useState({ isOpen: false, estimation: null });
+  const [convertForm, setConvertForm] = useState({ projectId: '', assignees: '', assignedDate: '', dueDate: '', priority: 'Medium', taskListId: '', taskType: 'Feature' });
   const { alert, confirm } = useAlert();
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [estData, projData, clientData] = await Promise.all([
+      const [estData, projData, clientData, usersData, listsData] = await Promise.all([
         api.get('/estimations'),
         api.get('/projects'),
-        api.get('/clients')
+        api.get('/clients'),
+        api.get('/users'),
+        api.get('/task-lists')
       ]);
       setEstimations(estData || []);
       setProjects(projData || []);
       setClients(clientData || []);
+      setUsers(usersData ? usersData.map(u => u.fullName || `${u.firstName} ${u.lastName}`.trim()) : []);
+      setTaskLists(listsData || []);
     } catch (err) {
       console.error('Failed to fetch estimations data:', err);
     } finally {
@@ -90,24 +98,29 @@ export default function Estimations({ user }) {
     setErrors({});
   };
 
-  const handleConvert = (id) => {
-    confirm('Convert this estimation into a Task?', async () => {
-      setIsSaving(true);
-      try {
-        await api.post(`/estimations/${id}/convert`);
-        alert('Estimation converted to Task successfully!', 'success', 'Success');
-        fetchData();
-      } catch (err) {
-        alert(err.response?.data?.error || 'Failed to convert estimation', 'error', 'Error');
-      } finally {
-        setIsSaving(false);
-      }
-    }, 'Convert to Task');
+  const handleConvertClick = (est) => {
+    setConvertModal({ isOpen: true, estimation: est });
+    setConvertForm({ projectId: est.projectId || '', assignees: '', assignedDate: '', dueDate: '', priority: 'Medium', taskListId: '', taskType: 'Feature' });
+  };
+
+  const submitConvert = async () => {
+    setIsSaving(true);
+    try {
+      await api.post(`/estimations/${convertModal.estimation.id}/convert`, convertForm);
+      alert('Estimation converted to Task successfully!', 'success', 'Success');
+      setConvertModal({ isOpen: false, estimation: null });
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to convert estimation', 'error', 'Error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Estimations...'}</div>;
 
   return (
+    <>
     <div className="estimations-page">
       <div className="estimations-header">
         <div className="estimations-header-left">
@@ -215,7 +228,7 @@ export default function Estimations({ user }) {
                       <td style={{ textAlign: 'right' }}>
                         <div className="estimations-action-group">
                           {est.status !== 'Converted' && (
-                            <button className="estimations-action-btn convert" onClick={() => handleConvert(est.id)} title="Convert to Task">
+                            <button className="estimations-action-btn convert" onClick={() => handleConvertClick(est)} title="Convert to Task">
                               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
                             </button>
                           )}
@@ -236,5 +249,73 @@ export default function Estimations({ user }) {
         )}
       </div>
     </div>
+
+      {/* Convert Modal */}
+      {convertModal.isOpen && (
+        <div className="task-drawer-overlay" style={{ zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', width: '600px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', boxSizing: 'border-box' }}>
+            <h3 style={{ margin: '0 0 1rem 0', color: '#1e293b', fontSize: '1.25rem' }}>Convert to Task</h3>
+            <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              Converting <strong>{convertModal.estimation.taskName}</strong>. Please provide the remaining task details.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Assignee</label>
+                <select className="estimations-select" value={convertForm.assignees} onChange={e => setConvertForm({...convertForm, assignees: e.target.value})}>
+                  <option value="">Unassigned</option>
+                  {users.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Project</label>
+                <select className="estimations-select" value={convertForm.projectId} onChange={e => setConvertForm({...convertForm, projectId: e.target.value, taskListId: ''})}>
+                  <option value="">-- Select Project --</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Task List</label>
+                <select className="estimations-select" value={convertForm.taskListId} onChange={e => setConvertForm({...convertForm, taskListId: e.target.value})}>
+                  <option value="">-- Select List --</option>
+                  {taskLists.filter(tl => tl.projectId === convertForm.projectId).map(tl => <option key={tl.id} value={tl.id}>{tl.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Assigned Date</label>
+                <input type="date" className="estimations-input" value={convertForm.assignedDate} onChange={e => setConvertForm({...convertForm, assignedDate: e.target.value})} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Delivery Date</label>
+                <input type="date" className="estimations-input" value={convertForm.dueDate} onChange={e => setConvertForm({...convertForm, dueDate: e.target.value})} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Priority</label>
+                <select className="estimations-select" value={convertForm.priority} onChange={e => setConvertForm({...convertForm, priority: e.target.value})}>
+                  <option value="Critical">Critical</option>
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Type</label>
+                <select className="estimations-select" value={convertForm.taskType} onChange={e => setConvertForm({...convertForm, taskType: e.target.value})}>
+                  <option value="Feature">Feature</option>
+                  <option value="Bug">Bug</option>
+                  <option value="Support">Support</option>
+                  <option value="Internal">Internal</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button className="estimations-btn-secondary" onClick={() => setConvertModal({ isOpen: false, estimation: null })}>Cancel</button>
+              <button className="estimations-btn-primary" onClick={submitConvert}>Convert</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
