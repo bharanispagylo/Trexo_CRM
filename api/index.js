@@ -1204,12 +1204,15 @@ app.get('/api/reports/monthly', async (req, res) => {
         taskMap[taskId] = {
           ...log.task,
           actualHours: 0,
-          approvedHours: log.task.approvedHours, // Use task's manually entered billable hours
+          approvedHours: 0, // Will be calculated from work logs for this period
           workLogPeriodString: `${month}/${year}`,
           deliveredDate: log.logDate // using logDate as reference
         };
       }
       taskMap[taskId].actualHours += log.hoursWorked;
+      if (log.task && log.task.isBillable) {
+        taskMap[taskId].approvedHours += log.hoursWorked;
+      }
     });
 
     res.json(Object.values(taskMap));
@@ -1267,11 +1270,14 @@ app.get('/api/reports/range', async (req, res) => {
         taskMap[taskId] = {
           ...log.task,
           actualHours: 0,
-          approvedHours: log.task.approvedHours, // Use task's manually entered billable hours
+          approvedHours: 0, // Will be calculated from work logs for this period
           deliveredDate: log.logDate
         };
       }
       taskMap[taskId].actualHours += log.hoursWorked;
+      if (log.task && log.task.isBillable) {
+        taskMap[taskId].approvedHours += log.hoursWorked;
+      }
     });
 
     res.json(Object.values(taskMap));
