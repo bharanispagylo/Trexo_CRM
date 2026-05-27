@@ -1156,10 +1156,10 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                         </div>
                       </div>
 
-                      {/* Actual Hours */}
+                      {/* Logged Billing Hours */}
                       <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
                         <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
-                          Actual Hours
+                          Logged Billing Hours
                         </label>
                         <div>
                           {isEditing ? (

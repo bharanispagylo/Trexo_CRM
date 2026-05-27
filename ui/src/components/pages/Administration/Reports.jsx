@@ -100,7 +100,7 @@ export default function Reports({ user }) {
   };
 
   const handleExport = () => {
-    const headers = ['Task # No', 'Title', 'Client', 'Project', 'Assignee', 'Total Hours', 'Billable Hours', 'Delivered Date'];
+    const headers = ['Task # No', 'Title', 'Client', 'Project', 'Assignee', 'Logged Billing Hours', 'Billable Hours', 'Delivered Date'];
     const rows = tasks.map(t => [
       t.taskNo || '-',
       `"${(t.title || '').replace(/"/g, '""')}"`,
@@ -268,7 +268,7 @@ export default function Reports({ user }) {
                 <th>Client</th>
                 <th>Project</th>
                 <th>Assignee</th>
-                <th>Total Hours</th>
+                <th>Logged Billing Hours</th>
                 <th>Billable Hours</th>
                 <th>Delivered Date</th>
               </tr>
