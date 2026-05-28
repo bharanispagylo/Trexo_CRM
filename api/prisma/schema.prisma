@@ -205,6 +205,7 @@ model Task {
   estimatedHours Float?  @default(0) @map("estimated_hours")
   approvedHours Float?   @default(0)
   actualHours   Float?   @default(0)
+  employeeHours Float?   @default(0) @map("employee_hours")
   taskListId  String?
   taskList    TaskList? @relation(fields: [taskListId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now()) @map("created_at")

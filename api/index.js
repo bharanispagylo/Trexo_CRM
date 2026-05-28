@@ -731,7 +731,10 @@ app.put('/api/tasks/:id', async (req, res) => {
 
     // Sanitize numbers
     if (taskData.approvedHours !== undefined) taskData.approvedHours = parseFloat(taskData.approvedHours) || 0;
-    if (taskData.actualHours !== undefined) taskData.actualHours = parseFloat(taskData.actualHours) || 0;
+    
+    // Prevent UI from overwriting auto-calculated log totals
+    delete taskData.actualHours;
+    delete taskData.employeeHours;
 
     // Universal model field sanitizer to protect Prisma against drift
     taskData = sanitizeTaskData(taskData);
@@ -806,11 +809,13 @@ app.post('/api/tasks/:id/worklogs', async (req, res) => {
     });
 
     const allLogs = await prisma.workLog.findMany({ where: { taskId: req.params.id } });
-    const totalHours = allLogs.reduce((sum, l) => sum + l.hoursWorked, 0);
+    const billedHours = allLogs.filter(l => l.isBilled).reduce((sum, l) => sum + l.hoursWorked, 0);
+    const employeeHours = allLogs.filter(l => !l.isBilled).reduce((sum, l) => sum + l.hoursWorked, 0);
     await prisma.task.update({
       where: { id: req.params.id },
       data: { 
-        actualHours: totalHours
+        actualHours: billedHours,
+        employeeHours: employeeHours
       }
     });
 
@@ -835,11 +840,13 @@ app.put('/api/worklogs/:logId', async (req, res) => {
     });
 
     const allLogs = await prisma.workLog.findMany({ where: { taskId: log.taskId } });
-    const totalHours = allLogs.reduce((sum, l) => sum + l.hoursWorked, 0);
+    const billedHours = allLogs.filter(l => l.isBilled).reduce((sum, l) => sum + l.hoursWorked, 0);
+    const employeeHours = allLogs.filter(l => !l.isBilled).reduce((sum, l) => sum + l.hoursWorked, 0);
     await prisma.task.update({
       where: { id: log.taskId },
       data: { 
-        actualHours: totalHours
+        actualHours: billedHours,
+        employeeHours: employeeHours
       }
     });
 
@@ -858,11 +865,13 @@ app.delete('/api/worklogs/:logId', async (req, res) => {
     await prisma.workLog.delete({ where: { id: req.params.logId } });
     
     const allLogs = await prisma.workLog.findMany({ where: { taskId: log.taskId } });
-    const totalHours = allLogs.reduce((sum, l) => sum + l.hoursWorked, 0);
+    const billedHours = allLogs.filter(l => l.isBilled).reduce((sum, l) => sum + l.hoursWorked, 0);
+    const employeeHours = allLogs.filter(l => !l.isBilled).reduce((sum, l) => sum + l.hoursWorked, 0);
     await prisma.task.update({
       where: { id: log.taskId },
       data: { 
-        actualHours: totalHours
+        actualHours: billedHours,
+        employeeHours: employeeHours
       }
     });
 
