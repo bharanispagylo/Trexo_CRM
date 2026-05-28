@@ -82,7 +82,6 @@ export default function Reports({ user }) {
   }, [reportType, selectedMonth, selectedYear, customStartDate, customEndDate, selectedClient]);
 
   const totalTasks = tasks.length;
-  const totalBillableHours = tasks.reduce((sum, t) => sum + (parseFloat(t.approvedHours) || 0), 0);
   const totalActualHours = tasks.reduce((sum, t) => sum + (parseFloat(t.actualHours) || 0), 0);
   
   const uniqueProjects = useMemo(() => {
@@ -100,7 +99,7 @@ export default function Reports({ user }) {
   };
 
   const handleExport = () => {
-    const headers = ['Task # No', 'Title', 'Client', 'Project', 'Assignee', 'Logged Billing Hours', 'Billable Hours', 'Delivered Date'];
+    const headers = ['Task # No', 'Title', 'Client', 'Project', 'Assignee', 'Billed Hours', 'Delivered Date'];
     const rows = tasks.map(t => [
       t.taskNo || '-',
       `"${(t.title || '').replace(/"/g, '""')}"`,
@@ -108,7 +107,6 @@ export default function Reports({ user }) {
       `"${(t.projectName || '-').replace(/"/g, '""')}"`,
       `"${(t.assignees || '-').replace(/"/g, '""')}"`,
       formatTime(parseFloat(t.actualHours) || 0),
-      formatTime(parseFloat(t.approvedHours) || 0),
       t.deliveredDate ? new Date(t.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'
     ]);
     
@@ -228,15 +226,7 @@ export default function Reports({ user }) {
             <span className="kpi-value">{totalTasks}</span>
           </div>
         </div>
-        <div className="reports-kpi-card">
-          <div className="kpi-icon-wrapper green">
-             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-          </div>
-          <div className="kpi-info">
-            <span className="kpi-label">Total Billable Hours</span>
-            <span className="kpi-value">{formatTime(totalBillableHours)} hrs</span>
-          </div>
-        </div>
+
         <div className="reports-kpi-card">
           <div className="kpi-icon-wrapper purple">
              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
@@ -268,8 +258,7 @@ export default function Reports({ user }) {
                 <th>Client</th>
                 <th>Project</th>
                 <th>Assignee</th>
-                <th>Logged Billing Hours</th>
-                <th>Billable Hours</th>
+                <th>Billed Hours</th>
                 <th>Delivered Date</th>
               </tr>
             </thead>
@@ -289,7 +278,6 @@ export default function Reports({ user }) {
                     </div>
                   </td>
                   <td>{formatTime(parseFloat(task.actualHours) || 0)}</td>
-                  <td>{formatTime(parseFloat(task.approvedHours) || 0)}</td>
                   <td>{task.deliveredDate ? new Date(task.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</td>
                 </tr>
               ))}
@@ -304,7 +292,6 @@ export default function Reports({ user }) {
                 <tr>
                   <td colSpan="5" className="footer-total-label">Total</td>
                   <td className="footer-total-hours">{formatTime(totalActualHours)} hrs</td>
-                  <td className="footer-total-hours">{formatTime(totalBillableHours)} hrs</td>
                   <td className="footer-total-tasks">{totalTasks} tasks</td>
                 </tr>
               </tfoot>

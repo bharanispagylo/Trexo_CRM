@@ -578,7 +578,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           <input className="saas-input" type="number" placeholder="0" value={form.estimatedHours} onChange={e => setForm({...form, estimatedHours: e.target.value})} />
         </div>
         <div className="saas-field">
-          <label className="saas-label">Logged Billing Hours</label>
+          <label className="saas-label">Billed Hours</label>
           <input className="saas-input" type="number" placeholder="0" value={form.actualHours} onChange={e => setForm({...form, actualHours: e.target.value})} />
         </div>
         <div className="saas-field">
@@ -1241,7 +1241,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                   <div style={{ width: '150px', display: 'flex', alignItems: 'center', gap: '1rem', color: '#475569', fontWeight: '600', fontSize: '0.85rem' }}>
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    Logged Billing Hours
+                    Billed Hours
                   </div>
                   <div style={{ width: '30px', color: '#cbd5e1' }}>:</div>
                   <div style={{ color: '#0f172a', fontWeight: '700', fontSize: '0.9rem', width: '150px' }}>{selectedProject.actualHours ? `${selectedProject.actualHours} hrs` : '-'}</div>
@@ -2648,7 +2648,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Client</th>
               <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Status</th>
               <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Estimated Hours</th>
-              <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Logged Billing Hours</th>
+              <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Billed Hours</th>
               <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Billable Hours</th>
               <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Created On</th>
               <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', textAlign: 'center', background: 'white', textTransform: 'capitalize' }}>Actions</th>

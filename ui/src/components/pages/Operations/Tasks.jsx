@@ -313,27 +313,21 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
   }, [task, isEdit, fetchComments, fetchWorkLogs]);
 
   useEffect(() => {
-    const totalHours = workLogs.reduce((acc, log) => acc + (Number(log.hoursWorked) || 0), 0);
+    const billedHours = workLogs.filter(log => log.isBilled).reduce((acc, log) => acc + (Number(log.hoursWorked) || 0), 0);
+    const employeeTime = workLogs.filter(log => !log.isBilled).reduce((acc, log) => acc + (Number(log.hoursWorked) || 0), 0);
     
     setForm(prev => {
-      if (prev.actualHours !== totalHours) {
-        const updatedForm = {
+      if (prev.actualHours !== billedHours || prev.employeeHours !== employeeTime) {
+        return {
           ...prev,
-          actualHours: totalHours,
-          actualHoursStr: decimalToTimeStr(totalHours)
+          actualHours: billedHours,
+          actualHoursStr: decimalToTimeStr(billedHours),
+          employeeHours: employeeTime
         };
-        
-        // Auto-save actualHours to the backend for existing tasks
-        if (task && task.id) {
-          const { comments, taskList, attachments, ...payload } = updatedForm;
-          api.put(`/tasks/${task.id}`, payload).catch(err => console.error('Failed to sync actualHours:', err));
-        }
-        
-        return updatedForm;
       }
       return prev;
     });
-  }, [workLogs, task]);
+  }, [workLogs]);
 
   const handleCommentFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -491,7 +485,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
     }
   };
   
-  const handleAddWorkLog = async () => {
+  const handleAddWorkLog = async (isBilledArg = false) => {
     if (!workLogForm.hoursWorked || !workLogForm.logDate) {
       alert("Please fill in Date and Hours.", "warning", "Required");
       return;
@@ -503,7 +497,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
           logDate: workLogForm.logDate,
           hoursWorked: workLogForm.hoursWorked,
           description: workLogForm.description,
-          isBilled: workLogForm.isBilled
+          isBilled: isBilledArg
         });
       } else {
         await api.post(`/tasks/${task.id}/worklogs`, {
@@ -511,7 +505,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
           logDate: workLogForm.logDate,
           hoursWorked: workLogForm.hoursWorked,
           description: workLogForm.description,
-          isBilled: workLogForm.isBilled
+          isBilled: isBilledArg
         });
       }
       fetchWorkLogs();
@@ -886,7 +880,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
             >
               General
             </button>
-            {!['employee', 'intern', 'guest', 'team lead'].includes(currentUser?.role?.toLowerCase()) && (
+            {currentUser?.role?.toLowerCase() === 'admin' && (
               <button 
                 className={`saas-tab-header-btn ${activeTab === 'billing' ? 'active' : ''}`}
                 onClick={() => setActiveTab('billing')}
@@ -895,17 +889,25 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
               </button>
             )}
             <button 
+              className={`saas-tab-header-btn ${activeTab === 'timelogs' ? 'active' : ''}`}
+              onClick={() => setActiveTab('timelogs')}
+            >
+              Time Logs
+            </button>
+            <button 
               className={`saas-tab-header-btn ${activeTab === 'attachments' ? 'active' : ''}`}
               onClick={() => setActiveTab('attachments')}
             >
               Attachments
             </button>
-            <button 
-              className={`saas-tab-header-btn ${activeTab === 'worklogs' ? 'active' : ''}`}
-              onClick={() => setActiveTab('worklogs')}
-            >
-              Work Logs
-            </button>
+            {currentUser?.role?.toLowerCase() === 'admin' && (
+              <button 
+                className={`saas-tab-header-btn ${activeTab === 'worklogs' ? 'active' : ''}`}
+                onClick={() => setActiveTab('worklogs')}
+              >
+                Billing Logs
+              </button>
+            )}
           </div>
 
           {/* Tab Content */}
@@ -1071,7 +1073,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
           </>
         )}
 
-            {activeTab === 'billing' && !['employee', 'intern', 'guest', 'team lead'].includes(currentUser?.role?.toLowerCase()) && (
+            {activeTab === 'billing' && currentUser?.role?.toLowerCase() === 'admin' && (
               <div className="saas-billing-pane animate-fade-in" style={{ padding: '1.5rem 2rem' }}>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '2rem', color: '#0f172a' }}>
                   Billing Information
@@ -1156,32 +1158,44 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                         </div>
                       </div>
 
-                      {/* Logged Billing Hours */}
+                      {/* Billed Hours */}
                       <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
                         <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
-                          Logged Billing Hours
+                          Billed Hours
                         </label>
                         <div>
-                          {isEditing ? (
-                            <input 
-                              type="text" 
-                              value={form.actualHoursStr !== undefined ? form.actualHoursStr : decimalToTimeStr(form.actualHours)}
-                              onChange={e => {
-                                const val = e.target.value;
-                                setForm(f => ({
-                                  ...f,
-                                  actualHoursStr: val,
-                                  actualHours: timeStrToDecimal(val)
-                                }));
-                              }}
-                              className="saas-grid-input"
-                              placeholder="e.g. 32:30"
-                            />
-                          ) : (
-                            <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
-                              {decimalToTimeStr(form.actualHours)}
-                            </span>
-                          )}
+                          <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
+                            {decimalToTimeStr(form.actualHours)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Employee Actual Time */}
+                      <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
+                        <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
+                          Employee Time Logged
+                        </label>
+                        <div>
+                          <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
+                            {decimalToTimeStr(form.employeeHours || 0)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Remaining Billable Hours */}
+                      <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
+                        <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
+                          Remaining Billable Hours
+                        </label>
+                        <div>
+                          <span style={{ 
+                            fontSize: '0.92rem', 
+                            fontWeight: '500', 
+                            color: '#0f172a'
+                          }}>
+                            {decimalToTimeStr(Math.max(0, (form.approvedHours || 0) - (form.actualHours || 0)))}
+                            {((form.approvedHours || 0) - (form.actualHours || 0)) < 0 && ' (Over Budget)'}
+                          </span>
                         </div>
                       </div>
                     </>
@@ -1196,7 +1210,115 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
               </div>
             )}
 
-            {activeTab === 'worklogs' && (
+            {activeTab === 'timelogs' && (
+              <div className="saas-details-grid animate-fade-in" style={{ display: 'block' }}>
+                {!isEdit ? (
+                  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                    Save the task first before adding time logs.
+                  </div>
+                ) : (
+                  <>
+                  <div className="saas-log-form-box" style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '2rem' }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '1rem' }}>{workLogForm.id ? 'Edit Time Log' : 'Add New Time Log'}</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                      <div>
+                        <label className="saas-field-label">Date</label>
+                        <input type="date" className="saas-input" value={workLogForm.logDate} onChange={e => setWorkLogForm({...workLogForm, logDate: e.target.value})} />
+                      </div>
+                      <div>
+                        <label className="saas-field-label">Actual Hours Worked</label>
+                        <input type="number" step="0.5" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} />
+                      </div>
+                    </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label className="saas-field-label">Description</label>
+                      <input type="text" className="saas-input" placeholder="What did you work on?" value={workLogForm.description} onChange={e => setWorkLogForm({...workLogForm, description: e.target.value})} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button className="saas-btn-primary" onClick={() => handleAddWorkLog(false)} disabled={workLogSaving}>
+                        {workLogSaving ? 'Saving...' : (workLogForm.id ? 'Update Time Log' : 'Add Time Log')}
+                      </button>
+                      {workLogForm.id && (
+                        <button 
+                          className="saas-btn-secondary" 
+                          onClick={() => setWorkLogForm({ logDate: new Date().toISOString().split('T')[0], hoursWorked: '', description: '', isBilled: false, id: null })}
+                          disabled={workLogSaving}
+                          style={{ padding: '0.5rem 1rem' }}
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="saas-recent-logs">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', margin: 0 }}>Recent Time Logs</h3>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#2563eb', background: '#eff6ff', padding: '0.25rem 0.75rem', borderRadius: '12px' }}>
+                        Total Time Logged: {form.employeeHours || 0} hrs
+                      </span>
+                    </div>
+                    {workLogs.filter(log => !log.isBilled).length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', background: '#f8fafc', borderRadius: '8px' }}>No time logs recorded yet.</div>
+                    ) : (
+                      <div className="saas-table-wrapper">
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                          <thead>
+                            <tr style={{ background: '#f1f5f9', color: '#475569' }}>
+                              <th style={{ padding: '0.75rem', fontWeight: 600 }}>Date</th>
+                              <th style={{ padding: '0.75rem', fontWeight: 600 }}>User</th>
+                              <th style={{ padding: '0.75rem', fontWeight: 600 }}>Hours Worked</th>
+                              <th style={{ padding: '0.75rem', fontWeight: 600 }}>Description</th>
+                              <th style={{ padding: '0.75rem', fontWeight: 600 }}>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {workLogs.filter(log => !log.isBilled).map(log => (
+                              <tr key={log.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                <td style={{ padding: '0.75rem' }}>{new Date(log.logDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                                <td style={{ padding: '0.75rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <div style={{ width: '24px', height: '24px', background: '#e2e8f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 600, color: '#475569' }}>
+                                      {log.user?.fullName ? log.user.fullName.charAt(0).toUpperCase() : '?'}
+                                    </div>
+                                    {log.user?.fullName || 'Unknown'}
+                                  </div>
+                                </td>
+                                <td style={{ padding: '0.75rem', fontWeight: 600, color: '#0f172a' }}>{log.hoursWorked}h</td>
+                                <td style={{ padding: '0.75rem', color: '#475569' }}>{log.description || '-'}</td>
+                                <td style={{ padding: '0.75rem' }}>
+                                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <button title="Edit" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer' }} onClick={() => {
+                                      setWorkLogForm({
+                                        id: log.id,
+                                        logDate: new Date(log.logDate).toISOString().split('T')[0],
+                                        hoursWorked: log.hoursWorked,
+                                        description: log.description || '',
+                                        isBilled: false
+                                      });
+                                    }}>
+                                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    </button>
+                                    <button title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }} onClick={() => {
+                                      if(window.confirm('Delete this time log?')) handleDeleteWorkLog(log.id);
+                                    }}>
+                                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'worklogs' && currentUser?.role?.toLowerCase() === 'admin' && (
               <div className="saas-details-grid animate-fade-in" style={{ display: 'block' }}>
                 {!isEdit ? (
                   <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
@@ -1222,8 +1344,8 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                     <input type="text" className="saas-input" placeholder="What did you work on?" value={workLogForm.description} onChange={e => setWorkLogForm({...workLogForm, description: e.target.value})} />
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="saas-btn-primary" onClick={handleAddWorkLog} disabled={workLogSaving}>
-                      {workLogSaving ? 'Saving...' : (workLogForm.id ? 'Update Work Log' : 'Add Work Log')}
+                    <button className="saas-btn-primary" onClick={() => handleAddWorkLog(true)} disabled={workLogSaving}>
+                      {workLogSaving ? 'Saving...' : (workLogForm.id ? 'Update Billing Log' : 'Add Billing Log')}
                     </button>
                     {workLogForm.id && (
                       <button 
@@ -1239,22 +1361,22 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                 </div>
 
                 <div>
-                  <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.95rem' }}>Recent Work Logs</h4>
-                  {workLogs.length === 0 ? (
-                    <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No work logs found for this task.</p>
+                  <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.95rem' }}>Recent Billing Logs</h4>
+                  {workLogs.filter(log => log.isBilled).length === 0 ? (
+                    <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No billing logs found for this task.</p>
                   ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                       <thead>
                         <tr style={{ background: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
                           <th style={{ padding: '0.75rem', fontWeight: 600 }}>Date</th>
                           <th style={{ padding: '0.75rem', fontWeight: 600 }}>User</th>
-                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Hours</th>
+                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Billed Hours</th>
                           <th style={{ padding: '0.75rem', fontWeight: 600 }}>Description</th>
                           <th style={{ padding: '0.75rem', fontWeight: 600 }}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {workLogs.map(log => (
+                        {workLogs.filter(log => log.isBilled).map(log => (
                           <tr key={log.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
                             <td style={{ padding: '0.75rem' }}>{formatDate(log.logDate)}</td>
                             <td style={{ padding: '0.75rem' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
@@ -1268,7 +1390,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                                     logDate: new Date(log.logDate).toISOString().split('T')[0],
                                     hoursWorked: log.hoursWorked,
                                     description: log.description || '',
-                                    isBilled: log.isBilled
+                                    isBilled: true
                                   });
                                 }}>
                                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
@@ -2065,6 +2187,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const [selectedListId, setSelectedListId] = useState(null);
   const [selectedProjId, setSelectedProjId] = useState(null);
   const [expandedProj, setExpandedProj] = useState({});
+  
+  // Explicit filters
+  const [filterProjectName, setFilterProjectName] = useState('');
+  const [filterDate, setFilterDate] = useState('');
 
   useEffect(() => {
     api.get('/projects').then(data => {
@@ -2306,6 +2432,20 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   };
 
   const filteredTasks = tasks.filter(t => {
+    // Explicit project filter
+    if (filterProjectName && t.projectName !== filterProjectName) {
+      const projIdFromTask = getTaskProjectId(t);
+      const projFilterObj = taskProjects.find(p => p.name === filterProjectName);
+      if (!projFilterObj || projIdFromTask !== projFilterObj.id) return false;
+    }
+    
+    // Explicit date filter
+    if (filterDate) {
+      const tDateStr = t.dueDate ? new Date(t.dueDate).toISOString().split('T')[0] : 
+                       (t.startDate ? new Date(t.startDate).toISOString().split('T')[0] : 
+                       (t.assignedDate ? new Date(t.assignedDate).toISOString().split('T')[0] : null));
+      if (tDateStr !== filterDate) return false;
+    }
     // Ã¢â€â‚¬Ã¢â€â‚¬ Sidebar filter: by selected list or project Ã¢â€â‚¬Ã¢â€â‚¬
     if (selectedListId) {
       if (t.taskListId !== selectedListId) return false;
@@ -2465,10 +2605,35 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                         key={list.id}
                         className={`tln-list-item ${isListSelected ? 'active' : ''}`}
                         onClick={(e) => { e.stopPropagation(); setSelectedListId(list.id); setSelectedProjId(null); }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                       >
-                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                        <span className="tln-list-name">{list.name}</span>
-                        <span className="tln-count">{listCount}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, overflow: 'hidden' }}>
+                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                          <span className="tln-list-name">{list.name}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <span className="tln-count">{listCount}</span>
+                          <button 
+                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 4px', fontSize: '1rem', display: 'flex', alignItems: 'center' }}
+                            title="Delete Task List"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (window.confirm('Delete this task list? All tasks inside will also be removed.')) {
+                                try {
+                                  await api.delete(`/task-lists/${list.id}`);
+                                  const updated = await api.get('/task-lists');
+                                  setTaskListsData(updated || []);
+                                  if (selectedListId === list.id) setSelectedListId(null);
+                                } catch (err) {
+                                  console.error(err);
+                                  alert('Failed to delete Task List');
+                                }
+                              }
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -2538,6 +2703,31 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           <h1 className="kanban-title">{pageTitle}</h1>
         </div>
         <div className="kanban-controls">
+          <div style={{ display: 'flex', gap: '0.5rem', marginRight: '1rem', alignItems: 'center' }}>
+            <select 
+              value={filterProjectName} 
+              onChange={e => setFilterProjectName(e.target.value)}
+              style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="">All Projects</option>
+              {taskProjects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+            </select>
+            <input 
+              type="date" 
+              value={filterDate} 
+              onChange={e => setFilterDate(e.target.value)}
+              title="Filter by task date"
+              style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
+            />
+            {(filterProjectName || filterDate) && (
+              <button 
+                onClick={() => { setFilterProjectName(''); setFilterDate(''); }}
+                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
           <div className="view-toggle">
             <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>List</button>
             <button className={viewMode === 'kanban' ? 'active' : ''} onClick={() => setViewMode('kanban')}>Kanban</button>
