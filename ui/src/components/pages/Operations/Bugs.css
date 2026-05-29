@@ -232,3 +232,21 @@
   padding: 0.6rem 1.5rem;
   cursor: pointer;
 }
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 768px) {
+  .bugs-root {
+    padding: 1rem;
+  }
+
+  .bugs-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .bugs-new-btn {
+    width: 100%;
+    text-align: center;
+  }
+}

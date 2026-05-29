@@ -28,6 +28,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const { can, loading } = usePermissions();
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const profileDropdownRef = useRef(null);
 
   useEffect(() => {
@@ -257,7 +258,13 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   };
 
   const NavItem = ({ id, label, icon }) => (
-    <button className={`nav-item ${activeTab === id ? 'active' : ''}`} onClick={() => setActiveTab(id)}>
+    <button 
+      className={`nav-item ${activeTab === id ? 'active' : ''}`} 
+      onClick={() => {
+        setActiveTab(id);
+        setSidebarOpen(false);
+      }}
+    >
       <span className="nav-icon">{icon}</span>
       <span className="nav-label">{label}</span>
     </button>
@@ -293,8 +300,23 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
   return (
     <div className="saas-dashboard-layout">
+      {sidebarOpen && (
+        <div 
+          className="saas-sidebar-backdrop" 
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.4)',
+            zIndex: 999
+          }}
+        />
+      )}
       {/* SIDEBAR */}
-      <aside className="saas-sidebar-nav">
+      <aside className={`saas-sidebar-nav ${sidebarOpen ? 'open' : ''}`}>
         <div className="saas-sidebar-header">
           <div className="saas-brand">
             <div className="saas-logo spagylo-logo">S</div>
@@ -350,7 +372,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       <div className="saas-main-area">
         <header className="saas-main-header">
           <div className="saas-header-left-breadcrumbs-group">
-            <button className="saas-hamburger-btn">
+            <button className="saas-hamburger-btn" onClick={() => setSidebarOpen(true)}>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
             <div className="saas-breadcrumbs">

@@ -733,3 +733,47 @@
   border: 1px solid #e2e8f0;
   text-transform: uppercase;
 }
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 768px) {
+  .leave-stats-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem;
+  }
+
+  .leave-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .leave-form-container {
+    max-width: 100%;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  .leave-form-modal {
+    width: 90% !important;
+    max-width: 500px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+
+  .leave-history-card {
+    overflow-x: auto;
+  }
+
+  .leave-table {
+    min-width: 600px; /* Force minimum width to allow clean scroll */
+  }
+
+  .saas-tabs {
+    gap: 1rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 0.5rem;
+  }
+}

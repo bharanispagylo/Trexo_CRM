@@ -173,8 +173,21 @@
   animation: slideUp 0.25s ease-out;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .track-team-page {
-    padding: 1rem 1.25rem;
+    padding: 1rem;
+  }
+
+  .team-list-container {
+    overflow-x: auto;
+  }
+
+  .team-list-table {
+    min-width: 600px;
+  }
+
+  .modal-content-card {
+    width: 95% !important;
+    padding: 1.25rem;
   }
 }

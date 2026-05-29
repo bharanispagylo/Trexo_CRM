@@ -282,3 +282,223 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+/* ══════════════════════════════════════════════
+   3-Panel Projects Layout
+   ══════════════════════════════════════════════ */
+
+.projects-3col-layout {
+  display: flex;
+  flex-direction: row;
+  height: calc(100vh - 56px); /* accounting for header height */
+  min-height: 0;
+  gap: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+/* ── Left Navigation Sidebar ── */
+.projects-left-nav {
+  width: 220px;
+  min-width: 200px;
+  max-width: 240px;
+  flex-shrink: 0;
+  background: #fafbfc;
+  border-right: 1px solid #e2e8f0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 1rem;
+}
+
+.pln-header {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  padding: 0.85rem 0.9rem 0.5rem;
+}
+
+/* All Projects row */
+.pln-all-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.42rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  border-radius: 0;
+  transition: background 0.12s, color 0.12s;
+  user-select: none;
+}
+.pln-all-item:hover { background: #f1f5f9; color: #1e293b; }
+.pln-all-item.active {
+  background: #eff6ff;
+  color: #2563eb;
+  border-right: 2px solid #2563eb;
+}
+
+/* Project block */
+.pln-project-block { display: flex; flex-direction: column; }
+
+.pln-project-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  user-select: none;
+}
+.pln-project-row:hover { background: #f1f5f9; color: #1e293b; }
+.pln-project-row.active {
+  background: #eff6ff;
+  color: #2563eb;
+  border-right: 2px solid #2563eb;
+}
+
+.pln-chevron {
+  font-size: 0.6rem;
+  color: #94a3b8;
+  width: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.pln-proj-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Task Lists */
+.pln-lists {
+  display: flex;
+  flex-direction: column;
+  padding-left: 0.5rem;
+}
+
+.pln-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.9rem 0.35rem 1.5rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  user-select: none;
+  border-left: 2px solid transparent;
+}
+.pln-list-item:hover { background: #f1f5f9; color: #1e293b; }
+.pln-list-item.active {
+  background: #eff6ff;
+  color: #2563eb;
+  border-left: 2px solid #2563eb;
+  font-weight: 700;
+}
+
+.pln-list-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pln-count {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 0.05rem 0.4rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.pln-all-item.active .pln-count,
+.pln-project-row.active .pln-count,
+.pln-list-item.active .tln-count {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.pln-empty-lists {
+  padding: 0.25rem 0.9rem 0.25rem 2rem;
+  font-size: 0.72rem;
+  color: #cbd5e1;
+  font-style: italic;
+}
+
+/* ── Main Content Area ── */
+.projects-main-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 768px) {
+  .projects-3col-layout {
+    flex-direction: column !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .projects-left-nav {
+    width: 100% !important;
+    max-width: none !important;
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+    max-height: 200px;
+  }
+
+  .projects-main-content {
+    overflow-y: visible !important;
+  }
+
+  .projects-page {
+    padding: 1rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+
+  .saas-textarea {
+    grid-column: span 1 !important;
+    max-width: 100% !important;
+  }
+
+  .saas-input, .saas-select {
+    max-width: 100% !important;
+  }
+
+  .saas-table-container {
+    overflow-x: auto;
+  }
+
+  .saas-table {
+    min-width: 750px;
+  }
+
+  .saas-tabs {
+    gap: 1rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 0.5rem;
+    display: flex;
+    flex-direction: row;
+  }
+}

@@ -52,13 +52,13 @@ export default function Teams() {
 
   return (
     <div className="page-container app-container">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 className="page-title">Team Structures</h1>
           <p className="page-desc">Manage departments, squads, and team assignments.</p>
         </div>
          {can('teams', 'create') && (
-           <button className="btn btn-primary" style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem', width: '130px', position: 'absolute', top: '2rem', right: '2rem' }} onClick={() => setShowForm(true)}>+ Create Team</button>
+           <button className="btn btn-primary" style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem', width: '130px' }} onClick={() => setShowForm(true)}>+ Create Team</button>
          )}
        </div>
 
@@ -78,7 +78,7 @@ export default function Teams() {
         </div>
       )}
 
-      <div className="data-card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="data-card" style={{ padding: 0, overflow: 'auto' }}>
         <table className="data-table">
           <thead>
             <tr>

@@ -3823,3 +3823,76 @@
   min-width: 0;
   padding: 0.5rem 1rem 1rem;
 }
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 768px) {
+  .kanban-root {
+    padding: 1rem;
+  }
+
+  .kanban-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.25rem;
+  }
+
+  .kanban-controls {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .view-toggle {
+    width: 100%;
+  }
+
+  .view-toggle button {
+    flex: 1;
+    text-align: center;
+  }
+
+  .kanban-new-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .list-view {
+    overflow-x: auto;
+  }
+
+  .list-table {
+    min-width: 750px;
+  }
+
+  /* Split Modal & Sidebars */
+  .modal-split {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .modal-right {
+    flex: none;
+    width: 100%;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .mrow {
+    grid-template-columns: 1fr !important;
+  }
+
+  .saas-main-container {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .saas-sidebar {
+    width: 100% !important;
+    border-left: none;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .saas-content-pane {
+    padding: 1.25rem;
+  }
+}

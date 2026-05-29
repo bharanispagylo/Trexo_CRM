@@ -35,12 +35,16 @@ export default function Clients({ user }) {
       return;
     }
     setIsSaving(true);
+    const sanitizedForm = {
+      ...form,
+      parentAgencyId: form.parentAgencyId || null
+    };
     try {
       if (form.id) {
-        await api.put(`/clients/${form.id}`, form);
+        await api.put(`/clients/${form.id}`, sanitizedForm);
         alert("Client updated successfully!", "success");
       } else {
-        await api.post('/clients', form);
+        await api.post('/clients', sanitizedForm);
         alert("Client created successfully!", "success");
       }
       setShowForm(false);

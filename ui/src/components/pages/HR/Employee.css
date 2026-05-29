@@ -308,17 +308,14 @@
   }
   
   .saas-tabs {
-    flex-direction: column;
     gap: 1rem;
-    align-items: stretch;
-    border-bottom: none;
-    margin-bottom: 1.5rem;
-  }
-  
-  .saas-tabs > div {
-    display: flex;
-    justify-content: flex-start;
+    overflow-x: auto;
+    white-space: nowrap;
     border-bottom: 1px solid var(--saas-border);
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: row !important;
+    padding-bottom: 0.5rem;
   }
   
   .saas-btn-add {

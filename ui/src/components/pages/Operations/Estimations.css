@@ -346,3 +346,55 @@
   background: #f0f7ff;
   border-color: #bfdbfe;
 }
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 768px) {
+  .estimations-page {
+    padding: 1rem;
+  }
+
+  .estimations-header {
+    flex-direction: column;
+    gap: 1.25rem;
+    align-items: flex-start;
+  }
+
+  .estimations-btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .estimations-form-card {
+    padding: 1.25rem;
+  }
+
+  .estimations-form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+
+  .estimations-input,
+  .estimations-select,
+  .estimations-textarea {
+    max-width: 100% !important;
+    grid-column: span 1 !important;
+  }
+
+  .estimations-form-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .estimations-btn-secondary {
+    width: 100%;
+    text-align: center;
+  }
+
+  .estimations-table-container {
+    overflow-x: auto;
+  }
+
+  .estimations-table {
+    min-width: 750px;
+  }
+}

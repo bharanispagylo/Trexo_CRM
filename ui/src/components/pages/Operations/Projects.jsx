@@ -6,6 +6,7 @@ import { useAlert } from '../../../context/AlertContext';
 
 export default function Projects({ user, initialSelectedProject, onClearInitialProject, onNavigateToTasks }) {
   const [projects, setProjects] = useState([]);
+  const [expandedProj, setExpandedProj] = useState({});
   const [employees, setEmployees] = useState([]);
   const [users, setUsers] = useState([]);
   const [clients, setClients] = useState([]);
@@ -113,6 +114,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchData(); }, []);
+
+  const toggleProjExpand = (projId) => {
+    setExpandedProj(prev => ({
+      ...prev,
+      [projId]: !prev[projId]
+    }));
+  };
 
   const formatDateForInput = (dateStr) => {
     if (!dateStr) return '';
@@ -990,7 +998,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   // ── RENDER DETAIL VIEW ──
-  if (currentView === 'detail' && selectedProject) {
+  const renderDetailContent = () => {
     const rawMembers = (selectedProject.members || '').split(',').map(m => m.trim()).filter(m => m !== "");
     const projMembers = [...new Set(rawMembers)];
     
@@ -2535,13 +2543,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         </div>
       </div>
     );
-  }
+  };
 
   // ── RENDER LIST VIEW ──
-
-
-  const viewLevel = getLevel('projects', 'view');
-  let allowedProjects = projects;
+  const renderListContent = () => {
+    const viewLevel = getLevel('projects', 'view');
+    let allowedProjects = projects;
 
   if (viewLevel === 'Self') {
     const loggedInName = (user?.fullName || user?.name || '').trim().toLowerCase();
@@ -2774,6 +2781,129 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             </select>
           </div>
         </div>
+      </div>
+    </div>
+  );
+  };
+
+  // Unified return statement of Projects component:
+  if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Projects...'}</div>;
+
+  // Let's get allowed projects for the sidebar counts:
+  const allowedProjects = (() => {
+    const lvl = getLevel('projects', 'view');
+    if (lvl === 'Self') {
+      const loggedInName = (user?.fullName || user?.name || '').trim().toLowerCase();
+      return projects.filter(p => {
+        const rawMembers = (p.members || '').split(',').map(m => m.trim()).filter(m => m !== "");
+        if (!rawMembers.some(m => m.toLowerCase() === loggedInName)) return false;
+        const emp = employees.find(e => e.name.trim().toLowerCase() === loggedInName);
+        if (emp) {
+          if ((emp.status || 'Active').toLowerCase() === 'inactive') return false;
+          const inactiveProjects = (emp.projectStatus || '').split(',').map(s => s.trim()).filter(Boolean);
+          if (inactiveProjects.includes(p.name)) return false;
+        }
+        return true;
+      });
+    }
+    return projects;
+  })();
+
+  return (
+    <div className="projects-3col-layout">
+      {/* ═ LEFT SIDEBAR ═ */}
+      <div className="projects-left-nav">
+        <div className="pln-header">
+          Projects
+          {can('projects', 'create') && (
+            <button 
+              style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: '0 4px' }}
+              title="Add New Project"
+              onClick={() => {
+                setForm({ name: '', status: 'Active', description: '', client: '', clientId: '', estimatedHours: 0, actualHours: 0, billableHours: 0 });
+                setShowForm(true);
+              }}
+            >+</button>
+          )}
+        </div>
+
+        {/* All Projects Item */}
+        <div
+          className={`pln-all-item ${currentView === 'list' ? 'active' : ''}`}
+          onClick={() => {
+            setCurrentView('list');
+            setSelectedProject(null);
+            setSelectedTaskListId(null);
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+          All Projects
+          <span className="pln-count">{allowedProjects.length}</span>
+        </div>
+
+        {/* Projects tree list */}
+        {allowedProjects.map(proj => {
+          const isProjSelected = selectedProject?.id === proj.id;
+          const isExpanded = !!expandedProj[proj.id];
+          const taskLists = proj.taskLists || [];
+          const taskCount = taskLists.reduce((acc, l) => acc + (l.tasks || []).length, 0);
+
+          return (
+            <div key={proj.id} className="pln-project-block">
+              <div
+                className={`pln-project-row ${isProjSelected && !selectedTaskListId ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedProject(proj);
+                  setCurrentView('detail');
+                  setSelectedTaskListId(null);
+                  toggleProjExpand(proj.id);
+                }}
+              >
+                <span className="pln-chevron">
+                  <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isExpanded ? 'none' : 'rotate(-90deg)', transition: 'transform 0.2s', color: '#94a3b8' }}><path d="M0 0l5 6 5-6z"/></svg>
+                </span>
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                <span className="pln-proj-name">{proj.name}</span>
+                <span className="pln-count">{taskCount}</span>
+              </div>
+
+              {isExpanded && taskLists.length > 0 && (
+                <div className="pln-lists">
+                  {taskLists.map(list => {
+                    const isListSelected = selectedProject?.id === proj.id && selectedTaskListId === list.id && detailTab === 'Tasks';
+                    const listTasksCount = (list.tasks || []).length;
+                    return (
+                      <div
+                        key={list.id}
+                        className={`pln-list-item ${isListSelected ? 'active' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedProject(proj);
+                          setCurrentView('detail');
+                          setDetailTab('Tasks');
+                          setSelectedTaskListId(list.id);
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                        <span className="pln-list-name">{list.name}</span>
+                        <span className="pln-count">{listTasksCount}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {isExpanded && taskLists.length === 0 && (
+                <div className="pln-empty-lists">No lists yet</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ═ MAIN CONTENT AREA ═ */}
+      <div className="projects-main-content">
+        {currentView === 'detail' && selectedProject ? renderDetailContent() : renderListContent()}
       </div>
     </div>
   );

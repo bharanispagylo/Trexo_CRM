@@ -52,12 +52,12 @@ export default function Salary() {
 
   return (
     <div className="page-container app-container">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 className="page-title">Salary Management</h1>
           <p className="page-desc">Process payroll and manage compensation.</p>
         </div>
-        <button className="btn btn-primary" style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem', width: '140px', position: 'absolute', top: '2rem', right: '2rem' }} onClick={() => setShowForm(true)}>Process Payroll</button>
+        <button className="btn btn-primary" style={{ padding: '0.6rem 0.75rem', fontSize: '0.875rem', width: '140px' }} onClick={() => setShowForm(true)}>Process Payroll</button>
       </div>
 
       {/* Add Payroll Form */}
@@ -80,7 +80,7 @@ export default function Salary() {
         </div>
       )}
 
-      <div className="data-card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="data-card" style={{ padding: 0, overflow: 'auto' }}>
         <table className="data-table">
           <thead>
             <tr>

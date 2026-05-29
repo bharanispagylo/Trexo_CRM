@@ -167,3 +167,40 @@
   font-size: 0.875rem;
   cursor: pointer;
 }
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 768px) {
+  .add-user-page {
+    padding: 1rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+
+  .saas-field.full-width {
+    grid-column: span 1 !important;
+  }
+
+  .saas-input, .saas-select {
+    max-width: 100% !important;
+  }
+
+  .image-upload-wrapper {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .saas-btn-primary, .saas-btn-secondary {
+    width: 100%;
+    text-align: center;
+  }
+}
