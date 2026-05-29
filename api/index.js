@@ -68,6 +68,22 @@ prisma.$connect()
       }
     }
 
+    // All columns that may be missing from the attendance table due to schema drift
+    const attendanceColumnFixes = [
+      'ALTER TABLE attendance ADD COLUMN IF NOT EXISTS photo_url TEXT;',
+      'ALTER TABLE attendance ADD COLUMN IF NOT EXISTS location TEXT;',
+    ];
+
+    for (const sql of attendanceColumnFixes) {
+      try {
+        await prisma.$executeRawUnsafe(sql);
+        const colName = sql.match(/ADD COLUMN IF NOT EXISTS "?(\w+)"?/i)?.[1];
+        console.log(`[Self-Healing] Attendance Column ${colName} verified/added successfully.`);
+      } catch (e) {
+        console.warn(`[Self-Healing] Warning for: ${sql.substring(0, 60)}...`, e.message);
+      }
+    }
+
     try {
       await prisma.task.deleteMany({ where: { clientId: '' } });
       await prisma.project.deleteMany({ where: { clientId: '' } });
@@ -1017,6 +1033,7 @@ app.get('/api/clients', async (req, res) => {
 app.post('/api/clients', async (req, res) => {
   try {
     const { projects, tasks, estimations, parentAgency, agencyClients, ...rest } = req.body;
+    if (rest.parentAgencyId === '') rest.parentAgencyId = null;
     const client = await prisma.client.create({
       data: rest
     });
@@ -1029,6 +1046,7 @@ app.post('/api/clients', async (req, res) => {
 app.put('/api/clients/:id', async (req, res) => {
   try {
     const { projects, tasks, estimations, parentAgency, agencyClients, ...rest } = req.body;
+    if (rest.parentAgencyId === '') rest.parentAgencyId = null;
     const client = await prisma.client.update({
       where: { id: req.params.id },
       data: rest

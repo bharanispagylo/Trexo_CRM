@@ -64,6 +64,8 @@ model Attendance {
   totalWorkingHrs String? @map("total_working_hrs")
   outTimeHrs String? @map("out_time_hrs")
   status     String?  @default("Present")
+  photoUrl   String?  @map("photo_url")
+  location   String?
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@map("attendance")
