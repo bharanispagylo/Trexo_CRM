@@ -710,8 +710,16 @@ app.post('/api/tasks', async (req, res) => {
     });
 
     // Sanitize numbers
-    if (taskData.approvedHours !== undefined) taskData.approvedHours = parseFloat(taskData.approvedHours) || 0;
-    if (taskData.actualHours !== undefined) taskData.actualHours = parseFloat(taskData.actualHours) || 0;
+    ['estimatedHours', 'approvedHours', 'actualHours', 'employeeHours'].forEach(key => {
+      if (taskData[key] !== undefined) {
+        if (taskData[key] === '' || taskData[key] === null || taskData[key] === undefined) {
+          taskData[key] = null;
+        } else {
+          const val = parseFloat(taskData[key]);
+          taskData[key] = isNaN(val) ? null : val;
+        }
+      }
+    });
     
     // Universal model field sanitizer to protect Prisma against drift
     taskData = sanitizeTaskData(taskData);
@@ -746,7 +754,16 @@ app.put('/api/tasks/:id', async (req, res) => {
     });
 
     // Sanitize numbers
-    if (taskData.approvedHours !== undefined) taskData.approvedHours = parseFloat(taskData.approvedHours) || 0;
+    ['estimatedHours', 'approvedHours', 'actualHours', 'employeeHours'].forEach(key => {
+      if (taskData[key] !== undefined) {
+        if (taskData[key] === '' || taskData[key] === null || taskData[key] === undefined) {
+          taskData[key] = null;
+        } else {
+          const val = parseFloat(taskData[key]);
+          taskData[key] = isNaN(val) ? null : val;
+        }
+      }
+    });
     
     // Prevent UI from overwriting auto-calculated log totals
     delete taskData.actualHours;
