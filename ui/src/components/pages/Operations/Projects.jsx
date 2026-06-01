@@ -1163,11 +1163,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         {/* Main Nav Tabs */}
         <div style={{ display: 'flex', gap: '2rem', borderBottom: '1px solid #e2e8f0', marginBottom: '2rem', padding: '0 0.5rem' }}>
           {[
-            { id: 'General', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> },
-            { id: 'Tasks', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> },
-            { id: 'Teams', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg> },
-            { id: 'Queries', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> },
-            { id: 'Attachments', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> }
+            { id: 'General', label: 'General', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> },
+            { id: 'Tasks', label: 'Task lists', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> },
+            { id: 'Teams', label: 'Team', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg> },
+            { id: 'Queries', label: 'Queries', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> },
+            { id: 'Attachments', label: 'Attachments', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> }
           ].map(tab => (
             <button
               key={tab.id}
@@ -1182,7 +1182,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               }}
             >
               {tab.icon}
-              {tab.id}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -1272,7 +1272,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 // View A: List of Task Categories
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>Task List</h3>
+                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>Task lists</h3>
                     {can('projects', 'create') && (
                       <div className="add-list-inline" style={{ marginTop: 0, display: 'flex', gap: '0.5rem' }}>
                         <input 
@@ -1293,128 +1293,137 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     )}
                   </div>
 
-                  <div className="task-lists-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxWidth: '420px' }}>
-                    {(selectedProject.taskLists || []).map(list => {
-                      const isEditing = editingListId === list.id;
-
-                      return (
-                        <div 
-                          key={list.id} 
-                          style={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            alignItems: 'center', 
-                            background: 'white', 
-                            padding: '0.6rem 1rem', 
-                            borderRadius: '8px', 
-                            border: '1px solid #e2e8f0', 
-                            cursor: isEditing ? 'default' : 'pointer', 
-                            transition: 'all 0.2s ease',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-                          }}
-                          onClick={() => {
-                            if (!isEditing) {
-                              setSelectedTaskListId(list.id);
-                            }
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!isEditing) {
-                              e.currentTarget.style.borderColor = '#2563eb';
-                              e.currentTarget.style.transform = 'translateY(-1px)';
-                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(37,99,235,0.06)';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!isEditing) {
-                              e.currentTarget.style.borderColor = '#e2e8f0';
-                              e.currentTarget.style.transform = 'translateY(0)';
-                              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)';
-                            }
-                          }}
-                        >
-                          {isEditing ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }} onClick={(e) => e.stopPropagation()}>
-                              <input
-                                className="saas-input"
-                                value={editingListName}
-                                onChange={(e) => setEditingListName(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleRenameList(list.id);
-                                  } else if (e.key === 'Escape') {
-                                    setEditingListId(null);
-                                    setEditingListName('');
-                                  }
-                                }}
-                                autoFocus
-                                style={{ height: '30px', fontSize: '0.85rem', flex: 1, padding: '0 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                              />
-                              <button
-                                onClick={() => handleRenameList(list.id)}
-                                style={{ background: '#0066FF', color: 'white', border: 'none', borderRadius: '6px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                title="Save"
-                              >
-                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                              </button>
-                              <button
-                                onClick={() => { setEditingListId(null); setEditingListName(''); }}
-                                style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                title="Cancel"
-                              >
-                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                              </button>
-                            </div>
+                  <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: 'white' }}>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <thead>
+                          <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                            <th style={{ padding: '0.85rem 1.25rem', width: '80px', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>#</th>
+                            <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>List Name</th>
+                            <th style={{ padding: '0.85rem 1.25rem', width: '180px', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Total Tasks</th>
+                            <th style={{ padding: '0.85rem 1.25rem', width: '220px', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', textAlign: 'center' }}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(selectedProject.taskLists || []).length === 0 ? (
+                            <tr>
+                              <td colSpan="4" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8', fontSize: '0.9rem' }}>
+                                No task categories created for this project yet.
+                              </td>
+                            </tr>
                           ) : (
-                            <>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <span style={{ fontSize: '0.92rem', fontWeight: '700', color: '#0f172a' }}>{list.name}</span>
-                                <span style={{ fontSize: '0.75rem', color: '#2563eb', background: '#eff6ff', padding: '0.1rem 0.4rem', borderRadius: '20px', fontWeight: '700' }}>
-                                  ({(list.tasks || []).length})
-                                </span>
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
-                                {/* Rename icon button */}
-                                {can('projects', 'edit') && (
-                                  <button
-                                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem', transition: 'color 0.2s', display: 'flex', alignItems: 'center' }}
-                                    title="Rename Category"
-                                    onClick={() => {
-                                      setEditingListId(list.id);
-                                      setEditingListName(list.name);
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.color = '#0066FF'}
-                                    onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
-                                  >
-                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                  </button>
-                                )}
+                            (selectedProject.taskLists || []).map((list, idx) => {
+                              const isEditing = editingListId === list.id;
+                              const listTasksCount = (list.tasks || []).length;
 
-                                {/* Delete list button */}
-                                {can('projects', 'delete') && (
-                                  <button 
-                                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.9rem', transition: 'color 0.2s', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
-                                    title="Delete Category"
-                                    onClick={() => {
-                                      confirm(`Delete "${list.name}" list and all its tasks?`, () => handleRemoveList(list.id), 'Delete Category');
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                                    onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
-                                  >
-                                    ✕
-                                  </button>
-                                )}
-                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#64748b" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                              </div>
-                            </>
+                              return (
+                                <tr 
+                                  key={list.id} 
+                                  style={{ 
+                                    borderBottom: '1px solid #f1f5f9', 
+                                    cursor: isEditing ? 'default' : 'pointer',
+                                    transition: 'background 0.15s' 
+                                  }} 
+                                  onClick={() => {
+                                    if (!isEditing) {
+                                      setSelectedTaskListId(list.id);
+                                    }
+                                  }}
+                                  onMouseEnter={e => {
+                                    if (!isEditing) e.currentTarget.style.background = '#f8fafc';
+                                  }}
+                                  onMouseLeave={e => {
+                                    if (!isEditing) e.currentTarget.style.background = 'white';
+                                  }}
+                                >
+                                  <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>
+                                    {idx + 1}
+                                  </td>
+                                  <td style={{ padding: '0.85rem 1.25rem' }}>
+                                    {isEditing ? (
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }} onClick={(e) => e.stopPropagation()}>
+                                        <input
+                                          className="saas-input"
+                                          value={editingListName}
+                                          onChange={(e) => setEditingListName(e.target.value)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                              handleRenameList(list.id);
+                                            } else if (e.key === 'Escape') {
+                                              setEditingListId(null);
+                                              setEditingListName('');
+                                            }
+                                          }}
+                                          autoFocus
+                                          style={{ height: '36px', fontSize: '0.85rem', flex: 1, padding: '0 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                        />
+                                        <button
+                                          onClick={() => handleRenameList(list.id)}
+                                          style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                          title="Save"
+                                        >
+                                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        </button>
+                                        <button
+                                          onClick={() => { setEditingListId(null); setEditingListName(''); }}
+                                          style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                          title="Cancel"
+                                        >
+                                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <span style={{ fontSize: '0.9rem', fontWeight: '700', color: '#2563eb' }}>
+                                        {list.name}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '0.85rem 1.25rem' }}>
+                                    <span style={{ fontSize: '0.75rem', color: '#2563eb', background: '#eff6ff', padding: '0.25rem 0.6rem', borderRadius: '20px', fontWeight: '700' }}>
+                                      {listTasksCount}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', alignItems: 'center' }}>
+                                      <button
+                                        style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                                        title="Open List"
+                                        onClick={() => setSelectedTaskListId(list.id)}
+                                      >
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                      </button>
+                                      {can('projects', 'edit') && (
+                                        <button
+                                          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                                          title="Rename Category"
+                                          onClick={() => {
+                                            setEditingListId(list.id);
+                                            setEditingListName(list.name);
+                                          }}
+                                        >
+                                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                        </button>
+                                      )}
+                                      {can('projects', 'delete') && (
+                                        <button
+                                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                                          title="Delete Category"
+                                          onClick={() => {
+                                            confirm(`Delete "${list.name}" list and all its tasks?`, () => handleRemoveList(list.id), 'Delete Category');
+                                          }}
+                                        >
+                                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })
                           )}
-                        </div>
-                      );
-                    })}
-                    {(selectedProject.taskLists || []).length === 0 && (
-                      <div style={{ color: '#94a3b8', fontSize: '0.95rem', padding: '3rem 2rem', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-                        No task categories created for this project yet.
-                      </div>
-                    )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -2652,7 +2661,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               </th>
               <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>#</th>
               <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Project Name</th>
-              <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Client</th>
               <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Status</th>
               <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Estimated Hours</th>
               <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Billed Hours</th>
@@ -2663,9 +2671,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="10" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>Syncing workspace...</td></tr>
+              <tr><td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>Syncing workspace...</td></tr>
             ) : filteredProjects.length === 0 ? (
-              <tr><td colSpan="10" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No projects in this view.</td></tr>
+              <tr><td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No projects in this view.</td></tr>
             ) : (
               filteredProjects.map((proj, idx) => {
                 const client = proj.client || '-';
@@ -2703,9 +2711,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       >
                         {proj.name}
                       </button>
-                    </td>
-                    <td style={{ padding: '1rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
-                      {client}
                     </td>
                     <td style={{ padding: '1rem 1rem' }}>
                       <span style={{ background: statusBg, color: statusColor, padding: '0.25rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '700' }}>
@@ -2789,122 +2794,5 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   // Unified return statement of Projects component:
   if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Projects...'}</div>;
 
-  // Let's get allowed projects for the sidebar counts:
-  const allowedProjects = (() => {
-    const lvl = getLevel('projects', 'view');
-    if (lvl === 'Self') {
-      const loggedInName = (user?.fullName || user?.name || '').trim().toLowerCase();
-      return projects.filter(p => {
-        const rawMembers = (p.members || '').split(',').map(m => m.trim()).filter(m => m !== "");
-        if (!rawMembers.some(m => m.toLowerCase() === loggedInName)) return false;
-        const emp = employees.find(e => e.name.trim().toLowerCase() === loggedInName);
-        if (emp) {
-          if ((emp.status || 'Active').toLowerCase() === 'inactive') return false;
-          const inactiveProjects = (emp.projectStatus || '').split(',').map(s => s.trim()).filter(Boolean);
-          if (inactiveProjects.includes(p.name)) return false;
-        }
-        return true;
-      });
-    }
-    return projects;
-  })();
-
-  return (
-    <div className="projects-3col-layout">
-      {/* ═ LEFT SIDEBAR ═ */}
-      <div className="projects-left-nav">
-        <div className="pln-header">
-          Projects
-          {can('projects', 'create') && (
-            <button 
-              style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: '0 4px' }}
-              title="Add New Project"
-              onClick={() => {
-                setForm({ name: '', status: 'Active', description: '', client: '', clientId: '', estimatedHours: 0, actualHours: 0, billableHours: 0 });
-                setShowForm(true);
-              }}
-            >+</button>
-          )}
-        </div>
-
-        {/* All Projects Item */}
-        <div
-          className={`pln-all-item ${currentView === 'list' ? 'active' : ''}`}
-          onClick={() => {
-            setCurrentView('list');
-            setSelectedProject(null);
-            setSelectedTaskListId(null);
-          }}
-        >
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-          All Projects
-          <span className="pln-count">{allowedProjects.length}</span>
-        </div>
-
-        {/* Projects tree list */}
-        {allowedProjects.map(proj => {
-          const isProjSelected = selectedProject?.id === proj.id;
-          const isExpanded = !!expandedProj[proj.id];
-          const taskLists = proj.taskLists || [];
-          const taskCount = taskLists.reduce((acc, l) => acc + (l.tasks || []).length, 0);
-
-          return (
-            <div key={proj.id} className="pln-project-block">
-              <div
-                className={`pln-project-row ${isProjSelected && !selectedTaskListId ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedProject(proj);
-                  setCurrentView('detail');
-                  setSelectedTaskListId(null);
-                  toggleProjExpand(proj.id);
-                }}
-              >
-                <span className="pln-chevron">
-                  <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isExpanded ? 'none' : 'rotate(-90deg)', transition: 'transform 0.2s', color: '#94a3b8' }}><path d="M0 0l5 6 5-6z"/></svg>
-                </span>
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                <span className="pln-proj-name">{proj.name}</span>
-                <span className="pln-count">{taskCount}</span>
-              </div>
-
-              {isExpanded && taskLists.length > 0 && (
-                <div className="pln-lists">
-                  {taskLists.map(list => {
-                    const isListSelected = selectedProject?.id === proj.id && selectedTaskListId === list.id && detailTab === 'Tasks';
-                    const listTasksCount = (list.tasks || []).length;
-                    return (
-                      <div
-                        key={list.id}
-                        className={`pln-list-item ${isListSelected ? 'active' : ''}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedProject(proj);
-                          setCurrentView('detail');
-                          setDetailTab('Tasks');
-                          setSelectedTaskListId(list.id);
-                        }}
-                      >
-                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                        <span className="pln-list-name">{list.name}</span>
-                        <span className="pln-count">{listTasksCount}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {isExpanded && taskLists.length === 0 && (
-                <div className="pln-empty-lists">No lists yet</div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ═ MAIN CONTENT AREA ═ */}
-      <div className="projects-main-content">
-        {currentView === 'detail' && selectedProject ? renderDetailContent() : renderListContent()}
-      </div>
-    </div>
-  );
+  return currentView === 'detail' && selectedProject ? renderDetailContent() : renderListContent();
 }

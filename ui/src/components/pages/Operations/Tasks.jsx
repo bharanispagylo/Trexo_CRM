@@ -2138,7 +2138,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const [loading, setLoading]   = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [viewMode, setViewMode] = useState('list'); 
-  const [subTab, setSubTab]     = useState(isTeamLeadOrAdmin ? 'all' : 'my'); 
+  const [subTab, setSubTab]     = useState('my'); 
   const [dragOver, setDragOver] = useState(null);
   const [taskDetailMode, setTaskDetailMode] = useState(false); // false=view, true=edit
   const [promptState, setPromptState] = useState({ isOpen: false, title: '', onSubmit: null });
@@ -2159,6 +2159,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const [listUsers, setListUsers] = useState([]);
   const toggleGroup = (key) => {
     setCollapsedGroups(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+  // Accordion state for All Tasks grouped by task list (null = none open, string = open list id)
+  const [expandedListId, setExpandedListId] = useState('__first__');
+  const toggleListAccordion = (id) => {
+    setExpandedListId(prev => prev === id ? null : id);
   };
 
   useEffect(() => {
@@ -2243,6 +2248,47 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     setDragOver(colId);
   };
 
+  const closeInlineAdd = () => {
+    setInlineAdd(null);
+    setInlineTitle(''); setInlineAssignee(''); setInlinePriority('Medium'); setInlineDueDate('');
+  };
+
+  const submitInlineAdd = async () => {
+    const title = inlineTitle.trim();
+    if (!title) { closeInlineAdd(); return; }
+    const { projName, projId, taskListId, statusId } = inlineAdd;
+    setIsSaving(true);
+    try {
+      await api.post('/tasks', {
+        title,
+        status: statusId,
+        projectName: projName || '',
+        projectId: projId || null,
+        taskListId: taskListId || null,
+        priority: inlinePriority || 'Medium',
+        assignees: inlineAssignee || '',
+        dueDate: inlineDueDate ? new Date(inlineDueDate).toISOString() : null,
+        tag: 'Engineering',
+        taskType: 'Feature',
+        isBillable: false,
+        description: ''
+      });
+      const data = await api.get('/tasks');
+      setTasks(data || []);
+      closeInlineAdd();
+    } catch (err) {
+      console.error('Inline add failed:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const openTaskDetail = (task, editMode = false) => {
+    setDrawerTask(task);
+    setTaskDetailMode(editMode);
+    setDrawerOpen(true);
+  };
+
   const handleDrop = async (e, colId) => {
     e.preventDefault();
     const id = dragId.current;
@@ -2278,7 +2324,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     document.querySelectorAll('.task-card').forEach(el => el.classList.remove('dragging'));
   };
 
-  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ INSERT/UPDATE ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const handleSaveTask = async (taskData, silent = false) => {
     if (!silent) setIsSaving(true);
     try {
@@ -2288,7 +2333,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       } else {
         await api.post('/tasks', taskData);
         alert('Task created successfully!', 'success', 'Success');
-        setView('board');
       }
       const data = await api.get('/tasks');
       setTasks(data || []);
@@ -2300,14 +2344,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     }
   };
 
-  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ DELETE ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const handleDeleteTask = async (id) => {
     setIsSaving(true);
     try {
       await api.delete(`/tasks/${id}`);
       alert('Task deleted successfully.', 'success', 'Deleted');
       fetchTasks();
-      setView('board');
     } catch (error) {
       console.error('Delete error:', error);
       alert('Failed to delete task.', 'error', 'Error');
@@ -2316,103 +2358,36 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     }
   };
 
-  const openNewTask = (eOrStatus) => {
-    const isEvent = typeof eOrStatus === 'object' && eOrStatus !== null && eOrStatus.nativeEvent;
-    const status = isEvent ? 'To Do' : (typeof eOrStatus === 'string' ? eOrStatus : 'To Do');
-
-    let defaultProjectName = '';
-    let defaultProjectId = null;
-    let defaultTaskListId = null;
-
-    if (selectedListId) {
-      defaultTaskListId = selectedListId;
-      const listObj = taskListsData.find(l => l.id === selectedListId);
-      if (listObj && listObj.projectId) {
-        defaultProjectId = listObj.projectId;
-        const proj = taskProjects.find(p => p.id === listObj.projectId);
-        if (proj) defaultProjectName = proj.name;
-      }
-    } else if (selectedProjId && selectedProjId !== 'unassigned') {
-      defaultProjectId = selectedProjId;
-      const proj = taskProjects.find(p => p.id === selectedProjId);
-      if (proj) defaultProjectName = proj.name;
-    }
-
-    setDrawerTask({ 
-      status: status, 
-      projectName: defaultProjectName, 
-      projectId: defaultProjectId,
-      taskListId: defaultTaskListId,
-      priority: 'Medium', 
-      title: '', 
-      description: '', 
-      assignees: '', 
-      isBillable: false, 
-      tag: 'Engineering', 
-      taskType: 'Feature' 
-    });
+  const openNewTask = (presetStatus = 'To Do', presetProject = '') => {
+    setDrawerTask({ status: presetStatus, projectName: presetProject, priority: 'Medium', title: '', description: '', assignees: '', isBillable: false, tag: 'Engineering', taskType: 'Feature' });
     setTaskDetailMode(true);
     setDrawerOpen(true);
   };
 
   const closeDrawer = () => { setDrawerOpen(false); setDrawerTask(null); };
 
-  const openInlineAdd = (_, statusId) => {
-    let defaultProjectName = '';
-    let defaultProjectId = null;
-    let defaultTaskListId = null;
-
-    if (selectedListId) {
-      defaultTaskListId = selectedListId;
-      const listObj = taskListsData.find(l => l.id === selectedListId);
-      if (listObj && listObj.projectId) {
-        defaultProjectId = listObj.projectId;
-        const proj = taskProjects.find(p => p.id === listObj.projectId);
-        if (proj) defaultProjectName = proj.name;
+  const openInlineAdd = (proj, statusId, taskListId = null) => {
+    let finalProjId = null;
+    let finalProjName = '';
+    if (taskListId) {
+      const list = taskListsData.find(l => l.id === taskListId);
+      if (list && list.projectId) {
+        const p = taskProjects.find(pr => pr.id === list.projectId);
+        if (p) {
+          finalProjId = p.id;
+          finalProjName = p.name;
+        }
       }
-    } else if (selectedProjId && selectedProjId !== 'unassigned') {
-      defaultProjectId = selectedProjId;
-      const proj = taskProjects.find(p => p.id === selectedProjId);
-      if (proj) defaultProjectName = proj.name;
     }
-
-    setInlineAdd({ projName: defaultProjectName, projId: defaultProjectId, taskListId: defaultTaskListId, statusId });
+    setInlineAdd({ 
+      proj: finalProjName || proj, 
+      projName: finalProjName || proj, 
+      projId: finalProjId, 
+      taskListId, 
+      statusId: statusId || 'To Do' 
+    });
     setInlineTitle(''); setInlineAssignee(''); setInlinePriority('Medium'); setInlineDueDate('');
     setTimeout(() => inlineInputRef.current?.focus(), 50);
-  };
-
-  const closeInlineAdd = () => {
-    setInlineAdd(null);
-    setInlineTitle(''); setInlineAssignee(''); setInlinePriority('Medium'); setInlineDueDate('');
-  };
-
-  const submitInlineAdd = async () => {
-    const title = inlineTitle.trim();
-    if (!title) { closeInlineAdd(); return; }
-    const { projName, projId, taskListId, statusId } = inlineAdd;
-    setIsSaving(true);
-    try {
-      await api.post('/tasks', {
-        title, status: statusId,
-        projectName: projName,
-        projectId: projId,
-        taskListId: taskListId,
-        priority: inlinePriority || 'Medium',
-        assignees: inlineAssignee || '',
-        dueDate: inlineDueDate ? new Date(inlineDueDate).toISOString() : null,
-        tag: 'Engineering', taskType: 'Feature', isBillable: false, description: ''
-      });
-      const data = await api.get('/tasks');
-      setTasks(data || []);
-      closeInlineAdd();
-    } catch (err) { console.error('Inline add failed:', err); }
-    finally { setIsSaving(false); }
-  };
-
-  const openTaskDetail = (task, editMode = false) => {
-    setDrawerTask(task);
-    setTaskDetailMode(editMode);
-    setDrawerOpen(true);
   };
 
   const getTaskProjectId = (t) => {
@@ -2432,238 +2407,46 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   };
 
   const filteredTasks = tasks.filter(t => {
-    // Explicit project filter
+    // 1. Project Filter
     if (filterProjectName && t.projectName !== filterProjectName) {
-      const projIdFromTask = getTaskProjectId(t);
-      const projFilterObj = taskProjects.find(p => p.name === filterProjectName);
-      if (!projFilterObj || projIdFromTask !== projFilterObj.id) return false;
+      return false;
     }
-    
-    // Explicit date filter
+
+    // 2. Date Filter
     if (filterDate) {
-      const tDateStr = t.dueDate ? new Date(t.dueDate).toISOString().split('T')[0] : 
-                       (t.startDate ? new Date(t.startDate).toISOString().split('T')[0] : 
-                       (t.assignedDate ? new Date(t.assignedDate).toISOString().split('T')[0] : null));
-      if (tDateStr !== filterDate) return false;
-    }
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Sidebar filter: by selected list or project Ã¢â€â‚¬Ã¢â€â‚¬
-    if (selectedListId) {
-      if (t.taskListId !== selectedListId) return false;
-    } else if (selectedProjId) {
-      if (selectedProjId === 'unassigned') {
-        const hasProject = taskProjects.some(p => p.id === t.projectId || p.name === t.projectName || (!t.projectId && !t.projectName && t.taskListId && taskListsData.some(l => l.id === t.taskListId && l.projectId === p.id)));
-        return !hasProject;
-      }
-      if (t.projectId) {
-        if (t.projectId !== selectedProjId) return false;
-      } else if (t.projectName) {
-        if (t.projectName !== selectedProj?.name) return false;
-      } else if (t.taskListId) {
-        const pLists = taskListsData.filter(l => l.projectId === selectedProjId);
-        const pListIds = new Set(pLists.map(l => l.id));
-        if (!pListIds.has(t.taskListId)) return false;
-      } else {
+      const targetDateStr = filterDate;
+      const matchDate = (dateStr) => {
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return false;
+        return d.toISOString().split('T')[0] === targetDateStr;
+      };
+      if (!matchDate(t.startDate) && !matchDate(t.dueDate) && !matchDate(t.deliveredDate)) {
         return false;
       }
     }
 
+    // 3. User Permission / SubTab Filter
     const level = getLevel('tasks', 'view');
     const editLevel = getLevel('tasks', 'edit');
     const deleteLevel = getLevel('tasks', 'delete');
+    
     const hasAllAccess = level === 'All' || editLevel === 'All' || deleteLevel === 'All' || isTeamLeadOrAdmin;
+    
     if (hasAllAccess && subTab === 'all') return true;
+    
+    // For 'my' tab or 'Self' level:
     const assignees = t.assignees ? t.assignees.split(',').map(a => a.trim().toLowerCase()) : [];
     const myName = (user?.fullName || user?.name || '').trim().toLowerCase();
+    
     return assignees.includes(myName);
   });
 
-  const accessibleTasks = tasks.filter(t => {
-    const level = getLevel('tasks', 'view');
-    const editLevel = getLevel('tasks', 'edit');
-    const deleteLevel = getLevel('tasks', 'delete');
-    const hasAllAccess = level === 'All' || editLevel === 'All' || deleteLevel === 'All' || isTeamLeadOrAdmin;
-    if (hasAllAccess && subTab === 'all') return true;
-    const assignees = t.assignees ? t.assignees.split(',').map(a => a.trim().toLowerCase()) : [];
-    const myName = (user?.fullName || user?.name || '').trim().toLowerCase();
-    return assignees.includes(myName);
-  });
-
-  const accessibleProjects = taskProjects.filter(p => {
-    const level = getLevel('tasks', 'view');
-    const editLevel = getLevel('tasks', 'edit');
-    const deleteLevel = getLevel('tasks', 'delete');
-    const hasAllAccess = level === 'All' || editLevel === 'All' || deleteLevel === 'All' || isTeamLeadOrAdmin;
-    if (hasAllAccess && subTab === 'all') return true;
-    return accessibleTasks.some(t => getTaskProjectId(t) === p.id);
-  });
-
-
-  if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Tasks...'}</div>;
-
-  // Breadcrumb title
-  const pageTitle = selectedList
-    ? `${selectedListProj?.name || ''} / ${selectedList.name}`
-
-    : selectedProj ? selectedProj.name
-    : subTab === 'my' ? 'My Assignments' : 'All Tasks';
+  const pageTitle = subTab === 'my' ? '' : 'All Tasks';
 
   return (
     <div className="tasks-3col-layout">
 
-      {/* Ã¢â€¢ÂÃ¢â€¢Â LEFT SIDEBAR Ã¢â€¢ÂÃ¢â€¢Â */}
-      <div className="tasks-left-nav">
-        <div className="tln-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Projects
-          {can('projects', 'create') && (
-            <button 
-              style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: '0 4px' }}
-              title="Create New Project"
-              onClick={async () => {
-                setPromptState({
-                  isOpen: true,
-                  title: 'Enter new Project Name:',
-                  onSubmit: async (name) => {
-                    if (name && name.trim()) {
-                      try {
-                        await api.post('/projects', { name: name.trim(), status: 'Active' });
-                        const data = await api.get('/projects');
-                        setTaskProjects(data || []);
-                      } catch (e) {
-                        alert('Failed to create project', 'error', 'Error');
-                      }
-                    }
-                  }
-                });
-              }}
-            >+</button>
-          )}
-        </div>
-
-        {/* All Tasks */}
-        <div
-          className={`tln-all-item ${!selectedListId && !selectedProjId ? 'active' : ''}`}
-          onClick={() => { setSelectedListId(null); setSelectedProjId(null); }}
-        >
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-          All Tasks
-          <span className="tln-count">{accessibleTasks.length}</span>
-        </div>
-
-        {/* Projects tree */}
-        {accessibleProjects.map(proj => {
-          const projLists = taskListsData.filter(l => l.projectId === proj.id);
-          const projTaskCount = accessibleTasks.filter(t => getTaskProjectId(t) === proj.id).length;
-          const isExpanded = !!expandedProj[proj.id];
-          const isProjSelected = selectedProjId === proj.id && !selectedListId;
-
-          return (
-            <div key={proj.id} className="tln-project-block">
-              <div
-                className={`tln-project-row ${isProjSelected ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedListId(null);
-                  setSelectedProjId(isProjSelected ? null : proj.id);
-                  toggleProjExpand(proj.id);
-                }}
-              >
-                <span className="tln-chevron"><svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isExpanded ? 'none' : 'rotate(-90deg)', transition: 'transform 0.2s', color: '#94a3b8' }}><path d="M0 0l5 6 5-6z"/></svg></span>
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                <span className="tln-proj-name">{proj.name}</span>
-                <button 
-                  style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '0 4px', fontSize: '1rem', marginRight: '4px' }}
-                  title="Add Task List"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    setPromptState({
-                      isOpen: true,
-                      title: `Enter new Task List name for ${proj.name}:`,
-                      onSubmit: async (listName) => {
-                        if (listName && listName.trim()) {
-                          try {
-                            await api.post('/task-lists', { name: listName.trim(), projectId: proj.id });
-                            const updated = await api.get('/task-lists');
-                            setTaskListsData(updated || []);
-                            if (!isExpanded) toggleProjExpand(proj.id);
-                          } catch (err) {
-                            alert('Failed to create Task List', 'error', 'Error');
-                          }
-                        }
-                      }
-                    });
-                  }}
-                >+</button>
-                <span className="tln-count">{projTaskCount}</span>
-              </div>
-
-              {isExpanded && projLists.length > 0 && (
-                <div className="tln-lists">
-                  {projLists.map(list => {
-                    const listCount = accessibleTasks.filter(t => t.taskListId === list.id).length;
-                    const isListSelected = selectedListId === list.id;
-                    return (
-                      <div
-                        key={list.id}
-                        className={`tln-list-item ${isListSelected ? 'active' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); setSelectedListId(list.id); setSelectedProjId(null); }}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, overflow: 'hidden' }}>
-                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                          <span className="tln-list-name">{list.name}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <span className="tln-count">{listCount}</span>
-                          <button 
-                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 4px', fontSize: '1rem', display: 'flex', alignItems: 'center' }}
-                            title="Delete Task List"
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              if (window.confirm('Delete this task list? All tasks inside will also be removed.')) {
-                                try {
-                                  await api.delete(`/task-lists/${list.id}`);
-                                  const updated = await api.get('/task-lists');
-                                  setTaskListsData(updated || []);
-                                  if (selectedListId === list.id) setSelectedListId(null);
-                                } catch (err) {
-                                  console.error(err);
-                                  alert('Failed to delete Task List');
-                                }
-                              }
-                            }}
-                          >
-                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {isExpanded && projLists.length === 0 && (
-                <div className="tln-empty-lists">No lists yet</div>
-              )}
-            </div>
-          );
-        })}
-        {(() => {
-           const unassignedTasks = accessibleTasks.filter(t => getTaskProjectId(t) === null);
-           if (unassignedTasks.length === 0) return null;
-           return (
-             <div className="tln-project-block">
-               <div
-                 className={`tln-project-row ${selectedProjId === 'unassigned' ? 'active' : ''}`}
-                 onClick={() => { setSelectedListId(null); setSelectedProjId('unassigned'); }}
-               >
-                 <span className="tln-chevron" style={{ visibility: 'hidden' }}><svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor"><path d="M0 0l5 6 5-6z"/></svg></span>
-                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                 <span className="tln-proj-name">Unassigned / Other</span>
-                 <span className="tln-count">{unassignedTasks.length}</span>
-               </div>
-             </div>
-           );
-        })()}
-      </div>
 
       {/* Ã¢â€¢ÂÃ¢â€¢Â MAIN CONTENT Ã¢â€¢ÂÃ¢â€¢Â */}
       <div className="tasks-main-content">
@@ -2700,17 +2483,23 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Header ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
       <div className="kanban-header">
         <div className="kanban-header-left">
-          <h1 className="kanban-title">{pageTitle}</h1>
         </div>
         <div className="kanban-controls">
           <div style={{ display: 'flex', gap: '0.5rem', marginRight: '1rem', alignItems: 'center' }}>
+            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Projects</label>
             <select 
               value={filterProjectName} 
               onChange={e => setFilterProjectName(e.target.value)}
               style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
             >
-              <option value="">All Projects</option>
-              {taskProjects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+              {subTab === 'my' ? (
+                <>
+                  <option value="">All Projects</option>
+                  {taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                </>
+              ) : (
+                taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)
+              )}
             </select>
             <input 
               type="date" 
@@ -3108,7 +2897,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           </div>
         </div>
       )}
-      </div>
       
       <PromptModal
         isOpen={promptState.isOpen}
@@ -3116,6 +2904,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         onSave={promptState.onSubmit}
         onCancel={() => setPromptState({ isOpen: false, title: '', onSubmit: null })}
       />
+      </div>
       </div>
     </div>
   );
