@@ -2676,7 +2676,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         );
       })()}
 
-      {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Views ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
+      {/* ── Views ── */}
       {viewMode === 'kanban' && (
         <div className="kanban-board">
           {COLUMNS.map(col => (
@@ -2701,7 +2701,247 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       )}
 
       {viewMode === 'list' && (() => {
-        // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ ClickUp-style: group by STATUS only ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+        if (subTab === 'all') {
+          // Group by Task List
+          const byList = {};
+          taskListsData.forEach(list => {
+            byList[list.id] = [];
+          });
+          byList['unassigned'] = [];
+
+          filteredTasks.forEach(task => {
+            const listId = task.taskListId;
+            if (listId && byList[listId] !== undefined) {
+              byList[listId].push(task);
+            } else {
+              byList['unassigned'].push(task);
+            }
+          });
+
+          // Only display groups that have tasks
+          const listGroups = taskListsData
+            .map(list => {
+              const listTasks = byList[list.id] || [];
+              const sortedTasks = [...listTasks].sort((a, b) => {
+                if (!a.dueDate) return 1;
+                if (!b.dueDate) return -1;
+                return new Date(a.dueDate) - new Date(b.dueDate);
+              });
+              return {
+                id: list.id,
+                name: list.name,
+                tasks: sortedTasks
+              };
+            })
+            .filter(g => g.tasks.length > 0);
+
+          const unassignedTasks = [...(byList['unassigned'] || [])].sort((a, b) => {
+            if (!a.dueDate) return 1;
+            if (!b.dueDate) return -1;
+            return new Date(a.dueDate) - new Date(b.dueDate);
+          });
+          if (unassignedTasks.length > 0) {
+            listGroups.push({
+              id: 'unassigned',
+              name: 'General / Unassigned',
+              tasks: unassignedTasks
+            });
+          }
+
+          return (
+            <div className="cu-list-root">
+              {listGroups.map(group => {
+                const isCollapsed = expandedListId === '__first__'
+                  ? listGroups.indexOf(group) !== 0
+                  : expandedListId !== group.id;
+                const isInline = inlineAdd && (inlineAdd.taskListId === group.id || (group.id === 'unassigned' && !inlineAdd.taskListId));
+
+                return (
+                  <div key={group.id} className="cu-status-section">
+                    {/* Section Header - Only show the tasks list name, count, and collapse/add controls */}
+                    <div className="cu-section-header">
+                      <div className="cu-section-left" onClick={() => {
+                        const isFirst = listGroups.length > 0 && listGroups[0].id === group.id;
+                        if (expandedListId === '__first__') {
+                          setExpandedListId(isFirst ? null : group.id);
+                        } else {
+                          toggleListAccordion(group.id);
+                        }
+                      }}>
+                        <span className="cu-section-chevron">
+                          <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
+                        </span>
+                        <span style={{ fontWeight: '700', fontSize: '0.88rem', color: '#1e293b', marginLeft: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          {group.name}
+                        </span>
+                        <span className="cu-section-count" style={{ marginLeft: '0.5rem', background: '#f1f5f9', color: '#64748b', padding: '0.1rem 0.4rem', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600 }}>
+                          {group.tasks.length}
+                        </span>
+                      </div>
+                      <div className="cu-section-right">
+                        {can('tasks', 'create') && (
+                          <button className="cu-section-add-btn" title={`Add task to ${group.name}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedListId(group.id);
+                              openInlineAdd('', 'To Do', group.id === 'unassigned' ? null : group.id);
+                            }}>+</button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Task Table */}
+                    {!isCollapsed && (
+                      <div className="cu-table-wrapper">
+                        <table className="cu-table">
+                          <thead>
+                            <tr className="cu-thead-row">
+                              <th className="cu-th cu-th-name">NAME</th>
+                              <th className="cu-th cu-th-assignee">ASSIGNEE</th>
+                              <th className="cu-th cu-th-project">PROJECT</th>
+                              <th className="cu-th cu-th-list">STATUS</th>
+                              <th className="cu-th cu-th-delivery">DELIVERY DATE</th>
+                              <th className="cu-th cu-th-priority">PRIORITY</th>
+                              <th className="cu-th cu-th-actions"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {group.tasks.map(task => {
+                              const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
+                              const relDate = formatRelativeDueDate(task.dueDate);
+                              const meta = STATUS_HEADER_META[task.status] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
+
+                              return (
+                                <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
+                                  <td className="cu-td cu-td-name">
+                                    <span className="cu-status-dot" style={{ color: meta.dotColor, borderColor: meta.dotColor }}>
+                                      <span className="cu-status-dot" style={{ background: meta.dotColor, borderColor: meta.dotColor }}></span>
+                                    </span>
+                                    <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
+                                    {task.taskNo && <span className="cu-task-id">{task.taskNo}</span>}
+                                  </td>
+                                  <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
+                                    <div className="cu-avatars">
+                                      {assignees.length === 0 ? (
+                                        <div className="cu-avatar-empty" title="Unassigned">
+                                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                        </div>
+                                      ) : assignees.slice(0, 3).map(a => (
+                                        <div key={a} className={`cu-avatar ${getAvatarColor(a)}`} title={a}>{initials(a)}</div>
+                                      ))}
+                                      {assignees.length > 3 && <div className="cu-avatar av-blue">+{assignees.length - 3}</div>}
+                                    </div>
+                                  </td>
+                                  <td className="cu-td cu-td-project">
+                                    {task.projectName ? (
+                                      <span className="cu-project-badge">{task.projectName}</span>
+                                    ) : <span className="cu-empty-cell">-</span>}
+                                  </td>
+
+                                  <td className="cu-td cu-td-list">
+                                    <span style={{
+                                      background: meta.bg,
+                                      color: meta.fg,
+                                      padding: '0.2rem 0.6rem',
+                                      borderRadius: '12px',
+                                      fontSize: '0.75rem',
+                                      fontWeight: '700',
+                                      textTransform: 'uppercase',
+                                      display: 'inline-block'
+                                    }}>
+                                      {task.status || 'To Do'}
+                                    </span>
+                                  </td>
+                                  <td className="cu-td cu-td-delivery">
+                                    {relDate ? (
+                                      <span className={`cu-due-badge ${relDate.isOverdue ? 'overdue' : relDate.isToday ? 'today' : ''}`}>
+                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        {relDate.text}
+                                      </span>
+                                    ) : <span className="cu-empty-cell">-</span>}
+                                  </td>
+                                  <td className="cu-td cu-td-priority">
+                                    <span className="cu-priority-badge">
+                                      <PriorityFlag priority={task.priority} />
+                                      <span>{task.priority || 'Medium'}</span>
+                                    </span>
+                                  </td>
+                                  <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
+                                    <div className="cu-row-actions">
+                                      {(getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
+                                        <button className="cu-act-btn" onClick={() => openTaskDetail(task, true)} title="Edit">
+                                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                        </button>
+                                      )}
+                                      {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
+                                        <button className="cu-act-btn danger" onClick={() => showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task')} title="Delete">
+                                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+
+                            {/* Inline Add Row */}
+                            {isInline ? (
+                              <tr className="cu-inline-row">
+                                <td className="cu-td cu-td-name">
+                                  <span className="cu-status-dot" style={{ background: '#94a3b8', width: "10px", height: "10px", borderRadius: "50%", display: "inline-block", flexShrink: 0 }}></span>
+                                  <input ref={inlineInputRef} className="cu-inline-input" placeholder="Task name"
+                                    value={inlineTitle} onChange={e => setInlineTitle(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }} autoFocus />
+                                </td>
+                                <td className="cu-td cu-td-assignee">
+                                  <select className="cu-inline-sel" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
+                                    <option value="">-</option>
+                                    {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim(); return <option key={u.id} value={n}>{n}</option>; })}
+                                  </select>
+                                </td>
+                                <td className="cu-td cu-td-project"><span className="cu-empty-cell">-</span></td>
+                                <td className="cu-td cu-td-list"><span className="cu-empty-cell">-</span></td>
+                                <td className="cu-td cu-td-delivery">
+                                  <input type="date" className="cu-inline-date" value={inlineDueDate} onChange={e => setInlineDueDate(e.target.value)} />
+                                </td>
+                                <td className="cu-td cu-td-priority">
+                                  <select className="cu-inline-sel" value={inlinePriority} onChange={e => setInlinePriority(e.target.value)}>
+                                    {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                                  </select>
+                                </td>
+                                <td className="cu-td cu-td-actions">
+                                  <div className="cu-row-actions" style={{ opacity: 1 }}>
+                                    <button className="cu-act-btn" onClick={submitInlineAdd} title="Save (Enter)">
+                                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    </button>
+                                    <button className="cu-act-btn danger" onClick={closeInlineAdd} title="Cancel (Esc)">
+                                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ) : (
+                              can('tasks', 'create') && (
+                                <tr className="cu-add-row" onClick={() => openInlineAdd('', 'To Do', group.id === 'unassigned' ? null : group.id)}>
+                                  <td colSpan="7">
+                                    <span className="cu-add-icon">+</span>
+                                    <span className="cu-add-text">Add Task</span>
+                                  </td>
+                                </tr>
+                              )
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        }
+
+        // Group by status (for My Tasks or general default fallback)
         const byStatus = {};
         COLUMNS.forEach(col => { byStatus[col.id] = []; });
         filteredTasks.forEach(task => {
@@ -2714,9 +2954,13 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           <div className="cu-list-root">
             {COLUMNS.map(col => {
               const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
-              const statusTasks = byStatus[col.id] || [];
+              const statusTasks = [...(byStatus[col.id] || [])].sort((a, b) => {
+                if (!a.dueDate) return 1;
+                if (!b.dueDate) return -1;
+                return new Date(a.dueDate) - new Date(b.dueDate);
+              });
               const isCollapsed = !!collapsedGroups[col.id];
-              const isInline = inlineAdd && inlineAdd.statusId === col.id;
+              const isInline = inlineAdd && inlineAdd.statusId === col.id && !inlineAdd.taskListId;
 
               return (
                 <div key={col.id} className="cu-status-section">
@@ -2735,7 +2979,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                     <div className="cu-section-right">
                       {can('tasks', 'create') && (
                         <button className="cu-section-add-btn" title={`Add task to ${col.label}`}
-                          onClick={() => openInlineAdd(inlineAdd?.proj || '', col.id)}>+</button>
+                          onClick={() => openInlineAdd('', col.id)}>+</button>
                       )}
                     </div>
                   </div>
@@ -2821,7 +3065,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                             );
                           })}
 
-                          {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Inline Add Row ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
+                          {/* Inline Add Row */}
                           {isInline ? (
                             <tr className="cu-inline-row">
                               <td className="cu-td cu-td-name">

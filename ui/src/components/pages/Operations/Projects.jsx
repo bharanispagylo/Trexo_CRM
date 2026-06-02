@@ -2,8 +2,79 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
 import './Projects.css';
+import './Tasks.css';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useAlert } from '../../../context/AlertContext';
+
+const STATUS_HEADER_META = {
+  'To Do':         { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false },
+  'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', isDone: false },
+  'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', isDone: false },
+  'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', isDone: false },
+  'Prod Deployed': { bg: '#ea580c', fg: '#ffffff', dotColor: '#fde68a', isDone: false },
+  'Prod Verified': { bg: '#0d9488', fg: '#ffffff', dotColor: '#bbf7d0', isDone: false },
+  'Delivered':     { bg: '#16a34a', fg: '#ffffff', dotColor: '#99f6e4', isDone: true  },
+};
+
+const PRIORITY_FLAGS = {
+  'Critical': { color: '#ef4444', label: 'Critical' },
+  'High':     { color: '#f59e0b', label: 'High' },
+  'Medium':   { color: '#3b82f6', label: 'Medium' },
+  'Low':      { color: '#94a3b8', label: 'Low' },
+};
+
+const PriorityFlag = ({ priority }) => {
+  const meta = PRIORITY_FLAGS[priority] || PRIORITY_FLAGS['Medium'];
+  return (
+    <svg 
+      viewBox="0 0 24 24" 
+      width="14" 
+      height="14" 
+      fill="currentColor" 
+      style={{ color: meta.color, display: 'inline-block', flexShrink: 0 }}
+      title={`Priority: ${meta.label}`}
+    >
+      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+      <line x1="4" y1="22" x2="4" y2="15"></line>
+    </svg>
+  );
+};
+
+const formatRelativeDueDate = (dateStr) => {
+  if (!dateStr) return null;
+  const dueDate = new Date(dateStr);
+  if (isNaN(dueDate.getTime())) return null;
+  
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  dueDate.setHours(0,0,0,0);
+  
+  const diffTime = dueDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) {
+    const absoluteDays = Math.abs(diffDays);
+    if (absoluteDays === 1) return { text: 'Yesterday', isOverdue: true };
+    return { text: `${absoluteDays} days ago`, isOverdue: true };
+  } else if (diffDays === 0) {
+    return { text: 'Today', isOverdue: false, isToday: true };
+  } else if (diffDays === 1) {
+    return { text: 'Tomorrow', isOverdue: false };
+  } else {
+    return { 
+      text: dueDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }), 
+      isOverdue: false 
+    };
+  }
+};
+
+const initials = (name) => name ? name.split(' ').map(w => w[0]).join('').toUpperCase() : '?';
+
+const AVATAR_COLORS_LIST = ['av-blue', 'av-pink', 'av-green', 'av-amber', 'av-purple'];
+const getAvatarColor = (name) => {
+  const charCode = name?.charCodeAt(0) || 0;
+  return AVATAR_COLORS_LIST[charCode % AVATAR_COLORS_LIST.length];
+};
 
 export default function Projects({ user, initialSelectedProject, onClearInitialProject, onNavigateToTasks }) {
   const [projects, setProjects] = useState([]);
@@ -28,6 +99,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [editingListName, setEditingListName] = useState('');
   const [detailTab, setDetailTab] = useState('General');
   const [selectedTaskListId, setSelectedTaskListId] = useState(null);
+  const [expandedListId, setExpandedListId] = useState('__first__');
+  const toggleListAccordion = (id) => {
+    setExpandedListId(prev => prev === id ? null : id);
+  };
+  const handleOpenCreateTaskModalForList = (listId) => {
+    setSelectedTaskListId(listId);
+    handleOpenCreateTaskModal();
+  };
 
   const [form, setForm] = useState({ name: '', status: 'Active' });
   const [showTaskFormModal, setShowTaskFormModal] = useState(false);
@@ -1175,7 +1254,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               onClick={() => { setDetailTab(tab.id); setSelectedTaskListId(null); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none',
-                padding: '0.75rem 0', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer',
+                padding: '0.75rem 0', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer',
                 color: detailTab === tab.id ? '#0f172a' : '#64748b',
                 borderBottom: detailTab === tab.id ? '2px solid #0f172a' : '2px solid transparent',
                 marginBottom: '-1px',
@@ -1269,323 +1348,269 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
           {detailTab === 'Tasks' && (
             <div>
-              {!selectedTaskListId ? (
-                // View A: List of Task Categories
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>Task lists</h3>
-                    {can('projects', 'create') && (
-                      <div className="add-list-inline" style={{ marginTop: 0, display: 'flex', gap: '0.5rem' }}>
-                        <input 
-                          className="saas-input" 
-                          placeholder="New Task List..." 
-                          style={{ width: '200px', height: '36px', fontSize: '0.85rem', padding: '0 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none' }}
-                          value={newListName}
-                          onChange={e => setNewListName(e.target.value)}
-                        />
-                        <button 
-                          className="saas-btn-submit" 
-                          style={{ padding: '0 1rem', height: '36px', fontSize: '0.8rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
-                          onClick={handleAddList}
-                        >
-                          + Add Task List
-                        </button>
-                      </div>
-                    )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#0f172a' }}>Task lists</h3>
+                {can('projects', 'create') && (
+                  <div className="add-list-inline" style={{ marginTop: 0, display: 'flex', gap: '0.5rem' }}>
+                    <input 
+                      className="saas-input" 
+                      placeholder="New Task List..." 
+                      style={{ width: '200px', height: '36px', fontSize: '0.85rem', padding: '0 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none' }}
+                      value={newListName}
+                      onChange={e => setNewListName(e.target.value)}
+                    />
+                    <button 
+                      className="saas-btn-submit" 
+                      style={{ padding: '0 1rem', height: '36px', fontSize: '0.8rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
+                      onClick={handleAddList}
+                    >
+                      + Add Task List
+                    </button>
                   </div>
+                )}
+              </div>
 
-                  <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: 'white' }}>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                        <thead>
-                          <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                            <th style={{ padding: '0.85rem 1.25rem', width: '80px', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>#</th>
-                            <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>List Name</th>
-                            <th style={{ padding: '0.85rem 1.25rem', width: '180px', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Total Tasks</th>
-                            <th style={{ padding: '0.85rem 1.25rem', width: '220px', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', textAlign: 'center' }}>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(selectedProject.taskLists || []).length === 0 ? (
-                            <tr>
-                              <td colSpan="4" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8', fontSize: '0.9rem' }}>
-                                No task categories created for this project yet.
-                              </td>
-                            </tr>
-                          ) : (
-                            (selectedProject.taskLists || []).map((list, idx) => {
-                              const isEditing = editingListId === list.id;
-                              const listTasksCount = (list.tasks || []).length;
-
-                              return (
-                                <tr 
-                                  key={list.id} 
-                                  style={{ 
-                                    borderBottom: '1px solid #f1f5f9', 
-                                    cursor: isEditing ? 'default' : 'pointer',
-                                    transition: 'background 0.15s' 
-                                  }} 
-                                  onClick={() => {
-                                    if (!isEditing) {
-                                      setSelectedTaskListId(list.id);
-                                    }
-                                  }}
-                                  onMouseEnter={e => {
-                                    if (!isEditing) e.currentTarget.style.background = '#f8fafc';
-                                  }}
-                                  onMouseLeave={e => {
-                                    if (!isEditing) e.currentTarget.style.background = 'white';
-                                  }}
-                                >
-                                  <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>
-                                    {idx + 1}
-                                  </td>
-                                  <td style={{ padding: '0.85rem 1.25rem' }}>
-                                    {isEditing ? (
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }} onClick={(e) => e.stopPropagation()}>
-                                        <input
-                                          className="saas-input"
-                                          value={editingListName}
-                                          onChange={(e) => setEditingListName(e.target.value)}
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                              handleRenameList(list.id);
-                                            } else if (e.key === 'Escape') {
-                                              setEditingListId(null);
-                                              setEditingListName('');
-                                            }
-                                          }}
-                                          autoFocus
-                                          style={{ height: '36px', fontSize: '0.85rem', flex: 1, padding: '0 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                                        />
-                                        <button
-                                          onClick={() => handleRenameList(list.id)}
-                                          style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                          title="Save"
-                                        >
-                                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                        </button>
-                                        <button
-                                          onClick={() => { setEditingListId(null); setEditingListName(''); }}
-                                          style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                          title="Cancel"
-                                        >
-                                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <span style={{ fontSize: '0.9rem', fontWeight: '700', color: '#2563eb' }}>
-                                        {list.name}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td style={{ padding: '0.85rem 1.25rem' }}>
-                                    <span style={{ fontSize: '0.75rem', color: '#2563eb', background: '#eff6ff', padding: '0.25rem 0.6rem', borderRadius: '20px', fontWeight: '700' }}>
-                                      {listTasksCount}
-                                    </span>
-                                  </td>
-                                  <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', alignItems: 'center' }}>
-                                      <button
-                                        style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
-                                        title="Open List"
-                                        onClick={() => setSelectedTaskListId(list.id)}
-                                      >
-                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                      </button>
-                                      {can('projects', 'edit') && (
-                                        <button
-                                          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
-                                          title="Rename Category"
-                                          onClick={() => {
-                                            setEditingListId(list.id);
-                                            setEditingListName(list.name);
-                                          }}
-                                        >
-                                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                        </button>
-                                      )}
-                                      {can('projects', 'delete') && (
-                                        <button
-                                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
-                                          title="Delete Category"
-                                          onClick={() => {
-                                            confirm(`Delete "${list.name}" list and all its tasks?`, () => handleRemoveList(list.id), 'Delete Category');
-                                          }}
-                                        >
-                                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                        </button>
-                                      )}
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+              {(selectedProject.taskLists || []).length === 0 ? (
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '3rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem', background: 'white' }}>
+                  No task categories created for this project yet.
                 </div>
               ) : (
-                // View B: Task Category Details Page (Drill-down)
-                (() => {
-                  const activeList = (selectedProject.taskLists || []).find(l => l.id === selectedTaskListId);
-                  if (!activeList) {
-                    setSelectedTaskListId(null);
-                    return null;
-                  }
-                  return (
-                    <div>
-                      {/* Back button styled matching the sketch */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                        <button 
-                          style={{ 
-                            background: 'none', 
-                            border: 'none', 
-                            color: '#0066FF', 
-                            cursor: 'pointer', 
-                            fontSize: '0.9rem', 
-                            fontWeight: '700', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '0.4rem',
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '6px',
-                            transition: 'background 0.2s'
-                          }}
-                          onClick={() => setSelectedTaskListId(null)}
-                          onMouseEnter={(e) => e.currentTarget.style.background = '#eff6ff'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                        >
-                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                          Task List
-                        </button>
-                      </div>
+                <div className="cu-list-root" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', border: 'none', background: 'transparent', boxShadow: 'none' }}>
+                  {(selectedProject.taskLists || []).map((list, idx) => {
+                    const isCollapsed = expandedListId === '__first__'
+                      ? idx !== 0
+                      : expandedListId !== list.id;
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem' }}>
-                          <h3 style={{ margin: 0, fontSize: '1.35rem', fontWeight: '800', color: '#0f172a' }}>{activeList.name}</h3>
-                          <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600' }}>({(activeList.tasks || []).length} tasks)</span>
+                    const listTasks = (list.tasks || []).sort((a, b) => {
+                      if (!a.dueDate) return 1;
+                      if (!b.dueDate) return -1;
+                      return new Date(a.dueDate) - new Date(b.dueDate);
+                    });
+
+                    return (
+                      <div key={list.id} className="cu-status-section">
+                        {/* Section Header */}
+                        <div className="cu-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div className="cu-section-left" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', flex: 1 }} onClick={() => {
+                            if (editingListId !== list.id) {
+                              const isFirst = selectedProject.taskLists.indexOf(list) === 0;
+                              if (expandedListId === '__first__') {
+                                setExpandedListId(isFirst ? null : list.id);
+                              } else {
+                                toggleListAccordion(list.id);
+                              }
+                            }
+                          }}>
+                            <span className="cu-section-chevron" style={{ display: 'flex', alignItems: 'center', marginRight: '8px' }}>
+                              <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
+                            </span>
+                            {editingListId === list.id ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  className="saas-input"
+                                  value={editingListName}
+                                  onChange={(e) => setEditingListName(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      handleRenameList(list.id);
+                                    } else if (e.key === 'Escape') {
+                                      setEditingListId(null);
+                                      setEditingListName('');
+                                    }
+                                  }}
+                                  autoFocus
+                                  style={{ height: '32px', fontSize: '0.85rem', padding: '0 0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', width: '200px' }}
+                                />
+                                <button
+                                  onClick={() => handleRenameList(list.id)}
+                                  style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                  title="Save"
+                                >
+                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </button>
+                                <button
+                                  onClick={() => { setEditingListId(null); setEditingListName(''); }}
+                                  style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                  title="Cancel"
+                                >
+                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <span className="cu-section-title" style={{ fontWeight: '700', fontSize: '0.8rem', color: '#1e293b', textTransform: 'uppercase' }}>{list.name}</span>
+                                <span className="cu-section-count" style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#64748b', background: '#f1f5f9', padding: '0.15rem 0.4rem', borderRadius: '12px', fontWeight: '700' }}>{listTasks.length}</span>
+                              </>
+                            )}
+                          </div>
+                          
+                          <div className="cu-section-right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            {can('projects', 'edit') && editingListId !== list.id && (
+                              <button
+                                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                                title="Rename Category"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingListId(list.id);
+                                  setEditingListName(list.name);
+                                }}
+                              >
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                              </button>
+                            )}
+                            {can('projects', 'delete') && editingListId !== list.id && (
+                              <button
+                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                                title="Delete Category"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  confirm(`Delete "${list.name}" list and all its tasks?`, () => handleRemoveList(list.id), 'Delete Category');
+                                }}
+                              >
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                              </button>
+                            )}
+                            {can('tasks', 'create') && editingListId !== list.id && (
+                              <button 
+                                className="cu-section-add-btn" 
+                                title={`Add task to ${list.name}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenCreateTaskModalForList(list.id);
+                                }}
+                                style={{
+                                  marginLeft: '8px',
+                                  width: '24px',
+                                  height: '24px',
+                                  borderRadius: '50%',
+                                  border: 'none',
+                                  background: '#2563eb',
+                                  color: 'white',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: 'bold',
+                                  fontSize: '1rem',
+                                  cursor: 'pointer'
+                                }}
+                              >+</button>
+                            )}
+                          </div>
                         </div>
 
-                        {can('tasks', 'create') && (
-                          <button 
-                            className="saas-btn-submit" 
-                            style={{ background: '#0066FF', color: 'white', border: 'none', borderRadius: '8px', padding: '0.6rem 1.25rem', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }} 
-                            onClick={handleOpenCreateTaskModal}
-                          >
-                            + Create Task
-                          </button>
+                        {/* Accordion Table Body */}
+                        {!isCollapsed && (
+                          <div className="cu-table-wrapper" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: 'white', marginTop: '0.5rem', marginBottom: '1.5rem' }}>
+                            <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                              <thead>
+                                <tr className="cu-thead-row" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                                  <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '35%' }}>NAME</th>
+                                  <th className="cu-th cu-th-assignee" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%', textAlign: 'center' }}>ASSIGNEE</th>
+                                  <th className="cu-th cu-th-list" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%' }}>STATUS</th>
+                                  <th className="cu-th cu-th-delivery" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%', textAlign: 'center' }}>DELIVERY DATE</th>
+                                  <th className="cu-th cu-th-priority" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%', textAlign: 'center' }}>PRIORITY</th>
+                                  <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', width: '5%' }}></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {listTasks.length === 0 ? (
+                                  <tr>
+                                    <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+                                      No tasks in this list.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  listTasks.map(task => {
+                                    const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
+                                    const relDate = formatRelativeDueDate(task.dueDate);
+                                    const meta = STATUS_HEADER_META[task.status] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
+
+                                    return (
+                                      <tr key={task.id} className="cu-row" onClick={() => { setViewingTask(task); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
+                                        <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span className="cu-status-dot" style={{ color: meta.dotColor, borderColor: meta.dotColor, display: 'flex', alignItems: 'center' }}>
+                                              <span className="cu-status-dot" style={{ background: meta.dotColor, borderColor: meta.dotColor, width: '6px', height: '6px', borderRadius: '50%', display: 'inline-block' }}></span>
+                                            </span>
+                                            <span className="cu-task-title" style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{task.title || 'Untitled Task'}</span>
+                                            {task.taskNo && <span className="cu-task-id" style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: '0.5rem', fontWeight: '500' }}>{task.taskNo}</span>}
+                                          </div>
+                                        </td>
+                                        <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                          <div className="cu-avatars" style={{ display: 'flex', justifyContent: 'center', gap: '0.25rem' }}>
+                                            {assignees.length === 0 ? (
+                                              <div className="cu-avatar-empty" title="Unassigned" style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                              </div>
+                                            ) : assignees.slice(0, 3).map(a => (
+                                              <div key={a} className={`cu-avatar ${getAvatarColor(a)}`} title={a} style={{ width: '24px', height: '24px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '600' }}>
+                                                {initials(a)}
+                                              </div>
+                                            ))}
+                                            {assignees.length > 3 && (
+                                              <div className="cu-avatar av-blue" style={{ width: '24px', height: '24px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '600', background: '#2563eb' }}>
+                                                +{assignees.length - 3}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </td>
+                                        <td className="cu-td cu-td-list" style={{ padding: '0.85rem 1.25rem' }}>
+                                          <span style={{
+                                            background: meta.bg,
+                                            color: meta.fg,
+                                            padding: '0.2rem 0.6rem',
+                                            borderRadius: '12px',
+                                            fontSize: '0.75rem',
+                                            fontWeight: '700',
+                                            textTransform: 'uppercase',
+                                            display: 'inline-block'
+                                          }}>
+                                            {task.status || 'To Do'}
+                                          </span>
+                                        </td>
+                                        <td className="cu-td cu-td-delivery" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                          {relDate ? (
+                                            <span className={`cu-due-badge ${relDate.isOverdue ? 'overdue' : relDate.isToday ? 'today' : ''}`} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: relDate.isOverdue ? '#fee2e2' : relDate.isToday ? '#fef3c7' : '#f1f5f9', color: relDate.isOverdue ? '#ef4444' : relDate.isToday ? '#d97706' : '#475569' }}>
+                                              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                              {relDate.text}
+                                            </span>
+                                          ) : <span className="cu-empty-cell">-</span>}
+                                        </td>
+                                        <td className="cu-td cu-td-priority" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                          <span className="cu-priority-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', color: '#475569' }}>
+                                            <PriorityFlag priority={task.priority} />
+                                            <span>{task.priority || 'Medium'}</span>
+                                          </span>
+                                        </td>
+                                        <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
+                                          <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                            <button className="cu-act-btn" onClick={() => { setViewingTask(task); setShowTaskViewModal(true); }} title="View" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: '0.25rem' }}>
+                                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                            </button>
+                                            {can('tasks', 'edit') && (
+                                              <button className="cu-act-btn" onClick={() => { setSelectedTaskListId(list.id); handleOpenEditTaskModal(task); }} title="Edit" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
+                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                              </button>
+                                            )}
+                                            {can('tasks', 'delete') && (
+                                              <button className="cu-act-btn danger" onClick={() => handleDeleteTask(task.id)} title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }}>
+                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                              </button>
+                                            )}
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
                         )}
                       </div>
-
-                      <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                        <div style={{ overflowX: 'auto' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
-                            <thead>
-                              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                                <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Task ID</th>
-                                <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Task Title</th>
-                                <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Assignee</th>
-                                <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Status</th>
-                                <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Priority</th>
-                                <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Start Date</th>
-                                <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Due Date</th>
-                                <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', textAlign: 'center' }}>Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {(activeList.tasks || []).map(task => (
-                                <tr key={task.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                  <td style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', fontWeight: '700', color: '#64748b' }}>
-                                    #{task.id.slice(-6).toUpperCase()}
-                                  </td>
-                                  <td style={{ padding: '1rem 1.5rem', fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>
-                                    {task.title}
-                                  </td>
-                                  <td style={{ padding: '1rem 1.5rem' }}>
-                                    <span style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderRadius: '6px', fontWeight: '700' }}>
-                                      {task.assignees || 'Unassigned'}
-                                    </span>
-                                  </td>
-                                  <td style={{ padding: '1rem 1.5rem' }}>
-                                    <span style={{ 
-                                      background: task.status === 'Completed' ? '#dcfce7' : task.status === 'In Progress' ? '#dbeafe' : '#f1f5f9', 
-                                      color: task.status === 'Completed' ? '#16a34a' : task.status === 'In Progress' ? '#2563eb' : '#475569', 
-                                      fontSize: '0.75rem', 
-                                      padding: '0.25rem 0.5rem', 
-                                      borderRadius: '6px', 
-                                      fontWeight: '700' 
-                                    }}>
-                                      {task.status || 'To Do'}
-                                    </span>
-                                  </td>
-                                  <td style={{ padding: '1rem 1.5rem' }}>
-                                    <span style={{ 
-                                      color: task.priority === 'High' ? '#ef4444' : task.priority === 'Medium' ? '#ea580c' : '#64748b', 
-                                      fontSize: '0.75rem', 
-                                      fontWeight: '700' 
-                                    }}>
-                                      {task.priority || 'Medium'}
-                                    </span>
-                                  </td>
-                                  <td style={{ padding: '1rem 1.5rem', fontSize: '0.85rem', color: '#64748b' }}>
-                                    {task.startDate ? new Date(task.startDate).toISOString().split('T')[0] : '-'}
-                                  </td>
-                                  <td style={{ padding: '1rem 1.5rem', fontSize: '0.85rem', color: '#64748b' }}>
-                                    {task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '-'}
-                                  </td>
-                                  <td style={{ padding: '1rem 1.5rem', textAlign: 'center' }}>
-                                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                                      {/* View Details Button */}
-                                      <button 
-                                        style={{ background: 'none', border: 'none', color: '#0066FF', cursor: 'pointer', padding: '0.25rem' }} 
-                                        title="View Details"
-                                        onClick={() => { setViewingTask(task); setShowTaskViewModal(true); }}
-                                      >
-                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                      </button>
-  
-                                      {/* Edit Button */}
-                                      {can('tasks', 'edit') && (
-                                        <button 
-                                          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }} 
-                                          title="Edit Task"
-                                          onClick={() => handleOpenEditTaskModal(task)}
-                                        >
-                                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                        </button>
-                                      )}
-  
-                                      {/* Delete Button */}
-                                      {can('tasks', 'delete') && (
-                                        <button 
-                                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }} 
-                                          title="Delete Task"
-                                          onClick={() => handleDeleteTask(task.id)}
-                                        >
-                                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                        </button>
-                                      )}
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                              {(activeList.tasks || []).length === 0 && (
-                                <tr>
-                                  <td colSpan="8" style={{ padding: '2.5rem', textAlign: 'center', fontSize: '0.9rem', color: '#94a3b8' }}>
-                                    No tasks in this category yet.
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()
+                    );
+                  })}
+                </div>
               )}
             </div>
           )}
