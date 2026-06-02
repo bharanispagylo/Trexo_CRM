@@ -1386,13 +1386,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       if (!b.dueDate) return -1;
                       return new Date(a.dueDate) - new Date(b.dueDate);
                     });
+                    const hasTasks = listTasks.length > 0;
 
                     return (
                       <div key={list.id} className="cu-status-section">
                         {/* Section Header */}
                         <div className="cu-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div className="cu-section-left" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', flex: 1 }} onClick={() => {
-                            if (editingListId !== list.id) {
+                          <div className="cu-section-left" style={{ display: 'flex', alignItems: 'center', cursor: hasTasks ? 'pointer' : 'default', flex: 1 }} onClick={() => {
+                            if (hasTasks && editingListId !== list.id) {
                               const isFirst = selectedProject.taskLists.indexOf(list) === 0;
                               if (expandedListId === '__first__') {
                                 setExpandedListId(isFirst ? null : list.id);
@@ -1401,9 +1402,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                               }
                             }
                           }}>
-                            <span className="cu-section-chevron" style={{ display: 'flex', alignItems: 'center', marginRight: '8px' }}>
-                              <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
-                            </span>
+                            {hasTasks ? (
+                              <span className="cu-section-chevron" style={{ display: 'flex', alignItems: 'center', marginRight: '8px' }}>
+                                <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
+                              </span>
+                            ) : (
+                              <span style={{ width: '18px', display: 'inline-block' }} />
+                            )}
                             {editingListId === list.id ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
                                 <input
@@ -1499,7 +1504,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         </div>
 
                         {/* Accordion Table Body */}
-                        {!isCollapsed && (
+                        {!isCollapsed && hasTasks && (
                           <div className="cu-table-wrapper" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: 'white', marginTop: '0.5rem', marginBottom: '1.5rem' }}>
                             <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                               <thead>

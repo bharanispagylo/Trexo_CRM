@@ -143,7 +143,7 @@ const timeStrToDecimal = (timeStr) => {
 function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialEditMode = false }) {
 
   const isEdit = !!(task && task.id);
-  const [isEditing, setIsEditing] = useState((!task || !task.id) || initialEditMode); // Start in edit mode for new tasks, or if requested
+  const [isEditing, setIsEditing] = useState(true); // Always in edit mode
   const { alert, confirm } = useAlert();
   
   const [form, setForm] = useState(() => {
@@ -155,7 +155,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
       dueDate: '',
       startDate: '',
       endDate: '',
-      assignedDate: '',
+      assignedDate: new Date().toISOString(),
       deliveredDate: '',
       priority: 'Medium',
       status: 'To Do',
@@ -184,16 +184,63 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
       taskNo: `TSK-${Math.floor(Math.random() * 900000) + 100000}`
     };
   });
+
+  const formatCreatedDate = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `Created ${months[d.getMonth()]} ${d.getDate()} ${d.getFullYear()}`;
+  };
+
+  const createdDateToDisplay = isEdit && task?.createdAt 
+    ? formatCreatedDate(task.createdAt) 
+    : formatCreatedDate(new Date());
+
+  const [initialForm, setInitialForm] = useState(null);
+
   useEffect(() => {
     if (task) {
-      setForm(prev => ({
-        ...prev,
+      const loadedForm = {
+        ...form,
         ...task,
         status: getStatusString(task.status),
         taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : `TSK-${Math.floor(Math.random() * 900000) + 100000}`)
-      }));
+      };
+      setForm(loadedForm);
+      setInitialForm(loadedForm);
+    } else {
+      setInitialForm(form);
     }
   }, [task]);
+
+  const isChanged = () => {
+    if (!task || !task.id) return true; // New tasks are always saveable
+    if (!initialForm) return false;
+    
+    const keysToCompare = [
+      'title', 'description', 'status', 'assignees', 'dueDate', 'deliveredDate', 'priority',
+      'tag', 'taskType', 'isBillable', 'estimatedHours', 'approvedHours', 'actualHours'
+    ];
+    
+    for (const key of keysToCompare) {
+      let v1 = form[key];
+      let v2 = initialForm[key];
+      
+      // Normalize dates
+      if (key === 'dueDate' || key === 'deliveredDate') {
+        v1 = v1 ? new Date(v1).toISOString().split('T')[0] : '';
+        v2 = v2 ? new Date(v2).toISOString().split('T')[0] : '';
+      }
+      if (v1 === null || v1 === undefined) v1 = '';
+      if (v2 === null || v2 === undefined) v2 = '';
+      
+      if (String(v1) !== String(v2)) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   const [activeTab, setActiveTab] = useState('general');
   const [users, setUsers] = useState([]);
@@ -585,7 +632,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
     const { comments, taskList, ...payload } = form;
     
     onSave(payload);
-    setIsEditing(false); // Switch back to view mode on save
   };
 
   const formatDate = (dateStr) => {
@@ -813,7 +859,12 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
           <span className="saas-breadcrumb-active">Task Details</span>
         </div>
         
-        <div className="saas-nav-right">
+        <div className="saas-nav-right" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {createdDateToDisplay && (
+            <span style={{ color: '#64748b', fontSize: '0.82rem', marginRight: '0.5rem', fontWeight: 500 }}>
+              {createdDateToDisplay}
+            </span>
+          )}
           {isEdit && canDelete && (
             <button 
               className="saas-btn-nav saas-btn-danger" 
@@ -826,31 +877,21 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
 
 
 
-          {isEditing ? (
-            <>
-              <button className="saas-btn-nav saas-btn-secondary" onClick={() => {
-                if (!task || !task.id) {
-                  onClose();
-                } else {
-                  setForm(task);
-                  setIsEditing(false);
-                }
-              }}>
-                Cancel
-              </button>
-              <button className="saas-btn-nav saas-btn-primary" onClick={submit}>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                {isEdit ? 'Save Changes' : 'Create Task'}
-              </button>
-            </>
-          ) : (
-            canEdit && (
-              <button className="saas-btn-nav saas-btn-primary" onClick={() => setIsEditing(true)}>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                Edit Task
-              </button>
-            )
-          )}
+          <button className="saas-btn-nav saas-btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button 
+            className="saas-btn-nav saas-btn-primary" 
+            onClick={submit} 
+            disabled={isEdit && !isChanged()}
+            style={{ 
+              opacity: (isEdit && !isChanged()) ? 0.6 : 1, 
+              cursor: (isEdit && !isChanged()) ? 'not-allowed' : 'pointer' 
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            {isEdit ? 'Save' : 'Create Task'}
+          </button>
         </div>
       </div>
 
@@ -906,7 +947,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                 className={`saas-tab-header-btn ${activeTab === 'worklogs' ? 'active' : ''}`}
                 onClick={() => setActiveTab('worklogs')}
               >
-                Billing Logs
+                Billed Logs
               </button>
             )}
           </div>
@@ -918,7 +959,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
               <div className="saas-meta-grid animate-fade-in" style={{ paddingBottom: '2rem' }}>
                 
                 {/* Row 1: Status & Assignees */}
-                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '100px 1fr 100px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconStatus /> Status</span>
                   <span className="saas-meta-value">
                     <select value={form.status} onChange={e => { const updated = { ...form, status: e.target.value }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }}>
@@ -935,26 +976,36 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   </span>
                 </div>
 
-                {/* Row 2: Dates (1) */}
-                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Assigned Date</span>
+                {/* Row 2: Dates (Due Date -> Delivery Date) */}
+                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Dates</span>
                   <span className="saas-meta-value">
-                    <input type="date" value={form.assignedDate ? new Date(form.assignedDate).toISOString().split('T')[0] : ''} onChange={e => set('assignedDate', e.target.value)} className="saas-grid-input" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontSize: '0.85rem' }} title="Assigned Date" />
-                  </span>
-                  
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Delivery Date</span>
-                  <span className="saas-meta-value">
-                    <input type="date" value={form.dueDate ? new Date(form.dueDate).toISOString().split('T')[0] : ''} onChange={e => set('dueDate', e.target.value)} className="saas-grid-input" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontSize: '0.85rem' }} title="Delivery Date" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'nowrap' }}>
+                      <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Due:</span>
+                      <input 
+                        type="date" 
+                        value={form.dueDate ? new Date(form.dueDate).toISOString().split('T')[0] : ''} 
+                        onChange={e => set('dueDate', e.target.value)} 
+                        style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#0f172a', width: '100px', cursor: 'pointer' }} 
+                        title="Due Date"
+                      />
+                      
+                      <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>→</span>
+
+                      <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Delivery:</span>
+                      <input 
+                        type="date" 
+                        value={form.deliveredDate ? new Date(form.deliveredDate).toISOString().split('T')[0] : ''} 
+                        onChange={e => set('deliveredDate', e.target.value)} 
+                        style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#0f172a', width: '100px', cursor: 'pointer' }} 
+                        title="Delivery Date"
+                      />
+                    </div>
                   </span>
                 </div>
 
-                {/* Row 2c: Dates (3) & Priority */}
-                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Delivered Date</span>
-                  <span className="saas-meta-value">
-                    <input type="date" value={form.deliveredDate ? new Date(form.deliveredDate).toISOString().split('T')[0] : ''} onChange={e => set('deliveredDate', e.target.value)} className="saas-grid-input" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontSize: '0.85rem' }} title="Delivered Date" />
-                  </span>
-                  
+                {/* Row 3: Priority */}
+                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconPriority /> Priority</span>
                   <span className="saas-meta-value">
                     <select value={form.priority} onChange={e => set('priority', e.target.value)} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }}>
@@ -964,80 +1015,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   </span>
                 </div>
 
-                {/* Row 3: Client & Project */}
-                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    Client
-                  </span>
-                  <span className="saas-meta-value">
-                    <select value={form.clientId || ''} onChange={e => { const updated = { ...form, clientId: e.target.value, projectName: '', projectId: null }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }}>
-                      <option value="">-- Select Client --</option>
-                      {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </span>
 
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconProject /> Project</span>
-                  <span className="saas-meta-value">
-                    <select value={form.projectName || ''} onChange={e => { const proj = projects.find(p => p.name === e.target.value); const updated = { ...form, projectName: e.target.value, projectId: proj ? proj.id : null, taskListId: null }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className={`saas-grid-select ${errors.projectName ? 'error' : ''}`} style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }}>
-                      <option value="">Empty</option>
-                      {projects.map(proj => <option key={proj.id} value={proj.name}>{proj.name}</option>)}
-                    </select>
-                  </span>
-                </div>
-
-                {/* Row 4: Task List & Type */}
-                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                    Task List
-                  </span>
-                  <span className="saas-meta-value">
-                    <select value={form.taskListId || ''} onChange={async (e) => { 
-                        if (e.target.value === 'NEW') {
-                          setPromptState({
-                            isOpen: true,
-                            title: 'Enter new Task List name:',
-                            onSubmit: async (listName) => {
-                              if (listName && listName.trim()) {
-                                try {
-                                  const res = await api.post('/task-lists', { name: listName.trim(), projectId: form.projectId });
-                                  setTaskLists(prev => [...prev, res]);
-                                  const updated = { ...form, taskListId: res.id };
-                                  setForm(updated);
-                                  if (!isEditing) handleInlineSave(updated);
-                                } catch(err) {
-                                  alert('Failed to create Task List', 'error', 'Error');
-                                }
-                              }
-                            }
-                          });
-                          return;
-                        }
-                        const updated = { ...form, taskListId: e.target.value || null }; 
-                        setForm(updated); 
-                        if (!isEditing) handleInlineSave(updated); 
-                      }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }} disabled={!form.projectId}>
-                      <option value="">{form.projectId ? "Empty" : "Select Project First"}</option>
-                      {form.projectId && taskLists.filter(tl => tl.projectId === form.projectId).map(tl => <option key={tl.id} value={tl.id}>{tl.name}</option>)}
-                      {form.projectId && <option value="NEW" style={{ fontWeight: 'bold', color: '#3b82f6' }}>+ Create New Task List</option>}
-                    </select>
-                  </span>
-                  
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                    Task Type
-                  </span>
-                  <span className="saas-meta-value">
-                    <select value={form.taskType || 'Feature'} onChange={e => { const updated = { ...form, taskType: e.target.value }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }}>
-                      <option value="Feature">Feature</option>
-                      <option value="Bug">Bug</option>
-                      <option value="Enhancement">Enhancement</option>
-                      <option value="Documentation">Documentation</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </span>
-                </div>
 
                 <div className="saas-meta-divider" style={{ borderBottom: '1px solid #f1f5f9', margin: '1.5rem 0' }}></div>
 
@@ -1055,19 +1033,20 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
           
           {isEditing && (
             <div className="form-actions" style={{ justifyContent: 'flex-end', borderTop: 'none', background: 'transparent', boxShadow: 'none' }}>
-              <button className="saas-btn-nav saas-btn-secondary" onClick={() => {
-                if (!task || !task.id) {
-                  onClose();
-                } else {
-                  setForm(task);
-                  setIsEditing(false);
-                }
-              }}>
+              <button className="saas-btn-nav saas-btn-secondary" onClick={onClose}>
                 Cancel
               </button>
-              <button className="saas-btn-nav saas-btn-primary" onClick={submit}>
+              <button 
+                className="saas-btn-nav saas-btn-primary" 
+                onClick={submit} 
+                disabled={isEdit && !isChanged()}
+                style={{ 
+                  opacity: (isEdit && !isChanged()) ? 0.6 : 1, 
+                  cursor: (isEdit && !isChanged()) ? 'not-allowed' : 'pointer' 
+                }}
+              >
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                {isEdit ? 'Save Changes' : 'Create Task'}
+                {isEdit ? 'Save' : 'Create Task'}
               </button>
             </div>
           )}
@@ -1863,7 +1842,7 @@ function TaskCard({ task, onDragStart, onClick, onDelete, currentUser }) {
 }
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Kanban Column ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave, isDragOver, onTaskClick, onDelete, currentUser, onAddTaskClick }) {
+function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave, isDragOver, onTaskClick, onDelete, currentUser, onAddTaskClick, showAdd = true }) {
   const meta = STATUS_HEADER_META[col.label] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
 
   return (
@@ -1879,9 +1858,11 @@ function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave
           <span className="col-clickup-count">{tasks.length}</span>
         </div>
         
-        <div className="col-clickup-actions">
-          <button className="col-clickup-action-btn" title="Add Task" onClick={() => onAddTaskClick(col.id)}>+</button>
-        </div>
+        {showAdd && (
+          <div className="col-clickup-actions">
+            <button className="col-clickup-action-btn" title="Add Task" onClick={() => onAddTaskClick(col.id)}>+</button>
+          </div>
+        )}
       </div>
 
       {isDragOver && <div className="drop-indicator">Drop here</div>}
@@ -1902,9 +1883,11 @@ function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave
         ))}
       </div>
 
-      <button className="col-clickup-add-task-btn" onClick={() => onAddTaskClick(col.id)}>
-        <span style={{ fontSize: '1.1rem', marginRight: '0.25rem' }}>+</span> Add Task
-      </button>
+      {showAdd && (
+        <button className="col-clickup-add-task-btn" onClick={() => onAddTaskClick(col.id)}>
+          <span style={{ fontSize: '1.1rem', marginRight: '0.25rem' }}>+</span> Add Task
+        </button>
+      )}
     </div>
   );
 }
@@ -2083,7 +2066,7 @@ function TaskCardWithDates({ task, onDragStart, onClick, onDelete, currentUser }
   );
 }
 
-function ScheduleColumn({ title, count, tasks, onDragStart, onDrop, onDragOver, onDragLeave, isDragOver, onTaskClick, onDelete, currentUser, onAddTaskClick, colorMeta }) {
+function ScheduleColumn({ title, count, tasks, onDragStart, onDrop, onDragOver, onDragLeave, isDragOver, onTaskClick, onDelete, currentUser, onAddTaskClick, colorMeta, showAdd = true }) {
   return (
     <div
       className={`kanban-col-clickup ${isDragOver ? 'drag-over' : ''}`}
@@ -2098,9 +2081,11 @@ function ScheduleColumn({ title, count, tasks, onDragStart, onDrop, onDragOver, 
           <span className="col-clickup-label">{title.toUpperCase()}</span>
           <span className="col-clickup-count">{count}</span>
         </div>
-        <div className="col-clickup-actions">
-          <button className="col-clickup-action-btn" title="Add Task" onClick={onAddTaskClick}>+</button>
-        </div>
+        {showAdd && (
+          <div className="col-clickup-actions">
+            <button className="col-clickup-action-btn" title="Add Task" onClick={onAddTaskClick}>+</button>
+          </div>
+        )}
       </div>
 
       {isDragOver && <div className="drop-indicator">Drop here</div>}
@@ -2121,9 +2106,11 @@ function ScheduleColumn({ title, count, tasks, onDragStart, onDrop, onDragOver, 
         ))}
       </div>
 
-      <button className="col-clickup-add-task-btn" onClick={onAddTaskClick}>
-        <span style={{ fontSize: '1.1rem', marginRight: '0.25rem' }}>+</span> Add Task
-      </button>
+      {showAdd && (
+        <button className="col-clickup-add-task-btn" onClick={onAddTaskClick}>
+          <span style={{ fontSize: '1.1rem', marginRight: '0.25rem' }}>+</span> Add Task
+        </button>
+      )}
     </div>
   );
 }
@@ -2265,9 +2252,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         status: statusId,
         projectName: projName || '',
         projectId: projId || null,
-        taskListId: taskListId || null,
+        taskListId: (taskListId && !String(taskListId).startsWith('gen_') && taskListId !== 'unassigned') ? taskListId : null,
         priority: inlinePriority || 'Medium',
         assignees: inlineAssignee || '',
+        assignedDate: new Date().toISOString(),
         dueDate: inlineDueDate ? new Date(inlineDueDate).toISOString() : null,
         tag: 'Engineering',
         taskType: 'Feature',
@@ -2359,8 +2347,21 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     }
   };
 
-  const openNewTask = (presetStatus = 'To Do', presetProject = '') => {
-    setDrawerTask({ status: presetStatus, projectName: presetProject, priority: 'Medium', title: '', description: '', assignees: '', isBillable: false, tag: 'Engineering', taskType: 'Feature' });
+  const openNewTask = (presetStatus = 'To Do', presetProject = '', presetProjectId = null, presetTaskListId = null, presetClientId = null) => {
+    setDrawerTask({
+      status: presetStatus,
+      projectName: presetProject,
+      projectId: presetProjectId,
+      taskListId: presetTaskListId,
+      clientId: presetClientId,
+      priority: 'Medium',
+      title: '',
+      description: '',
+      assignees: '',
+      isBillable: false,
+      tag: 'Engineering',
+      taskType: 'Feature'
+    });
     setTaskDetailMode(true);
     setDrawerOpen(true);
   };
@@ -2371,12 +2372,21 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     let finalProjId = null;
     let finalProjName = '';
     if (taskListId) {
-      const list = taskListsData.find(l => l.id === taskListId);
-      if (list && list.projectId) {
-        const p = taskProjects.find(pr => pr.id === list.projectId);
+      if (String(taskListId).startsWith('gen_')) {
+        const derivedProjId = taskListId.substring(4);
+        const p = taskProjects.find(pr => pr.id === derivedProjId);
         if (p) {
           finalProjId = p.id;
           finalProjName = p.name;
+        }
+      } else {
+        const list = taskListsData.find(l => l.id === taskListId);
+        if (list && list.projectId) {
+          const p = taskProjects.find(pr => pr.id === list.projectId);
+          if (p) {
+            finalProjId = p.id;
+            finalProjName = p.name;
+          }
         }
       }
     }
@@ -2523,11 +2533,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             <button className={viewMode === 'kanban' ? 'active' : ''} onClick={() => setViewMode('kanban')}>Kanban</button>
             <button className={viewMode === 'schedule' ? 'active' : ''} onClick={() => setViewMode('schedule')}>Schedule</button>
           </div>
-          {can('tasks', 'create') && (
-            <button className="kanban-new-btn" onClick={openNewTask}>
-              + New Task
-            </button>
-          )}
 
 
         </div>
@@ -2670,6 +2675,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 currentUser={user}
                 onAddTaskClick={col.onAddTask}
                 colorMeta={col.colorMeta}
+                showAdd={subTab !== 'my'}
               />
             ))}
           </div>
@@ -2693,6 +2699,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
               onDelete={handleDeleteTask}
               currentUser={user}
               onAddTaskClick={openNewTask}
+              showAdd={subTab !== 'my'}
             />
 
           ))}
@@ -2718,222 +2725,345 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             }
           });
 
-          // Only display groups that have tasks
-          const listGroups = taskListsData
-            .map(list => {
-              const listTasks = byList[list.id] || [];
-              const sortedTasks = [...listTasks].sort((a, b) => {
-                if (!a.dueDate) return 1;
-                if (!b.dueDate) return -1;
-                return new Date(a.dueDate) - new Date(b.dueDate);
-              });
-              return {
-                id: list.id,
-                name: list.name,
-                tasks: sortedTasks
-              };
-            })
-            .filter(g => g.tasks.length > 0);
-
+          // Map task lists to their project
+          const projectGroupsMap = {};
+          
+          taskProjects.forEach(proj => {
+            projectGroupsMap[proj.id] = {
+              id: proj.id,
+              name: proj.name,
+              lists: []
+            };
+          });
+          
+          taskListsData.forEach(list => {
+            const listTasks = byList[list.id] || [];
+            if (listTasks.length === 0) return;
+            
+            const sortedTasks = [...listTasks].sort((a, b) => {
+              if (!a.dueDate) return 1;
+              if (!b.dueDate) return -1;
+              return new Date(a.dueDate) - new Date(b.dueDate);
+            });
+            
+            const listGroup = {
+              id: list.id,
+              name: list.name,
+              tasks: sortedTasks
+            };
+            
+            const projId = list.projectId;
+            if (projId && projectGroupsMap[projId]) {
+              projectGroupsMap[projId].lists.push(listGroup);
+            } else {
+              if (!projectGroupsMap['unassigned_proj']) {
+                projectGroupsMap['unassigned_proj'] = {
+                  id: 'unassigned_proj',
+                  name: 'General / No Project',
+                  lists: []
+                };
+              }
+              projectGroupsMap['unassigned_proj'].lists.push(listGroup);
+            }
+          });
+          
           const unassignedTasks = [...(byList['unassigned'] || [])].sort((a, b) => {
             if (!a.dueDate) return 1;
             if (!b.dueDate) return -1;
             return new Date(a.dueDate) - new Date(b.dueDate);
           });
+          
           if (unassignedTasks.length > 0) {
-            listGroups.push({
-              id: 'unassigned',
-              name: 'General / Unassigned',
-              tasks: unassignedTasks
+            unassignedTasks.forEach(task => {
+              const projId = getTaskProjectId(task);
+              if (projId && projectGroupsMap[projId]) {
+                let genList = projectGroupsMap[projId].lists.find(l => l.id === `gen_${projId}`);
+                if (!genList) {
+                  genList = {
+                    id: `gen_${projId}`,
+                    name: 'General Tasks',
+                    tasks: []
+                  };
+                  projectGroupsMap[projId].lists.push(genList);
+                }
+                genList.tasks.push(task);
+              } else {
+                if (!projectGroupsMap['unassigned_proj']) {
+                  projectGroupsMap['unassigned_proj'] = {
+                    id: 'unassigned_proj',
+                    name: 'General / No Project',
+                    lists: []
+                  };
+                }
+                let genList = projectGroupsMap['unassigned_proj'].lists.find(l => l.id === 'unassigned');
+                if (!genList) {
+                  genList = {
+                    id: 'unassigned',
+                    name: 'General / Unassigned',
+                    tasks: []
+                  };
+                  projectGroupsMap['unassigned_proj'].lists.push(genList);
+                }
+                genList.tasks.push(task);
+              }
             });
           }
+          
+          const finalProjectGroups = Object.values(projectGroupsMap)
+            .filter(projGroup => projGroup.lists.length > 0);
+
+          finalProjectGroups.forEach(projGroup => {
+            projGroup.lists.forEach(list => {
+              list.tasks.sort((a, b) => {
+                if (!a.dueDate) return 1;
+                if (!b.dueDate) return -1;
+                return new Date(a.dueDate) - new Date(b.dueDate);
+              });
+            });
+          });
+
+          const firstListId = finalProjectGroups[0]?.lists[0]?.id;
 
           return (
             <div className="cu-list-root">
-              {listGroups.map(group => {
-                const isCollapsed = expandedListId === '__first__'
-                  ? listGroups.indexOf(group) !== 0
-                  : expandedListId !== group.id;
-                const isInline = inlineAdd && (inlineAdd.taskListId === group.id || (group.id === 'unassigned' && !inlineAdd.taskListId));
-
+              {finalProjectGroups.map(projGroup => {
                 return (
-                  <div key={group.id} className="cu-status-section">
-                    {/* Section Header - Only show the tasks list name, count, and collapse/add controls */}
-                    <div className="cu-section-header">
-                      <div className="cu-section-left" onClick={() => {
-                        const isFirst = listGroups.length > 0 && listGroups[0].id === group.id;
-                        if (expandedListId === '__first__') {
-                          setExpandedListId(isFirst ? null : group.id);
-                        } else {
-                          toggleListAccordion(group.id);
-                        }
+                  <div key={projGroup.id} className="project-group-container" style={{ marginBottom: '2.5rem' }}>
+                    {/* Project Group Header */}
+                    <div className="project-group-header" style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.6rem',
+                      padding: '0.65rem 1rem',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      marginBottom: '0.75rem',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                    }}>
+                      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#475569" strokeWidth="2.5" style={{ flexShrink: 0 }}>
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                      </svg>
+                      <span style={{
+                        fontWeight: '800',
+                        fontSize: '0.85rem',
+                        color: '#334155',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
                       }}>
-                        <span className="cu-section-chevron">
-                          <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
-                        </span>
-                        <span style={{ fontWeight: '700', fontSize: '0.88rem', color: '#1e293b', marginLeft: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                          {group.name}
-                        </span>
-                        <span className="cu-section-count" style={{ marginLeft: '0.5rem', background: '#f1f5f9', color: '#64748b', padding: '0.1rem 0.4rem', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600 }}>
-                          {group.tasks.length}
-                        </span>
-                      </div>
-                      <div className="cu-section-right">
-                        {can('tasks', 'create') && (
-                          <button className="cu-section-add-btn" title={`Add task to ${group.name}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setExpandedListId(group.id);
-                              openInlineAdd('', 'To Do', group.id === 'unassigned' ? null : group.id);
-                            }}>+</button>
-                        )}
-                      </div>
+                        {projGroup.name}
+                      </span>
+                      <span style={{
+                        background: '#e2e8f0',
+                        color: '#475569',
+                        padding: '0.1rem 0.45rem',
+                        borderRadius: '12px',
+                        fontSize: '0.7rem',
+                        fontWeight: 700
+                      }}>
+                        {projGroup.lists.reduce((sum, l) => sum + l.tasks.length, 0)} Tasks
+                      </span>
                     </div>
 
-                    {/* Task Table */}
-                    {!isCollapsed && (
-                      <div className="cu-table-wrapper">
-                        <table className="cu-table">
-                          <thead>
-                            <tr className="cu-thead-row">
-                              <th className="cu-th cu-th-name">NAME</th>
-                              <th className="cu-th cu-th-assignee">ASSIGNEE</th>
-                              <th className="cu-th cu-th-project">PROJECT</th>
-                              <th className="cu-th cu-th-list">STATUS</th>
-                              <th className="cu-th cu-th-delivery">DELIVERY DATE</th>
-                              <th className="cu-th cu-th-priority">PRIORITY</th>
-                              <th className="cu-th cu-th-actions"></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {group.tasks.map(task => {
-                              const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
-                              const relDate = formatRelativeDueDate(task.dueDate);
-                              const meta = STATUS_HEADER_META[task.status] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
+                    {/* Task Lists belonging to this Project */}
+                    <div className="project-task-lists-wrapper" style={{
+                      paddingLeft: '1.5rem',
+                      borderLeft: '2px solid #e2e8f0',
+                      marginLeft: '0.75rem'
+                    }}>
+                      {projGroup.lists.map(list => {
+                        const isCollapsed = expandedListId === '__first__'
+                          ? list.id !== firstListId
+                          : expandedListId !== list.id;
+                        const isInline = inlineAdd && (inlineAdd.taskListId === list.id || (list.id === 'unassigned' && !inlineAdd.taskListId));
 
-                              return (
-                                <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
-                                  <td className="cu-td cu-td-name">
-                                    <span className="cu-status-dot" style={{ color: meta.dotColor, borderColor: meta.dotColor }}>
-                                      <span className="cu-status-dot" style={{ background: meta.dotColor, borderColor: meta.dotColor }}></span>
-                                    </span>
-                                    <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
-                                    {task.taskNo && <span className="cu-task-id">{task.taskNo}</span>}
-                                  </td>
-                                  <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
-                                    <div className="cu-avatars">
-                                      {assignees.length === 0 ? (
-                                        <div className="cu-avatar-empty" title="Unassigned">
-                                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                        </div>
-                                      ) : assignees.slice(0, 3).map(a => (
-                                        <div key={a} className={`cu-avatar ${getAvatarColor(a)}`} title={a}>{initials(a)}</div>
-                                      ))}
-                                      {assignees.length > 3 && <div className="cu-avatar av-blue">+{assignees.length - 3}</div>}
-                                    </div>
-                                  </td>
-                                  <td className="cu-td cu-td-project">
-                                    {task.projectName ? (
-                                      <span className="cu-project-badge">{task.projectName}</span>
-                                    ) : <span className="cu-empty-cell">-</span>}
-                                  </td>
-
-                                  <td className="cu-td cu-td-list">
-                                    <span style={{
-                                      background: meta.bg,
-                                      color: meta.fg,
-                                      padding: '0.2rem 0.6rem',
-                                      borderRadius: '12px',
-                                      fontSize: '0.75rem',
-                                      fontWeight: '700',
-                                      textTransform: 'uppercase',
-                                      display: 'inline-block'
-                                    }}>
-                                      {task.status || 'To Do'}
-                                    </span>
-                                  </td>
-                                  <td className="cu-td cu-td-delivery">
-                                    {relDate ? (
-                                      <span className={`cu-due-badge ${relDate.isOverdue ? 'overdue' : relDate.isToday ? 'today' : ''}`}>
-                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                        {relDate.text}
-                                      </span>
-                                    ) : <span className="cu-empty-cell">-</span>}
-                                  </td>
-                                  <td className="cu-td cu-td-priority">
-                                    <span className="cu-priority-badge">
-                                      <PriorityFlag priority={task.priority} />
-                                      <span>{task.priority || 'Medium'}</span>
-                                    </span>
-                                  </td>
-                                  <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
-                                    <div className="cu-row-actions">
-                                      {(getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
-                                        <button className="cu-act-btn" onClick={() => openTaskDetail(task, true)} title="Edit">
-                                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                        </button>
-                                      )}
-                                      {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
-                                        <button className="cu-act-btn danger" onClick={() => showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task')} title="Delete">
-                                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                        </button>
-                                      )}
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-
-                            {/* Inline Add Row */}
-                            {isInline ? (
-                              <tr className="cu-inline-row">
-                                <td className="cu-td cu-td-name">
-                                  <span className="cu-status-dot" style={{ background: '#94a3b8', width: "10px", height: "10px", borderRadius: "50%", display: "inline-block", flexShrink: 0 }}></span>
-                                  <input ref={inlineInputRef} className="cu-inline-input" placeholder="Task name"
-                                    value={inlineTitle} onChange={e => setInlineTitle(e.target.value)}
-                                    onKeyDown={e => { if (e.key === 'Enter') submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }} autoFocus />
-                                </td>
-                                <td className="cu-td cu-td-assignee">
-                                  <select className="cu-inline-sel" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
-                                    <option value="">-</option>
-                                    {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim(); return <option key={u.id} value={n}>{n}</option>; })}
-                                  </select>
-                                </td>
-                                <td className="cu-td cu-td-project"><span className="cu-empty-cell">-</span></td>
-                                <td className="cu-td cu-td-list"><span className="cu-empty-cell">-</span></td>
-                                <td className="cu-td cu-td-delivery">
-                                  <input type="date" className="cu-inline-date" value={inlineDueDate} onChange={e => setInlineDueDate(e.target.value)} />
-                                </td>
-                                <td className="cu-td cu-td-priority">
-                                  <select className="cu-inline-sel" value={inlinePriority} onChange={e => setInlinePriority(e.target.value)}>
-                                    {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-                                  </select>
-                                </td>
-                                <td className="cu-td cu-td-actions">
-                                  <div className="cu-row-actions" style={{ opacity: 1 }}>
-                                    <button className="cu-act-btn" onClick={submitInlineAdd} title="Save (Enter)">
-                                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        return (
+                          <div key={list.id} className="cu-status-section" style={{ marginBottom: '1rem' }}>
+                            {/* Section Header */}
+                            <div className="cu-section-header">
+                              <div className="cu-section-left" onClick={() => {
+                                if (expandedListId === '__first__') {
+                                  setExpandedListId(list.id === firstListId ? null : list.id);
+                                } else {
+                                  toggleListAccordion(list.id);
+                                }
+                              }}>
+                                <span className="cu-section-chevron">
+                                  <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
+                                </span>
+                                <span style={{ fontWeight: '700', fontSize: '0.82rem', color: '#64748b', marginLeft: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                  {list.name}
+                                </span>
+                                <span className="cu-section-count" style={{ marginLeft: '0.5rem', background: '#f1f5f9', color: '#64748b', padding: '0.1rem 0.4rem', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600 }}>
+                                  {list.tasks.length}
+                                </span>
+                              </div>
+                              <div className="cu-section-right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                {can('tasks', 'create') && (
+                                  <>
+                                    <button className="kanban-new-btn" title="Create New Task"
+                                      style={{ padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem', boxShadow: 'none' }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        let projId = projGroup.id !== 'unassigned_proj' ? projGroup.id : null;
+                                        let projName = projGroup.id !== 'unassigned_proj' ? projGroup.name : '';
+                                        let clientId = null;
+                                        if (projId) {
+                                          const p = taskProjects.find(pr => pr.id === projId);
+                                          if (p) clientId = p.clientId;
+                                        }
+                                        const isVirtual = String(list.id).startsWith('gen_') || list.id === 'unassigned';
+                                        openNewTask('To Do', projName, projId, isVirtual ? null : list.id, clientId);
+                                      }}>
+                                      New
                                     </button>
-                                    <button className="cu-act-btn danger" onClick={closeInlineAdd} title="Cancel (Esc)">
-                                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ) : (
-                              can('tasks', 'create') && (
-                                <tr className="cu-add-row" onClick={() => openInlineAdd('', 'To Do', group.id === 'unassigned' ? null : group.id)}>
-                                  <td colSpan="7">
-                                    <span className="cu-add-icon">+</span>
-                                    <span className="cu-add-text">Add Task</span>
-                                  </td>
-                                </tr>
-                              )
+                                    <button className="cu-section-add-btn" title={`Add task inline to ${list.name}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setExpandedListId(list.id);
+                                        let projName = projGroup.id !== 'unassigned_proj' ? projGroup.name : '';
+                                        openInlineAdd(projName, 'To Do', list.id);
+                                      }}>+</button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Task Table */}
+                            {!isCollapsed && (
+                              <div className="cu-table-wrapper">
+                                <table className="cu-table">
+                                  <thead>
+                                    <tr className="cu-thead-row">
+                                      <th className="cu-th cu-th-name">NAME</th>
+                                      <th className="cu-th cu-th-assignee">ASSIGNEE</th>
+                                      <th className="cu-th cu-th-list">STATUS</th>
+                                      <th className="cu-th cu-th-delivery">DUE DATE</th>
+                                      <th className="cu-th cu-th-priority">PRIORITY</th>
+                                      <th className="cu-th cu-th-actions"></th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {list.tasks.map(task => {
+                                      const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
+                                      const relDate = formatRelativeDueDate(task.dueDate);
+                                      const meta = STATUS_HEADER_META[task.status] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
+
+                                      return (
+                                        <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
+                                          <td className="cu-td cu-td-name">
+                                            <span className="cu-status-dot" style={{ color: meta.dotColor, borderColor: meta.dotColor }}>
+                                              <span className="cu-status-dot" style={{ background: meta.dotColor, borderColor: meta.dotColor }}></span>
+                                            </span>
+                                            <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
+                                            {task.taskNo && <span className="cu-task-id">{task.taskNo}</span>}
+                                          </td>
+                                          <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
+                                            <div className="cu-avatars">
+                                              {assignees.length === 0 ? (
+                                                <div className="cu-avatar-empty" title="Unassigned">
+                                                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                                </div>
+                                              ) : assignees.slice(0, 3).map(a => (
+                                                <div key={a} className={`cu-avatar ${getAvatarColor(a)}`} title={a}>{initials(a)}</div>
+                                              ))}
+                                              {assignees.length > 3 && <div className="cu-avatar av-blue">+{assignees.length - 3}</div>}
+                                            </div>
+                                          </td>
+                                          <td className="cu-td cu-td-list">
+                                            <span style={{
+                                              background: meta.bg,
+                                              color: meta.fg,
+                                              padding: '0.2rem 0.6rem',
+                                              borderRadius: '12px',
+                                              fontSize: '0.75rem',
+                                              fontWeight: '700',
+                                              textTransform: 'uppercase',
+                                              display: 'inline-block'
+                                            }}>
+                                              {task.status || 'To Do'}
+                                            </span>
+                                          </td>
+                                          <td className="cu-td cu-td-delivery">
+                                            {relDate ? (
+                                              <span className={`cu-due-badge ${relDate.isOverdue ? 'overdue' : relDate.isToday ? 'today' : ''}`}>
+                                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                {relDate.text}
+                                              </span>
+                                            ) : <span className="cu-empty-cell">-</span>}
+                                          </td>
+                                          <td className="cu-td cu-td-priority">
+                                            <span className="cu-priority-badge">
+                                              <PriorityFlag priority={task.priority} />
+                                              <span>{task.priority || 'Medium'}</span>
+                                            </span>
+                                          </td>
+                                          <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
+                                            <div className="cu-row-actions">
+                                              {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
+                                                <button className="cu-act-btn danger" onClick={() => showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task')} title="Delete">
+                                                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                </button>
+                                              )}
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+
+                                    {/* Inline Add Row */}
+                                    {isInline ? (
+                                      <tr className="cu-inline-row">
+                                        <td className="cu-td cu-td-name">
+                                          <span className="cu-status-dot" style={{ background: '#94a3b8', width: "10px", height: "10px", borderRadius: "50%", display: "inline-block", flexShrink: 0 }}></span>
+                                          <input ref={inlineInputRef} className="cu-inline-input" placeholder="Task name"
+                                            value={inlineTitle} onChange={e => setInlineTitle(e.target.value)}
+                                            onKeyDown={e => { if (e.key === 'Enter') submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }} autoFocus />
+                                        </td>
+                                        <td className="cu-td cu-td-assignee">
+                                          <select className="cu-inline-sel" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
+                                            <option value="">-</option>
+                                            {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim(); return <option key={u.id} value={n}>{n}</option>; })}
+                                          </select>
+                                        </td>
+                                        <td className="cu-td cu-td-list"><span className="cu-empty-cell">-</span></td>
+                                        <td className="cu-td cu-td-delivery">
+                                          <input type="date" className="cu-inline-date" value={inlineDueDate} onChange={e => setInlineDueDate(e.target.value)} />
+                                        </td>
+                                        <td className="cu-td cu-td-priority">
+                                          <select className="cu-inline-sel" value={inlinePriority} onChange={e => setInlinePriority(e.target.value)}>
+                                            {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                                          </select>
+                                        </td>
+                                        <td className="cu-td cu-td-actions">
+                                          <div className="cu-row-actions" style={{ opacity: 1 }}>
+                                            <button className="cu-act-btn" onClick={submitInlineAdd} title="Save (Enter)">
+                                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                            </button>
+                                            <button className="cu-act-btn danger" onClick={closeInlineAdd} title="Cancel (Esc)">
+                                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                            </button>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    ) : (
+                                      can('tasks', 'create') && (
+                                        <tr className="cu-add-row" onClick={() => openInlineAdd('', 'To Do', list.id)}>
+                                          <td colSpan="6">
+                                            <span className="cu-add-icon">+</span>
+                                            <span className="cu-add-text">Add Task</span>
+                                          </td>
+                                        </tr>
+                                      )
+                                    )}
+                                  </tbody>
+                                </table>
+                              </div>
                             )}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}
@@ -2977,7 +3107,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                       <span className="cu-section-count">{statusTasks.length}</span>
                     </div>
                     <div className="cu-section-right">
-                      {can('tasks', 'create') && (
+                      {can('tasks', 'create') && subTab !== 'my' && (
                         <button className="cu-section-add-btn" title={`Add task to ${col.label}`}
                           onClick={() => openInlineAdd('', col.id)}>+</button>
                       )}
@@ -2994,7 +3124,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                             <th className="cu-th cu-th-assignee">ASSIGNEE</th>
                             <th className="cu-th cu-th-project">PROJECT</th>
                             <th className="cu-th cu-th-list">TASK LIST</th>
-                            <th className="cu-th cu-th-delivery">DELIVERY DATE</th>
+                            <th className="cu-th cu-th-delivery">DUE DATE</th>
                             <th className="cu-th cu-th-priority">PRIORITY</th>
                             <th className="cu-th cu-th-actions"></th>
                           </tr>
@@ -3049,11 +3179,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                 </td>
                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
                                   <div className="cu-row-actions">
-                                    {(getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
-                                      <button className="cu-act-btn" onClick={() => openTaskDetail(task, true)} title="Edit">
-                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                      </button>
-                                    )}
+
                                     {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
                                       <button className="cu-act-btn danger" onClick={() => showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task')} title="Delete">
                                         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -3102,7 +3228,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                               </td>
                             </tr>
                           ) : (
-                            can('tasks', 'create') && (
+                            can('tasks', 'create') && subTab !== 'my' && (
                               <tr className="cu-add-row" onClick={() => openInlineAdd('', col.id)}>
                                 <td colSpan="7">
                                   <span className="cu-add-icon">+</span>

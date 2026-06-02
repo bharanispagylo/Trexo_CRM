@@ -48,11 +48,17 @@ export function AlertProvider({ children }) {
   }, []);
 
   const closeTop = useCallback((id, confirmed = false) => {
+    let itemToConfirm = null;
     setQueue(prev => {
       const item = prev.find(i => i.id === id);
-      if (confirmed && item?.onConfirm) item.onConfirm();
+      if (confirmed && item?.onConfirm) {
+        itemToConfirm = item;
+      }
       return prev.filter(i => i.id !== id);
     });
+    if (itemToConfirm) {
+      itemToConfirm.onConfirm();
+    }
   }, []);
 
   // Convenience helpers

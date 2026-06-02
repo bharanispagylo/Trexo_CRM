@@ -849,13 +849,13 @@
 
 .saas-meta-row {
   display: grid;
-  grid-template-columns: 140px 1fr 140px 1fr;
+  grid-template-columns: 100px 1fr 100px 1fr;
   align-items: center;
   gap: 1rem;
 }
 
 .saas-meta-row.full-width {
-  grid-template-columns: 140px 300px;
+  grid-template-columns: 100px 300px;
 }
 
 .saas-meta-label {
