@@ -1,6 +1,12 @@
 {
+  "name": "trexo-crm-root",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix api\" \"npm run dev --prefix ui\""
+  },
   "devDependencies": {
     "autoprefixer": "^10.5.0",
+    "concurrently": "^8.2.2",
     "postcss": "^8.5.14",
     "tailwindcss": "^4.2.4"
   }

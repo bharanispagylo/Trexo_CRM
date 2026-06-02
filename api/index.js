@@ -791,6 +791,12 @@ app.put('/api/tasks/:id', async (req, res) => {
 
 app.delete('/api/tasks/:id', async (req, res) => {
   try {
+    const existing = await prisma.task.findUnique({
+      where: { id: req.params.id }
+    });
+    if (!existing) {
+      return res.json({ success: true });
+    }
     await prisma.task.delete({
       where: { id: req.params.id }
     });
