@@ -17,7 +17,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
-  max-width: 1000px;
+  max-width: 100%;
 }
 
 .estimations-header-left {
@@ -197,7 +197,7 @@
 
 /* Modern Tables */
 .estimations-table-container {
-  max-width: 1000px;
+  max-width: 100%;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
@@ -213,7 +213,7 @@
 }
 
 .estimations-table th {
-  padding: 1rem 1.25rem;
+  padding: 0.75rem 1.25rem;
   background: #f8fafc;
   font-size: 0.72rem;
   font-weight: 700;
@@ -224,7 +224,7 @@
 }
 
 .estimations-table td {
-  padding: 1.1rem 1.25rem;
+  padding: 0.65rem 1.25rem;
   border-bottom: 1px solid #f1f5f9;
   color: #334155;
   font-weight: 500;

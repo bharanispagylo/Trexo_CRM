@@ -23,13 +23,14 @@
   animation: fadeIn 0.25s ease-out;
 }
 
-/* Reduced width container and removed list box border */
+/* Styled table container like Estimations card */
 .clients-table-container {
   max-width: 1000px;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  border-radius: 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01), 0 10px 15px -3px rgba(0, 0, 0, 0.02);
 }
 
 .clients-table {
@@ -40,43 +41,46 @@
 }
 
 .clients-table th {
-  padding: 1rem;
-  background: transparent;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
   font-size: 0.72rem;
   font-weight: 700;
   color: #475569;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .clients-table td {
-  padding: 1.1rem 1rem;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
   color: #334155;
   font-weight: 500;
 }
 
 .clients-table tr:hover td {
-  background: #f1f5f9;
+  background: #f8fafc;
 }
 
 .clients-table tr:last-child td {
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: none;
 }
 
 /* Form Styles */
 .clients-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
+  display: flex;
+  gap: 2rem;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
 }
 
 .clients-field {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
+  min-width: 250px;
+  max-width: 320px;
 }
 
 .clients-label {
@@ -90,7 +94,7 @@
 .clients-input,
 .clients-select {
   width: 100%;
-  max-width: 320px;
+  max-width: 100%;
   padding: 0.65rem 0.85rem;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -99,6 +103,7 @@
   color: #1e293b;
   background: #fff;
   transition: all 0.15s ease-in-out;
+  box-sizing: border-box;
 }
 
 .clients-field.full-width .clients-input {
@@ -188,11 +193,12 @@
   border: none;
   color: #64748b;
   cursor: pointer;
-  padding: 0.4rem 0.6rem;
+  padding: 6px;
   border-radius: 6px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease-in-out;
 }
 
 .client-action-btn:hover {
@@ -201,11 +207,12 @@
 }
 
 .client-action-btn.delete {
-  color: #ef4444;
+  color: #64748b;
 }
 
 .client-action-btn.delete:hover {
   background: #fef2f2;
+  color: #ef4444;
 }
 
 /* RESPONSIVE DESIGN */

@@ -50,7 +50,7 @@ export default function Estimations({ user }) {
     if (!form.taskName?.trim() || !form.client?.trim() || !form.projectId || form.estimatedHours <= 0) {
       setErrors({
         taskName: !form.taskName?.trim() ? 'Task Name is required' : '',
-        client: !form.client?.trim() ? 'Client is required' : '',
+        client: !form.client?.trim() ? 'Company Name is required' : '',
         projectId: !form.projectId ? 'Project is required' : '',
         estimatedHours: form.estimatedHours <= 0 ? 'Estimated hours must be greater than 0' : ''
       });
@@ -151,17 +151,17 @@ export default function Estimations({ user }) {
                 {errors.taskName && <span className="estimations-error-text">{errors.taskName}</span>}
               </div>
               <div className="estimations-field">
-                <label className="estimations-label">Client *</label>
+                <label className="estimations-label">Company Name *</label>
                 <select 
                   className={`estimations-select ${errors.client ? 'error' : ''}`} 
                   value={form.clientId || ''} 
                   onChange={e => {
                     const clientObj = clients.find(c => c.id === e.target.value);
-                    setForm({...form, clientId: clientObj?.id || null, client: clientObj?.name || ''});
+                    setForm({...form, clientId: clientObj?.id || null, client: clientObj?.company || clientObj?.name || ''});
                   }}
                 >
-                  <option value="">Select a Client</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  <option value="">Select a Company Name</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
                 </select>
                 {errors.client && <span className="estimations-error-text">{errors.client}</span>}
               </div>
@@ -169,7 +169,7 @@ export default function Estimations({ user }) {
                 <label className="estimations-label">Project *</label>
                 <select className={`estimations-select ${errors.projectId ? 'error' : ''}`} value={form.projectId || ''} onChange={e => setForm({...form, projectId: e.target.value})}>
                   <option value="">Select a Project</option>
-                  {projects.filter(p => !form.client || p.client?.toLowerCase().includes(form.client.toLowerCase())).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  {projects.filter(p => !form.clientId || p.clientId === form.clientId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
                 {errors.projectId && <span className="estimations-error-text">{errors.projectId}</span>}
               </div>
@@ -205,7 +205,7 @@ export default function Estimations({ user }) {
                   <tr>
                     <th>Est. ID</th>
                     <th>Task Name</th>
-                    <th>Client</th>
+                    <th>Company</th>
                     <th>Project</th>
                     <th>Estimation Hrs</th>
                     <th>Status</th>
@@ -217,7 +217,7 @@ export default function Estimations({ user }) {
                     <tr key={est.id}>
                       <td style={{ fontWeight: '600', color: '#334155' }}>{est.estimationNo}</td>
                       <td style={{ fontWeight: '600' }}>{est.taskName}</td>
-                      <td>{est.client || est.clientRef?.name || '-'}</td>
+                      <td>{est.clientRef?.company || est.client || '-'}</td>
                       <td>{est.projectRef?.name || '-'}</td>
                       <td style={{ fontWeight: '600', color: '#2563eb' }}>{est.estimatedHours} hrs</td>
                       <td>

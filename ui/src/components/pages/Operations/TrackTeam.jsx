@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
 import { useAlert } from '../../../context/AlertContext';
 import './TrackTeam.css';
+import Tasks from './Tasks';
 
 const isAssigneeMatch = (assigneeStr, employeeName) => {
   if (!assigneeStr || !employeeName) return false;
@@ -21,13 +22,14 @@ const isAssigneeMatch = (assigneeStr, employeeName) => {
 };
 
 export default function TrackTeam({ user }) {
-  const { alert } = useAlert();
+  const { alert, confirm } = useAlert();
   const [employees, setEmployees] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
+  const [viewingEmployeeTasks, setViewingEmployeeTasks] = useState(null);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
   
@@ -79,6 +81,22 @@ export default function TrackTeam({ user }) {
     }
   };
 
+  const handleDeleteMember = (id, name) => {
+    confirm(`Are you sure you want to remove ${name} from the tracking dashboard?`, async () => {
+      setLoading(true);
+      try {
+        await api.delete(`/employees/${id}`);
+        alert('Team member removed successfully!', 'success', 'Success');
+        await fetchData();
+      } catch (err) {
+        console.error('Delete error:', err);
+        alert('Failed to remove team member: ' + err.message, 'error', 'Error');
+      } finally {
+        setLoading(false);
+      }
+    }, 'Remove Team Member');
+  };
+
   const handleAddMember = async (e) => {
     e.preventDefault();
     if (!newMemberForm.name.trim() || !newMemberForm.role.trim()) {
@@ -118,6 +136,38 @@ export default function TrackTeam({ user }) {
   };
 
   if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Adding Member...' : 'Loading Tracker Dashboard...'}</div>;
+
+  if (viewingEmployeeTasks) {
+    return (
+      <div className="track-team-page" style={{ padding: '0' }}>
+        <div style={{ padding: '1rem 3rem 0 3rem' }}>
+          <button 
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              color: '#2563eb', 
+              fontSize: '0.85rem', 
+              fontWeight: '600', 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.25rem',
+              padding: 0,
+              marginBottom: '1rem'
+            }}
+            onClick={() => setViewingEmployeeTasks(null)}
+          >
+            ← Back to Team Members
+          </button>
+        </div>
+        <Tasks 
+          user={user}
+          initialAssigneeFilter={viewingEmployeeTasks}
+          onClearAssigneeFilter={() => setViewingEmployeeTasks(null)}
+        />
+      </div>
+    );
+  }
 
   // Filter tasks assigned to currently selected member
   const selectedMemberTasks = selectedMember 
@@ -183,14 +233,26 @@ export default function TrackTeam({ user }) {
                         <span className="role-tag-mini">{emp.role}</span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <button 
-                          className="member-action-btn-sm" 
-                          title="View Assigned Tasks"
-                          onClick={() => setSelectedMember(emp)}
-                        >
-                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                          View Tasks
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                          <button 
+                            className="member-action-btn-sm" 
+                            title="View Assigned Tasks"
+                            onClick={() => setViewingEmployeeTasks(emp.name)}
+                          >
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            View Tasks
+                          </button>
+                          <button 
+                            className="member-delete-icon-btn" 
+                            title="Remove Member"
+                            onClick={() => handleDeleteMember(emp.id, emp.name)}
+                          >
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'block' }}>
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -233,7 +295,7 @@ export default function TrackTeam({ user }) {
                 </div>
 
                 <div className="saas-field">
-                  <label className="saas-label">Designation / Role *</label>
+                  <label className="saas-label">Role in project *</label>
                   <input 
                     type="text" 
                     className="saas-input"
@@ -242,20 +304,6 @@ export default function TrackTeam({ user }) {
                     onChange={e => setNewMemberForm({ ...newMemberForm, role: e.target.value })}
                     required
                   />
-                </div>
-
-                <div className="saas-field">
-                  <label className="saas-label">Employee Type</label>
-                  <select 
-                    className="saas-select"
-                    value={newMemberForm.type}
-                    onChange={e => setNewMemberForm({ ...newMemberForm, type: e.target.value })}
-                  >
-                    <option value="Employee">Employee</option>
-                    <option value="Team Lead">Team Lead</option>
-                    <option value="Intern">Intern</option>
-                    <option value="Guest">Guest</option>
-                  </select>
                 </div>
               </div>
 

@@ -42,13 +42,13 @@ const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 
 
 const STATUS_HEADER_META = {
-  'To Do':         { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false },
-  'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', isDone: false },
-  'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', isDone: false },
-  'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', isDone: false },
-  'Prod Deployed': { bg: '#ea580c', fg: '#ffffff', dotColor: '#fde68a', isDone: false },
-  'Prod Verified': { bg: '#0d9488', fg: '#ffffff', dotColor: '#bbf7d0', isDone: false },
-  'Delivered':     { bg: '#16a34a', fg: '#ffffff', dotColor: '#99f6e4', isDone: true  },
+  'To Do':         { bg: '#f1f5f9', fg: '#000000', dotColor: '#94a3b8', isDone: false },
+  'In Progress':   { bg: '#2563eb', fg: '#000000', dotColor: '#bfdbfe', isDone: false },
+  'In Testing':    { bg: '#7c3aed', fg: '#000000', dotColor: '#e9d5ff', isDone: false },
+  'Re-opened':     { bg: '#db2777', fg: '#000000', dotColor: '#fecdd3', isDone: false },
+  'Prod Deployed': { bg: '#ea580c', fg: '#000000', dotColor: '#fde68a', isDone: false },
+  'Prod Verified': { bg: '#0d9488', fg: '#000000', dotColor: '#bbf7d0', isDone: false },
+  'Delivered':     { bg: '#16a34a', fg: '#000000', dotColor: '#99f6e4', isDone: true  },
 };
 
 const PRIORITY_FLAGS = {
@@ -932,12 +932,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
               </button>
             )}
             <button 
-              className={`saas-tab-header-btn ${activeTab === 'timelogs' ? 'active' : ''}`}
-              onClick={() => setActiveTab('timelogs')}
-            >
-              Time Logs
-            </button>
-            <button 
               className={`saas-tab-header-btn ${activeTab === 'attachments' ? 'active' : ''}`}
               onClick={() => setActiveTab('attachments')}
             >
@@ -960,17 +954,17 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
               <div className="saas-meta-grid animate-fade-in" style={{ paddingBottom: '2rem' }}>
                 
                 {/* Row 1: Status & Assignees */}
-                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '100px 1fr 100px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div className="saas-meta-row saas-meta-row-4col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconStatus /> Status</span>
                   <span className="saas-meta-value">
-                    <select value={form.status} onChange={e => { const updated = { ...form, status: e.target.value }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }}>
+                    <select value={form.status} onChange={e => { const updated = { ...form, status: e.target.value }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
                       {COLUMNS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                     </select>
                   </span>
                   
                   <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconAssignee /> Assignee</span>
                   <span className="saas-meta-value">
-                    <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }}>
+                    <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
                       <option value="">Empty</option>
                       {(form.projectName && projects.find(p => p.name === form.projectName)?.members ? projects.find(p => p.name === form.projectName).members.split(',').map(m => m.trim()).filter(Boolean) : users).map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
@@ -978,7 +972,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                 </div>
 
                 {/* Row 2: Dates (Due Date -> Delivery Date) */}
-                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Dates</span>
                   <span className="saas-meta-value">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'nowrap' }}>
@@ -987,7 +981,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                         type="date" 
                         value={form.dueDate ? new Date(form.dueDate).toISOString().split('T')[0] : ''} 
                         onChange={e => set('dueDate', e.target.value)} 
-                        style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#0f172a', width: '100px', cursor: 'pointer' }} 
+                        style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '100px', cursor: 'pointer', fontWeight: 600 }} 
                         title="Due Date"
                       />
                       
@@ -998,7 +992,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                         type="date" 
                         value={form.deliveredDate ? new Date(form.deliveredDate).toISOString().split('T')[0] : ''} 
                         onChange={e => set('deliveredDate', e.target.value)} 
-                        style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#0f172a', width: '100px', cursor: 'pointer' }} 
+                        style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '100px', cursor: 'pointer', fontWeight: 600 }} 
                         title="Delivery Date"
                       />
                     </div>
@@ -1006,10 +1000,10 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                 </div>
 
                 {/* Row 3: Priority */}
-                <div className="saas-meta-row" style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconPriority /> Priority</span>
                   <span className="saas-meta-value">
-                    <select value={form.priority} onChange={e => set('priority', e.target.value)} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', fontWeight: 600 }}>
+                    <select value={form.priority} onChange={e => set('priority', e.target.value)} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
                       <option value="">Empty</option>
                       {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
@@ -1142,7 +1136,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                       {/* Billed Hours */}
                       <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
                         <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
-                          Billed Hours
+                          Already Billed
                         </label>
                         <div>
                           <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
@@ -1151,17 +1145,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                         </div>
                       </div>
 
-                      {/* Employee Actual Time */}
-                      <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
-                        <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
-                          Employee Time Logged
-                        </label>
-                        <div>
-                          <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
-                            {decimalToTimeStr(form.employeeHours || 0)}
-                          </span>
-                        </div>
-                      </div>
 
                       {/* Remaining Billable Hours */}
                       <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
@@ -1191,113 +1174,6 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
               </div>
             )}
 
-            {activeTab === 'timelogs' && (
-              <div className="saas-details-grid animate-fade-in" style={{ display: 'block' }}>
-                {!isEdit ? (
-                  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-                    Save the task first before adding time logs.
-                  </div>
-                ) : (
-                  <>
-                  <div className="saas-log-form-box" style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '2rem' }}>
-                    <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '1rem' }}>{workLogForm.id ? 'Edit Time Log' : 'Add New Time Log'}</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                      <div>
-                        <label className="saas-field-label">Date</label>
-                        <input type="date" className="saas-input" value={workLogForm.logDate} onChange={e => setWorkLogForm({...workLogForm, logDate: e.target.value})} />
-                      </div>
-                      <div>
-                        <label className="saas-field-label">Actual Hours Worked</label>
-                        <input type="number" step="0.5" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} />
-                      </div>
-                    </div>
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label className="saas-field-label">Description</label>
-                      <input type="text" className="saas-input" placeholder="What did you work on?" value={workLogForm.description} onChange={e => setWorkLogForm({...workLogForm, description: e.target.value})} />
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button className="saas-btn-primary" onClick={() => handleAddWorkLog(false)} disabled={workLogSaving}>
-                        {workLogSaving ? 'Saving...' : (workLogForm.id ? 'Update Time Log' : 'Add Time Log')}
-                      </button>
-                      {workLogForm.id && (
-                        <button 
-                          className="saas-btn-secondary" 
-                          onClick={() => setWorkLogForm({ logDate: new Date().toISOString().split('T')[0], hoursWorked: '', description: '', isBilled: false, id: null })}
-                          disabled={workLogSaving}
-                          style={{ padding: '0.5rem 1rem' }}
-                        >
-                          Cancel
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="saas-recent-logs">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                      <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', margin: 0 }}>Recent Time Logs</h3>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#2563eb', background: '#eff6ff', padding: '0.25rem 0.75rem', borderRadius: '12px' }}>
-                        Total Time Logged: {form.employeeHours || 0} hrs
-                      </span>
-                    </div>
-                    {workLogs.filter(log => !log.isBilled).length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', background: '#f8fafc', borderRadius: '8px' }}>No time logs recorded yet.</div>
-                    ) : (
-                      <div className="saas-table-wrapper">
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
-                          <thead>
-                            <tr style={{ background: '#f1f5f9', color: '#475569' }}>
-                              <th style={{ padding: '0.75rem', fontWeight: 600 }}>Date</th>
-                              <th style={{ padding: '0.75rem', fontWeight: 600 }}>User</th>
-                              <th style={{ padding: '0.75rem', fontWeight: 600 }}>Hours Worked</th>
-                              <th style={{ padding: '0.75rem', fontWeight: 600 }}>Description</th>
-                              <th style={{ padding: '0.75rem', fontWeight: 600 }}>Action</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {workLogs.filter(log => !log.isBilled).map(log => (
-                              <tr key={log.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                <td style={{ padding: '0.75rem' }}>{new Date(log.logDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                                <td style={{ padding: '0.75rem' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <div style={{ width: '24px', height: '24px', background: '#e2e8f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 600, color: '#475569' }}>
-                                      {log.user?.fullName ? log.user.fullName.charAt(0).toUpperCase() : '?'}
-                                    </div>
-                                    {log.user?.fullName || 'Unknown'}
-                                  </div>
-                                </td>
-                                <td style={{ padding: '0.75rem', fontWeight: 600, color: '#0f172a' }}>{log.hoursWorked}h</td>
-                                <td style={{ padding: '0.75rem', color: '#475569' }}>{log.description || '-'}</td>
-                                <td style={{ padding: '0.75rem' }}>
-                                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <button title="Edit" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer' }} onClick={() => {
-                                      setWorkLogForm({
-                                        id: log.id,
-                                        logDate: new Date(log.logDate).toISOString().split('T')[0],
-                                        hoursWorked: log.hoursWorked,
-                                        description: log.description || '',
-                                        isBilled: false
-                                      });
-                                    }}>
-                                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                    </button>
-                                    <button title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }} onClick={() => {
-                                      if(window.confirm('Delete this time log?')) handleDeleteWorkLog(log.id);
-                                    }}>
-                                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                  </>
-                )}
-              </div>
-            )}
 
             {activeTab === 'worklogs' && currentUser?.role?.toLowerCase() === 'admin' && (
               <div className="saas-details-grid animate-fade-in" style={{ display: 'block' }}>
@@ -2121,13 +1997,21 @@ function ScheduleColumn({ title, count, tasks, onDragStart, onDrop, onDragOver, 
 // ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
 //  MAIN TASKS COMPONENT
 // ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
-export default function Tasks({ user, initialSelectedTask, onClearInitialTask, onDetailViewChange }) {
+export default function Tasks({ user, initialSelectedTask, onClearInitialTask, onDetailViewChange, initialAssigneeFilter, onClearAssigneeFilter }) {
   const isTeamLeadOrAdmin = user?.role?.toLowerCase() === 'team lead' || user?.role?.toLowerCase() === 'admin';
   const [tasks, setTasks]       = useState([]);
   const [loading, setLoading]   = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [viewMode, setViewMode] = useState('list'); 
   const [subTab, setSubTab]     = useState('my'); 
+  const [assigneeFilter, setAssigneeFilter] = useState(initialAssigneeFilter);
+
+  useEffect(() => {
+    setAssigneeFilter(initialAssigneeFilter);
+    if (initialAssigneeFilter) {
+      setSubTab('my');
+    }
+  }, [initialAssigneeFilter]); 
   const [dragOver, setDragOver] = useState(null);
   const [taskDetailMode, setTaskDetailMode] = useState(false); // false=view, true=edit
   const [promptState, setPromptState] = useState({ isOpen: false, title: '', onSubmit: null });
@@ -2141,6 +2025,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const [inlineAssignee, setInlineAssignee] = useState('');
   const [inlinePriority, setInlinePriority] = useState('Medium');
   const [inlineDueDate, setInlineDueDate] = useState('');
+  const [inlineTaskType, setInlineTaskType] = useState('Task');
   const inlineInputRef = useRef(null);
   // Side drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -2239,7 +2124,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
   const closeInlineAdd = () => {
     setInlineAdd(null);
-    setInlineTitle(''); setInlineAssignee(''); setInlinePriority('Medium'); setInlineDueDate('');
+    setInlineTitle(''); setInlineAssignee(''); setInlinePriority('Medium'); setInlineDueDate(''); setInlineTaskType('Task');
   };
 
   const submitInlineAdd = async () => {
@@ -2258,8 +2143,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         assignees: inlineAssignee || '',
         assignedDate: new Date().toISOString(),
         dueDate: inlineDueDate ? new Date(inlineDueDate).toISOString() : null,
-        tag: 'Engineering',
-        taskType: 'Feature',
+        tag: '',
+        taskType: inlineTaskType || 'Task',
         isBillable: false,
         description: ''
       });
@@ -2338,6 +2223,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     setIsSaving(true);
     try {
       await api.delete(`/tasks/${id}`);
+      setTasks(prev => prev.filter(t => t.id !== id));
       alert('Task deleted successfully.', 'success', 'Deleted');
       fetchTasks();
     } catch (error) {
@@ -2445,13 +2331,13 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     
     const hasAllAccess = level === 'All' || editLevel === 'All' || deleteLevel === 'All' || isTeamLeadOrAdmin;
     
-    if (hasAllAccess && subTab === 'all') return true;
+    if (hasAllAccess && subTab === 'all' && !assigneeFilter) return true;
     
-    // For 'my' tab or 'Self' level:
+    // For 'my' tab, 'Self' level, or specified assigneeFilter:
     const assignees = t.assignees ? t.assignees.split(',').map(a => a.trim().toLowerCase()) : [];
-    const myName = (user?.fullName || user?.name || '').trim().toLowerCase();
+    const targetName = (assigneeFilter || user?.fullName || user?.name || '').trim().toLowerCase();
     
-    return assignees.includes(myName);
+    return assignees.includes(targetName);
   });
 
   const pageTitle = subTab === 'my' ? '' : 'All Tasks';
@@ -2463,11 +2349,15 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       {/* Ã¢â€¢ÂÃ¢â€¢Â MAIN CONTENT Ã¢â€¢ÂÃ¢â€¢Â */}
       <div className="tasks-main-content">
       <div className="kanban-root" onDragEnd={handleDragEnd}>
-      {(getLevel('tasks', 'view') === 'All' || getLevel('tasks', 'edit') === 'All' || getLevel('tasks', 'delete') === 'All' || isTeamLeadOrAdmin) && (
+      {(getLevel('tasks', 'view') === 'All' || getLevel('tasks', 'edit') === 'All' || getLevel('tasks', 'delete') === 'All' || isTeamLeadOrAdmin) && !assigneeFilter && (
         <div className="saas-tabs" style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '2rem' }}>
           <button 
             className={`saas-tab ${subTab === 'my' ? 'active' : ''}`} 
-            onClick={() => setSubTab('my')}
+            onClick={() => {
+              setSubTab('my');
+              setAssigneeFilter(null);
+              if (onClearAssigneeFilter) onClearAssigneeFilter();
+            }}
             style={{ 
               background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
               color: subTab === 'my' ? '#2563eb' : '#64748b',
@@ -2478,7 +2368,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           </button>
           <button 
             className={`saas-tab ${subTab === 'all' ? 'active' : ''}`} 
-            onClick={() => setSubTab('all')}
+            onClick={() => {
+              setSubTab('all');
+              setAssigneeFilter(null);
+              if (onClearAssigneeFilter) onClearAssigneeFilter();
+            }}
             style={{ 
               background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
               color: subTab === 'all' ? '#2563eb' : '#64748b',
@@ -2486,6 +2380,49 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             }}
           >
             All Tasks
+          </button>
+        </div>
+      )}
+
+      {assigneeFilter && (
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.6rem', 
+          background: '#eff6ff', 
+          border: '1px solid #bfdbfe', 
+          padding: '0.4rem 0.85rem', 
+          borderRadius: '8px', 
+          fontSize: '0.85rem', 
+          color: '#1d4ed8', 
+          fontWeight: 600, 
+          marginBottom: '1rem', 
+          width: 'fit-content' 
+        }}>
+          <span>Viewing tasks for: <strong>{assigneeFilter}</strong></span>
+          <button 
+            style={{ 
+              background: '#dbeafe', 
+              border: 'none', 
+              color: '#1d4ed8', 
+              cursor: 'pointer', 
+              fontWeight: '700', 
+              borderRadius: '50%', 
+              width: '18px', 
+              height: '18px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              fontSize: '0.75rem',
+              padding: 0
+            }} 
+            onClick={() => { 
+              setAssigneeFilter(null); 
+              if (onClearAssigneeFilter) onClearAssigneeFilter(); 
+            }}
+            title="Clear employee filter"
+          >
+            ✕
           </button>
         </div>
       )}
@@ -2826,7 +2763,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           const firstListId = finalProjectGroups[0]?.lists[0]?.id;
 
           return (
-            <div className="cu-list-root">
+            <div className="cu-list-root all-tasks-list">
               {finalProjectGroups.map(projGroup => {
                 return (
                   <div key={projGroup.id} className="project-group-container" style={{ marginBottom: '2.5rem' }}>
@@ -2901,7 +2838,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                               </div>
                               <div className="cu-section-right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 {can('tasks', 'create') && (
-                                  <>
                                     <button className="kanban-new-btn" title="Create New Task"
                                       style={{ padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem', boxShadow: 'none' }}
                                       onClick={(e) => {
@@ -2918,14 +2854,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                       }}>
                                       New
                                     </button>
-                                    <button className="cu-section-add-btn" title={`Add task inline to ${list.name}`}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setExpandedListId(list.id);
-                                        let projName = projGroup.id !== 'unassigned_proj' ? projGroup.name : '';
-                                        openInlineAdd(projName, 'To Do', list.id);
-                                      }}>+</button>
-                                  </>
                                 )}
                               </div>
                             </div>
@@ -2960,49 +2888,40 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                             {task.taskNo && <span className="cu-task-id">{task.taskNo}</span>}
                                           </td>
                                           <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
-                                            <div className="cu-avatars">
-                                              {assignees.length === 0 ? (
-                                                <div className="cu-avatar-empty" title="Unassigned">
-                                                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                                </div>
-                                              ) : assignees.slice(0, 3).map(a => (
-                                                <div key={a} className={`cu-avatar ${getAvatarColor(a)}`} title={a}>{initials(a)}</div>
-                                              ))}
-                                              {assignees.length > 3 && <div className="cu-avatar av-blue">+{assignees.length - 3}</div>}
+                                            <div className="cu-inline-field-wrapper">
+                                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#64748b" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                              <select className="cu-inline-dropdown" value={task.assignees || ''} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { await api.put(`/tasks/${task.id}`, { assignees: e.target.value }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }}>
+                                                <option value="">Unassigned</option>
+                                                {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim(); return <option key={u.id} value={n}>{n}</option>; })}
+                                              </select>
                                             </div>
                                           </td>
-                                          <td className="cu-td cu-td-list">
-                                            <span style={{
-                                              background: meta.bg,
-                                              color: meta.fg,
-                                              padding: '0.2rem 0.6rem',
-                                              borderRadius: '12px',
-                                              fontSize: '0.75rem',
-                                              fontWeight: '700',
-                                              textTransform: 'uppercase',
-                                              display: 'inline-block'
-                                            }}>
-                                              {task.status || 'To Do'}
-                                            </span>
+                                          <td className="cu-td cu-td-list" onClick={e => e.stopPropagation()}>
+                                            <div className="cu-inline-field-wrapper">
+                                              <span className="cu-inline-status-dot" style={{ background: meta.dotColor }}></span>
+                                              <select className="cu-inline-dropdown" value={task.status || 'To Do'} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Delivered' && !task.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${task.id}`, updateData); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: meta.fg, fontWeight: 700 }}>
+                                                {COLUMNS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
+                                              </select>
+                                            </div>
                                           </td>
-                                          <td className="cu-td cu-td-delivery">
-                                            {relDate ? (
-                                              <span className={`cu-due-badge ${relDate.isOverdue ? 'overdue' : relDate.isToday ? 'today' : ''}`}>
-                                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                {relDate.text}
-                                              </span>
-                                            ) : <span className="cu-empty-cell">-</span>}
+                                          <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
+                                            <div className="cu-inline-field-wrapper">
+                                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                              <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                            </div>
                                           </td>
-                                          <td className="cu-td cu-td-priority">
-                                            <span className="cu-priority-badge">
+                                          <td className="cu-td cu-td-priority" onClick={e => e.stopPropagation()}>
+                                            <div className="cu-inline-field-wrapper">
                                               <PriorityFlag priority={task.priority} />
-                                              <span>{task.priority || 'Medium'}</span>
-                                            </span>
+                                              <select className="cu-inline-dropdown" value={task.priority || 'Medium'} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { priority: val }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, priority: val } : t)); } catch(err) { console.error(err); } }}>
+                                                {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                                              </select>
+                                            </div>
                                           </td>
                                           <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
                                             <div className="cu-row-actions">
                                               {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
-                                                <button className="cu-act-btn danger" onClick={() => showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task')} title="Delete">
+                                                <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task'); }} title="Delete">
                                                   <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                                 </button>
                                               )}
@@ -3014,36 +2933,74 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
                                     {/* Inline Add Row */}
                                     {isInline ? (
-                                      <tr className="cu-inline-row">
-                                        <td className="cu-td cu-td-name">
-                                          <span className="cu-status-dot" style={{ background: '#94a3b8', width: "10px", height: "10px", borderRadius: "50%", display: "inline-block", flexShrink: 0 }}></span>
-                                          <input ref={inlineInputRef} className="cu-inline-input" placeholder="Task name"
-                                            value={inlineTitle} onChange={e => setInlineTitle(e.target.value)}
-                                            onKeyDown={e => { if (e.key === 'Enter') submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }} autoFocus />
-                                        </td>
-                                        <td className="cu-td cu-td-assignee">
-                                          <select className="cu-inline-sel" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
-                                            <option value="">-</option>
-                                            {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim(); return <option key={u.id} value={n}>{n}</option>; })}
-                                          </select>
-                                        </td>
-                                        <td className="cu-td cu-td-list"><span className="cu-empty-cell">-</span></td>
-                                        <td className="cu-td cu-td-delivery">
-                                          <input type="date" className="cu-inline-date" value={inlineDueDate} onChange={e => setInlineDueDate(e.target.value)} />
-                                        </td>
-                                        <td className="cu-td cu-td-priority">
-                                          <select className="cu-inline-sel" value={inlinePriority} onChange={e => setInlinePriority(e.target.value)}>
-                                            {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-                                          </select>
-                                        </td>
-                                        <td className="cu-td cu-td-actions">
-                                          <div className="cu-row-actions" style={{ opacity: 1 }}>
-                                            <button className="cu-act-btn" onClick={submitInlineAdd} title="Save (Enter)">
-                                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                            </button>
-                                            <button className="cu-act-btn danger" onClick={closeInlineAdd} title="Cancel (Esc)">
-                                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                            </button>
+                                      <tr className="cu-inline-row animate-fade-in">
+                                        <td colSpan="6" style={{ padding: '8px' }}>
+                                          <div className="new-task-inline-bar">
+                                            <div className="ntib-left">
+                                              <span className="ntib-dotted-circle"></span>
+                                              <input
+                                                ref={inlineInputRef}
+                                                type="text"
+                                                placeholder="Task Name or type '/' for commands"
+                                                value={inlineTitle}
+                                                onChange={e => setInlineTitle(e.target.value)}
+                                                onKeyDown={e => { if (e.key === 'Enter') submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }}
+                                                autoFocus
+                                                className="ntib-input"
+                                              />
+                                            </div>
+                                            <div className="ntib-right">
+                                              <div className="ntib-dropdown-wrapper">
+                                                <span className="ntib-dropdown-trigger">
+                                                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '2px' }}><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+                                                  {inlineTaskType}
+                                                </span>
+                                                <select 
+                                                  className="ntib-hidden-select" 
+                                                  value={inlineTaskType} 
+                                                  onChange={e => setInlineTaskType(e.target.value)}
+                                                >
+                                                  <option value="Task">Task</option>
+                                                  <option value="Milestone">Milestone</option>
+                                                  <option value="Form Response">Form Response</option>
+                                                  <option value="Meeting Note">Meeting Note</option>
+                                                </select>
+                                              </div>
+                                              
+                                              <span className="ntib-divider"></span>
+                                              
+                                              <div className="ntib-dropdown-wrapper">
+                                                <button type="button" className="ntib-btn-icon" title="Assignee">
+                                                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                                </button>
+                                                <select className="ntib-hidden-select" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
+                                                  <option value="">Assignee</option>
+                                                  {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim(); return <option key={u.id} value={n}>{n}</option>; })}
+                                                </select>
+                                                {inlineAssignee && <span className="ntib-badge">{initials(inlineAssignee)}</span>}
+                                              </div>
+                                              
+                                              <div className="ntib-dropdown-wrapper">
+                                                <button type="button" className="ntib-btn-icon" title="Due Date">
+                                                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                </button>
+                                                <input type="date" className="ntib-hidden-date" value={inlineDueDate} onChange={e => setInlineDueDate(e.target.value)} />
+                                                {inlineDueDate && <span className="ntib-badge">{new Date(inlineDueDate).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>}
+                                              </div>
+                                              
+                                              <div className="ntib-dropdown-wrapper">
+                                                <button type="button" className="ntib-btn-icon" title="Priority">
+                                                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                                                </button>
+                                                <select className="ntib-hidden-select" value={inlinePriority} onChange={e => setInlinePriority(e.target.value)}>
+                                                  {PRIORITIES.map(p => <option key={p} value={p}>{p} Priority</option>)}
+                                                </select>
+                                                {inlinePriority && <span className="ntib-badge priority-color">{inlinePriority}</span>}
+                                              </div>
+                                              
+                                              <button type="button" className="ntib-cancel-btn" onClick={closeInlineAdd}>Cancel</button>
+                                              <button type="button" className="ntib-save-btn" onClick={submitInlineAdd}>Save ↵</button>
+                                            </div>
                                           </div>
                                         </td>
                                       </tr>
@@ -3082,7 +3039,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         });
 
         return (
-          <div className="cu-list-root">
+          <div className="cu-list-root my-tasks-list">
             {COLUMNS.map(col => {
               const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
               const statusTasks = [...(byStatus[col.id] || [])].sort((a, b) => {
@@ -3144,15 +3101,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                   {task.taskNo && <span className="cu-task-id">{task.taskNo}</span>}
                                 </td>
                                 <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
-                                  <div className="cu-avatars">
-                                    {assignees.length === 0 ? (
-                                      <div className="cu-avatar-empty" title="Unassigned">
-                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                      </div>
-                                    ) : assignees.slice(0, 3).map(a => (
-                                      <div key={a} className={`cu-avatar ${getAvatarColor(a)}`} title={a}>{initials(a)}</div>
-                                    ))}
-                                    {assignees.length > 3 && <div className="cu-avatar av-blue">+{assignees.length - 3}</div>}
+                                  <div className="cu-inline-field-wrapper">
+                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#64748b" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                    <select className="cu-inline-dropdown" value={task.assignees || ''} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { await api.put(`/tasks/${task.id}`, { assignees: e.target.value }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }}>
+                                      <option value="">Unassigned</option>
+                                      {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim(); return <option key={u.id} value={n}>{n}</option>; })}
+                                    </select>
                                   </div>
                                 </td>
                                 <td className="cu-td cu-td-project">
@@ -3164,25 +3118,25 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                 <td className="cu-td cu-td-list">
                                   {task.taskListId && taskListsData.length ? (taskListsData.find(l => l.id === task.taskListId)?.name || '-') : <span className="cu-empty-cell">-</span>}
                                 </td>
-                                <td className="cu-td cu-td-delivery">
-                                  {relDate ? (
-                                    <span className={`cu-due-badge ${relDate.isOverdue ? 'overdue' : relDate.isToday ? 'today' : ''}`}>
-                                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                      {relDate.text}
-                                    </span>
-                                  ) : <span className="cu-empty-cell">-</span>}
+                                <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
+                                  <div className="cu-inline-field-wrapper">
+                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                    <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                  </div>
                                 </td>
-                                <td className="cu-td cu-td-priority">
-                                  <span className="cu-priority-badge">
+                                <td className="cu-td cu-td-priority" onClick={e => e.stopPropagation()}>
+                                  <div className="cu-inline-field-wrapper">
                                     <PriorityFlag priority={task.priority} />
-                                    <span>{task.priority || 'Medium'}</span>
-                                  </span>
+                                    <select className="cu-inline-dropdown" value={task.priority || 'Medium'} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { priority: val }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, priority: val } : t)); } catch(err) { console.error(err); } }}>
+                                      {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                                    </select>
+                                  </div>
                                 </td>
                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
                                   <div className="cu-row-actions">
 
                                     {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
-                                      <button className="cu-act-btn danger" onClick={() => showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task')} title="Delete">
+                                      <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task'); }} title="Delete">
                                         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                       </button>
                                     )}
@@ -3194,37 +3148,74 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
                           {/* Inline Add Row */}
                           {isInline ? (
-                            <tr className="cu-inline-row">
-                              <td className="cu-td cu-td-name">
-                                <span className="cu-status-dot" style={{ background: meta.dotColor, width: "10px", height: "10px", borderRadius: "50%", display: "inline-block", flexShrink: 0 }}></span>
-                                <input ref={inlineInputRef} className="cu-inline-input" placeholder="Task name"
-                                  value={inlineTitle} onChange={e => setInlineTitle(e.target.value)}
-                                  onKeyDown={e => { if (e.key === 'Enter') submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }} autoFocus />
-                              </td>
-                              <td className="cu-td cu-td-assignee">
-                                <select className="cu-inline-sel" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
-                                  <option value="">-</option>
-                                  {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim(); return <option key={u.id} value={n}>{n}</option>; })}
-                                </select>
-                              </td>
-                              <td className="cu-td cu-td-project"><span className="cu-empty-cell">-</span></td>
-                              <td className="cu-td cu-td-list"><span className="cu-empty-cell">-</span></td>
-                              <td className="cu-td cu-td-delivery">
-                                <input type="date" className="cu-inline-date" value={inlineDueDate} onChange={e => setInlineDueDate(e.target.value)} />
-                              </td>
-                              <td className="cu-td cu-td-priority">
-                                <select className="cu-inline-sel" value={inlinePriority} onChange={e => setInlinePriority(e.target.value)}>
-                                  {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-                                </select>
-                              </td>
-                              <td className="cu-td cu-td-actions">
-                                <div className="cu-row-actions" style={{ opacity: 1 }}>
-                                  <button className="cu-act-btn" onClick={submitInlineAdd} title="Save (Enter)">
-                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                  </button>
-                                  <button className="cu-act-btn danger" onClick={closeInlineAdd} title="Cancel (Esc)">
-                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                  </button>
+                            <tr className="cu-inline-row animate-fade-in">
+                              <td colSpan="7" style={{ padding: '8px' }}>
+                                <div className="new-task-inline-bar">
+                                  <div className="ntib-left">
+                                    <span className="ntib-dotted-circle"></span>
+                                    <input
+                                      ref={inlineInputRef}
+                                      type="text"
+                                      placeholder="Task Name or type '/' for commands"
+                                      value={inlineTitle}
+                                      onChange={e => setInlineTitle(e.target.value)}
+                                      onKeyDown={e => { if (e.key === 'Enter') submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }}
+                                      autoFocus
+                                      className="ntib-input"
+                                    />
+                                  </div>
+                                  <div className="ntib-right">
+                                    <div className="ntib-dropdown-wrapper">
+                                      <span className="ntib-dropdown-trigger">
+                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '2px' }}><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+                                        {inlineTaskType}
+                                      </span>
+                                      <select 
+                                        className="ntib-hidden-select" 
+                                        value={inlineTaskType} 
+                                        onChange={e => setInlineTaskType(e.target.value)}
+                                      >
+                                        <option value="Task">Task</option>
+                                        <option value="Milestone">Milestone</option>
+                                        <option value="Form Response">Form Response</option>
+                                        <option value="Meeting Note">Meeting Note</option>
+                                      </select>
+                                    </div>
+                                    
+                                    <span className="ntib-divider"></span>
+                                    
+                                    <div className="ntib-dropdown-wrapper">
+                                      <button type="button" className="ntib-btn-icon" title="Assignee">
+                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                      </button>
+                                      <select className="ntib-hidden-select" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
+                                        <option value="">Assignee</option>
+                                        {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim(); return <option key={u.id} value={n}>{n}</option>; })}
+                                      </select>
+                                      {inlineAssignee && <span className="ntib-badge">{initials(inlineAssignee)}</span>}
+                                    </div>
+                                    
+                                    <div className="ntib-dropdown-wrapper">
+                                      <button type="button" className="ntib-btn-icon" title="Due Date">
+                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                      </button>
+                                      <input type="date" className="ntib-hidden-date" value={inlineDueDate} onChange={e => setInlineDueDate(e.target.value)} />
+                                      {inlineDueDate && <span className="ntib-badge">{new Date(inlineDueDate).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>}
+                                    </div>
+                                    
+                                    <div className="ntib-dropdown-wrapper">
+                                      <button type="button" className="ntib-btn-icon" title="Priority">
+                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                                      </button>
+                                      <select className="ntib-hidden-select" value={inlinePriority} onChange={e => setInlinePriority(e.target.value)}>
+                                        {PRIORITIES.map(p => <option key={p} value={p}>{p} Priority</option>)}
+                                      </select>
+                                      {inlinePriority && <span className="ntib-badge priority-color">{inlinePriority}</span>}
+                                    </div>
+                                    
+                                    <button type="button" className="ntib-cancel-btn" onClick={closeInlineAdd}>Cancel</button>
+                                    <button type="button" className="ntib-save-btn" onClick={submitInlineAdd}>Save ↵</button>
+                                  </div>
                                 </div>
                               </td>
                             </tr>

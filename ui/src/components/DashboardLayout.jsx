@@ -2,10 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
 import './DashboardLayout.css';
 import { usePermissions } from '../hooks/usePermissions';
-import Employee from './pages/HR/Employee';
 import Salary from './pages/HR/Salary';
-import Leave from './pages/HR/Leave';
-import Attendance from './pages/HR/Attendance';
 import Projects from './pages/Operations/Projects';
 import TrackTeam from './pages/Operations/TrackTeam';
 import Tasks from './pages/Operations/Tasks';
@@ -181,10 +178,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'employee': return <Employee user={user} />;
       case 'salary': return <Salary user={user} />;
-      case 'leave': return <Leave user={user} />;
-      case 'attendance': return <Attendance user={user} />;
       case 'projects': 
         if (!can('projects', 'view') && user?.role?.toLowerCase() !== 'admin') {
           return renderOverview(setActiveTab, (taskData) => {
@@ -272,10 +266,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
   const getHeaderInfo = () => {
     switch (activeTab) {
-      case 'employee': return { title: 'Employee Directory', back: 'HR', id: 'Employees' };
       case 'salary': return { title: 'Payroll Management', back: 'HR', id: 'Salary' };
-      case 'leave': return { title: 'Leave Requests', back: 'HR', id: 'Leave' };
-      case 'attendance': return { title: 'Attendance Logs', back: 'HR', id: 'Attendance' };
       case 'projects': return { title: 'Project Portfolio', back: 'Operations', id: 'Projects' };
       case 'track-team': return { title: 'Track your Team', back: 'Operations', id: 'TrackTeam' };
       case 'estimations': return { title: 'Estimations', back: 'Operations', id: 'Estimations' };
@@ -288,7 +279,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'add-user': return { title: 'Create New User', back: 'Users', id: 'NewUser' };
       case 'edit-user': return { title: 'Edit User Profile', back: 'Users', id: 'EditUser' };
       case 'reports': return { title: 'Reports', back: 'Reports', id: 'Reports' };
-      default: return { title: 'Dashboard Overview', back: 'Main', id: 'Overview' };
+      default: return { title: 'Dashboard', back: 'Main', id: 'Overview' };
 
 
     }
@@ -330,41 +321,27 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         <div className="saas-nav-groups">
           <div className="saas-nav-group">
             <NavItem id="overview" label="Dashboard" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>} />
-            {can('attendance', 'view') && <NavItem id="attendance" label="Attendance" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>} />}
-            {can('leave', 'view') && <NavItem id="leave" label="Leave" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>} />}
           </div>
 
           <div className="saas-nav-group">
             {can('tasks', 'view') && <NavItem id="tasks" label="Tasks" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>} />}
             {can('projects', 'view') && <NavItem id="projects" label="Projects" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>} />}
-            {user?.role?.toLowerCase() === 'admin' && <NavItem id="track-team" label="Track your Team" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>} />}
-            {!['employee', 'intern', 'guest', 'team lead'].includes(user?.role?.toLowerCase()) && <NavItem id="estimations" label="Estimations" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>} />}
-            {user?.role?.toLowerCase() === 'admin' && <NavItem id="clients" label="Clients" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>} />}
+            {can('teams', 'view') && <NavItem id="track-team" label="My Team" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>} />}
+            {can('estimations', 'view') && <NavItem id="estimations" label="Estimations" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>} />}
+            {can('reports', 'view') && <NavItem id="reports" label="Reports" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>} />}
+            {can('clients', 'view') && <NavItem id="clients" label="Clients" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>} />}
           </div>
 
-          {(can('employees', 'view') || can('users', 'view') || can('roles', 'view') || user?.role?.toLowerCase() === 'admin') && (
+          {(can('users', 'view') || can('roles', 'view')) && (
             <div className="saas-nav-group">
-              {can('employees', 'view') && <NavItem id="employee" label="Employees" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>} />}
               {can('users', 'view') && <NavItem id="users" label="Users" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-3-3.87"></path><path d="M2 21v-2a4 4 0 0 1 3-3.87"></path><circle cx="12" cy="7" r="4"></circle></svg>} />}
-              {user?.role?.toLowerCase() === 'admin' && <NavItem id="reports" label="Reports" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>} />}
-              {user?.role?.toLowerCase() === 'admin' && <NavItem id="roles" label="Roles" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>} />}
+              {can('roles', 'view') && <NavItem id="roles" label="Roles" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>} />}
             </div>
           )}
 
         </div>
 
-        {/* Sidebar Help Support Card */}
-        <div className="saas-sidebar-footer">
-          <div className="support-card-modern">
-            <div className="support-icon-circle">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" strokeWidth="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-            </div>
-            <div className="support-text-wrapper">
-              <span className="support-title">Need help?</span>
-              <span className="support-subtitle">Contact Support</span>
-            </div>
-          </div>
-        </div>
+
 
       </aside>
 

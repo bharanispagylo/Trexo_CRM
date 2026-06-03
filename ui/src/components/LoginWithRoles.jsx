@@ -616,26 +616,9 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
 
   return (
     <div className="dashboard-container app-container">
-      {/* Top bar */}
-      <header className="topbar">
-        <div className="topbar-brand">
-          <div className="logo-icon logo-icon-sm">O</div>
-          <span className="topbar-title">OfficeCRM</span>
-        </div>
-        <div className="topbar-context">
-          <div className="topbar-context-title">Admin Dashboard</div>
-          <p className="topbar-context-sub">Full system access</p>
-        </div>
-        <div className="flex-spacer" />
-        <div className="topbar-actions">
-          {/* Profile block removed in favor of DashboardLayout header */}
-        </div>
-      </header>
-
       <main className="main-content">
         {/* Task Cards Section */}
-        <h2 className="panel-title" style={{ marginTop: "1rem", marginBottom: "1rem" }}>Task Overview</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem', marginTop: '1rem' }}>
           <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
             <div style={{ flex: '2 1 60%', minWidth: '300px', display: 'flex' }}>
               {renderTaskCard("Today's Tasks", tasks.today, "today")}
@@ -795,18 +778,6 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
 
   return (
     <div className="dashboard-container dashboard-container-emp app-container">
-      {/* Top bar */}
-      <header className="topbar">
-        <div className="topbar-brand">
-          <div className="logo-icon logo-icon-sm">O</div>
-          <span className="topbar-title">OfficeCRM</span>
-        </div>
-        <div className="flex-spacer" />
-        <div className="topbar-actions">
-          {/* Profile block removed in favor of DashboardLayout header */}
-        </div>
-      </header>
-
       <main className="main-content main-content-emp">
         {/* Task Cards Section */}
         <div style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>

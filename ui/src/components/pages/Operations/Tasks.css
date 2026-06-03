@@ -1828,6 +1828,11 @@
   background: white;
   cursor: pointer;
 }
+.saas-grid-select option {
+  color: #64748b !important;
+  font-weight: normal !important;
+  background-color: #ffffff;
+}
 
 .saas-grid-select:focus {
   border-color: #2563eb;
@@ -3558,6 +3563,73 @@
   padding: 0.12rem 0.4rem;
 }
 
+/* ── Inline Field Wrapper (icon + dropdown in table cell) ── */
+.cu-inline-field-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  max-width: 100%;
+}
+.cu-inline-field-wrapper:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+.cu-inline-field-wrapper:focus-within {
+  background: #fff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.08);
+}
+
+.cu-inline-dropdown {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  outline: none;
+  padding: 0.1rem 0;
+  min-width: 0;
+  max-width: 100%;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+.cu-inline-dropdown:focus {
+  color: #0f172a;
+}
+.cu-inline-dropdown option {
+  font-weight: normal !important;
+  color: #64748b !important;
+  background-color: #ffffff;
+}
+
+.cu-inline-date-field {
+  width: 100px;
+  font-size: 0.72rem;
+  color: #475569;
+}
+.cu-inline-date-field::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.cu-inline-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
 /* ── Hours ── */
 .cu-td-hours { text-align: center; }
 .cu-hours {
@@ -3655,6 +3727,187 @@
 .cu-inline-sel:focus, .cu-inline-date:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37,99,235,0.1);
+}
+
+/* ── New Task Inline Bar (Aesthetic matching user's first reference image) ── */
+.new-task-inline-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ntib-left {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.ntib-dotted-circle {
+  width: 15px;
+  height: 15px;
+  border: 1.5px dashed #94a3b8;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.ntib-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.85rem;
+  color: #1e293b;
+  width: 100%;
+  font-family: inherit;
+  padding: 0.2rem 0;
+}
+.ntib-input::placeholder {
+  color: #94a3b8;
+}
+
+.ntib-right {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.ntib-dropdown-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ntib-dropdown-trigger {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.12s ease;
+}
+.ntib-dropdown-trigger:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.ntib-btn-icon {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.25rem;
+  background: #ffffff;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  width: 25px;
+  height: 25px;
+  box-sizing: border-box;
+}
+.ntib-btn-icon:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.ntib-divider {
+  width: 1px;
+  height: 16px;
+  background: #e2e8f0;
+  margin: 0 0.15rem;
+}
+
+.ntib-hidden-select {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.ntib-hidden-date {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.ntib-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 0.08rem 0.3rem;
+  border-radius: 4px;
+  margin-left: 0.2rem;
+  max-width: 75px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.ntib-badge.priority-color {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.ntib-cancel-btn {
+  border: none;
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  transition: all 0.12s ease;
+}
+.ntib-cancel-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.ntib-save-btn {
+  border: none;
+  background: #7c3aed; /* Modern Purple */
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.12s ease;
+  box-shadow: 0 1px 2px rgba(124, 58, 237, 0.15);
+}
+.ntib-save-btn:hover {
+  background: #6d28d9;
+  box-shadow: 0 2px 4px rgba(109, 40, 217, 0.25);
 }
 
 /* ══════════════════════════════════════════════
@@ -3824,6 +4077,16 @@
   padding: 0.5rem 1rem 1rem;
 }
 
+.saas-meta-row {
+  display: grid !important;
+}
+.saas-meta-row-4col {
+  grid-template-columns: 100px 1fr 100px 1fr;
+}
+.saas-meta-row-2col {
+  grid-template-columns: 100px 1fr;
+}
+
 /* RESPONSIVE DESIGN */
 @media (max-width: 768px) {
   .kanban-root {
@@ -3858,11 +4121,11 @@
   }
 
   .list-view {
-    overflow-x: auto;
+    overflow-x: visible;
   }
 
   .list-table {
-    min-width: 750px;
+    min-width: 0;
   }
 
   /* Split Modal & Sidebars */
@@ -3894,5 +4157,204 @@
 
   .saas-content-pane {
     padding: 1.25rem;
+  }
+
+  /* Drawer Modal Full Screen on Mobile */
+  .task-drawer-overlay {
+    padding: 0 !important;
+  }
+  
+  .task-drawer-panel {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+  }
+
+  /* Drawer Navigation & Header responsive */
+  .saas-nav {
+    height: auto !important;
+    min-height: 56px;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 0.75rem 1rem !important;
+    gap: 0.75rem !important;
+  }
+  .saas-nav-right {
+    justify-content: flex-end !important;
+    width: 100% !important;
+    margin-top: 0.25rem;
+  }
+
+  /* Detail Tabs Header Scrollable */
+  .saas-tabs-header-row {
+    overflow-x: auto;
+    white-space: nowrap;
+    gap: 1rem !important;
+    padding-bottom: 0.25rem;
+  }
+  .saas-tab-header-btn {
+    padding: 0.5rem 0.25rem !important;
+    flex-shrink: 0;
+  }
+
+  /* Responsive 2-column & 4-column Meta Grid inside Drawer */
+  .saas-meta-row-4col,
+  .saas-meta-row-2col {
+    grid-template-columns: 100px 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Table to Card View Transformation on Mobile */
+  .cu-table-wrapper {
+    overflow: visible !important;
+  }
+
+  .cu-table {
+    min-width: 0 !important;
+    display: block !important;
+    width: 100% !important;
+  }
+  
+  .cu-table thead,
+  .cu-thead,
+  .cu-thead-row {
+    display: none !important;
+  }
+  
+  .cu-table tbody {
+    display: flex !important;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100% !important;
+  }
+  
+  .cu-row {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 0 !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    display: flex !important;
+    flex-direction: column;
+    gap: 0.75rem;
+    position: relative;
+    cursor: pointer;
+  }
+  
+  .cu-td {
+    padding: 0.25rem 0 !important;
+    border: none !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.85rem !important;
+    min-height: 28px;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  /* Specific styles to make it look like a card */
+  .cu-td-name {
+    font-size: 0.95rem !important;
+    font-weight: 700;
+    color: #0f172a;
+    border-bottom: 1px solid #f1f5f9 !important;
+    padding-bottom: 0.5rem !important;
+    margin-bottom: 0.25rem;
+    justify-content: flex-start !important;
+    gap: 0.5rem;
+  }
+  
+  .cu-td-name::before {
+    content: "Task: ";
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  
+  /* Add label prefix to columns */
+  .cu-td-assignee::before {
+    content: "Assignee";
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+
+  .cu-td-project::before {
+    content: "Project";
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+
+  /* All Tasks Status vs My Tasks Task List */
+  .all-tasks-list .cu-td-list::before {
+    content: "Status";
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+
+  .my-tasks-list .cu-td-list::before {
+    content: "Task List";
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+
+  .cu-td-delivery::before {
+    content: "Due Date";
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+
+  .cu-td-priority::before {
+    content: "Priority";
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+  
+  .cu-td-actions {
+    justify-content: flex-end !important;
+    border-top: 1px solid #f1f5f9 !important;
+    padding-top: 0.5rem !important;
+    margin-top: 0.25rem;
+  }
+  
+  /* Keep dropdown select/date aligned cleanly on the right */
+  .cu-td .cu-inline-field-wrapper {
+    margin-left: auto;
+    width: auto !important;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+  }
+
+  /* Adjust dropdown select to fit nicely */
+  .cu-inline-dropdown {
+    font-size: 0.8rem !important;
+    text-align: right;
+    direction: rtl;
+  }
+
+  /* Ensure row action buttons and card delete buttons are always visible on mobile */
+  .cu-row-actions,
+  .card-clickup-delete-btn {
+    opacity: 1 !important;
+    color: #94a3b8 !important;
+  }
+
+  /* Make actions larger and easier to tap on mobile */
+  .cu-act-btn,
+  .card-clickup-delete-btn {
+    padding: 0.5rem !important;
+    min-width: 32px;
+    min-height: 32px;
   }
 }

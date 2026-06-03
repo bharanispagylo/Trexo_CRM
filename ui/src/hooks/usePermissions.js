@@ -25,14 +25,15 @@ export function PermissionProvider({ children, userRole }) {
         } else if (userRole.toLowerCase() === 'admin') {
           // Default full access for Admin if not found in DB
           setPermissions({
-            attendance: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
-            leave: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
+            dashboard: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
             tasks: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
-            teams: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
-            employees: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
-            users: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
             projects: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
-            salaries: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
+            teams: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
+            estimations: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
+            reports: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
+            clients: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
+            users: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
+            roles: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
           });
         } else {
           // Default empty permissions for others

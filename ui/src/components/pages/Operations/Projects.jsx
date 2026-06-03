@@ -7,13 +7,13 @@ import { usePermissions } from '../../../hooks/usePermissions';
 import { useAlert } from '../../../context/AlertContext';
 
 const STATUS_HEADER_META = {
-  'To Do':         { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false },
-  'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', isDone: false },
-  'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', isDone: false },
-  'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', isDone: false },
-  'Prod Deployed': { bg: '#ea580c', fg: '#ffffff', dotColor: '#fde68a', isDone: false },
-  'Prod Verified': { bg: '#0d9488', fg: '#ffffff', dotColor: '#bbf7d0', isDone: false },
-  'Delivered':     { bg: '#16a34a', fg: '#ffffff', dotColor: '#99f6e4', isDone: true  },
+  'To Do':         { bg: '#f1f5f9', fg: '#000000', dotColor: '#94a3b8', isDone: false },
+  'In Progress':   { bg: '#2563eb', fg: '#000000', dotColor: '#bfdbfe', isDone: false },
+  'In Testing':    { bg: '#7c3aed', fg: '#000000', dotColor: '#e9d5ff', isDone: false },
+  'Re-opened':     { bg: '#db2777', fg: '#000000', dotColor: '#fecdd3', isDone: false },
+  'Prod Deployed': { bg: '#ea580c', fg: '#000000', dotColor: '#fde68a', isDone: false },
+  'Prod Verified': { bg: '#0d9488', fg: '#000000', dotColor: '#bbf7d0', isDone: false },
+  'Delivered':     { bg: '#16a34a', fg: '#000000', dotColor: '#99f6e4', isDone: true  },
 };
 
 const PRIORITY_FLAGS = {
@@ -167,8 +167,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   }, [initialSelectedProject, onClearInitialProject]);
 
   // ── FETCH DATA ──
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [projData, empData, userData, clientData] = await Promise.all([
         api.get('/projects'),
@@ -189,7 +189,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     } catch (error) {
       console.error('Fetch error:', error);
     }
-    setLoading(false);
+    if (!silent) setLoading(false);
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -239,7 +239,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       await api.put(`/projects/${selectedProject.id}`, {
         members: updatedMembers.join(', ')
       });
-      fetchData();
+      fetchData(true);
     } catch (error) {
       console.error('Update members error:', error);
     }
@@ -274,7 +274,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
       setSelectedEmployeeToAdd('');
       setShowAddMemberModal(false);
-      fetchData();
+      fetchData(true);
       alert('Member added to project successfully!', 'success', 'Member Added');
     } catch (error) {
       console.error('Error adding member:', error);
@@ -316,7 +316,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
       setCreateMemberForm({ name: '', role: '', status: 'Active' });
       setShowCreateMemberModal(false);
-      fetchData();
+      fetchData(true);
       alert('Member created and added to project successfully!', 'success', 'Done');
     } catch (error) {
       console.error('Error creating and adding member:', error);
@@ -340,7 +340,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     
     try {
       await api.put(`/employees/${emp.id}`, { projectStatus: newStatusStr });
-      fetchData();
+      fetchData(true);
     } catch (error) {
       console.error('Toggle status error:', error);
       alert('Failed to update status', 'error', 'Error');
@@ -369,7 +369,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       }
       setShowEditMemberModal(false);
       setEditingEmployee(null);
-      fetchData();
+      fetchData(true);
       alert('Member updated successfully!', 'success', 'Updated');
     } catch (error) {
       console.error('Save edit member error:', error);
@@ -385,9 +385,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         projectId: selectedProject.id
       });
       setNewListName('');
-      fetchData();
+      await fetchData(true);
+      alert('Task list created successfully!', 'success');
     } catch (error) {
       console.error('Add list error:', error);
+      alert('Failed to create task list', 'error');
     }
   };
 
@@ -444,7 +446,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     confirm('Delete this task list? All tasks inside will also be removed.', async () => {
       try {
         await api.delete(`/task-lists/${listId}`);
-        fetchData();
+        fetchData(true);
       } catch (error) {
         console.error('Delete list error:', error);
       }
@@ -460,7 +462,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       await api.put(`/task-lists/${listId}`, { name: editingListName.trim() });
       setEditingListId(null);
       setEditingListName('');
-      fetchData();
+      fetchData(true);
     } catch (error) {
       console.error('Rename list error:', error);
       alert('Failed to rename category.', 'error', 'Error');
@@ -528,7 +530,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       setShowTaskFormModal(false);
       setTaskFormFields({ title: '', assignees: '', status: 'To Do', priority: 'Medium', assignedDate: '', dueDate: '', deliveredDate: '', description: '', taskType: 'Feature' });
       setEditingTask(null);
-      fetchData();
+      fetchData(true);
     } catch (error) {
       console.error('Save task error:', error);
       alert('Failed to save task', 'error', 'Error');
@@ -541,7 +543,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     confirm('Are you sure you want to delete this task?', async () => {
       try {
         await api.delete(`/tasks/${taskId}`);
-        fetchData();
+        fetchData(true);
       } catch (error) {
         console.error('Delete task error:', error);
         alert('Failed to delete task', 'error', 'Error');
@@ -600,7 +602,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       setShowQueryModal(false);
       setQueryFormFields({ title: '', description: '', sentTo: '', status: 'Open', solved: false, priority: 'Medium' });
       setEditingQuery(null);
-      fetchData();
+      fetchData(true);
     } catch (error) {
       console.error('Save query error:', error);
       alert('Failed to save query', 'error', 'Error');
@@ -613,7 +615,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     confirm('Are you sure you want to delete this query?', async () => {
       try {
         await api.delete(`/project-queries/${queryId}`);
-        fetchData();
+        fetchData(true);
       } catch (error) {
         console.error('Delete query error:', error);
         alert('Failed to delete query', 'error', 'Error');
@@ -874,7 +876,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Status</strong>
               <span style={{
                 background: viewingTask.status === 'Completed' ? '#dcfce7' : viewingTask.status === 'In Progress' ? '#dbeafe' : '#f1f5f9',
-                color: viewingTask.status === 'Completed' ? '#16a34a' : viewingTask.status === 'In Progress' ? '#2563eb' : '#475569',
+                color: '#000000',
                 padding: '0.25rem 0.5rem',
                 borderRadius: '6px',
                 fontSize: '0.8rem',
@@ -1364,7 +1366,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       style={{ padding: '0 1rem', height: '36px', fontSize: '0.8rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
                       onClick={handleAddList}
                     >
-                      + Add Task List
+                      Add Task List
                     </button>
                   </div>
                 )}
@@ -1474,31 +1476,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                               >
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                               </button>
-                            )}
-                            {can('tasks', 'create') && editingListId !== list.id && (
-                              <button 
-                                className="cu-section-add-btn" 
-                                title={`Add task to ${list.name}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenCreateTaskModalForList(list.id);
-                                }}
-                                style={{
-                                  marginLeft: '8px',
-                                  width: '24px',
-                                  height: '24px',
-                                  borderRadius: '50%',
-                                  border: 'none',
-                                  background: '#2563eb',
-                                  color: 'white',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontWeight: 'bold',
-                                  fontSize: '1rem',
-                                  cursor: 'pointer'
-                                }}
-                              >+</button>
                             )}
                           </div>
                         </div>
@@ -2377,7 +2354,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 });
                 setShowUploadModal(false);
                 setUploadForm({ name: '', description: '', file: null });
-                fetchData();
+                fetchData(true);
                 alert('File uploaded successfully!', 'success', 'Uploaded');
               } catch (err) {
                 console.error('Upload save error:', err);
@@ -2389,7 +2366,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             const handleDeleteAttachment = async (attId) => {
               try {
                 await api.delete(`/projects/${selectedProject.id}/attachments/${attId}`);
-                fetchData();
+                fetchData(true);
               } catch (err) {
                 console.error('Delete attachment error:', err);
               }
@@ -2682,7 +2659,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         <table className="saas-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', background: 'white' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-              <th style={{ width: '40px', padding: '1rem 1.5rem', background: 'white' }}>
+              <th style={{ width: '40px', padding: '0.55rem 1.5rem', background: 'white' }}>
                 <input 
                   type="checkbox" 
                   style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
@@ -2690,14 +2667,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                   onChange={handleSelectAll}
                 />
               </th>
-              <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>#</th>
-              <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Project Name</th>
-              <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Status</th>
-              <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Estimated Hours</th>
-              <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Billed Hours</th>
-              <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Billable Hours</th>
-              <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Created On</th>
-              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', textAlign: 'center', background: 'white', textTransform: 'capitalize' }}>Actions</th>
+              <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>#</th>
+              <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Project Name</th>
+              <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Status</th>
+              <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Estimated Hours</th>
+              <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Billed Hours</th>
+              <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Billable Hours</th>
+              <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Created On</th>
+              <th style={{ padding: '0.55rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', textAlign: 'center', background: 'white', textTransform: 'capitalize' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -2721,7 +2698,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                 return (
                   <tr key={proj.id} style={{ borderBottom: '1px solid #f1f5f9', background: 'white' }}>
-                    <td style={{ padding: '1rem 1.5rem' }}>
+                    <td style={{ padding: '0.55rem 1.5rem' }}>
                       <input 
                         type="checkbox" 
                         style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
@@ -2729,10 +2706,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         onChange={(e) => handleSelectOne(e, proj.id)}
                       />
                     </td>
-                    <td style={{ padding: '1rem 1rem', fontSize: '0.85rem', color: '#1e293b', fontWeight: '600' }}>
+                    <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#1e293b', fontWeight: '600' }}>
                       {idx + 1}
                     </td>
-                    <td style={{ padding: '1rem 1rem' }}>
+                    <td style={{ padding: '0.55rem 1rem' }}>
                       <button 
                         style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', padding: 0, textAlign: 'left' }}
                         onClick={() => {
@@ -2743,24 +2720,24 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         {proj.name}
                       </button>
                     </td>
-                    <td style={{ padding: '1rem 1rem' }}>
+                    <td style={{ padding: '0.55rem 1rem' }}>
                       <span style={{ background: statusBg, color: statusColor, padding: '0.25rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '700' }}>
                         {displayStatus}
                       </span>
                     </td>
-                    <td style={{ padding: '1rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
+                    <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
                       {estHours}
                     </td>
-                    <td style={{ padding: '1rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
+                    <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
                       {actHours}
                     </td>
-                    <td style={{ padding: '1rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
+                    <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
                       {bilHours}
                     </td>
-                    <td style={{ padding: '1rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
+                    <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
                       {createdOn}
                     </td>
-                    <td style={{ padding: '1rem 1.5rem', textAlign: 'center' }}>
+                    <td style={{ padding: '0.55rem 1.5rem', textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                         {/* Edit Button */}
                         <button 

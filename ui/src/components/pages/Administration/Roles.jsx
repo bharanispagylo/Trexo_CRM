@@ -11,14 +11,15 @@ const ACTIONS = [
 ];
 
 const MODULES = [
-  { id: 'attendance', label: 'Attendance' },
-  { id: 'leave', label: 'Leave' },
+  { id: 'dashboard', label: 'Dashboard' },
   { id: 'tasks', label: 'Tasks' },
-  { id: 'employees', label: 'Employees' },
-  { id: 'users', label: 'Users' },
   { id: 'projects', label: 'Projects' },
-  { id: 'salaries', label: 'Salaries' },
+  { id: 'teams', label: 'My Team' },
+  { id: 'estimations', label: 'Estimations' },
   { id: 'reports', label: 'Reports' },
+  { id: 'clients', label: 'Clients' },
+  { id: 'users', label: 'Users' },
+  { id: 'roles', label: 'Roles' },
 ];
 
 export default function Roles() {
@@ -29,7 +30,7 @@ export default function Roles() {
   const [isEditing, setIsEditing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
-  const [expandedModules, setExpandedModules] = useState(['attendance', 'leave', 'tasks']); // Default some expanded
+  const [expandedModules, setExpandedModules] = useState(['dashboard', 'tasks']); // Default some expanded
   const { alert, confirm } = useAlert();
   
   // Initial default permissions

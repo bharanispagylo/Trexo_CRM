@@ -8,11 +8,8 @@ export default function Clients({ user }) {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ id: '', name: '', email: '', phone: '', company: '', address: '', status: 'Active', clientType: 'Direct', parentAgencyId: '' });
+  const [form, setForm] = useState({ id: '', name: '', company: '' });
   const { alert, confirm } = useAlert();
-
-  const [filterType, setFilterType] = useState('All');
-  const [filterAgency, setFilterAgency] = useState('All');
 
   useEffect(() => {
     fetchClients();
@@ -30,15 +27,29 @@ export default function Clients({ user }) {
   };
 
   const handleSave = async () => {
+    if (!form.company.trim()) {
+      alert("Company Name is required.", "error");
+      return;
+    }
     if (!form.name.trim()) {
-      alert("Client name is required.", "error");
+      alert("Primary Contact is required.", "error");
       return;
     }
     setIsSaving(true);
+    
+    // We send defaults for fields that are removed from form, but preserve other fields if editing
     const sanitizedForm = {
       ...form,
+      name: form.name.trim(),
+      company: form.company.trim(),
+      email: form.email || '',
+      phone: form.phone || '',
+      address: form.address || '',
+      status: form.status || 'Active',
+      clientType: form.clientType || 'Direct',
       parentAgencyId: form.parentAgencyId || null
     };
+
     try {
       if (form.id) {
         await api.put(`/clients/${form.id}`, sanitizedForm);
@@ -75,51 +86,20 @@ export default function Clients({ user }) {
 
   const openForm = (client = null) => {
     if (client) {
-      setForm({ ...client, parentAgencyId: client.parentAgencyId || '', clientType: client.clientType || 'Direct' });
+      setForm({ ...client });
     } else {
-      setForm({ id: '', name: '', email: '', phone: '', company: '', address: '', status: 'Active', clientType: 'Direct', parentAgencyId: '' });
+      setForm({ id: '', name: '', company: '', email: '', phone: '', address: '', status: 'Active', clientType: 'Direct', parentAgencyId: '' });
     }
     setShowForm(true);
   };
 
   if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Clients...'}</div>;
 
-  const filteredClients = clients.filter(c => {
-    const cType = c.clientType || 'Direct';
-    if (filterType !== 'All' && cType !== filterType) return false;
-    if (filterAgency !== 'All' && c.parentAgencyId !== filterAgency) return false;
-    return true;
-  });
-
-  const agencies = clients.filter(c => c.clientType === 'Agency');
-
   return (
     <div className="clients-page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem', maxWidth: '1000px' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>Client Management</h2>
-        
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <select 
-            className="clients-select" 
-            style={{ width: 'auto', padding: '0.5rem 1rem' }} 
-            value={filterType} 
-            onChange={(e) => { setFilterType(e.target.value); if(e.target.value !== 'Agency Client') setFilterAgency('All'); }}
-          >
-            <option value="All">All Types</option>
-            <option value="Direct">Direct Clients</option>
-            <option value="Agency">Agencies</option>
-            <option value="Agency Client">Agency Sub-Clients</option>
-          </select>
-          
-          {filterType === 'Agency Client' && (
-            <select className="clients-select" style={{ width: 'auto', padding: '0.5rem 1rem' }} value={filterAgency} onChange={(e) => setFilterAgency(e.target.value)}>
-              <option value="All">All Agencies</option>
-              {agencies.map(ag => <option key={ag.id} value={ag.id}>{ag.name}</option>)}
-            </select>
-          )}
-
-          <button className="clients-btn-submit" onClick={() => openForm()}>+ New Client</button>
-        </div>
+        <button className="clients-btn-submit" onClick={() => openForm()}>+ New Client</button>
       </div>
 
       {showForm && (
@@ -130,50 +110,12 @@ export default function Clients({ user }) {
           </div>
           <div className="clients-form-grid">
             <div className="clients-field">
-              <label className="clients-label">Name *</label>
-              <input className="clients-input" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Client Name" />
+              <label className="clients-label">Company Name *</label>
+              <input className="clients-input" value={form.company || ''} onChange={e => setForm({...form, company: e.target.value})} placeholder="Company Name" />
             </div>
             <div className="clients-field">
-              <label className="clients-label">Company</label>
-              <input className="clients-input" value={form.company} onChange={e => setForm({...form, company: e.target.value})} placeholder="Company Name" />
-            </div>
-            <div className="clients-field">
-              <label className="clients-label">Email</label>
-              <input className="clients-input" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="Email Address" />
-            </div>
-            <div className="clients-field">
-              <label className="clients-label">Phone</label>
-              <input className="clients-input" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="Phone Number" />
-            </div>
-            <div className="clients-field full-width" style={{ gridColumn: 'span 2' }}>
-              <label className="clients-label">Address</label>
-              <input className="clients-input" value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder="Full Address" />
-            </div>
-            <div className="clients-field">
-              <label className="clients-label">Client Type</label>
-              <select className="clients-select" value={form.clientType || 'Direct'} onChange={e => setForm({...form, clientType: e.target.value, parentAgencyId: e.target.value !== 'Agency Client' ? null : form.parentAgencyId})}>
-                <option value="Direct">Direct Client</option>
-                <option value="Agency">Agency</option>
-                <option value="Agency Client">Agency Client (Sub-client)</option>
-              </select>
-            </div>
-            {form.clientType === 'Agency Client' && (
-              <div className="clients-field">
-                <label className="clients-label">Parent Agency</label>
-                <select className="clients-select" value={form.parentAgencyId || ''} onChange={e => setForm({...form, parentAgencyId: e.target.value})}>
-                  <option value="">Select Parent Agency...</option>
-                  {clients.filter(c => c.clientType === 'Agency').map(agency => (
-                    <option key={agency.id} value={agency.id}>{agency.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="clients-field">
-              <label className="clients-label">Status</label>
-              <select className="clients-select" value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
+              <label className="clients-label">Primary Contact *</label>
+              <input className="clients-input" value={form.name || ''} onChange={e => setForm({...form, name: e.target.value})} placeholder="Primary Contact" />
             </div>
           </div>
           <div className="clients-form-actions" style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem' }}>
@@ -187,47 +129,45 @@ export default function Clients({ user }) {
         <table className="clients-table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Company</th>
-              <th>Contact</th>
-              <th>Type</th>
-              <th>Status</th>
+              <th>Company Name</th>
+              <th>Primary Contact</th>
               <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredClients.map(client => (
+            {clients.map(client => (
               <tr key={client.id}>
-                <td><strong>{client.name}</strong></td>
-                <td>{client.company || '-'}</td>
-                <td>
-                  <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>{client.email || '-'}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>{client.phone || '-'}</div>
-                </td>
-                <td>
-                  <span className={`client-type-pill ${client.clientType === 'Agency' ? 'agency' : client.clientType === 'Agency Client' ? 'subclient' : 'direct'}`}>
-                    {client.clientType || 'Direct'}
-                  </span>
-                  {client.clientType === 'Agency Client' && client.parentAgencyId && (
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px' }}>
-                      Agency: {clients.find(c => c.id === client.parentAgencyId)?.name || 'Unknown'}
-                    </div>
-                  )}
-                </td>
-                <td>
-                  <span className={`client-status-pill ${client.status === 'Active' ? 'active' : 'inactive'}`}>
-                    {client.status}
-                  </span>
-                </td>
+                <td><strong>{client.company || '-'}</strong></td>
+                <td>{client.name || '-'}</td>
                 <td style={{ textAlign: 'right' }}>
-                  <button className="client-action-btn" onClick={() => openForm(client)}>Edit</button>
-                  <button className="client-action-btn delete" onClick={() => handleDelete(client.id)}>Delete</button>
+                  <div style={{ display: 'inline-flex', gap: '0.25rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                    <button 
+                      className="client-action-btn" 
+                      title="Edit Client"
+                      onClick={() => openForm(client)}
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'block' }}>
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                      </svg>
+                    </button>
+                    <button 
+                      className="client-action-btn delete" 
+                      title="Delete Client"
+                      onClick={() => handleDelete(client.id)}
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'block' }}>
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      </svg>
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
             {clients.length === 0 && (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>No clients found.</td>
+                <td colSpan="3" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>No clients found.</td>
               </tr>
             )}
           </tbody>

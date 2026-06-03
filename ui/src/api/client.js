@@ -8,7 +8,14 @@ const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 export const api = {
 
   async get(route) {
-    const res = await fetch(`${BASE_URL}${route}`);
+    const separator = route.includes('?') ? '&' : '?';
+    const res = await fetch(`${BASE_URL}${route}${separator}t=${Date.now()}`, {
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
       throw new Error(errorData.details || errorData.error || `GET ${route} failed: ${res.status}`);

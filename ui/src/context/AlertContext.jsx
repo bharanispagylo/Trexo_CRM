@@ -48,18 +48,12 @@ export function AlertProvider({ children }) {
   }, []);
 
   const closeTop = useCallback((id, confirmed = false) => {
-    let itemToConfirm = null;
-    setQueue(prev => {
-      const item = prev.find(i => i.id === id);
-      if (confirmed && item?.onConfirm) {
-        itemToConfirm = item;
-      }
-      return prev.filter(i => i.id !== id);
-    });
-    if (itemToConfirm) {
-      itemToConfirm.onConfirm();
+    const item = queue.find(i => i.id === id);
+    if (confirmed && item?.onConfirm) {
+      item.onConfirm();
     }
-  }, []);
+    setQueue(prev => prev.filter(i => i.id !== id));
+  }, [queue]);
 
   // Convenience helpers
   const alert = useCallback((message, type = 'info', title) => {
