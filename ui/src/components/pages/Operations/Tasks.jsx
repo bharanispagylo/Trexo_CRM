@@ -212,6 +212,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
     } else {
       setInitialForm(form);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task]);
 
   const isChanged = () => {
