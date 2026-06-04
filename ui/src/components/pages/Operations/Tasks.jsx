@@ -166,8 +166,8 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
       estimatedHours: '',
       approvedHours: '',
       actualHours: '',
-      actualHoursStr: '00:00',
-      approvedHoursStr: '00:00',
+      actualHoursStr: '0.0',
+      approvedHoursStr: '0.0',
       taskListId: '',
       attachments: ''
     };
@@ -205,7 +205,8 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
         ...form,
         ...task,
         status: getStatusString(task.status),
-        taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : `TSK-${Math.floor(Math.random() * 900000) + 100000}`)
+        taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : `TSK-${Math.floor(Math.random() * 900000) + 100000}`),
+        approvedHoursStr: task.approvedHours !== undefined && task.approvedHours !== null ? Number(task.approvedHours).toFixed(1) : '0.0'
       };
       setForm(loadedForm);
       setInitialForm(loadedForm);
@@ -370,7 +371,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
         return {
           ...prev,
           actualHours: billedHours,
-          actualHoursStr: decimalToTimeStr(billedHours),
+          actualHoursStr: billedHours.toFixed(1),
           employeeHours: employeeTime
         };
       }
@@ -1085,8 +1086,8 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                                 isBillable: false,
                                 approvedHours: 0,
                                 actualHours: 0,
-                                approvedHoursStr: '00:00',
-                                actualHoursStr: '00:00'
+                                approvedHoursStr: '0.0',
+                                actualHoursStr: '0.0'
                               }));
                               setErrors(errs => {
                                 const { billing, ...rest } = errs;
@@ -1113,21 +1114,23 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                           {isEditing ? (
                             <input 
                               type="text" 
-                              value={form.approvedHoursStr !== undefined ? form.approvedHoursStr : decimalToTimeStr(form.approvedHours)}
+                              value={form.approvedHoursStr !== undefined ? form.approvedHoursStr : (form.approvedHours !== undefined && form.approvedHours !== null ? Number(form.approvedHours).toFixed(1) : '0.0')}
                               onChange={e => {
                                 const val = e.target.value;
-                                setForm(f => ({
-                                  ...f,
-                                  approvedHoursStr: val,
-                                  approvedHours: timeStrToDecimal(val)
-                                }));
+                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                  setForm(f => ({
+                                    ...f,
+                                    approvedHoursStr: val,
+                                    approvedHours: val === '' || val === '.' ? 0 : parseFloat(val) || 0
+                                  }));
+                                }
                               }}
                               className="saas-grid-input"
-                              placeholder="e.g. 40:00"
+                              placeholder="e.g. 40.0"
                             />
                           ) : (
                             <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
-                              {decimalToTimeStr(form.approvedHours)}
+                              {Number(form.approvedHours || 0).toFixed(1)}
                             </span>
                           )}
                         </div>
@@ -1140,7 +1143,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                         </label>
                         <div>
                           <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
-                            {decimalToTimeStr(form.actualHours)}
+                            {Number(form.actualHours || 0).toFixed(1)}
                           </span>
                         </div>
                       </div>
@@ -1157,7 +1160,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                             fontWeight: '500', 
                             color: '#0f172a'
                           }}>
-                            {decimalToTimeStr(Math.max(0, (form.approvedHours || 0) - (form.actualHours || 0)))}
+                            {Number(Math.max(0, (form.approvedHours || 0) - (form.actualHours || 0))).toFixed(1)}
                             {((form.approvedHours || 0) - (form.actualHours || 0)) < 0 && ' (Over Budget)'}
                           </span>
                         </div>
@@ -1186,19 +1189,19 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   <>
                     <div style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                       <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.95rem' }}>Add New Work Log</h4>
-                  <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                    <div style={{ flex: 1 }}>
-                      <label className="saas-field-label">Date</label>
-                      <input type="date" className="saas-input" value={workLogForm.logDate} onChange={e => setWorkLogForm({...workLogForm, logDate: e.target.value})} />
+                  <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1rem' }}>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <label className="saas-field-label" style={{ flexShrink: 0, fontWeight: 600, color: '#475569' }}>Date</label>
+                      <input type="date" className="saas-input" value={workLogForm.logDate} onChange={e => setWorkLogForm({...workLogForm, logDate: e.target.value})} style={{ flex: 1 }} />
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <label className="saas-field-label">Hours</label>
-                      <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} />
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <label className="saas-field-label" style={{ flexShrink: 0, fontWeight: 600, color: '#475569' }}>Hours</label>
+                      <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} style={{ flex: 1 }} />
                     </div>
                   </div>
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label className="saas-field-label">Description</label>
-                    <input type="text" className="saas-input" placeholder="What did you work on?" value={workLogForm.description} onChange={e => setWorkLogForm({...workLogForm, description: e.target.value})} />
+                  <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <label className="saas-field-label" style={{ flexShrink: 0, fontWeight: 600, color: '#475569' }}>Description</label>
+                    <input type="text" className="saas-input" placeholder="What did you work on?" value={workLogForm.description} onChange={e => setWorkLogForm({...workLogForm, description: e.target.value})} style={{ flex: 1 }} />
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button className="saas-btn-primary" onClick={() => handleAddWorkLog(true)} disabled={workLogSaving}>

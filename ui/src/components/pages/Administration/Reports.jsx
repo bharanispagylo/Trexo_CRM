@@ -2,23 +2,47 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../../../api/client';
 import './Reports.css';
 
-const formatTime = (hours) => {
-  if (!hours) return '00:00';
-  const h = Math.floor(hours);
-  const m = Math.round((hours - h) * 60);
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+const formatDecimal = (hours) => {
+  if (hours === undefined || hours === null) return '0.0';
+  return Number(hours).toFixed(1);
 };
 
-// Removed generateRecentWeeks
+const getWeekRange = (dateStr) => {
+  const date = new Date(dateStr);
+  const day = date.getDay(); // 0 is Sunday, 1 is Monday, etc.
+  
+  // Calculate difference to Monday
+  // If Sunday (0), we want to subtract 6 days.
+  // If Monday (1), subtract 0 days.
+  // If Tuesday (2), subtract 1 day, etc.
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  
+  const monday = new Date(date);
+  monday.setDate(date.getDate() + diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+  
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+  
+  return {
+    monday: monday.toISOString().split('T')[0],
+    sunday: sunday.toISOString().split('T')[0],
+    mondayDate: monday,
+    sundayDate: sunday
+  };
+};
 
 export default function Reports({ user }) {
-  const [reportType, setReportType] = useState('monthly'); // 'monthly' | 'weekly'
+  const [reportType, setReportType] = useState('monthly'); // 'monthly' | 'weekly' | 'custom'
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   
+  const [selectedWeekDate, setSelectedWeekDate] = useState(new Date().toISOString().split('T')[0]);
+
   const [customStartDate, setCustomStartDate] = useState(new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]);
   const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -43,6 +67,16 @@ export default function Reports({ user }) {
           client: selectedClient
         });
         data = await api.get(`/reports/monthly?${params.toString()}`);
+      } else if (reportType === 'weekly') {
+        const range = getWeekRange(selectedWeekDate);
+        const params = new URLSearchParams({
+          startDate: new Date(range.monday).toISOString(),
+          endDate: new Date(new Date(range.sunday).setHours(23, 59, 59, 999)).toISOString(),
+          project: selectedProject,
+          assignee: selectedAssignee,
+          client: selectedClient
+        });
+        data = await api.get(`/reports/range?${params.toString()}`);
       } else {
         if (customStartDate && customEndDate) {
           const params = new URLSearchParams({
@@ -68,6 +102,9 @@ export default function Reports({ user }) {
         setProjects(projectsData || []);
         setAssignees(usersData || []);
         setClients(clientsData || []);
+        if (clientsData && clientsData.length > 0) {
+          setSelectedClient(clientsData[0].id);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch reports:', err);
@@ -79,10 +116,11 @@ export default function Reports({ user }) {
   useEffect(() => {
     fetchReports();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportType, selectedMonth, selectedYear, customStartDate, customEndDate, selectedClient]);
+  }, [reportType, selectedMonth, selectedYear, customStartDate, customEndDate, selectedClient, selectedWeekDate]);
 
   const totalTasks = tasks.length;
-  const totalActualHours = tasks.reduce((sum, t) => sum + (parseFloat(t.actualHours) || 0), 0);
+  const totalApprovedHours = tasks.reduce((sum, t) => sum + (parseFloat(t.taskApprovedHours) || 0), 0);
+  const totalActualHours = tasks.reduce((sum, t) => sum + (parseFloat(t.taskActualHours) || 0), 0);
   
   const uniqueProjects = useMemo(() => {
     const projNames = new Set(tasks.map(t => t.projectName).filter(Boolean));
@@ -99,14 +137,14 @@ export default function Reports({ user }) {
   };
 
   const handleExport = () => {
-    const headers = ['Task # No', 'Title', 'Client', 'Project', 'Assignee', 'Billed Hours', 'Delivered Date'];
+    const headers = ['Task # No', 'Title', 'Project', 'Assignee', 'Billable Hours', 'Already Billed', 'Delivered Date'];
     const rows = tasks.map(t => [
       t.taskNo || '-',
       `"${(t.title || '').replace(/"/g, '""')}"`,
-      `"${(t.clientRef?.name || '-').replace(/"/g, '""')}"`,
       `"${(t.projectName || '-').replace(/"/g, '""')}"`,
       `"${(t.assignees || '-').replace(/"/g, '""')}"`,
-      formatTime(parseFloat(t.actualHours) || 0),
+      formatDecimal(parseFloat(t.taskApprovedHours) || 0),
+      formatDecimal(parseFloat(t.taskActualHours) || 0),
       t.deliveredDate ? new Date(t.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'
     ]);
     
@@ -115,7 +153,16 @@ export default function Reports({ user }) {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = reportType === 'monthly' ? `Monthly_Report_${selectedYear}_${selectedMonth}.csv` : `Custom_Report_${customStartDate}_to_${customEndDate}.csv`;
+    let downloadFilename;
+    if (reportType === 'monthly') {
+      downloadFilename = `Monthly_Report_${selectedYear}_${selectedMonth}.csv`;
+    } else if (reportType === 'weekly') {
+      const range = getWeekRange(selectedWeekDate);
+      downloadFilename = `Weekly_Report_${range.monday}_to_${range.sunday}.csv`;
+    } else {
+      downloadFilename = `Custom_Report_${customStartDate}_to_${customEndDate}.csv`;
+    }
+    a.download = downloadFilename;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -143,11 +190,19 @@ export default function Reports({ user }) {
              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
           </div>
           <div className="reports-title-text">
-            <h2>{reportType === 'monthly' ? 'Monthly Report' : 'Custom Report'}</h2>
+            <h2>
+              {reportType === 'monthly' 
+                ? 'Monthly Report' 
+                : reportType === 'weekly' 
+                  ? 'Weekly Report' 
+                  : 'Custom Report'}
+            </h2>
             <p>
               {reportType === 'monthly' 
                 ? 'View delivered tasks summary for the selected month.'
-                : 'View delivered tasks summary for a custom date range.'}
+                : reportType === 'weekly'
+                  ? 'View delivered tasks summary for the selected week (Monday to Sunday).'
+                  : 'View delivered tasks summary for a custom date range.'}
             </p>
           </div>
         </div>
@@ -159,6 +214,12 @@ export default function Reports({ user }) {
               onClick={() => setReportType('monthly')}
             >
               Monthly
+            </button>
+            <button 
+              className={reportType === 'weekly' ? 'active' : ''} 
+              onClick={() => setReportType('weekly')}
+            >
+              Weekly
             </button>
             <button 
               className={reportType === 'custom' ? 'active' : ''} 
@@ -190,6 +251,22 @@ export default function Reports({ user }) {
                   {years.map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </>
+            ) : reportType === 'weekly' ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <input 
+                  type="date" 
+                  value={selectedWeekDate} 
+                  onChange={(e) => setSelectedWeekDate(e.target.value)} 
+                  style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} 
+                />
+                <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#1e293b', backgroundColor: '#f1f5f9', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
+                  {(() => {
+                    const range = getWeekRange(selectedWeekDate);
+                    const opt = { day: '2-digit', month: 'short', year: 'numeric' };
+                    return `${range.mondayDate.toLocaleDateString('en-US', opt)} - ${range.sundayDate.toLocaleDateString('en-US', opt)}`;
+                  })()}
+                </span>
+              </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
@@ -201,8 +278,7 @@ export default function Reports({ user }) {
         </div>
         <div className="reports-filter-right">
           <select className="reports-select" value={selectedClient} onChange={e => setSelectedClient(e.target.value)}>
-            <option value="All Clients">All Clients</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {clients.map(c => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
           </select>
           <select className="reports-select" value={selectedProject} onChange={e => setSelectedProject(e.target.value)}>
             <option value="All Projects">All Projects</option>
@@ -255,10 +331,10 @@ export default function Reports({ user }) {
               <tr>
                 <th>Task # No</th>
                 <th>Title</th>
-                <th>Client</th>
                 <th>Project</th>
                 <th>Assignee</th>
-                <th>Billed Hours</th>
+                <th>Billable Hours</th>
+                <th>Already Billed</th>
                 <th>Delivered Date</th>
               </tr>
             </thead>
@@ -267,7 +343,6 @@ export default function Reports({ user }) {
                 <tr key={task.id}>
                   <td>{task.taskNo || '-'}</td>
                   <td className="task-title-cell">{task.title}</td>
-                  <td>{task.clientRef ? task.clientRef.name : '-'}</td>
                   <td>{task.projectName || '-'}</td>
                   <td>
                     <div className="assignee-cell">
@@ -277,21 +352,23 @@ export default function Reports({ user }) {
                       {task.assignees || 'Unassigned'}
                     </div>
                   </td>
-                  <td>{formatTime(parseFloat(task.actualHours) || 0)}</td>
+                  <td>{formatDecimal(parseFloat(task.taskApprovedHours) || 0)}</td>
+                  <td>{formatDecimal(parseFloat(task.taskActualHours) || 0)}</td>
                   <td>{task.deliveredDate ? new Date(task.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</td>
                 </tr>
               ))}
               {tasks.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="no-data-cell">No tasks delivered in this period.</td>
+                  <td colSpan="7" className="no-data-cell">No tasks delivered in this period.</td>
                 </tr>
               )}
             </tbody>
             {tasks.length > 0 && (
               <tfoot>
                 <tr>
-                  <td colSpan="5" className="footer-total-label">Total</td>
-                  <td className="footer-total-hours">{formatTime(totalActualHours)} hrs</td>
+                  <td colSpan="4" className="footer-total-label">Total</td>
+                  <td className="footer-total-hours">{formatDecimal(totalApprovedHours)} hrs</td>
+                  <td className="footer-total-hours">{formatDecimal(totalActualHours)} hrs</td>
                   <td className="footer-total-tasks">{totalTasks} tasks</td>
                 </tr>
               </tfoot>

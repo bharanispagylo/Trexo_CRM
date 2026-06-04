@@ -1,0 +1,61 @@
+Task # No,Title,Company Name,Project,Assignee,Billable Hours,Already Billed,Delivered Date
+TSK-4B889B,"api calling","ANTATRITICAGENCY","whatmaters","Jack Doe",30.0,30.0,03 Jun 2026
+TSK-893895,"dashboard design","-","whatmaters","Mano Sebastin",40.0,30.0,03 Jun 2026
+TSK-E54671,"Create Wellness Survey Creator","ANTATRITICAGENCY","whatmaters","Jack Doe",30.0,30.0,03 Jun 2026
+TSK-0A7C81,"API Connection","ANTATRITICAGENCY","whatmaters","Pranesh",40.0,30.0,03 Jun 2026
+TSK-3293E2,"uidesign","ANTATRITICAGENCY","legallaid","Jack Doe",15.0,25.0,03 Jun 2026
+TSK-540D65,"Develop dashboard page","-","legallaid","Pranesh",40.0,30.0,03 Jun 2026
+-,"Update the UI","-","castprintz","Pranesh",15.0,25.0,03 Jun 2026
+TSK-6DB5C7,"solve error in tasks page","-","whatmaters","Mano Sebastin",30.0,30.0,03 Jun 2026
+-,"Check API Connection","-","castprintz","Pranesh",15.0,25.0,03 Jun 2026
+TSK-392EDE,"Implement Client Intake Form Validation","ANTATRITICAGENCY","legallaid","Pranesh",30.0,30.0,03 Jun 2026
+TSK-2DA58E,"update the token","ANTATRITICAGENCY","castprintz","Jack Doe",0.0,30.0,03 Jun 2026
+TSK-80EAD4,"Solving the web page error","-","legallaid","admin",0.0,30.0,03 Jun 2026
+TSK-BD6B07,"Develop STL File Upload & Parser","-","castprintz","-",40.0,30.0,03 Jun 2026
+TSK-762778,"Setup PDF Case Summary Generator","ANTATRITICAGENCY","legallaid","Jack Doe",15.0,25.0,03 Jun 2026
+TSK-1ED603,"developing home page","-","whatmaters","admin",30.0,30.0,03 Jun 2026
+TSK-E55500,"Implement Quote Price Calculator","-","castprintz","-",0.0,30.0,03 Jun 2026
+TSK-EDDE88,"Testing  Web page Functionality","-","castprintz","Jack Doe",40.0,25.0,03 Jun 2026
+TSK-B87A4E,"Fix Attorney Match Algorithm Bug","ANTATRITICAGENCY","legallaid","-",15.0,25.0,03 Jun 2026
+TSK-1AAC46,"Fix Chart Reloading Crash","ANTATRITICAGENCY","whatmaters","Mano Sebastin",30.0,30.0,03 Jun 2026
+TSK-E561E6,"Fix WebGL STL Render Crash","-","castprintz","-",0.0,30.0,03 Jun 2026
+TSK-89520A,"Design Lawyer Profile Customizer","ANTATRITICAGENCY","legallaid","Pranesh",40.0,30.0,03 Jun 2026
+TSK-A69986,"Optimize Survey Submission Query","ANTATRITICAGENCY","whatmaters","Jack Doe",15.0,25.0,03 Jun 2026
+TSK-5C9403,"Integrate Material Selector Dropdown","-","castprintz","-",30.0,30.0,03 Jun 2026
+TSK-909F78,"Draft System User Manual","ANTATRITICAGENCY","legallaid","Mano Sebastin",0.0,30.0,03 Jun 2026
+TSK-B38A21,"Design Weekly wellness dashboard","ANTATRITICAGENCY","whatmaters","admin",40.0,30.0,03 Jun 2026
+TSK-1F4A29,"Design Manufacturing Workflow Tracker","-","castprintz","admin",15.0,25.0,03 Jun 2026
+TSK-0F253A,"Audit Logging Database Migrations","ANTATRITICAGENCY","legallaid","Jack Doe",30.0,30.0,03 Jun 2026
+TSK-233595,"Add CSV Export for Teams","ANTATRITICAGENCY","whatmaters","-",0.0,30.0,03 Jun 2026
+TSK-608814,"Resolve Notification Delay","ANTATRITICAGENCY","legallaid","admin",40.0,30.0,03 Jun 2026
+TSK-D937ED,"Integrate Push Notification Engine","ANTATRITICAGENCY","whatmaters","-",15.0,25.0,03 Jun 2026
+TSK-FC0F84,"Fix Shipping Cost Overcharge","-","castprintz","-",30.0,30.0,03 Jun 2026
+TSK-FB55B1,"Integrate Stripe Payment Gateway","ANTATRITICAGENCY","legallaid","Pranesh",0.0,30.0,03 Jun 2026
+TSK-86E693,"Fix Token Refresh Interceptor","ANTATRITICAGENCY","whatmaters","admin",40.0,30.0,03 Jun 2026
+TSK-59573C,"Build Customer Orders Dashboard","-","castprintz","Jack Doe",15.0,25.0,03 Jun 2026
+TSK-60BCEB,"Optimize Case Search Engine","ANTATRITICAGENCY","legallaid","Mano Sebastin",30.0,30.0,03 Jun 2026
+TSK-B9078E,"Create User Profile Preferences","ANTATRITICAGENCY","whatmaters","Pranesh",0.0,30.0,03 Jun 2026
+TSK-6E9BB2,"Perform Penetration Audit","-","castprintz","Pranesh",40.0,30.0,03 Jun 2026
+TSK-E7148F,"Security Hardening on Client Files","ANTATRITICAGENCY","legallaid","Jack Doe",15.0,25.0,03 Jun 2026
+TSK-CC65CE,"Draft Privacy and Compliance Policy","ANTATRITICAGENCY","whatmaters","admin",30.0,30.0,03 Jun 2026
+TSK-98D054,"Draft Printer Calibration Manual","-","castprintz","Jack Doe",0.0,30.0,03 Jun 2026
+TSK-8BD10F,"Develop Case Archive Feature","ANTATRITICAGENCY","legallaid","Jack Doe",40.0,30.0,03 Jun 2026
+TSK-BA1D16,"Fix Multi-select Checkbox styling","ANTATRITICAGENCY","whatmaters","Pranesh",15.0,25.0,03 Jun 2026
+TSK-D434F9,"Optimize G-code Parsing Speed","-","castprintz","Mano Sebastin",30.0,30.0,03 Jun 2026
+TSK-49A0EF,"Fix Mobile Layout Overflow on Case View","ANTATRITICAGENCY","legallaid","Jack Doe",0.0,30.0,03 Jun 2026
+TSK-761F41,"Implement Daily Checklist widget","ANTATRITICAGENCY","whatmaters","Pranesh",40.0,30.0,03 Jun 2026
+TSK-F00425,"Fix PDF Invoice Logo aspect ratio","-","castprintz","Jack Doe",15.0,25.0,03 Jun 2026
+TSK-4980D8,"Design Dark Mode Theme","ANTATRITICAGENCY","legallaid","admin",30.0,30.0,03 Jun 2026
+TSK-6792AB,"Add Admin User Audit trail","ANTATRITICAGENCY","whatmaters","Jack Doe",0.0,30.0,03 Jun 2026
+TSK-2CBA40,"Implement Batch Discount module","-","castprintz","-",40.0,30.0,03 Jun 2026
+TSK-5F9A81,"Perform E2E Testing for Authentication","ANTATRITICAGENCY","legallaid","Pranesh",15.0,25.0,03 Jun 2026
+TSK-0AD206,"Fix Zero-state UI layout","ANTATRITICAGENCY","whatmaters","Pranesh",30.0,30.0,03 Jun 2026
+TSK-8D1627,"Refactor Printer API Controller","-","castprintz","Mano Sebastin",0.0,30.0,03 Jun 2026
+TSK-AB94AB,"Setup Auto-assignment Rules","ANTATRITICAGENCY","legallaid","-",40.0,30.0,03 Jun 2026
+TSK-A86802,"Setup Sentry Error Tracking","ANTATRITICAGENCY","whatmaters","Pranesh",15.0,25.0,03 Jun 2026
+TSK-2B0183,"Fix Slicing Timeout Bug","-","castprintz","admin",30.0,30.0,03 Jun 2026
+TSK-CF2B5C,"Refactor Rich Text Editor component (Phase 4)","ANTATRITICAGENCY","legallaid","-",0.0,30.0,03 Jun 2026
+TSK-0EB8DE,"Write Unit Tests for Score Calculations (Phase 4)","ANTATRITICAGENCY","whatmaters","Mano Sebastin",40.0,30.0,03 Jun 2026
+TSK-10BB3B,"Write Client Order Placement Tests (Phase 4)","-","castprintz","admin",15.0,25.0,03 Jun 2026
+TSK-B7444A,"Add Client Feedback Survey popup (Phase 4)","ANTATRITICAGENCY","legallaid","Jack Doe",30.0,30.0,03 Jun 2026
+TSK-E13B8B,"Optimize Image Upload compression (Phase 4)","ANTATRITICAGENCY","whatmaters","admin",40.0,20.0,03 Jun 2026

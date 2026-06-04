@@ -1212,71 +1212,98 @@ app.post('/api/estimations/:id/convert', async (req, res) => {
 });
 
 // 10. Reports
+const syncReportsTable = async () => {
+  try {
+    const tasks = await prisma.task.findMany({
+      include: {
+        clientRef: true,
+        projectRef: true,
+        workLogs: true
+      }
+    });
+
+    const reportsToInsert = tasks.map(task => {
+      let deliveredDate = task.deliveredDate || task.dueDate;
+      if (task.workLogs && task.workLogs.length > 0) {
+        const dates = task.workLogs.map(wl => new Date(wl.logDate));
+        deliveredDate = new Date(Math.max(...dates));
+      }
+
+      return {
+        id: task.id,
+        taskNo: task.taskNo,
+        title: task.title,
+        companyName: task.clientRef ? (task.clientRef.company || task.clientRef.name) : null,
+        projectName: task.projectName || (task.projectRef ? task.projectRef.name : null),
+        projectId: task.projectId,
+        clientId: task.clientId,
+        assignees: task.assignees,
+        billableHours: task.approvedHours || 0.0,
+        alreadyBilled: task.actualHours || 0.0,
+        deliveredDate: deliveredDate
+      };
+    });
+
+    await prisma.$transaction([
+      prisma.report.deleteMany(),
+      prisma.report.createMany({
+        data: reportsToInsert
+      })
+    ]);
+  } catch (err) {
+    console.error('Failed to sync reports table:', err);
+  }
+};
+
+// 10. Reports
 app.get('/api/reports/monthly', async (req, res) => {
   try {
     const { month, year, project, assignee, client } = req.query;
     
-    // Default to current month/year if not provided
+    await syncReportsTable();
+
     const currentDate = new Date();
-    const targetMonth = month ? parseInt(month) - 1 : currentDate.getMonth(); // 0-indexed
+    const targetMonth = month ? parseInt(month) - 1 : currentDate.getMonth();
     const targetYear = year ? parseInt(year) : currentDate.getFullYear();
     
     const startDate = new Date(targetYear, targetMonth, 1);
     const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
     
     const whereClause = {
-      logDate: {
+      deliveredDate: {
         gte: startDate,
         lte: endDate,
       }
     };
 
     if (assignee && assignee !== 'All Assignees') {
-      whereClause.user = { fullName: { contains: assignee } }; // This is an approximation
+      whereClause.assignees = { contains: assignee, mode: 'insensitive' };
     }
-
-    const taskFilters = {};
     if (project && project !== 'All Projects') {
-      taskFilters.projectName = project;
+      whereClause.projectName = project;
     }
     if (client && client !== 'All Clients') {
-      taskFilters.clientId = client;
+      whereClause.clientId = client;
     }
 
-    if (Object.keys(taskFilters).length > 0) {
-      whereClause.task = taskFilters;
-    }
-
-    const logs = await prisma.workLog.findMany({
-      where: whereClause,
-      include: {
-        task: {
-          include: { clientRef: true, projectRef: true }
-        },
-        user: true
-      }
+    const reportRecords = await prisma.report.findMany({
+      where: whereClause
     });
 
-    // Aggregate by task
-    const taskMap = {};
-    logs.forEach(log => {
-      const taskId = log.taskId;
-      if (!taskMap[taskId]) {
-        taskMap[taskId] = {
-          ...log.task,
-          actualHours: 0,
-          approvedHours: 0, // Will be calculated from work logs for this period
-          workLogPeriodString: `${month}/${year}`,
-          deliveredDate: log.logDate // using logDate as reference
-        };
-      }
-      taskMap[taskId].actualHours += log.hoursWorked;
-      if (log.task && log.task.isBillable) {
-        taskMap[taskId].approvedHours += log.hoursWorked;
-      }
-    });
+    const mapped = reportRecords.map(r => ({
+      id: r.id,
+      taskNo: r.taskNo,
+      title: r.title,
+      projectName: r.projectName,
+      assignees: r.assignees,
+      deliveredDate: r.deliveredDate,
+      clientRef: r.companyName ? { company: r.companyName } : null,
+      taskApprovedHours: r.billableHours,
+      taskActualHours: r.alreadyBilled,
+      workLogPeriodString: `${month || (targetMonth + 1)}/${year || targetYear}`
+    }));
 
-    res.json(Object.values(taskMap));
+    res.json(mapped);
   } catch (error) {
     console.error('GET /api/reports/monthly error:', error);
     res.status(500).json({ error: error.message });
@@ -1292,61 +1319,51 @@ app.get('/api/reports/range', async (req, res) => {
       return res.status(400).json({ error: 'startDate and endDate are required' });
     }
     
+    await syncReportsTable();
+
     const start = new Date(startDate);
     const end = new Date(endDate);
     
     const whereClause = {
-      logDate: {
+      deliveredDate: {
         gte: start,
         lte: end,
       }
     };
-    
-    const taskFilters = {};
+
+    if (assignee && assignee !== 'All Assignees') {
+      whereClause.assignees = { contains: assignee, mode: 'insensitive' };
+    }
     if (project && project !== 'All Projects') {
-      taskFilters.projectName = project;
+      whereClause.projectName = project;
     }
     if (client && client !== 'All Clients') {
-      taskFilters.clientId = client;
-    }
-    if (Object.keys(taskFilters).length > 0) {
-      whereClause.task = taskFilters;
+      whereClause.clientId = client;
     }
 
-    const logs = await prisma.workLog.findMany({
-      where: whereClause,
-      include: {
-        task: {
-          include: { clientRef: true, projectRef: true }
-        },
-        user: true
-      }
-    });
-    
-    // Aggregate by task
-    const taskMap = {};
-    logs.forEach(log => {
-      const taskId = log.taskId;
-      if (!taskMap[taskId]) {
-        taskMap[taskId] = {
-          ...log.task,
-          actualHours: 0,
-          approvedHours: 0, // Will be calculated from work logs for this period
-          deliveredDate: log.logDate
-        };
-      }
-      taskMap[taskId].actualHours += log.hoursWorked;
-      if (log.task && log.task.isBillable) {
-        taskMap[taskId].approvedHours += log.hoursWorked;
-      }
+    const reportRecords = await prisma.report.findMany({
+      where: whereClause
     });
 
-    res.json(Object.values(taskMap));
+    const mapped = reportRecords.map(r => ({
+      id: r.id,
+      taskNo: r.taskNo,
+      title: r.title,
+      projectName: r.projectName,
+      assignees: r.assignees,
+      deliveredDate: r.deliveredDate,
+      clientRef: r.companyName ? { company: r.companyName } : null,
+      taskApprovedHours: r.billableHours,
+      taskActualHours: r.alreadyBilled
+    }));
+
+    res.json(mapped);
   } catch (error) {
     console.error('GET /api/reports/range error:', error);
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // 12. Role Permissions
 app.get('/api/roles/permissions', async (req, res) => {

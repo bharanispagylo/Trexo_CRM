@@ -25,7 +25,7 @@
 
 /* Styled table container like Estimations card */
 .clients-table-container {
-  max-width: 1000px;
+  width: 100%;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 16px;

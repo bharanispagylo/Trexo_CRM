@@ -97,7 +97,7 @@ export default function Clients({ user }) {
 
   return (
     <div className="clients-page-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem', maxWidth: '1000px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem', width: '100%' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>Client Management</h2>
         <button className="clients-btn-submit" onClick={() => openForm()}>+ New Client</button>
       </div>

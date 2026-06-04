@@ -308,3 +308,21 @@ model Notification {
 
   @@map("notifications")
 }
+
+model Report {
+  id                 String    @id @default(uuid())
+  taskNo             String?   @map("task_no")
+  title              String
+  companyName        String?   @map("company_name")
+  projectName        String?   @map("project_name")
+  projectId          String?   @map("project_id")
+  clientId           String?   @map("client_id")
+  assignees          String?
+  billableHours      Float     @default(0.0) @map("billable_hours")
+  alreadyBilled      Float     @default(0.0) @map("already_billed")
+  deliveredDate      DateTime? @map("delivered_date")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  @@map("reports")
+}
+

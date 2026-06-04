@@ -217,7 +217,15 @@ export default function Estimations({ user }) {
                     <tr key={est.id}>
                       <td style={{ fontWeight: '600', color: '#334155' }}>{est.estimationNo}</td>
                       <td style={{ fontWeight: '600' }}>{est.taskName}</td>
-                      <td>{est.clientRef?.company || est.client || '-'}</td>
+                      <td>{(() => {
+                        const targetId = est.clientId || est.client_id;
+                        const clientObj = clients.find(c => 
+                          (targetId && c.id === targetId && targetId !== 'null') ||
+                          (est.client && c.name?.toLowerCase() === est.client.toLowerCase()) ||
+                          (est.client && c.company?.toLowerCase() === est.client.toLowerCase())
+                        );
+                        return clientObj ? (clientObj.company || clientObj.name) : (est.client || '-');
+                      })()}</td>
                       <td>{est.projectRef?.name || '-'}</td>
                       <td style={{ fontWeight: '600', color: '#2563eb' }}>{est.estimatedHours} hrs</td>
                       <td>
