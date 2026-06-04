@@ -255,6 +255,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
 
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
+  const [mentionState, setMentionState] = useState({ isOpen: false, filter: '' });
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState('');
   const [workLogs, setWorkLogs] = useState([]);
@@ -1530,17 +1531,82 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
               </div>
             )}
             <div className="comment-box-flex-row">
-              <div className="comment-input-field-wrapper">
+              <div className="comment-input-field-wrapper" style={{ position: 'relative' }}>
                 <input 
                   type="text" 
                   value={newComment} 
-                  onChange={e => setNewComment(e.target.value)} 
-                  onKeyDown={e => { if (e.key === 'Enter') handleAddComment(); }} 
-                  placeholder={commentUploading ? "Uploading..." : "Write a comment..."}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setNewComment(val);
+                    const match = val.match(/(?:^|\s)@([a-zA-Z0-9_]*)$/);
+                    if (match) {
+                      setMentionState({ isOpen: true, filter: match[1].toLowerCase() });
+                    } else {
+                      setMentionState({ isOpen: false, filter: '' });
+                    }
+                  }} 
+                  onKeyDown={e => { 
+                    if (mentionState?.isOpen) {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const filteredUsers = users.filter(u => u.toLowerCase().includes(mentionState.filter));
+                        if (filteredUsers.length > 0) {
+                          const val = newComment.replace(/(?:^|\s)@[a-zA-Z0-9_]*$/, ` @${filteredUsers[0].replace(/\s+/g, '_')} `);
+                          setNewComment(val);
+                          setMentionState({ isOpen: false, filter: '' });
+                        }
+                      }
+                      return;
+                    }
+                    if (e.key === 'Enter') handleAddComment(); 
+                  }} 
+                  placeholder={commentUploading ? "Uploading..." : "Write a comment... (Type @ to mention)"}
                   className="comment-main-text-input"
                   style={{ paddingRight: '4rem' }}
                   disabled={commentUploading}
                 />
+                
+                {mentionState?.isOpen && (
+                  <div className="mention-dropdown animate-fade-in" style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: '0',
+                    background: 'white',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    maxHeight: '150px',
+                    overflowY: 'auto',
+                    zIndex: 20,
+                    width: '200px',
+                    marginBottom: '8px'
+                  }}>
+                    {users.filter(u => u.toLowerCase().includes(mentionState.filter)).map(u => (
+                      <div 
+                        key={u}
+                        onClick={() => {
+                          const val = newComment.replace(/(?:^|\s)@[a-zA-Z0-9_]*$/, ` @${u.replace(/\s+/g, '_')} `);
+                          setNewComment(val);
+                          setMentionState({ isOpen: false, filter: '' });
+                        }}
+                        style={{
+                          padding: '0.5rem 0.75rem',
+                          cursor: 'pointer',
+                          fontSize: '0.85rem',
+                          borderBottom: '1px solid #f1f5f9',
+                          color: '#1e293b'
+                        }}
+                        onMouseEnter={e => e.target.style.background = '#f8fafc'}
+                        onMouseLeave={e => e.target.style.background = 'white'}
+                      >
+                        {u}
+                      </div>
+                    ))}
+                    {users.filter(u => u.toLowerCase().includes(mentionState.filter)).length === 0 && (
+                      <div style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem', color: '#94a3b8' }}>No users found</div>
+                    )}
+                  </div>
+                )}
                 <div style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span 
                     className="comment-emoji-icon" 
