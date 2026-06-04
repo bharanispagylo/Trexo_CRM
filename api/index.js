@@ -31,6 +31,7 @@ const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 require('dotenv').config();
+const { sendNotificationEmail } = require('./emailSender');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -117,6 +118,30 @@ const notifyAdmins = async (title, message) => {
     const adminNames = admins.map(a => a.fullName || `${a.firstName} ${a.lastName}`.trim());
     await createNotification(adminNames, title, message);
   } catch (err) {}
+};
+
+const notifyEmailsByNames = async (userIds, subject, message, type) => {
+  if (!userIds) return;
+  const names = (typeof userIds === 'string' ? userIds.split(',') : userIds).map(u => u.trim()).filter(Boolean);
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        OR: names.map(name => ({
+          OR: [
+            { fullName: { contains: name, mode: 'insensitive' } },
+            { firstName: { contains: name, mode: 'insensitive' } },
+            { lastName: { contains: name, mode: 'insensitive' } }
+          ]
+        }))
+      }
+    });
+    const emails = users.map(u => u.email).filter(Boolean);
+    if (emails.length > 0) {
+      await sendNotificationEmail(emails, subject, message, type);
+    }
+  } catch (err) {
+    console.error('[Email Notification Error]', err.message);
+  }
 };
 
 const sanitizeTaskData = (taskData) => {
@@ -566,6 +591,14 @@ app.post('/api/projects', async (req, res) => {
     const project = await prisma.project.create({ data });
     if (project.members) {
       createNotification(project.members, `New Project: ${project.name}`, `You have been added to the project team.`);
+      notifyEmailsByNames(project.members, `New Project: ${project.name}`, {
+        author: 'Admin',
+        action: 'added you to',
+        itemTitle: project.name,
+        boardName: 'Projects Board',
+        projectName: project.name,
+        buttonText: 'View Project'
+      }, 'project');
     }
     notifyAdmins(`Project Created`, `Project ${project.name} was created.`);
     res.json(project);
@@ -727,6 +760,17 @@ app.post('/api/tasks', async (req, res) => {
     const task = await prisma.task.create({
       data: taskData
     });
+    if (task.assignees) {
+      createNotification(task.assignees, `New Task Assigned: ${task.title}`, `You have been assigned to a new task.`);
+      notifyEmailsByNames(task.assignees, `New Task Assigned: ${task.title}`, {
+        author: 'Admin',
+        action: 'assigned you to',
+        itemTitle: task.title,
+        boardName: 'Tasks Board',
+        projectName: task.projectName || 'General',
+        buttonText: 'View Item'
+      }, 'task');
+    }
     res.json(task);
   } catch (error) {
     console.error('POST /api/tasks error:', error);
@@ -938,6 +982,33 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
         // Exclude the author from notifications
         const assignees = task.assignees.split(',').map(a => a.trim()).filter(a => a && a.toLowerCase() !== comment.author.toLowerCase());
         createNotification(assignees, `New Comment on ${task.title}`, `${comment.author} commented: "${comment.text.substring(0, 30)}..."`);
+        
+        // Email assignees about the comment
+        notifyEmailsByNames(assignees, `New Comment on ${task.title}`, {
+          author: comment.author,
+          action: 'commented on',
+          itemTitle: task.title,
+          boardName: 'Tasks Board',
+          projectName: task.projectName || 'General',
+          commentText: comment.text,
+          buttonText: 'Reply on Trexo CRM'
+        }, 'comment');
+      }
+      
+      // Notify mentioned users
+      const mentions = comment.text.match(/@([a-zA-Z0-9_]+)/g);
+      if (mentions) {
+        const mentionedNames = mentions.map(m => m.substring(1));
+        createNotification(mentionedNames, `You were mentioned in ${task ? task.title : 'a task'}`, `${comment.author} mentioned you: "${comment.text.substring(0, 30)}..."`);
+        notifyEmailsByNames(mentionedNames, `You were mentioned in ${task ? task.title : 'a task'}`, {
+          author: comment.author,
+          action: 'mentioned you in an update on',
+          itemTitle: task ? task.title : 'a task',
+          boardName: 'Tasks Board',
+          projectName: task ? (task.projectName || 'General') : 'General',
+          commentText: comment.text,
+          buttonText: 'Reply on Trexo CRM'
+        }, 'comment');
       }
     } catch (e) {
       console.error('Failed to send comment notification', e);
