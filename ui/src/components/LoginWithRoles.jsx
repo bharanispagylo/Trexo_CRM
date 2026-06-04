@@ -42,6 +42,12 @@ function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }) {
   const [demoUsers, setDemoUsers] = useState([]);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const emailParam = params.get("email");
+    if (emailParam) {
+      setEmail(emailParam);
+    }
+
     const fetchDemo = async () => {
       try {
         const data = await api.get('/users');

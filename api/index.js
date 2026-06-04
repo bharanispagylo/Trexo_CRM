@@ -135,13 +135,48 @@ const notifyEmailsByNames = async (userIds, subject, message, type) => {
         }))
       }
     });
-    const emails = users.map(u => u.email).filter(Boolean);
-    if (emails.length > 0) {
-      await sendNotificationEmail(emails, subject, message, type);
+
+    for (const u of users) {
+      if (u.email) {
+        const userContext = {
+          ...message,
+          buttonLink: `https://trexo-crm-fqxl.vercel.app?email=${encodeURIComponent(u.email)}`
+        };
+        await sendNotificationEmail(u.email, subject, userContext, type);
+      }
     }
   } catch (err) {
     console.error('[Email Notification Error]', err.message);
   }
+};
+
+const getTaskDetailsForEmail = async (task) => {
+  let taskListName = task.status || 'To Do';
+  let projectName = task.projectName || 'General';
+
+  if (task.taskListId) {
+    try {
+      const tl = await prisma.taskList.findUnique({
+        where: { id: task.taskListId }
+      });
+      if (tl) taskListName = tl.name;
+    } catch (e) {
+      console.error('Error fetching task list name:', e.message);
+    }
+  }
+
+  if (!task.projectName && task.projectId) {
+    try {
+      const proj = await prisma.project.findUnique({
+        where: { id: task.projectId }
+      });
+      if (proj) projectName = proj.name;
+    } catch (e) {
+      console.error('Error fetching project name:', e.message);
+    }
+  }
+
+  return { taskListName, projectName };
 };
 
 const sanitizeTaskData = (taskData) => {
@@ -762,12 +797,13 @@ app.post('/api/tasks', async (req, res) => {
     });
     if (task.assignees) {
       createNotification(task.assignees, `New Task Assigned: ${task.title}`, `You have been assigned to a new task.`);
+      const { taskListName, projectName } = await getTaskDetailsForEmail(task);
       notifyEmailsByNames(task.assignees, `New Task Assigned: ${task.title}`, {
         author: 'Admin',
         action: 'assigned you to',
         itemTitle: task.title,
-        boardName: 'Tasks Board',
-        projectName: task.projectName || 'General',
+        boardName: taskListName,
+        projectName: projectName,
         buttonText: 'View Item'
       }, 'task');
     }
@@ -983,13 +1019,15 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
         const assignees = task.assignees.split(',').map(a => a.trim()).filter(a => a && a.toLowerCase() !== comment.author.toLowerCase());
         createNotification(assignees, `New Comment on ${task.title}`, `${comment.author} commented: "${comment.text.substring(0, 30)}..."`);
         
+        const { taskListName, projectName } = await getTaskDetailsForEmail(task);
+
         // Email assignees about the comment
         notifyEmailsByNames(assignees, `New Comment on ${task.title}`, {
           author: comment.author,
           action: 'commented on',
           itemTitle: task.title,
-          boardName: 'Tasks Board',
-          projectName: task.projectName || 'General',
+          boardName: taskListName,
+          projectName: projectName,
           commentText: comment.text,
           buttonText: 'Reply on Trexo CRM'
         }, 'comment');
@@ -1000,12 +1038,21 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
       if (mentions) {
         const mentionedNames = mentions.map(m => m.substring(1));
         createNotification(mentionedNames, `You were mentioned in ${task ? task.title : 'a task'}`, `${comment.author} mentioned you: "${comment.text.substring(0, 30)}..."`);
+        
+        let taskListName = 'Tasks Board';
+        let projectName = 'General';
+        if (task) {
+          const details = await getTaskDetailsForEmail(task);
+          taskListName = details.taskListName;
+          projectName = details.projectName;
+        }
+
         notifyEmailsByNames(mentionedNames, `You were mentioned in ${task ? task.title : 'a task'}`, {
           author: comment.author,
           action: 'mentioned you in an update on',
           itemTitle: task ? task.title : 'a task',
-          boardName: 'Tasks Board',
-          projectName: task ? (task.projectName || 'General') : 'General',
+          boardName: taskListName,
+          projectName: projectName,
           commentText: comment.text,
           buttonText: 'Reply on Trexo CRM'
         }, 'comment');

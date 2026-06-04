@@ -23,14 +23,15 @@
 }
 
 .saas-form-container {
-  max-width: 600px;
+  max-width: 800px;
   margin: 0 auto;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
+  column-gap: 2.5rem;
+  row-gap: 1.5rem;
   margin-bottom: 2rem;
 }
 
@@ -54,7 +55,7 @@
 
 .saas-input, .saas-select {
   width: 100%;
-  max-width: 280px;
+  max-width: 100%;
   padding: 0.65rem 0.9rem;
   border: 1.2px solid #e2e8f0;
   border-radius: 8px;
