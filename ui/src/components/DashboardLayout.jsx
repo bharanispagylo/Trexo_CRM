@@ -90,6 +90,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
     return () => {
       if (unsubscribe) unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleMarkAsRead = async (id) => {

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
-import { useAlert } from '../../../context/AlertContext';
 import './TrackTeam.css';
 import Tasks from './Tasks';
 
@@ -10,7 +9,6 @@ const isAssigneeMatch = (assigneeStr, userId) => {
 };
 
 export default function TrackTeam({ user }) {
-  const { alert } = useAlert();
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
