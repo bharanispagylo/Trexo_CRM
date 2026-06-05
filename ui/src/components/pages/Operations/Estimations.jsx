@@ -283,9 +283,9 @@ export default function Estimations({ user }) {
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Task List</label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Task Group</label>
                 <select className="estimations-select" value={convertForm.taskListId} onChange={e => setConvertForm({...convertForm, taskListId: e.target.value})}>
-                  <option value="">-- Select List --</option>
+                  <option value="">-- Select Group --</option>
                   {taskLists.filter(tl => tl.projectId === convertForm.projectId).map(tl => <option key={tl.id} value={tl.id}>{tl.name}</option>)}
                 </select>
               </div>

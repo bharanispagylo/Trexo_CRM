@@ -79,7 +79,6 @@ const getAvatarColor = (name) => {
 export default function Projects({ user, initialSelectedProject, onClearInitialProject, onNavigateToTasks }) {
   const [projects, setProjects] = useState([]);
   const [expandedProj, setExpandedProj] = useState({});
-  const [employees, setEmployees] = useState([]);
   const [users, setUsers] = useState([]);
   const [clients, setClients] = useState([]);
 
@@ -170,14 +169,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [projData, empData, userData, clientData] = await Promise.all([
+      const [projData, userData, clientData] = await Promise.all([
         api.get('/projects'),
-        api.get('/employees'),
         api.get('/users'),
         api.get('/clients')
       ]);
       setProjects(projData || []);
-      setEmployees(empData || []);
       setUsers(userData || []);
       setClients(clientData || []);
       
@@ -215,29 +212,27 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
 
   // ── DETAIL VIEW HANDLERS ──
-  const toggleMemberDetail = async (empName) => {
+  const toggleMemberDetail = async (userId) => {
     if (!selectedProject) return;
     
-    const target = empName.trim();
+    const target = userId.trim();
     const currentMembers = (selectedProject.members || '')
       .split(',')
       .map(m => m.trim())
       .filter(m => m !== "");
     
-    const exists = currentMembers.some(m => m.toLowerCase() === target.toLowerCase());
+    const exists = currentMembers.includes(target);
     
     let updatedMembers;
     if (exists) {
-      // Remove (case-insensitive)
-      updatedMembers = currentMembers.filter(m => m.toLowerCase() !== target.toLowerCase());
+      updatedMembers = currentMembers.filter(m => m !== target);
     } else {
-      // Add
       updatedMembers = [...currentMembers, target];
     }
 
     try {
       await api.put(`/projects/${selectedProject.id}`, {
-        members: updatedMembers.join(', ')
+        members: updatedMembers.join(',')
       });
       fetchData(true);
     } catch (error) {
@@ -247,7 +242,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
   const handleAddMember = async () => {
     if (!selectedEmployeeToAdd) {
-      alert('Please select an employee to add', 'warning', 'No Selection');
+      alert('Please select a user to add', 'warning', 'No Selection');
       return;
     }
     try {
@@ -256,21 +251,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         .map(m => m.trim())
         .filter(m => m !== "");
       
-      if (!currentMembers.some(m => m.toLowerCase() === selectedEmployeeToAdd.trim().toLowerCase())) {
+      if (!currentMembers.includes(selectedEmployeeToAdd.trim())) {
         currentMembers.push(selectedEmployeeToAdd.trim());
       }
 
       await api.put(`/projects/${selectedProject.id}`, {
-        members: currentMembers.join(', ')
+        members: currentMembers.join(',')
       });
-
-      const emp = employees.find(e => e.name.trim().toLowerCase() === selectedEmployeeToAdd.trim().toLowerCase());
-      if (emp) {
-        await api.put(`/employees/${emp.id}`, {
-          projectName: selectedProject.name,
-          projectStatus: 'Active'
-        });
-      }
 
       setSelectedEmployeeToAdd('');
       setShowAddMemberModal(false);
@@ -282,100 +269,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     }
   };
 
-  const handleCreateAndAddMember = async () => {
-    if (!createMemberForm.name.trim()) {
-      alert('Please enter a member name', 'warning', 'Required');
-      return;
-    }
-    try {
-      const newEmpId = `EMP-${Date.now().toString().slice(-3)}`;
-      await api.post('/employees', {
-        id: newEmpId,
-        name: createMemberForm.name,
-        role: createMemberForm.role || 'Member',
-        status: createMemberForm.status || 'Active',
-        phoneNo: createMemberForm.phoneNo || '',
-        emergencyNo: createMemberForm.emergencyNo || '',
-        type: createMemberForm.type || 'Employee',
-        projectName: selectedProject.name,
-        projectStatus: 'Active'
-      });
-
-      const currentMembers = (selectedProject.members || '')
-        .split(',')
-        .map(m => m.trim())
-        .filter(m => m !== "");
-      
-      if (!currentMembers.some(m => m.toLowerCase() === createMemberForm.name.trim().toLowerCase())) {
-        currentMembers.push(createMemberForm.name.trim());
-      }
-
-      await api.put(`/projects/${selectedProject.id}`, {
-        members: currentMembers.join(', ')
-      });
-
-      setCreateMemberForm({ name: '', role: '', status: 'Active' });
-      setShowCreateMemberModal(false);
-      fetchData(true);
-      alert('Member created and added to project successfully!', 'success', 'Done');
-    } catch (error) {
-      console.error('Error creating and adding member:', error);
-      alert('Failed to create and add member: ' + error.message, 'error', 'Error');
-    }
-  };
-
-  const handleToggleStatus = async (emp) => {
-    if (!emp.id) return;
-    
-    let inactiveProjects = (emp.projectStatus || '').split(',').map(s => s.trim()).filter(Boolean);
-    const projName = selectedProject.name;
-    
-    if (inactiveProjects.includes(projName)) {
-      inactiveProjects = inactiveProjects.filter(p => p !== projName);
-    } else {
-      inactiveProjects.push(projName);
-    }
-    
-    const newStatusStr = inactiveProjects.join(', ');
-    
-    try {
-      await api.put(`/employees/${emp.id}`, { projectStatus: newStatusStr });
-      fetchData(true);
-    } catch (error) {
-      console.error('Toggle status error:', error);
-      alert('Failed to update status', 'error', 'Error');
-    }
-  };
-
-  const handleSaveEditMember = async () => {
-    if (!editingEmployee || !editingEmployee.id) return;
-    try {
-      await api.put(`/employees/${editingEmployee.id}`, {
-        name: editingEmployee.name,
-        role: editingEmployee.role,
-        projectStatus: editingEmployee.status
-      });
-      // If the name changed, we also need to update the project's member list!
-      const originalName = employees.find(e => e.id === editingEmployee.id)?.name || '';
-      if (originalName && originalName.trim().toLowerCase() !== editingEmployee.name.trim().toLowerCase()) {
-        const currentMembers = (selectedProject.members || '')
-          .split(',')
-          .map(m => m.trim())
-          .filter(m => m !== "");
-        const updatedMembers = currentMembers.map(m => m.toLowerCase() === originalName.toLowerCase() ? editingEmployee.name.trim() : m);
-        await api.put(`/projects/${selectedProject.id}`, {
-          members: updatedMembers.join(', ')
-        });
-      }
-      setShowEditMemberModal(false);
-      setEditingEmployee(null);
-      fetchData(true);
-      alert('Member updated successfully!', 'success', 'Updated');
-    } catch (error) {
-      console.error('Save edit member error:', error);
-      alert('Failed to save changes', 'error', 'Error');
-    }
-  };
 
   const handleAddList = async () => {
     if (!newListName.trim() || !selectedProject) return;
@@ -386,10 +279,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       });
       setNewListName('');
       await fetchData(true);
-      alert('Task list created successfully!', 'success');
+      alert('Task group created successfully!', 'success');
     } catch (error) {
       console.error('Add list error:', error);
-      alert('Failed to create task list', 'error');
+      alert('Failed to create task group', 'error');
     }
   };
 
@@ -443,14 +336,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleRemoveList = async (listId) => {
-    confirm('Delete this task list? All tasks inside will also be removed.', async () => {
+    confirm('Delete this task group? All tasks inside will also be removed.', async () => {
       try {
         await api.delete(`/task-lists/${listId}`);
         fetchData(true);
       } catch (error) {
         console.error('Delete list error:', error);
       }
-    }, 'Delete Task List');
+    }, 'Delete Task Group');
   };
 
   const handleRenameList = async (listId) => {
@@ -688,7 +581,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     if (!selectedProject) return null;
     const rawMembers = (selectedProject.members || '').split(',').map(m => m.trim()).filter(m => m !== "");
     const projMembers = [...new Set(rawMembers)];
-    const assigneesList = projMembers.length > 0 ? projMembers : employees.map(e => e.name);
+    const assigneesList = projMembers.length > 0 ? projMembers : users.map(u => u.id);
 
     return (
       <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
@@ -720,9 +613,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                   onChange={e => setTaskFormFields({ ...taskFormFields, assignees: e.target.value })}
                 >
                   <option value="">Unassigned</option>
-                  {assigneesList.map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
+                  {assigneesList.map(uId => {
+                    const uObj = users.find(u => u.id === uId) || {};
+                    const displayName = uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown';
+                    return <option key={uId} value={uId}>{displayName}</option>;
+                  })}
                 </select>
               </div>
 
@@ -905,7 +800,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     if (!selectedProject) return null;
     const rawMembers = (selectedProject.members || '').split(',').map(m => m.trim()).filter(m => m !== "");
     const projMembers = [...new Set(rawMembers)];
-    const assigneesList = projMembers.length > 0 ? projMembers : employees.map(e => e.name);
+    const assigneesList = projMembers.length > 0 ? projMembers : users.map(u => u.id);
 
     return (
       <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
@@ -1246,7 +1141,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         <div style={{ display: 'flex', gap: '2rem', borderBottom: '1px solid #e2e8f0', marginBottom: '2rem', padding: '0 0.5rem' }}>
           {[
             { id: 'General', label: 'General', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> },
-            { id: 'Tasks', label: 'Task lists', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> },
+            { id: 'Tasks', label: 'Task Groups', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> },
             { id: 'Teams', label: 'Team', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg> },
             { id: 'Queries', label: 'Queries', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> },
             { id: 'Attachments', label: 'Attachments', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> }
@@ -1351,12 +1246,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           {detailTab === 'Tasks' && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#0f172a' }}>Task lists</h3>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#0f172a' }}>Task Groups</h3>
                 {can('projects', 'create') && (
                   <div className="add-list-inline" style={{ marginTop: 0, display: 'flex', gap: '0.5rem' }}>
                     <input 
                       className="saas-input" 
-                      placeholder="New Task List..." 
+                      placeholder="New Task Group..." 
                       style={{ width: '200px', height: '36px', fontSize: '0.85rem', padding: '0 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none' }}
                       value={newListName}
                       onChange={e => setNewListName(e.target.value)}
@@ -1366,7 +1261,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       style={{ padding: '0 1rem', height: '36px', fontSize: '0.8rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
                       onClick={handleAddList}
                     >
-                      Add Task List
+                      Add Task Group
                     </button>
                   </div>
                 )}
@@ -1640,16 +1535,15 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       <tr><td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No members assigned.</td></tr>
                     ) : (
                       projMembers.map((m, idx) => {
-                        const emp = employees.find(e => e.name.trim().toLowerCase() === m.toLowerCase()) || {};
-                        const usr = users.find(u => (u.fullName || '').trim().toLowerCase() === m.toLowerCase()) || {};
+                        const usr = users.find(u => u.id === m) || {};
+                        const displayName = usr.fullName || `${usr.firstName || ''} ${usr.lastName || ''}`.trim() || 'Unknown';
                         
-                        const inactiveProjects = (emp.projectStatus || '').split(',').map(s => s.trim()).filter(Boolean);
-                        const isActive = !inactiveProjects.includes(selectedProject.name);
-                        const statusVal = isActive ? 'Active' : 'Inactive';
-                        const designation = emp.role || 'Member';
+                        const isActive = true;
+                        const statusVal = 'Active';
+                        const designation = 'Member';
                         
-                        const loggedInName = (user?.fullName || user?.name || '').trim().toLowerCase();
-                        const isYou = loggedInName && m.toLowerCase() === loggedInName;
+                        const loggedInId = user?.id || '';
+                        const isYou = loggedInId && m === loggedInId;
                         
                         // Avatar helpers
                         const getInitials = (name) => {
@@ -1674,12 +1568,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                 {usr.profileImage ? (
                                   <img src={usr.profileImage} alt={m} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #e2e8f0' }} />
                                 ) : (
-                                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: getAvatarColor(m), color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.85rem', border: '1.5px solid #e2e8f0' }}>
-                                    {getInitials(m)}
+                                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: getAvatarColor(displayName), color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.85rem', border: '1.5px solid #e2e8f0' }}>
+                                    {getInitials(displayName)}
                                   </div>
                                 )}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  <span style={{ fontWeight: '700', color: '#0f172a', fontSize: '0.9rem' }}>{m}</span>
+                                  <span style={{ fontWeight: '700', color: '#0f172a', fontSize: '0.9rem' }}>{displayName}</span>
                                   {isYou && (
                                     <span style={{ background: '#EFF6FF', color: '#0066FF', borderRadius: '4px', fontSize: '0.65rem', padding: '2px 6px', fontWeight: '700' }}>You</span>
                                   )}
@@ -1708,46 +1602,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                             {can('projects', 'assign') && (
                               <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
                                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '1rem', justifyContent: 'flex-end' }}>
-                                  {/* Edit Icon */}
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ cursor: 'pointer', color: '#64748b' }} onClick={() => { setEditingEmployee(emp.id ? emp : { id: `EMP-${Date.now()}`, name: m, role: designation, status: statusVal }); setShowEditMemberModal(true); }}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                  </svg>
-
                                   {/* Delete Icon */}
                                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ cursor: 'pointer', color: '#ef4444' }} onClick={() => {
-                                    confirm(`Delete member "${m}" from this project?`, () => toggleMemberDetail(m), 'Remove Member');
+                                    confirm(`Delete member "${displayName}" from this project?`, () => toggleMemberDetail(m), 'Remove Member');
                                   }}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                   </svg>
-
-                                  {/* Toggle Switch */}
-                                  {emp.id && (
-                                    <label style={{ display: 'inline-block', position: 'relative', width: '38px', height: '20px', cursor: 'pointer' }}>
-                                      <input 
-                                        type="checkbox" 
-                                        checked={isActive} 
-                                        onChange={() => handleToggleStatus(emp)} 
-                                        style={{ opacity: 0, width: 0, height: 0 }} 
-                                      />
-                                      <span style={{ 
-                                        position: 'absolute', 
-                                        top: 0, left: 0, right: 0, bottom: 0, 
-                                        backgroundColor: isActive ? '#0066FF' : '#cbd5e1', 
-                                        transition: '0.3s', 
-                                        borderRadius: '20px' 
-                                      }}>
-                                        <span style={{ 
-                                          position: 'absolute', 
-                                          height: '14px', width: '14px', 
-                                          left: isActive ? '20px' : '3px', 
-                                          bottom: '3px', 
-                                          backgroundColor: 'white', 
-                                          transition: '0.3s', 
-                                          borderRadius: '50%' 
-                                        }} />
-                                      </span>
-                                    </label>
-                                  )}
                                 </div>
                               </td>
                             )}
@@ -1793,12 +1653,15 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                           value={selectedEmployeeToAdd}
                           onChange={e => setSelectedEmployeeToAdd(e.target.value)}
                         >
-                          <option value="">Choose an employee...</option>
-                          {employees
-                            .filter(emp => !projMembers.some(pm => pm.toLowerCase() === emp.name.trim().toLowerCase()))
-                            .map(emp => (
-                              <option key={emp.id} value={emp.name}>{emp.name} ({emp.role || 'No role'})</option>
-                            ))
+                          <option value="">Choose a user...</option>
+                          {users
+                            .filter(u => !projMembers.includes(u.id))
+                            .map(u => {
+                              const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
+                              return (
+                                <option key={u.id} value={u.id}>{displayName} ({u.role || 'No role'})</option>
+                              );
+                            })
                           }
                         </select>
                       </div>
@@ -1806,126 +1669,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                       <button style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 1.25rem', fontWeight: '600', color: '#64748b', cursor: 'pointer' }} onClick={() => setShowAddMemberModal(false)}>Cancel</button>
                       <button style={{ background: '#0066FF', border: 'none', borderRadius: '8px', padding: '0.6rem 1.25rem', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={handleAddMember}>Add Member</button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {showCreateMemberModal && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                  <div style={{ background: 'white', borderRadius: '12px', width: '450px', padding: '2rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                      <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>Create Team Member</h3>
-                      <button style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#94a3b8' }} onClick={() => setShowCreateMemberModal(false)}>✕</button>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '2rem' }}>
-                      <div className="saas-field">
-                        <label className="saas-label">Member Name</label>
-                        <input
-                          className="saas-input"
-                          placeholder="Enter name"
-                          value={createMemberForm.name}
-                          onChange={e => setCreateMemberForm({ ...createMemberForm, name: e.target.value })}
-                        />
-                      </div>
-                      <div className="saas-field">
-                        <label className="saas-label">Designation</label>
-                        <input
-                          className="saas-input"
-                          placeholder="e.g. Developer"
-                          value={createMemberForm.role}
-                          onChange={e => setCreateMemberForm({ ...createMemberForm, role: e.target.value })}
-                        />
-                      </div>
-                      <div className="saas-field">
-                        <label className="saas-label">Type</label>
-                        <select
-                          className="saas-select"
-                          value={createMemberForm.type}
-                          onChange={e => setCreateMemberForm({ ...createMemberForm, type: e.target.value })}
-                        >
-                          <option value="Employee">Employee</option>
-                          <option value="Contractor">Contractor</option>
-                          <option value="Intern">Intern</option>
-                        </select>
-                      </div>
-                      <div className="saas-field">
-                        <label className="saas-label">Phone No</label>
-                        <input
-                          className="saas-input"
-                          placeholder="e.g. +91 9876543210"
-                          value={createMemberForm.phoneNo}
-                          onChange={e => setCreateMemberForm({ ...createMemberForm, phoneNo: e.target.value })}
-                        />
-                      </div>
-                      <div className="saas-field">
-                        <label className="saas-label">Emergency No</label>
-                        <input
-                          className="saas-input"
-                          placeholder="e.g. +91 9000000000"
-                          value={createMemberForm.emergencyNo}
-                          onChange={e => setCreateMemberForm({ ...createMemberForm, emergencyNo: e.target.value })}
-                        />
-                      </div>
-                      <div className="saas-field">
-                        <label className="saas-label">Status</label>
-                        <select
-                          className="saas-select"
-                          value={createMemberForm.status}
-                          onChange={e => setCreateMemberForm({ ...createMemberForm, status: e.target.value })}
-                        >
-                          <option value="Active">Active</option>
-                          <option value="Inactive">Inactive</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                      <button style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 1.25rem', fontWeight: '600', color: '#64748b', cursor: 'pointer' }} onClick={() => setShowCreateMemberModal(false)}>Cancel</button>
-                      <button style={{ background: '#0066FF', border: 'none', borderRadius: '8px', padding: '0.6rem 1.25rem', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={handleCreateAndAddMember}>Create & Add</button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {showEditMemberModal && editingEmployee && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                  <div style={{ background: 'white', borderRadius: '12px', width: '450px', padding: '2rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                      <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>Edit Team Member</h3>
-                      <button style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#94a3b8' }} onClick={() => { setShowEditMemberModal(false); setEditingEmployee(null); }}>✕</button>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '2rem' }}>
-                      <div className="saas-field">
-                        <label className="saas-label">Member Name</label>
-                        <input
-                          className="saas-input"
-                          value={editingEmployee.name}
-                          onChange={e => setEditingEmployee({ ...editingEmployee, name: e.target.value })}
-                        />
-                      </div>
-                      <div className="saas-field">
-                        <label className="saas-label">Designation</label>
-                        <input
-                          className="saas-input"
-                          value={editingEmployee.role}
-                          onChange={e => setEditingEmployee({ ...editingEmployee, role: e.target.value })}
-                        />
-                      </div>
-                      <div className="saas-field">
-                        <label className="saas-label">Status</label>
-                        <select
-                          className="saas-select"
-                          value={editingEmployee.status}
-                          onChange={e => setEditingEmployee({ ...editingEmployee, status: e.target.value })}
-                        >
-                          <option value="Active">Active</option>
-                          <option value="Inactive">Inactive</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                      <button style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 1.25rem', fontWeight: '600', color: '#64748b', cursor: 'pointer' }} onClick={() => { setShowEditMemberModal(false); setEditingEmployee(null); }}>Cancel</button>
-                      <button style={{ background: '#0066FF', border: 'none', borderRadius: '8px', padding: '0.6rem 1.25rem', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={handleSaveEditMember}>Save Changes</button>
                     </div>
                   </div>
                 </div>
@@ -2568,16 +2311,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     let allowedProjects = projects;
 
   if (viewLevel === 'Self') {
-    const loggedInName = (user?.fullName || user?.name || '').trim().toLowerCase();
+    const loggedInId = user?.id || '';
     allowedProjects = allowedProjects.filter(p => {
       const rawMembers = (p.members || '').split(',').map(m => m.trim()).filter(m => m !== "");
-      if (!rawMembers.some(m => m.toLowerCase() === loggedInName)) return false;
-      const emp = employees.find(e => e.name.trim().toLowerCase() === loggedInName);
-      if (emp) {
-        if ((emp.status || 'Active').toLowerCase() === 'inactive') return false;
-        const inactiveProjects = (emp.projectStatus || '').split(',').map(s => s.trim()).filter(Boolean);
-        if (inactiveProjects.includes(p.name)) return false;
-      }
+      if (!rawMembers.includes(loggedInId)) return false;
       return true;
     });
   }

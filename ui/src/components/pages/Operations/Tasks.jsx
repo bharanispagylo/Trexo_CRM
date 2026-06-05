@@ -349,8 +349,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
     fetchComments();
     fetchWorkLogs();
     api.get('/users').then(data => {
-      const names = data.map(u => u.fullName || `${u.firstName} ${u.lastName}`.trim());
-      setUsers(names);
+      setUsers(data || []);
     }).catch(console.error);
     api.get('/clients').then(data => {
       setClients(data || []);
@@ -744,7 +743,19 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
               </span>
             </div>
             <div className="comment-text-body">
-              {cleanText.split('\n').map((line, i) => <div key={i}>{line}</div>)}
+              {cleanText.split('\n').map((line, i) => {
+                const parts = line.split(/(@[a-zA-Z0-9_-]+)/g);
+                return (
+                  <div key={i}>
+                    {parts.map((part, idx) => {
+                      if (part.startsWith('@') && part.length > 1) {
+                        return <strong key={idx} style={{ fontWeight: '700' }}>{part}</strong>;
+                      }
+                      return part;
+                    })}
+                  </div>
+                );
+              })}
               {attachment && renderCommentAttachmentPill(attachment)}
             </div>
           <div className="comment-actions-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '0.25rem', position: 'relative' }}>
@@ -968,7 +979,11 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   <span className="saas-meta-value">
                     <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
                       <option value="">Empty</option>
-                      {(form.projectName && projects.find(p => p.name === form.projectName)?.members ? projects.find(p => p.name === form.projectName).members.split(',').map(m => m.trim()).filter(Boolean) : users).map(u => <option key={u} value={u}>{u}</option>)}
+                      {(form.projectName && projects.find(p => p.name === form.projectName)?.members ? projects.find(p => p.name === form.projectName).members.split(',').map(m => m.trim()).filter(Boolean) : users.map(u => u.id)).map(uId => {
+                        const uObj = users.find(u => u.id === uId) || {};
+                        const displayName = uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown';
+                        return <option key={uId} value={uId}>{displayName}</option>;
+                      })}
                     </select>
                   </span>
                 </div>
@@ -1549,9 +1564,15 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                     if (mentionState?.isOpen) {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        const filteredUsers = users.filter(u => u.toLowerCase().includes(mentionState.filter));
+                        const searchStr = mentionState.filter.toLowerCase();
+                        const filteredUsers = users.filter(u => {
+                          const name = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase();
+                          return name.includes(searchStr);
+                        });
                         if (filteredUsers.length > 0) {
-                          const val = newComment.replace(/(?:^|\s)@[a-zA-Z0-9_]*$/, ` @${filteredUsers[0].replace(/\s+/g, '_')} `);
+                          const chosenUser = filteredUsers[0];
+                          const chosenName = (chosenUser.fullName || `${chosenUser.firstName || ''} ${chosenUser.lastName || ''}`).replace(/\s+/g, '_');
+                          const val = newComment.replace(/(?:^|\s)@[a-zA-Z0-9_]*$/, ` @${chosenName} `);
                           setNewComment(val);
                           setMentionState({ isOpen: false, filter: '' });
                         }
@@ -1581,11 +1602,17 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                     width: '200px',
                     marginBottom: '8px'
                   }}>
-                    {users.filter(u => u.toLowerCase().includes(mentionState.filter)).map(u => (
+                    {users.filter(u => {
+                      const name = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase();
+                      return name.includes(mentionState.filter.toLowerCase());
+                    }).map(u => {
+                      const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
+                      return (
                       <div 
-                        key={u}
+                        key={u.id}
                         onClick={() => {
-                          const val = newComment.replace(/(?:^|\s)@[a-zA-Z0-9_]*$/, ` @${u.replace(/\s+/g, '_')} `);
+                          const chosenName = displayName.replace(/\s+/g, '_');
+                          const val = newComment.replace(/(?:^|\s)@[a-zA-Z0-9_]*$/, ` @${chosenName} `);
                           setNewComment(val);
                           setMentionState({ isOpen: false, filter: '' });
                         }}
@@ -1599,10 +1626,14 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                         onMouseEnter={e => e.target.style.background = '#f8fafc'}
                         onMouseLeave={e => e.target.style.background = 'white'}
                       >
-                        {u}
+                        {displayName}
                       </div>
-                    ))}
-                    {users.filter(u => u.toLowerCase().includes(mentionState.filter)).length === 0 && (
+                    );
+                  })}
+                    {users.filter(u => {
+                      const name = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase();
+                      return name.includes(mentionState.filter.toLowerCase());
+                    }).length === 0 && (
                       <div style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem', color: '#94a3b8' }}>No users found</div>
                     )}
                   </div>
@@ -1683,7 +1714,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
 }
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Task Card (Kanban) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-function TaskCard({ task, onDragStart, onClick, onDelete, currentUser }) {
+function TaskCard({ task, onDragStart, onClick, onDelete, currentUser, listUsers }) {
   const { getLevel } = usePermissions();
   const { confirm: showConfirm } = useAlert();
   const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
@@ -1738,10 +1769,12 @@ function TaskCard({ task, onDragStart, onClick, onDelete, currentUser }) {
             ) : (
               <>
                 {assignees.slice(0, 3).map(a => {
-                  const avCls = getAvatarColor(a);
+                  const uObj = listUsers.find(u => u.id === a);
+                  const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
+                  const avCls = getAvatarColor(dispName);
                   return (
-                    <div key={a} className={`card-clickup-avatar ${avCls}`} title={a}>
-                      {initials(a)}
+                    <div key={a} className={`card-clickup-avatar ${avCls}`} title={dispName}>
+                      {initials(dispName)}
                     </div>
                   );
                 })}
@@ -1903,7 +1936,7 @@ const categorizeTask = (task, today) => {
   return 'backlog';
 };
 
-function TaskCardWithDates({ task, onDragStart, onClick, onDelete, currentUser }) {
+function TaskCardWithDates({ task, onDragStart, onClick, onDelete, currentUser, listUsers }) {
   const { getLevel } = usePermissions();
   const { confirm: showConfirm } = useAlert();
   const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
@@ -1980,10 +2013,12 @@ function TaskCardWithDates({ task, onDragStart, onClick, onDelete, currentUser }
             ) : (
               <>
                 {assignees.slice(0, 3).map(a => {
-                  const avCls = getAvatarColor(a);
+                  const uObj = listUsers.find(u => u.id === a);
+                  const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
+                  const avCls = getAvatarColor(dispName);
                   return (
-                    <div key={a} className={`card-clickup-avatar ${avCls}`} title={a}>
-                      {initials(a)}
+                    <div key={a} className={`card-clickup-avatar ${avCls}`} title={dispName}>
+                      {initials(dispName)}
                     </div>
                   );
                 })}
@@ -2404,9 +2439,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     
     // For 'my' tab, 'Self' level, or specified assigneeFilter:
     const assignees = t.assignees ? t.assignees.split(',').map(a => a.trim().toLowerCase()) : [];
-    const targetName = (assigneeFilter || user?.fullName || user?.name || '').trim().toLowerCase();
+    const targetId = (assigneeFilter || user?.id || '').trim().toLowerCase();
     
-    return assignees.includes(targetName);
+    return assignees.includes(targetId);
   });
 
   const pageTitle = subTab === 'my' ? '' : 'All Tasks';
@@ -2468,7 +2503,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           marginBottom: '1rem', 
           width: 'fit-content' 
         }}>
-          <span>Viewing tasks for: <strong>{assigneeFilter}</strong></span>
+          <span>Viewing tasks for: <strong>{listUsers.find(u => u.id === assigneeFilter)?.fullName || assigneeFilter}</strong></span>
           <button 
             style={{ 
               background: '#dbeafe', 
@@ -2961,7 +2996,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#64748b" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                               <select className="cu-inline-dropdown" value={task.assignees || ''} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { await api.put(`/tasks/${task.id}`, { assignees: e.target.value }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }}>
                                                 <option value="">Unassigned</option>
-                                                {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim(); return <option key={u.id} value={n}>{n}</option>; })}
+                                                {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                               </select>
                                             </div>
                                           </td>
@@ -3044,9 +3079,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </button>
                                                 <select className="ntib-hidden-select" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
                                                   <option value="">Assignee</option>
-                                                  {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim(); return <option key={u.id} value={n}>{n}</option>; })}
+                                                  {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                 </select>
-                                                {inlineAssignee && <span className="ntib-badge">{initials(inlineAssignee)}</span>}
+                                                {inlineAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === inlineAssignee) || {}).fullName || inlineAssignee)}</span>}
                                               </div>
                                               
                                               <div className="ntib-dropdown-wrapper">
@@ -3150,7 +3185,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                             <th className="cu-th cu-th-name">NAME</th>
                             <th className="cu-th cu-th-assignee">ASSIGNEE</th>
                             <th className="cu-th cu-th-project">PROJECT</th>
-                            <th className="cu-th cu-th-list">TASK LIST</th>
+                            <th className="cu-th cu-th-list">TASK GROUP</th>
                             <th className="cu-th cu-th-delivery">DUE DATE</th>
                             <th className="cu-th cu-th-priority">PRIORITY</th>
                             <th className="cu-th cu-th-actions"></th>
@@ -3174,7 +3209,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#64748b" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                     <select className="cu-inline-dropdown" value={task.assignees || ''} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { await api.put(`/tasks/${task.id}`, { assignees: e.target.value }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }}>
                                       <option value="">Unassigned</option>
-                                      {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim(); return <option key={u.id} value={n}>{n}</option>; })}
+                                      {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                     </select>
                                   </div>
                                 </td>
@@ -3259,9 +3294,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                       </button>
                                       <select className="ntib-hidden-select" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
                                         <option value="">Assignee</option>
-                                        {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim(); return <option key={u.id} value={n}>{n}</option>; })}
+                                        {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                       </select>
-                                      {inlineAssignee && <span className="ntib-badge">{initials(inlineAssignee)}</span>}
+                                      {inlineAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === inlineAssignee) || {}).fullName || inlineAssignee)}</span>}
                                     </div>
                                     
                                     <div className="ntib-dropdown-wrapper">

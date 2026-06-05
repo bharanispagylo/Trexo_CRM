@@ -214,7 +214,7 @@
 
 .action-btn:hover { background: #FEF2F2; }
 
-/* Task List Sub-section */
+/* Task Group Sub-section */
 .task-lists-container {
   padding: 1.5rem;
   background: #F8FAFC;
@@ -379,7 +379,7 @@
   white-space: nowrap;
 }
 
-/* Task Lists */
+/* Task Groups */
 .pln-lists {
   display: flex;
   flex-direction: column;

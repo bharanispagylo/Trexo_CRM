@@ -3,6 +3,7 @@ import "./LoginWithRoles.css";
 import DashboardLayout from "./DashboardLayout";
 import { api } from "../api/client";
 import { PermissionProvider } from "../hooks/usePermissions";
+import { requestForToken } from "../firebase";
 
 // ── Mock Users Database Removed ──────────────────────────────
 
@@ -822,6 +823,12 @@ export default function LoginWithRoles() {
   });
   const [isRegistering, setIsRegistering] = useState(false);
   const [isForgotPwd, setIsForgotPwd] = useState(false);
+
+  useEffect(() => {
+    if (user && user.id) {
+      requestForToken(user.id, api).catch(err => console.error("Error registering FCM token:", err));
+    }
+  }, [user]);
 
   const handleLogin = (u) => {
     setUser(u);

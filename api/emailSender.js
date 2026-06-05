@@ -92,7 +92,7 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
           <!-- Board/Project Info -->
           <div style="margin-bottom: 24px; margin-left: 48px;">
              <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">
-                <strong>Task List:</strong> ${context.boardName || 'To Do'}
+                <strong>Task Group:</strong> ${context.boardName || 'To Do'}
              </div>
              <div style="font-size: 13px; color: #6b7280;">
                 <strong>Project Name:</strong> ${context.projectName || 'General'}

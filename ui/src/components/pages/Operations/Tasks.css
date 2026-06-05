@@ -4003,7 +4003,7 @@
   white-space: nowrap;
 }
 
-/* Task Lists */
+/* Task Groups */
 .tln-lists {
   display: flex;
   flex-direction: column;
@@ -4299,7 +4299,7 @@
   }
 
   .my-tasks-list .cu-td-list::before {
-    content: "Task List";
+    content: "Task Group";
     color: #64748b;
     font-weight: 600;
     font-size: 0.8rem;

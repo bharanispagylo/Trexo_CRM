@@ -10,66 +10,7 @@ datasource db {
   // Use Supabase Dashboard SQL Editor to run schema changes manually
 }
 
-model Employee {
-  id            String   @id
-  name          String
-  role          String?
-  phoneNo       String?  @map("phone_no")
-  emergencyNo   String?  @map("emergency_no")
-  status        String?  @default("Active")
-  type          String?  @default("Employee") // Employee, Contractor, Intern
-  projectName   String?  @default("-")
-  projectStatus String?  @default("Inactive") // Active, Inactive
-  createdAt     DateTime @default(now()) @map("created_at")
-
-  @@map("employees")
-}
-
-model Salary {
-  id         String   @id
-  month      String
-  emps       Int      @default(0)
-  total      String?
-  status     String?  @default("Draft")
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  @@map("salaries")
-}
-
-model Leave {
-  id          String   @id @default(uuid())
-  name        String
-  type        String
-  days        Float    @default(1.0)
-  period      String?
-  dates       String?
-  reason      String?
-  status      String?  @default("Pending")
-  attachments String?
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  @@map("leaves")
-}
-
-model Attendance {
-  id         String   @id @default(uuid())
-  name       String
-  empId      String?  @map("emp_id")
-  role       String?
-  destination String?
-  date       DateTime @db.Date
-  checkIn    String?  @map("checkIn")
-  checkOut   String?  @map("checkOut")
-  breakTime  String?  @map("break_time")
-  totalWorkingHrs String? @map("total_working_hrs")
-  outTimeHrs String? @map("out_time_hrs")
-  status     String?  @default("Present")
-  photoUrl   String?  @map("photo_url")
-  location   String?
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  @@map("attendance")
-}
+// Unused models removed (Employee, Salary, Leave, Attendance)
 
 model Project {
   id              String   @id @default(uuid())
@@ -138,7 +79,8 @@ model ProjectQuery {
   queryId     String   @map("query_id")
   title       String
   description String?  @db.Text
-  sentTo      String?  @map("sent_to")
+  sentToId    String?  @map("sent_to")
+  assignedUser User?   @relation(fields: [sentToId], references: [id])
   status      String?  @default("Open") // Open, In Progress, Closed
   solved      Boolean  @default(false)
   priority    String?  @default("Medium") // Low, Medium, High
@@ -191,12 +133,11 @@ model Task {
   title       String
   description String?
   taskType    String?  @map("task_type")
-  projectName String?  @map("project_name")
   projectId   String?  @map("project_id")
   projectRef  Project? @relation(fields: [projectId], references: [id])
   clientId    String?  @map("client_id")
   clientRef   Client?  @relation(fields: [clientId], references: [id])
-  assignees   String?
+  assignees   String?  // Comma-separated User UUIDs
   dueDate     DateTime?
   status      String?  @default("To Do")
   priority    String?  @default("Medium")
@@ -221,22 +162,14 @@ model Task {
 }
 
 
-model Bug {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  status      String?  @default("Open")
-  imageUrl    String?  @map("image_url")
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  @@map("bugs")
-}
+// Unused Bug model removed
 
 model Comment {
   id        String   @id @default(uuid())
   taskId    String
   text      String
-  author    String
+  authorId  String   @map("author")
+  user      User     @relation(fields: [authorId], references: [id])
   likes     Int      @default(0)
   reactions Json?    @default("{}")
   parentId  String?
@@ -257,14 +190,21 @@ model User {
   email        String?  @unique
   password     String?
   phoneNo      String?  @map("phone_no")
+  emergencyNo  String?  @map("emergency_no")
+  type         String?  @default("Employee") // Employee, Contractor, Intern
+  projectStatus String? @default("Inactive") // Active, Inactive
   empId        String?  @unique @map("emp_id")
   designation  String?
   profileImage String?  @map("profile_image")
   role         String?  @default("User")
   status       String?  @default("Active")
+  fcmToken     String?  @map("fcm_token")
   createdAt    DateTime @default(now()) @map("created_at")
 
   workLogs     WorkLog[]
+  comments     Comment[]
+  queries      ProjectQuery[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -300,6 +240,7 @@ model RolePermission {
 model Notification {
   id        String   @id @default(uuid())
   userId    String   @map("user_id") // the user who receives the notification
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
   message   String
   isRead    Boolean  @default(false) @map("is_read")
@@ -313,11 +254,9 @@ model Report {
   id                 String    @id @default(uuid())
   taskNo             String?   @map("task_no")
   title              String
-  companyName        String?   @map("company_name")
-  projectName        String?   @map("project_name")
   projectId          String?   @map("project_id")
   clientId           String?   @map("client_id")
-  assignees          String?
+  assignees          String?   // Comma-separated User UUIDs
   billableHours      Float     @default(0.0) @map("billable_hours")
   alreadyBilled      Float     @default(0.0) @map("already_billed")
   deliveredDate      DateTime? @map("delivered_date")

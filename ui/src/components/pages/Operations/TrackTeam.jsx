@@ -4,50 +4,26 @@ import { useAlert } from '../../../context/AlertContext';
 import './TrackTeam.css';
 import Tasks from './Tasks';
 
-const isAssigneeMatch = (assigneeStr, employeeName) => {
-  if (!assigneeStr || !employeeName) return false;
-  
-  // Normalize both strings to alphanumeric lowercase to handle spacing, punctuation, and email matches
-  const cleanString = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const empClean = cleanString(employeeName);
-  
-  // Split the assignees list (comma-separated) and clean each name
-  const assigneesList = assigneeStr.split(',').map(a => cleanString(a));
-  
-  return assigneesList.some(assignee => {
-    if (!assignee) return false;
-    // Match if one is a substring of another (handles "Muthukumar" matching "Muthu Kumar" or first name only)
-    return assignee.includes(empClean) || empClean.includes(assignee);
-  });
+const isAssigneeMatch = (assigneeStr, userId) => {
+  if (!assigneeStr || !userId) return false;
+  return assigneeStr.includes(userId);
 };
 
 export default function TrackTeam({ user }) {
-  const { alert, confirm } = useAlert();
-  const [employees, setEmployees] = useState([]);
+  const { alert } = useAlert();
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
   const [viewingEmployeeTasks, setViewingEmployeeTasks] = useState(null);
-  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState('');
   
-  const [newMemberForm, setNewMemberForm] = useState({
-    name: '',
-    role: '',
-    type: 'Employee'
-  });
-
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [empData, taskData, userData] = await Promise.all([
-        api.get('/employees'),
+      const [taskData, userData] = await Promise.all([
         api.get('/tasks'),
         api.get('/users')
       ]);
-      setEmployees(empData || []);
       setTasks(taskData || []);
       setUsers(userData || []);
     } catch (err) {
@@ -61,81 +37,7 @@ export default function TrackTeam({ user }) {
     fetchData();
   }, []);
 
-  const handleUserSelectChange = (e) => {
-    const userId = e.target.value;
-    setSelectedUserId(userId);
-    const foundUser = users.find(u => u.id === userId);
-    if (foundUser) {
-      const displayName = foundUser.fullName || `${foundUser.firstName || ''} ${foundUser.lastName || ''}`.trim();
-      setNewMemberForm({
-        name: displayName,
-        role: foundUser.designation || '',
-        type: foundUser.role === 'Admin' ? 'Team Lead' : 'Employee'
-      });
-    } else {
-      setNewMemberForm({
-        name: '',
-        role: '',
-        type: 'Employee'
-      });
-    }
-  };
-
-  const handleDeleteMember = (id, name) => {
-    confirm(`Are you sure you want to remove ${name} from the tracking dashboard?`, async () => {
-      setLoading(true);
-      try {
-        await api.delete(`/employees/${id}`);
-        alert('Team member removed successfully!', 'success', 'Success');
-        await fetchData();
-      } catch (err) {
-        console.error('Delete error:', err);
-        alert('Failed to remove team member: ' + err.message, 'error', 'Error');
-      } finally {
-        setLoading(false);
-      }
-    }, 'Remove Team Member');
-  };
-
-  const handleAddMember = async (e) => {
-    e.preventDefault();
-    if (!newMemberForm.name.trim() || !newMemberForm.role.trim()) {
-      alert('Please select an employee and specify their role/designation.', 'warning', 'Missing Fields');
-      return;
-    }
-    
-    setIsSaving(true);
-    try {
-      await api.post('/employees', {
-        id: `EMP-${Date.now().toString().slice(-3)}`,
-        name: newMemberForm.name,
-        role: newMemberForm.role,
-        phoneNo: '',
-        emergencyNo: '',
-        status: 'Active',
-        type: newMemberForm.type,
-        projectName: '-',
-        projectStatus: 'Inactive'
-      });
-      
-      alert('Team member added successfully to tracking dashboard!', 'success', 'Success');
-      setNewMemberForm({
-        name: '',
-        role: '',
-        type: 'Employee'
-      });
-      setSelectedUserId('');
-      setShowAddMemberModal(false);
-      await fetchData();
-    } catch (err) {
-      console.error('Insert error:', err);
-      alert('Failed to add team member: ' + err.message, 'error', 'Error');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Adding Member...' : 'Loading Tracker Dashboard...'}</div>;
+  if (loading) return <div className="loading-screen">Loading Tracker Dashboard...</div>;
 
   if (viewingEmployeeTasks) {
     return (
@@ -162,7 +64,7 @@ export default function TrackTeam({ user }) {
         </div>
         <Tasks 
           user={user}
-          initialAssigneeFilter={viewingEmployeeTasks}
+          initialAssigneeFilter={viewingEmployeeTasks.id}
           onClearAssigneeFilter={() => setViewingEmployeeTasks(null)}
         />
       </div>
@@ -171,7 +73,7 @@ export default function TrackTeam({ user }) {
 
   // Filter tasks assigned to currently selected member
   const selectedMemberTasks = selectedMember 
-    ? tasks.filter(t => isAssigneeMatch(t.assignees, selectedMember.name))
+    ? tasks.filter(t => isAssigneeMatch(t.assignees, selectedMember.id))
     : [];
 
   return (
@@ -184,17 +86,6 @@ export default function TrackTeam({ user }) {
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button 
                 className="saas-btn-submit" 
-                style={{ background: '#2563eb', padding: '0.5rem 1.25rem', fontSize: '0.85rem', color: 'white', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600' }}
-                onClick={() => {
-                  setSelectedUserId('');
-                  setNewMemberForm({ name: '', role: '', type: 'Employee' });
-                  setShowAddMemberModal(true);
-                }}
-              >
-                + Add Member
-              </button>
-              <button 
-                className="saas-btn-submit" 
                 style={{ background: 'white', border: '1px solid #cbd5e1', padding: '0.5rem 1rem', fontSize: '0.85rem', color: '#475569', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center' }}
                 onClick={fetchData}
               >
@@ -204,9 +95,9 @@ export default function TrackTeam({ user }) {
             </div>
           </div>
 
-          {employees.length === 0 ? (
+          {users.length === 0 ? (
             <div style={{ padding: '3rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', textAlign: 'center', color: '#94a3b8' }}>
-              No employees currently registered.
+              No users currently registered.
             </div>
           ) : (
             <div className="team-list-container">
@@ -219,43 +110,39 @@ export default function TrackTeam({ user }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {employees.map(emp => (
-                    <tr key={emp.id}>
-                      <td>
-                        <div className="td-member-info">
-                          <div className="member-avatar-sm">
-                            {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                  {users.map(u => {
+                    const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
+                    return (
+                      <tr key={u.id}>
+                        <td>
+                          <div className="td-member-info">
+                            <div className="member-avatar-sm">
+                              {displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                            </div>
+                            <span className="member-name-text">{displayName}</span>
                           </div>
-                          <span className="member-name-text">{emp.name}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="role-tag-mini">{emp.role}</span>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                          <button 
-                            className="member-action-btn-sm" 
-                            title="View Assigned Tasks"
-                            onClick={() => setViewingEmployeeTasks(emp.name)}
-                          >
-                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                            View Tasks
-                          </button>
-                          <button 
-                            className="member-delete-icon-btn" 
-                            title="Remove Member"
-                            onClick={() => handleDeleteMember(emp.id, emp.name)}
-                          >
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'block' }}>
-                              <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td>
+                          <span className="role-tag-mini">{u.designation || u.role || 'Member'}</span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            <button 
+                              className="member-action-btn-sm" 
+                              title="View Assigned Tasks"
+                              onClick={() => {
+                                setViewingEmployeeTasks(u);
+                                setSelectedMember(u);
+                              }}
+                            >
+                              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                              View Tasks
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -263,74 +150,8 @@ export default function TrackTeam({ user }) {
         </div>
       </div>
 
-      {/* ADD MEMBER MODAL */}
-      {showAddMemberModal && (
-        <div className="activity-detail-modal" onClick={() => setShowAddMemberModal(false)}>
-          <div className="modal-content-card animate-slide-up" onClick={e => e.stopPropagation()} style={{ width: '450px' }}>
-            <div className="modal-header">
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800' }}>Add Team Member</h3>
-              <button className="modal-close" onClick={() => setShowAddMemberModal(false)}>✕</button>
-            </div>
-
-            <form onSubmit={handleAddMember}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '1.5rem' }}>
-                <div className="saas-field">
-                  <label className="saas-label">Employee Name *</label>
-                  <select 
-                    className="saas-select"
-                    value={selectedUserId}
-                    onChange={handleUserSelectChange}
-                    required
-                  >
-                    <option value="">-- Select Registered User --</option>
-                    {users.map(u => {
-                      const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim();
-                      return (
-                        <option key={u.id} value={u.id}>
-                          {displayName} {u.email ? `(${u.email})` : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                <div className="saas-field">
-                  <label className="saas-label">Role in project *</label>
-                  <input 
-                    type="text" 
-                    className="saas-input"
-                    placeholder="e.g. Frontend Engineer"
-                    value={newMemberForm.role}
-                    onChange={e => setNewMemberForm({ ...newMemberForm, role: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #f1f5f9', paddingTop: '1rem' }}>
-                <button 
-                  type="button" 
-                  className="saas-btn-cancel" 
-                  style={{ background: 'white', border: '1px solid #cbd5e1', padding: '0.6rem 1.25rem', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
-                  onClick={() => setShowAddMemberModal(false)}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="saas-btn-submit"
-                  style={{ background: '#2563eb', padding: '0.6rem 1.5rem', color: 'white', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600' }}
-                >
-                  Save Member
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* DETAIL & ASSIGNED TASKS MODAL */}
-      {selectedMember && (
+      {selectedMember && !viewingEmployeeTasks && (
         <div className="activity-detail-modal" onClick={() => setSelectedMember(null)}>
           <div className="modal-content-card animate-slide-up" onClick={e => e.stopPropagation()} style={{ width: '700px', maxWidth: '95%' }}>
             <div className="modal-header">
@@ -340,11 +161,11 @@ export default function TrackTeam({ user }) {
             
             <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1.25rem' }}>
               <div className="member-avatar-lg" style={{ width: '60px', height: '60px', fontSize: '1.3rem' }}>
-                {selectedMember.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                {(selectedMember.fullName || selectedMember.firstName || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
               </div>
               <div style={{ flex: 1 }}>
-                <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1.15rem', fontWeight: '800' }}>{selectedMember.name}</h4>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>{selectedMember.role} • ID: #{selectedMember.id} • {selectedMember.type || 'Employee'}</p>
+                <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1.15rem', fontWeight: '800' }}>{selectedMember.fullName || `${selectedMember.firstName || ''} ${selectedMember.lastName || ''}`.trim()}</h4>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>{selectedMember.designation || selectedMember.role} • ID: #{selectedMember.id.substring(0, 8)} • {selectedMember.type || 'Employee'}</p>
               </div>
             </div>
 

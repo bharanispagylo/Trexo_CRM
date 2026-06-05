@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
 import './DashboardLayout.css';
 import { usePermissions } from '../hooks/usePermissions';
-import Salary from './pages/HR/Salary';
 import Projects from './pages/Operations/Projects';
 import TrackTeam from './pages/Operations/TrackTeam';
 import Tasks from './pages/Operations/Tasks';
@@ -13,9 +12,8 @@ import Roles from './pages/Administration/Roles';
 import AddUser from './pages/Administration/AddUser';
 import EditUser from './pages/Administration/EditUser';
 import Reports from './pages/Administration/Reports';
-
-
-
+import { useAlert } from '../context/AlertContext';
+import { onMessageListener } from '../firebase';
 export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const [activeTab, setActiveTab] = useState(() => {
     const path = window.location.pathname.substring(1);
@@ -63,9 +61,9 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
   const fetchNotifications = async () => {
     try {
-      const name = user?.fullName || user?.name;
-      if (!name) return;
-      const data = await api.get(`/notifications/${encodeURIComponent(name)}`);
+      const id = user?.id;
+      if (!id) return;
+      const data = await api.get(`/notifications/${encodeURIComponent(id)}`);
       setNotifications(data || []);
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
@@ -79,6 +77,21 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  const alert = useAlert();
+
+  useEffect(() => {
+    const unsubscribe = onMessageListener((payload) => {
+      const title = payload?.notification?.title || 'New Notification';
+      const body = payload?.notification?.body || 'You have a new update.';
+      alert(body, 'info', title);
+      fetchNotifications(); // Refresh dropdown
+    });
+    
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
   const handleMarkAsRead = async (id) => {
     try {
       await api.put(`/notifications/${id}/read`);
@@ -90,9 +103,9 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
   const handleMarkAllAsRead = async () => {
     try {
-      const name = user?.fullName || user?.name;
-      if (!name) return;
-      await api.put(`/notifications/user/${encodeURIComponent(name)}/read-all`);
+      const id = user?.id;
+      if (!id) return;
+      await api.put(`/notifications/user/${encodeURIComponent(id)}/read-all`);
       fetchNotifications();
     } catch (err) {
       console.error('Failed to mark all notifications as read:', err);
@@ -178,7 +191,6 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'salary': return <Salary user={user} />;
       case 'projects': 
         if (!can('projects', 'view') && user?.role?.toLowerCase() !== 'admin') {
           return renderOverview(setActiveTab, (taskData) => {

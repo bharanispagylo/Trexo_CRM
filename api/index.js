@@ -97,6 +97,8 @@ prisma.$connect()
   })
   .catch(console.error);
 
+const { sendPushNotification } = require('./firebaseSender');
+
 // Helper to create notifications for multiple users
 const createNotification = async (userIds, title, message) => {
   if (!userIds || !prisma.notification) return;
@@ -107,6 +109,8 @@ const createNotification = async (userIds, title, message) => {
         data: { userId: user, title, message }
       });
     }
+    // Fire off FCM push notification asynchronously
+    sendPushNotification(userIds, title, message, prisma).catch(err => console.error('FCM Error:', err));
   } catch (err) {
     console.error('[Notification Error]', err.message);
   }
@@ -384,6 +388,20 @@ app.post('/api/forgot-password', async (req, res) => {
   } catch (error) {
     console.error('POST /api/forgot-password error:', error);
     res.status(500).json({ error: 'Failed to process request', details: error.message });
+  }
+});
+app.post('/api/users/update-fcm-token', async (req, res) => {
+  try {
+    const { userId, fcmToken } = req.body;
+    if (!userId || !fcmToken) return res.status(400).json({ error: 'Missing userId or fcmToken' });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { fcmToken }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('POST /api/users/update-fcm-token error:', error);
+    res.status(500).json({ error: 'Failed to update FCM token', details: error.message });
   }
 });
 
@@ -1606,3 +1624,4 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
