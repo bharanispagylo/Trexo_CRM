@@ -1241,7 +1241,8 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                   {workLogs.filter(log => log.isBilled).length === 0 ? (
                     <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No billing logs found for this task.</p>
                   ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <div className="table-responsive">
+<table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                       <thead>
                         <tr style={{ background: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
                           <th style={{ padding: '0.75rem', fontWeight: 600 }}>Date</th>
@@ -1280,6 +1281,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                         ))}
                       </tbody>
                     </table>
+</div>
                   )}
                 </div>
                 </>
@@ -1323,7 +1325,8 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
 
                 {/* Table Block */}
                 <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', maxWidth: '100%', margin: '0 auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
+                  <div className="table-responsive">
+<table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                         <th style={{ width: '32%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Name</th>
@@ -1472,6 +1475,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
                       )}
                     </tbody>
                   </table>
+</div>
                   
                   {/* End of list Footer block centered */}
                   {form.attachments && form.attachments.split(',').filter(Boolean).length > 0 && (
@@ -2965,7 +2969,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                             {/* Task Table */}
                             {!isCollapsed && (
                               <div className="cu-table-wrapper">
-                                <table className="cu-table">
+                                <div className="table-responsive">
+<table className="cu-table">
                                   <thead>
                                     <tr className="cu-thead-row">
                                       <th className="cu-th cu-th-name">NAME</th>
@@ -3120,6 +3125,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                     )}
                                   </tbody>
                                 </table>
+</div>
                               </div>
                             )}
                           </div>
@@ -3179,7 +3185,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                   {/* Task Table */}
                   {!isCollapsed && (
                     <div className="cu-table-wrapper">
-                      <table className="cu-table">
+                      <div className="table-responsive">
+<table className="cu-table">
                         <thead>
                           <tr className="cu-thead-row">
                             <th className="cu-th cu-th-name">NAME</th>
@@ -3335,6 +3342,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           )}
                         </tbody>
                       </table>
+</div>
                     </div>
                   )}
                 </div>

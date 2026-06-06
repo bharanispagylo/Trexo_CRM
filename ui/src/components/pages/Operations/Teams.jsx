@@ -79,7 +79,8 @@ export default function Teams() {
       )}
 
       <div className="data-card" style={{ padding: 0, overflow: 'auto' }}>
-        <table className="data-table">
+        <div className="table-responsive">
+<table className="data-table">
           <thead>
             <tr>
               <th>Team Name</th>
@@ -114,6 +115,7 @@ export default function Teams() {
             )}
           </tbody>
         </table>
+</div>
       </div>
     </div>
   );

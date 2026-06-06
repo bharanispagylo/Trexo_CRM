@@ -277,7 +277,8 @@ export default function Roles() {
         )}
 
         <div className={`permissions-grid-container ${!isEditing ? 'readonly' : ''}`}>
-          <table className="sketch-table">
+          <div className="table-responsive">
+<table className="sketch-table">
             <thead>
               <tr>
                 <th>Permission</th>
@@ -324,6 +325,7 @@ export default function Roles() {
               })}
             </tbody>
           </table>
+</div>
         </div>
       </div>
     </div>

@@ -102,15 +102,42 @@ const { sendPushNotification } = require('./firebaseSender');
 // Helper to create notifications for multiple users
 const createNotification = async (userIds, title, message) => {
   if (!userIds || !prisma.notification) return;
-  const users = (typeof userIds === 'string' ? userIds.split(',') : userIds).map(u => u.trim()).filter(Boolean);
+  const usersOrNames = (typeof userIds === 'string' ? userIds.split(',') : userIds).map(u => u.trim()).filter(Boolean);
+  
+  if (usersOrNames.length === 0) return;
+
   try {
-    for (const user of users) {
+    const validUserIds = [];
+    const isUUID = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+    
+    for (const item of usersOrNames) {
+      if (isUUID(item)) {
+        validUserIds.push(item);
+      } else {
+        const nameWithSpaces = item.replace(/_/g, ' ');
+        const foundUser = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { fullName: { contains: nameWithSpaces, mode: 'insensitive' } },
+              { firstName: { contains: nameWithSpaces, mode: 'insensitive' } },
+              { lastName: { contains: nameWithSpaces, mode: 'insensitive' } }
+            ]
+          }
+        });
+        if (foundUser) validUserIds.push(foundUser.id);
+      }
+    }
+
+    // De-duplicate validUserIds
+    const uniqueUserIds = [...new Set(validUserIds)];
+
+    for (const uid of uniqueUserIds) {
       await prisma.notification.create({
-        data: { userId: user, title, message }
+        data: { userId: uid, title, message }
       });
     }
     // Fire off FCM push notification asynchronously
-    sendPushNotification(userIds, title, message, prisma).catch(err => console.error('FCM Error:', err));
+    sendPushNotification(uniqueUserIds, title, message, prisma).catch(err => console.error('FCM Error:', err));
   } catch (err) {
     console.error('[Notification Error]', err.message);
   }
@@ -130,13 +157,18 @@ const notifyEmailsByNames = async (userIds, subject, message, type) => {
   try {
     const users = await prisma.user.findMany({
       where: {
-        OR: names.map(name => ({
-          OR: [
-            { fullName: { contains: name, mode: 'insensitive' } },
-            { firstName: { contains: name, mode: 'insensitive' } },
-            { lastName: { contains: name, mode: 'insensitive' } }
-          ]
-        }))
+        OR: names.map(name => {
+          const nameWithSpaces = name.replace(/_/g, ' ');
+          return {
+            OR: [
+              { id: name },
+              { fullName: { contains: nameWithSpaces, mode: 'insensitive' } },
+              { firstName: { contains: nameWithSpaces, mode: 'insensitive' } },
+              { lastName: { contains: nameWithSpaces, mode: 'insensitive' } },
+              { email: { contains: name, mode: 'insensitive' } }
+            ]
+          };
+        })
       }
     });
 
@@ -878,6 +910,15 @@ app.put('/api/tasks/:id', async (req, res) => {
     // Notify assignees about task update
     if (task.assignees) {
       createNotification(task.assignees, `Task Updated: ${task.title}`, `Task has been updated by a team member.`);
+      const { taskListName, projectName } = await getTaskDetailsForEmail(task);
+      notifyEmailsByNames(task.assignees, `Task Updated: ${task.title}`, {
+        author: 'A team member',
+        action: 'updated or reassigned you to',
+        itemTitle: task.title,
+        boardName: taskListName,
+        projectName: projectName,
+        buttonText: 'View Item'
+      }, 'task');
     }
 
     res.json(task);
@@ -909,9 +950,14 @@ app.get('/api/tasks/:id/comments', async (req, res) => {
   try {
     const comments = await prisma.comment.findMany({
       where: { taskId: req.params.id },
+      include: { user: true },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(comments);
+    const mapped = comments.map(c => ({
+      ...c,
+      author: c.user?.fullName || c.user?.firstName || 'Anonymous'
+    }));
+    res.json(mapped);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1020,28 +1066,51 @@ app.delete('/api/worklogs/:logId', async (req, res) => {
 
 app.post('/api/tasks/:id/comments', async (req, res) => {
   try {
+    const authorName = req.body.author || 'Anonymous';
+    
+    // Find the author's user ID since Prisma requires it
+    const userRecord = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { fullName: authorName },
+          { firstName: authorName },
+          { lastName: authorName },
+          { email: authorName }
+        ]
+      }
+    });
+
+    let authorId = userRecord?.id;
+    if (!authorId) {
+       const fallbackUser = await prisma.user.findFirst();
+       authorId = fallbackUser?.id;
+    }
+
     const comment = await prisma.comment.create({
       data: {
         taskId: req.params.id,
         text: req.body.text,
-        author: req.body.author || 'Anonymous',
+        authorId: authorId,
         parentId: req.body.parentId || null
-      }
+      },
+      include: { user: true }
     });
+
+    const commentAuthorName = comment.user?.fullName || comment.user?.firstName || authorName;
 
     // Notify assignees about the new comment
     try {
       const task = await prisma.task.findUnique({ where: { id: req.params.id } });
       if (task && task.assignees) {
         // Exclude the author from notifications
-        const assignees = task.assignees.split(',').map(a => a.trim()).filter(a => a && a.toLowerCase() !== comment.author.toLowerCase());
-        createNotification(assignees, `New Comment on ${task.title}`, `${comment.author} commented: "${comment.text.substring(0, 30)}..."`);
+        const assignees = task.assignees.split(',').map(a => a.trim()).filter(a => a && a.toLowerCase() !== (authorId || '').toLowerCase());
+        createNotification(assignees, `New Comment on ${task.title}`, `${commentAuthorName} commented: "${comment.text.substring(0, 30)}..."`);
         
         const { taskListName, projectName } = await getTaskDetailsForEmail(task);
 
         // Email assignees about the comment
         notifyEmailsByNames(assignees, `New Comment on ${task.title}`, {
-          author: comment.author,
+          author: commentAuthorName,
           action: 'commented on',
           itemTitle: task.title,
           boardName: taskListName,
@@ -1055,7 +1124,7 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
       const mentions = comment.text.match(/@([a-zA-Z0-9_]+)/g);
       if (mentions) {
         const mentionedNames = mentions.map(m => m.substring(1));
-        createNotification(mentionedNames, `You were mentioned in ${task ? task.title : 'a task'}`, `${comment.author} mentioned you: "${comment.text.substring(0, 30)}..."`);
+        createNotification(mentionedNames, `You were mentioned in ${task ? task.title : 'a task'}`, `${commentAuthorName} mentioned you: "${comment.text.substring(0, 30)}..."`);
         
         let taskListName = 'Tasks Board';
         let projectName = 'General';
@@ -1066,7 +1135,7 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
         }
 
         notifyEmailsByNames(mentionedNames, `You were mentioned in ${task ? task.title : 'a task'}`, {
-          author: comment.author,
+          author: commentAuthorName,
           action: 'mentioned you in an update on',
           itemTitle: task ? task.title : 'a task',
           boardName: taskListName,
@@ -1079,7 +1148,10 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
       console.error('Failed to send comment notification', e);
     }
 
-    res.json(comment);
+    res.json({
+      ...comment,
+      author: commentAuthorName
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

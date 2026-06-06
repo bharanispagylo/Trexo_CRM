@@ -323,7 +323,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       <aside className={`saas-sidebar-nav ${sidebarOpen ? 'open' : ''}`}>
         <div className="saas-sidebar-header">
           <div className="saas-brand">
-            <div className="saas-logo spagylo-logo">S</div>
+            <img src="https://engage-socially.s3.ap-south-1.amazonaws.com/static-images/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.5rem', height: 'auto', objectFit: 'contain' }} />
             <div className="saas-brand-text">
               <div className="saas-company">Spagylo CRM</div>
               <div className="saas-user-role">{user?.role || 'Admin'}</div>

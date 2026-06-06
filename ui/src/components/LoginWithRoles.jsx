@@ -90,48 +90,26 @@ function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }) {
         <div className="login-bg-glow-2" />
 
         <div className="logo-container">
-          <div className="logo-icon">O</div>
+          <img src="https://engage-socially.s3.ap-south-1.amazonaws.com/static-images/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.75rem', height: 'auto', objectFit: 'contain' }} />
           <div>
-            <div className="logo-text">OfficeCRM</div>
-            <div className="logo-subtext">Employee Management Portal</div>
+            <div className="logo-text">Spagylo CRM</div>
           </div>
         </div>
 
-        <div className="login-center-content">
-          <div className="login-badge">Secure Role-Based Access</div>
-          <h2 className="login-title">
-            One portal.<br />
-            <span className="login-title-highlight">Two roles.</span><br />
-            Seamless access.
-          </h2>
-          <p className="login-desc">
-            Administrators manage the full workforce. Employees access their own profile, leave, and documents — all from a single secure login.
-          </p>
 
-          <div className="role-cards">
-            <div className="role-card">
-              <div className="role-card-title">Admin</div>
-              <div className="role-card-desc">Full workforce control & reporting</div>
-            </div>
-            <div className="role-card">
-              <div className="role-card-title">Employee</div>
-              <div className="role-card-desc">Personal profile & self-service</div>
-            </div>
-          </div>
-        </div>
 
-        <div className="login-footer">© 2025 OfficeCRM · All rights reserved</div>
+        <div className="login-footer">© 2025 Spagylo CRM · All rights reserved</div>
       </div>
 
       {/* Right panel — login form */}
       <div className="login-right-panel">
         <div className="mobile-logo">
-          <div className="logo-icon logo-icon-sm">O</div>
-          <div className="logo-text logo-text-lg">OfficeCRM</div>
+          <img src="https://engage-socially.s3.ap-south-1.amazonaws.com/static-images/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.25rem', height: 'auto', objectFit: 'contain' }} />
+          <div className="logo-text logo-text-lg">Spagylo CRM</div>
         </div>
 
         <div className="login-form-container">
-          <h1 className="login-heading">Welcome back</h1>
+          <h1 className="login-heading">Welcome</h1>
           <p className="login-subheading">Sign in to your account to continue</p>
 
           {error && (
@@ -273,32 +251,21 @@ function RegisterPage({ onRegister, onLoginClick }) {
         <div className="login-bg-glow-2" />
 
         <div className="logo-container">
-          <div className="logo-icon">O</div>
+          <img src="https://engage-socially.s3.ap-south-1.amazonaws.com/static-images/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.75rem', height: 'auto', objectFit: 'contain' }} />
           <div>
-            <div className="logo-text">OfficeCRM</div>
-            <div className="logo-subtext">Employee Management Portal</div>
+            <div className="logo-text">Spagylo CRM</div>
           </div>
         </div>
 
-        <div className="login-center-content">
-          <div className="login-badge">Join Our Team</div>
-          <h2 className="login-title">
-            Start your journey.<br />
-            <span className="login-title-highlight">Register today.</span><br />
-            Seamless onboarding.
-          </h2>
-          <p className="login-desc">
-            Create an account to access the full suite of tools and manage your profile with ease.
-          </p>
-        </div>
-        <div className="login-footer">© 2025 OfficeCRM · All rights reserved</div>
+
+        <div className="login-footer">© 2025 Spagylo CRM · All rights reserved</div>
       </div>
 
       {/* Right panel */}
       <div className="login-right-panel">
         <div className="mobile-logo">
-          <div className="logo-icon logo-icon-sm">O</div>
-          <div className="logo-text logo-text-lg">OfficeCRM</div>
+          <img src="https://engage-socially.s3.ap-south-1.amazonaws.com/static-images/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.25rem', height: 'auto', objectFit: 'contain' }} />
+          <div className="logo-text logo-text-lg">Spagylo CRM</div>
         </div>
 
         <div className="login-form-container">
@@ -412,32 +379,21 @@ function ForgotPasswordPage({ onBackToLogin }) {
         <div className="login-bg-glow-2" />
 
         <div className="logo-container">
-          <div className="logo-icon">O</div>
+          <img src="https://engage-socially.s3.ap-south-1.amazonaws.com/static-images/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.75rem', height: 'auto', objectFit: 'contain' }} />
           <div>
-            <div className="logo-text">OfficeCRM</div>
-            <div className="logo-subtext">Employee Management Portal</div>
+            <div className="logo-text">Spagylo CRM</div>
           </div>
         </div>
 
-        <div className="login-center-content">
-          <div className="login-badge">Account Recovery</div>
-          <h2 className="login-title">
-            Forgot Password?<br />
-            <span className="login-title-highlight">We've got you.</span><br />
-            Secure reset.
-          </h2>
-          <p className="login-desc">
-            Enter your email address and a new password to instantly securely reset your account access.
-          </p>
-        </div>
-        <div className="login-footer">© 2026 OfficeCRM · All rights reserved</div>
+
+        <div className="login-footer">© 2026 Spagylo CRM · All rights reserved</div>
       </div>
 
       {/* Right panel */}
       <div className="login-right-panel">
         <div className="mobile-logo">
-          <div className="logo-icon logo-icon-sm">O</div>
-          <div className="logo-text logo-text-lg">OfficeCRM</div>
+          <img src="https://engage-socially.s3.ap-south-1.amazonaws.com/static-images/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.25rem', height: 'auto', objectFit: 'contain' }} />
+          <div className="logo-text logo-text-lg">Spagylo CRM</div>
         </div>
 
         <div className="login-form-container">

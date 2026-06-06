@@ -72,7 +72,8 @@ export default function Users({ onAddUser, onEditUser }) {
       </div>
 
       <div className="users-list-container">
-        <table className="users-list-table">
+        <div className="table-responsive">
+<table className="users-list-table">
           <thead>
             <tr>
               <th>Profile</th>
@@ -150,6 +151,7 @@ export default function Users({ onAddUser, onEditUser }) {
             ))}
           </tbody>
         </table>
+</div>
       </div>
     </div>
   );

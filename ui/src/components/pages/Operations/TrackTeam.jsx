@@ -99,7 +99,8 @@ export default function TrackTeam({ user }) {
             </div>
           ) : (
             <div className="team-list-container">
-              <table className="team-list-table">
+              <div className="table-responsive">
+<table className="team-list-table">
                 <thead>
                   <tr>
                     <th>Member</th>
@@ -143,6 +144,7 @@ export default function TrackTeam({ user }) {
                   })}
                 </tbody>
               </table>
+</div>
             </div>
           )}
         </div>
@@ -177,7 +179,8 @@ export default function TrackTeam({ user }) {
               </h4>
 
               <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', maxHeight: '250px', overflowY: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+                <div className="table-responsive">
+<table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                       <th style={{ padding: '0.75rem 1rem', color: '#475569', fontWeight: '700' }}>Task</th>
@@ -229,6 +232,7 @@ export default function TrackTeam({ user }) {
                     )}
                   </tbody>
                 </table>
+</div>
               </div>
             </div>
 
