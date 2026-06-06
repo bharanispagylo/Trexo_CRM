@@ -174,6 +174,79 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
   }
 }
 
+/**
+ * Send a Password Reset OTP email via AWS SES
+ * @param {string} to - recipient email
+ * @param {string|number} otp - 6-digit OTP code
+ */
+async function sendOtpEmail(to, otp) {
+  if (!to) return false;
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f4f5f7; padding: 40px 20px;">
+      <div style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <div style="border-top: 4px solid #2563eb; text-align: center; padding: 20px 0; border-bottom: 1px solid #e5e7eb;">
+          <h1 style="margin:0; font-size:20px; font-weight:700; color:#1a1d1f;">
+             Trexo CRM Password Reset
+          </h1>
+        </div>
+        <div style="padding: 32px 40px; text-align: center;">
+          <h2 style="color: #1f2937; margin-bottom: 8px;">Verification Code</h2>
+          <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin-bottom: 24px;">
+            Please use the verification code below to reset your password. This OTP is valid for 10 minutes.
+          </p>
+          <div style="display: inline-block; background-color: #f3f4f6; color: #111827; font-size: 32px; font-weight: 700; letter-spacing: 6px; padding: 12px 36px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 24px;">
+            ${otp}
+          </div>
+          <p style="color: #9ca3af; font-size: 13px; margin: 0;">
+            If you did not request a password reset, please ignore this email.
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  let recipients = [to];
+  if (process.env.NODE_ENV === 'DEV' || process.env.NODE_ENV === 'development') {
+    const devEmails = getDevEmails();
+    if (devEmails.length > 0) {
+      recipients = devEmails;
+    }
+  }
+
+  const fromAddress = process.env.EMAIL_FROM || '"Admin" <admin@spagylo.com>';
+
+  const emailParams = {
+    Destination: {
+      ToAddresses: recipients,
+    },
+    Message: {
+      Body: {
+        Html: {
+          Charset: 'UTF-8',
+          Data: html,
+        },
+      },
+      Subject: {
+        Charset: 'UTF-8',
+        Data: 'Your Password Reset OTP - Trexo CRM',
+      },
+    },
+    Source: fromAddress,
+  };
+
+  try {
+    const data = await ses.sendEmail(emailParams).promise();
+    console.log(`[Mailer] OTP Email sent successfully to ${recipients.join(', ')}. Message ID: ${data.MessageId}`);
+    return true;
+  } catch (mailErr) {
+    console.warn(`[Mailer Warning] Failed to send OTP email via SES to ${recipients.join(', ')}: ${mailErr.message}`);
+    return false;
+  }
+}
+
 module.exports = {
-  sendNotificationEmail
+  sendNotificationEmail,
+  sendOtpEmail
 };
+

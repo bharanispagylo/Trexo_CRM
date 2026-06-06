@@ -31,11 +31,15 @@ const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 require('dotenv').config();
-const { sendNotificationEmail } = require('./emailSender');
+const { sendNotificationEmail, sendOtpEmail } = require('./emailSender');
 
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 5000;
+
+// In-memory store for Forgot Password OTP codes
+const otpStore = new Map();
+
 
 // Self-healing database column verification
 prisma.$connect()
@@ -400,26 +404,120 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-app.post('/api/forgot-password', async (req, res) => {
+app.post('/api/forgot-password/request-otp', async (req, res) => {
   try {
-    const { email, newPassword } = req.body;
-    if (!email || !newPassword) return res.status(400).json({ error: 'Email and new password are required' });
-    
-    const user = await prisma.user.findUnique({ where: { email } });
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    // Normalize email
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (!user) {
+      return res.status(404).json({ error: 'User with this email does not exist.' });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store in otpStore (valid for 10 minutes)
+    otpStore.set(normalizedEmail, {
+      otp,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+      verified: false
+    });
+
+    // Send email
+    const emailSent = await sendOtpEmail(user.email, otp);
+    if (!emailSent) {
+      return res.status(500).json({ error: 'Failed to send OTP email. Please try again.' });
+    }
+
+    console.log(`[OTP] Generated OTP ${otp} for email ${normalizedEmail}`);
+    res.json({ message: 'OTP verification code has been sent to your email.' });
+  } catch (error) {
+    console.error('POST /api/forgot-password/request-otp error:', error);
+    res.status(500).json({ error: 'Failed to request OTP', details: error.message });
+  }
+});
+
+app.post('/api/forgot-password/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required' });
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const entry = otpStore.get(normalizedEmail);
+
+    if (!entry) {
+      return res.status(400).json({ error: 'No OTP requested for this email.' });
+    }
+
+    if (Date.now() > entry.expiresAt) {
+      otpStore.delete(normalizedEmail);
+      return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+    }
+
+    if (entry.otp !== otp.trim()) {
+      return res.status(400).json({ error: 'Invalid OTP code. Please try again.' });
+    }
+
+    // Mark as verified and set a fresh expiration (e.g. 5 minutes to complete the reset)
+    otpStore.set(normalizedEmail, {
+      ...entry,
+      verified: true,
+      expiresAt: Date.now() + 5 * 60 * 1000
+    });
+
+    res.json({ message: 'OTP verified successfully. You can now reset your password.' });
+  } catch (error) {
+    console.error('POST /api/forgot-password/verify-otp error:', error);
+    res.status(500).json({ error: 'Failed to verify OTP', details: error.message });
+  }
+});
+
+app.post('/api/forgot-password/reset-password', async (req, res) => {
+  try {
+    const { email, newPassword, confirmPassword } = req.body;
+    if (!email || !newPassword || !confirmPassword) {
+      return res.status(400).json({ error: 'Email, new password, and confirm password are required' });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'Passwords do not match.' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const entry = otpStore.get(normalizedEmail);
+
+    if (!entry || !entry.verified) {
+      return res.status(400).json({ error: 'OTP verification is required before resetting password.' });
+    }
+
+    if (Date.now() > entry.expiresAt) {
+      otpStore.delete(normalizedEmail);
+      return res.status(400).json({ error: 'Session expired. Please start the process again.' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     await prisma.user.update({
-      where: { email },
+      where: { email: normalizedEmail },
       data: { password: newPassword }
     });
-    
-    console.log(`Password reset directly for: ${email}`);
+
+    // Clear from OTP store
+    otpStore.delete(normalizedEmail);
+
+    console.log(`Password reset successfully via OTP for: ${normalizedEmail}`);
     res.json({ message: 'Password has been successfully reset.' });
   } catch (error) {
-    console.error('POST /api/forgot-password error:', error);
-    res.status(500).json({ error: 'Failed to process request', details: error.message });
+    console.error('POST /api/forgot-password/reset-password error:', error);
+    res.status(500).json({ error: 'Failed to reset password', details: error.message });
   }
 });
 app.post('/api/users/update-fcm-token', async (req, res) => {
