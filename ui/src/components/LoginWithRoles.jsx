@@ -90,7 +90,7 @@ function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }) {
         <div className="login-bg-glow-2" />
 
         <div className="logo-container">
-          <img src="https://engage-socially.s3.ap-south-1.amazonaws.com/static-images/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.75rem', height: 'auto', objectFit: 'contain' }} />
+          <img src="/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.75rem', height: 'auto', objectFit: 'contain' }} />
           <div>
             <div className="logo-text">Spagylo CRM</div>
           </div>
@@ -104,7 +104,7 @@ function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }) {
       {/* Right panel — login form */}
       <div className="login-right-panel">
         <div className="mobile-logo">
-          <img src="https://engage-socially.s3.ap-south-1.amazonaws.com/static-images/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.25rem', height: 'auto', objectFit: 'contain' }} />
+          <img src="/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.25rem', height: 'auto', objectFit: 'contain' }} />
           <div className="logo-text logo-text-lg">Spagylo CRM</div>
         </div>
 
@@ -251,7 +251,7 @@ function RegisterPage({ onRegister, onLoginClick }) {
         <div className="login-bg-glow-2" />
 
         <div className="logo-container">
-          <img src="https://engage-socially.s3.ap-south-1.amazonaws.com/static-images/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.75rem', height: 'auto', objectFit: 'contain' }} />
+          <img src="/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.75rem', height: 'auto', objectFit: 'contain' }} />
           <div>
             <div className="logo-text">Spagylo CRM</div>
           </div>
@@ -264,7 +264,7 @@ function RegisterPage({ onRegister, onLoginClick }) {
       {/* Right panel */}
       <div className="login-right-panel">
         <div className="mobile-logo">
-          <img src="https://engage-socially.s3.ap-south-1.amazonaws.com/static-images/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.25rem', height: 'auto', objectFit: 'contain' }} />
+          <img src="/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.25rem', height: 'auto', objectFit: 'contain' }} />
           <div className="logo-text logo-text-lg">Spagylo CRM</div>
         </div>
 
@@ -379,7 +379,7 @@ function ForgotPasswordPage({ onBackToLogin }) {
         <div className="login-bg-glow-2" />
 
         <div className="logo-container">
-          <img src="https://engage-socially.s3.ap-south-1.amazonaws.com/static-images/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.75rem', height: 'auto', objectFit: 'contain' }} />
+          <img src="/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.75rem', height: 'auto', objectFit: 'contain' }} />
           <div>
             <div className="logo-text">Spagylo CRM</div>
           </div>
@@ -392,7 +392,7 @@ function ForgotPasswordPage({ onBackToLogin }) {
       {/* Right panel */}
       <div className="login-right-panel">
         <div className="mobile-logo">
-          <img src="https://engage-socially.s3.ap-south-1.amazonaws.com/static-images/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.25rem', height: 'auto', objectFit: 'contain' }} />
+          <img src="/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.25rem', height: 'auto', objectFit: 'contain' }} />
           <div className="logo-text logo-text-lg">Spagylo CRM</div>
         </div>
 
