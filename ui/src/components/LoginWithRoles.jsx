@@ -345,25 +345,63 @@ function RegisterPage({ onRegister, onLoginClick }) {
 //  FORGOT PASSWORD PAGE
 // ══════════════════════════════════════════════════════════
 function ForgotPasswordPage({ onBackToLogin }) {
+  const [step, setStep] = useState(1); // 1: Enter Email/Send OTP, 2: Enter OTP/Verify, 3: Enter New Password/Reset
   const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const handleReset = async () => {
+  const handleRequestOtp = async () => {
     setError("");
     setMessage("");
-    if (!email || !newPassword) { setError("Please enter email and new password."); return; }
+    if (!email) { setError("Please enter your email address."); return; }
     setLoading(true);
     try {
-      const res = await api.post('/forgot-password', { email, newPassword });
-      setMessage(res.message || "Password has been successfully reset.");
-      setEmail("");
-      setNewPassword("");
+      const res = await api.post('/forgot-password/request-otp', { email });
+      setMessage(res.message || "OTP sent successfully.");
+      setStep(2);
     } catch (err) {
-      setError(err.message || "Failed to process request. Email might not exist.");
+      setError(err.error || err.message || "Failed to send OTP. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setError("");
+    setMessage("");
+    if (!otp) { setError("Please enter the OTP verification code."); return; }
+    setLoading(true);
+    try {
+      const res = await api.post('/forgot-password/verify-otp', { email, otp });
+      setMessage(res.message || "OTP verified successfully.");
+      setStep(3);
+    } catch (err) {
+      setError(err.error || err.message || "Invalid or expired OTP. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    setError("");
+    setMessage("");
+    if (!newPassword || !confirmPassword) { setError("Please fill all fields."); return; }
+    if (newPassword !== confirmPassword) { setError("Passwords do not match."); return; }
+    if (newPassword.length < 6) { setError("Password must be at least 6 characters."); return; }
+    setLoading(true);
+    try {
+      const res = await api.post('/forgot-password/reset-password', { email, newPassword, confirmPassword });
+      setMessage(res.message || "Password has been successfully reset.");
+      setTimeout(() => {
+        onBackToLogin();
+      }, 2000);
+    } catch (err) {
+      setError(err.error || err.message || "Failed to reset password. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -385,7 +423,6 @@ function ForgotPasswordPage({ onBackToLogin }) {
           </div>
         </div>
 
-
         <div className="login-footer">© 2026 Spagylo CRM · All rights reserved</div>
       </div>
 
@@ -398,7 +435,11 @@ function ForgotPasswordPage({ onBackToLogin }) {
 
         <div className="login-form-container">
           <h1 className="login-heading">Reset Password</h1>
-          <p className="login-subheading">Create a new password for your account</p>
+          <p className="login-subheading">
+            {step === 1 && "Enter your email address to receive an OTP code"}
+            {step === 2 && "Enter the 6-digit OTP code sent to your email"}
+            {step === 3 && "Create a secure new password for your account"}
+          </p>
 
           {error && (
             <div className="error-message">
@@ -412,49 +453,146 @@ function ForgotPasswordPage({ onBackToLogin }) {
             </div>
           )}
 
-          <div className="input-group">
-            <label className="input-label">Email Address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleReset()}
-              placeholder="you@officecrm.in"
-              className="input-field"
-            />
-          </div>
+          {step === 1 && (
+            <>
+              <div className="input-group">
+                <label className="input-label">Email Address</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleRequestOtp()}
+                  placeholder="you@officecrm.in"
+                  className="input-field"
+                />
+              </div>
 
-          <div className="input-group input-group-mb-lg">
-            <label className="input-label">New Password</label>
-            <div style={{ position: "relative" }}>
-              <input
-                type={showPwd ? "text" : "password"}
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleReset()}
-                placeholder="Enter new password"
-                className="input-field input-field-pwd"
-              />
               <button
-                onClick={() => setShowPwd(v => !v)}
-                className="pwd-toggle-btn"
-              >{showPwd ? "👁️" : "🔒"}</button>
-            </div>
-          </div>
+                onClick={handleRequestOtp}
+                disabled={loading}
+                className="btn-primary"
+                style={{ marginTop: '1rem' }}
+              >
+                {loading ? (
+                  <><span className="spinner"></span> Sending OTP...</>
+                ) : (
+                  <>Send Verification Code</>
+                )}
+              </button>
+            </>
+          )}
 
-          <button
-            onClick={handleReset}
-            disabled={loading}
-            className="btn-primary"
-          >
-            {loading ? (
-              <><span className="spinner"></span> Resetting...</>
-            ) : (
-              <><span></span> Reset Password</>
-            )}
-          </button>
+          {step === 2 && (
+            <>
+              <div className="input-group" style={{ marginBottom: '0.75rem' }}>
+                <label className="input-label">Email Address</label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="email"
+                    value={email}
+                    disabled
+                    className="input-field"
+                    style={{ background: '#f8fafc', color: '#64748b', cursor: 'not-allowed', flex: 1 }}
+                  />
+                  <button 
+                    onClick={() => { setStep(1); setError(""); setMessage(""); }}
+                    style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    Change
+                  </button>
+                </div>
+              </div>
 
-          <div className="auth-switch-prompt">
+              <div className="input-group">
+                <label className="input-label">Enter OTP Code</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={otp}
+                  onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+                  onKeyDown={e => e.key === "Enter" && handleVerifyOtp()}
+                  placeholder="123456"
+                  className="input-field"
+                  style={{ textAlign: 'center', letterSpacing: '4px', fontSize: '1.25rem', fontWeight: 'bold' }}
+                />
+              </div>
+
+              <button
+                onClick={handleVerifyOtp}
+                disabled={loading}
+                className="btn-primary"
+                style={{ marginTop: '1rem' }}
+              >
+                {loading ? (
+                  <><span className="spinner"></span> Verifying...</>
+                ) : (
+                  <>Verify Code</>
+                )}
+              </button>
+
+              <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                <button
+                  onClick={handleRequestOtp}
+                  disabled={loading}
+                  style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.85rem', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  Resend Verification Code
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <div className="input-group">
+                <label className="input-label">New Password</label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showPwd ? "text" : "password"}
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    className="input-field"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(v => !v)}
+                    className="pwd-toggle-btn"
+                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    {showPwd ? "👁️" : "🔒"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="input-group" style={{ marginTop: '1rem' }}>
+                <label className="input-label">Confirm New Password</label>
+                <input
+                  type={showPwd ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleResetPassword()}
+                  placeholder="Confirm new password"
+                  className="input-field"
+                />
+              </div>
+
+              <button
+                onClick={handleResetPassword}
+                disabled={loading}
+                className="btn-primary"
+                style={{ marginTop: '1.5rem' }}
+              >
+                {loading ? (
+                  <><span className="spinner"></span> Resetting...</>
+                ) : (
+                  <>Reset Password</>
+                )}
+              </button>
+            </>
+          )}
+
+          <div className="auth-switch-prompt" style={{ marginTop: '1.5rem' }}>
             <span className="auth-switch-text">Remember your password? </span>
             <button className="auth-switch-btn" onClick={onBackToLogin}>Back to login</button>
           </div>
