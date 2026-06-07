@@ -74,16 +74,47 @@ prisma.$connect()
     }
 
     // All columns that may be missing from the attendance table due to schema drift
-    const attendanceColumnFixes = [
-      'ALTER TABLE attendance ADD COLUMN IF NOT EXISTS photo_url TEXT;',
-      'ALTER TABLE attendance ADD COLUMN IF NOT EXISTS location TEXT;',
-    ];
+    try {
+      const tableExists = await prisma.$queryRaw`
+        SELECT EXISTS (
+          SELECT FROM pg_tables 
+          WHERE schemaname = 'public' 
+          AND tablename = 'attendance'
+        );
+      `;
 
-    for (const sql of attendanceColumnFixes) {
+      if (tableExists?.[0]?.exists) {
+        const attendanceColumnFixes = [
+          'ALTER TABLE attendance ADD COLUMN IF NOT EXISTS photo_url TEXT;',
+          'ALTER TABLE attendance ADD COLUMN IF NOT EXISTS location TEXT;',
+        ];
+
+        for (const sql of attendanceColumnFixes) {
+          try {
+            await prisma.$executeRawUnsafe(sql);
+            const colName = sql.match(/ADD COLUMN IF NOT EXISTS "?(\w+)"?/i)?.[1];
+            console.log(`[Self-Healing] Attendance Column ${colName} verified/added successfully.`);
+          } catch (e) {
+            console.warn(`[Self-Healing] Warning for: ${sql.substring(0, 60)}...`, e.message);
+          }
+        }
+      } else {
+        console.log('[Self-Healing] Attendance table does not exist, skipping column verification.');
+      }
+    } catch (e) {
+      console.warn('[Self-Healing] Failed to check if attendance table exists:', e.message);
+    }
+
+    // Ensure teams table has role and designation columns
+    const teamsColumnFixes = [
+      'ALTER TABLE teams ADD COLUMN IF NOT EXISTS role TEXT DEFAULT \'Employee\';',
+      'ALTER TABLE teams ADD COLUMN IF NOT EXISTS designation TEXT;',
+    ];
+    for (const sql of teamsColumnFixes) {
       try {
         await prisma.$executeRawUnsafe(sql);
         const colName = sql.match(/ADD COLUMN IF NOT EXISTS "?(\w+)"?/i)?.[1];
-        console.log(`[Self-Healing] Attendance Column ${colName} verified/added successfully.`);
+        console.log(`[Self-Healing] Teams column ${colName} verified/added successfully.`);
       } catch (e) {
         console.warn(`[Self-Healing] Warning for: ${sql.substring(0, 60)}...`, e.message);
       }
@@ -263,6 +294,11 @@ app.get('/', (req, res) => {
   res.json({ message: 'Trexo CRM API is running successfully!' });
 });
 
+// Chrome DevTools well-known integration endpoint to prevent console 404 errors
+app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
+  res.json({});
+});
+
 // Database diagnostics and auto-repair route
 app.get('/api/test-db', async (req, res) => {
   const { PrismaClient } = require('@prisma/client');
@@ -359,12 +395,17 @@ app.post('/api/users', async (req, res) => {
     let finalFirstName = firstName || finalFullName.split(' ')[0] || '';
     let finalLastName = lastName || finalFullName.split(' ').slice(1).join(' ') || '';
 
+    // Sanitize unique fields: convert empty strings to null to avoid unique constraint violations
+    const sanitizedRest = { ...rest };
+    if (sanitizedRest.empId === '' || sanitizedRest.empId === undefined) sanitizedRest.empId = null;
+    if (sanitizedRest.email === '' || sanitizedRest.email === undefined) sanitizedRest.email = null;
+
     const user = await prisma.user.create({
       data: {
         firstName: finalFirstName,
         lastName: finalLastName,
         fullName: finalFullName,
-        ...rest
+        ...sanitizedRest
       }
     });
     res.json(user);
@@ -549,6 +590,10 @@ app.put('/api/users/:id', async (req, res) => {
       updateData.lastName = lastName || finalFullName.split(' ').slice(1).join(' ') || '';
     }
 
+    // Sanitize unique fields: convert empty strings to null to avoid unique constraint violations
+    if (updateData.empId === '') updateData.empId = null;
+    if (updateData.email === '') updateData.email = null;
+
     const user = await prisma.user.update({
       where: { id: req.params.id },
       data: updateData
@@ -561,12 +606,24 @@ app.put('/api/users/:id', async (req, res) => {
 
 
 app.delete('/api/users/:id', async (req, res) => {
+  const userId = req.params.id;
   try {
+    // 1. Delete comments authored by this user
+    await prisma.comment.deleteMany({
+      where: { authorId: userId }
+    });
+    // 2. Clear sentToId on queries assigned to this user
+    await prisma.projectQuery.updateMany({
+      where: { sentToId: userId },
+      data: { sentToId: null }
+    });
+    // 3. Delete the user
     await prisma.user.delete({
-      where: { id: req.params.id }
+      where: { id: userId }
     });
     res.json({ success: true });
   } catch (error) {
+    console.error('DELETE /api/users/:id error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -740,6 +797,69 @@ app.put('/api/attendance/:id', async (req, res) => {
     });
     res.json(attendance);
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Teams CRUD
+app.get('/api/teams', async (req, res) => {
+  try {
+    const teams = await prisma.team.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(teams);
+  } catch (error) {
+    console.error('GET /api/teams error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/teams', async (req, res) => {
+  try {
+    const { name, role, designation } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Member name is required' });
+    }
+    const team = await prisma.team.create({
+      data: {
+        name: name.trim(),
+        role: role || 'Employee',
+        designation: designation || null,
+      }
+    });
+    res.json(team);
+  } catch (error) {
+    console.error('POST /api/teams error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/teams/:id', async (req, res) => {
+  try {
+    const { name, role, designation } = req.body;
+    const team = await prisma.team.update({
+      where: { id: req.params.id },
+      data: {
+        ...(name !== undefined && { name: name.trim() }),
+        ...(role !== undefined && { role }),
+        ...(designation !== undefined && { designation }),
+      }
+    });
+    res.json(team);
+  } catch (error) {
+    console.error('PUT /api/teams error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/teams/:id', async (req, res) => {
+  try {
+    await prisma.team.delete({
+      where: { id: req.params.id }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('DELETE /api/teams error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1601,6 +1721,7 @@ app.get('/api/reports/monthly', async (req, res) => {
       taskNo: r.taskNo,
       title: r.title,
       projectName: r.projectName,
+      projectId: r.projectId,
       assignees: r.assignees,
       deliveredDate: r.deliveredDate,
       clientRef: r.companyName ? { company: r.companyName } : null,
@@ -1656,6 +1777,7 @@ app.get('/api/reports/range', async (req, res) => {
       taskNo: r.taskNo,
       title: r.title,
       projectName: r.projectName,
+      projectId: r.projectId,
       assignees: r.assignees,
       deliveredDate: r.deliveredDate,
       clientRef: r.companyName ? { company: r.companyName } : null,

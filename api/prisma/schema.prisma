@@ -118,11 +118,13 @@ model TaskList {
 }
 
 model Team {
-  id         String   @id @default(uuid())
-  name       String
-  lead       String?
-  members    Int      @default(0)
-  createdAt  DateTime @default(now()) @map("created_at")
+  id          String   @id @default(uuid())
+  name        String
+  role        String?  @default("Employee")
+  designation String?
+  lead        String?
+  members     Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
 
   @@map("teams")
 }
@@ -254,6 +256,8 @@ model Report {
   id                 String    @id @default(uuid())
   taskNo             String?   @map("task_no")
   title              String
+  companyName        String?   @map("company_name")
+  projectName        String?   @map("project_name")
   projectId          String?   @map("project_id")
   clientId           String?   @map("client_id")
   assignees          String?   // Comma-separated User UUIDs
