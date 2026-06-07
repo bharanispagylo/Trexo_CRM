@@ -4087,8 +4087,27 @@
   grid-template-columns: 100px 1fr;
 }
 
+.project-task-lists-wrapper {
+  padding-left: 1.5rem;
+  border-left: 2px solid #e2e8f0;
+  margin-left: 0.75rem;
+}
+
 /* RESPONSIVE DESIGN */
 @media (max-width: 768px) {
+  .project-task-lists-wrapper {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+    border-left: none !important;
+  }
+  
+  .cu-list-root {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
   .kanban-root {
     padding: 1rem;
   }
@@ -4329,18 +4348,38 @@
   /* Keep dropdown select/date aligned cleanly on the right */
   .cu-td .cu-inline-field-wrapper {
     margin-left: auto;
-    width: auto !important;
+    width: 140px !important;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: 0.25rem;
+    justify-content: flex-start;
+    gap: 0.5rem;
+  }
+
+  .cu-td .cu-inline-field-wrapper svg {
+    width: 14px !important;
+    height: 14px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .cu-inline-status-dot {
+    margin-left: 3px !important;
+    margin-right: 3px !important;
   }
 
   /* Adjust dropdown select to fit nicely */
   .cu-inline-dropdown {
     font-size: 0.8rem !important;
-    text-align: right;
-    direction: rtl;
+    text-align: left !important;
+    direction: ltr !important;
+    width: 100%;
+  }
+
+  .cu-inline-date-field {
+    width: 100% !important;
+  }
+
+  .cu-section-right .kanban-new-btn {
+    width: auto !important;
   }
 
   /* Ensure row action buttons and card delete buttons are always visible on mobile */
@@ -4356,5 +4395,90 @@
     padding: 0.5rem !important;
     min-width: 32px;
     min-height: 32px;
+  }
+
+  /* Mobile Details & Comments layout fixes */
+  .saas-task-page {
+    overflow-y: auto !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+  }
+
+  .saas-main-container {
+    overflow-y: visible !important;
+    height: auto !important;
+    flex: none !important;
+  }
+
+  .saas-content-pane {
+    flex: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 1.25rem !important;
+  }
+
+  .saas-sidebar {
+    flex: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    width: 100% !important;
+    border-left: none !important;
+    border-top: 1px solid #f1f5f9 !important;
+    padding-bottom: 80px !important;
+  }
+
+  .comments-feed-container {
+    flex: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 1rem !important;
+  }
+
+  .comment-post-input-box {
+    position: sticky !important;
+    bottom: 60px !important;
+    z-index: 9999 !important;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.08) !important;
+    background: #ffffff !important;
+    border-top: 1px solid #e2e8f0 !important;
+  }
+
+  .saas-meta-value > div {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+
+  .billing-field-row {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+    align-items: flex-start !important;
+  }
+
+  .saas-details-grid div[style*="gap: 1.5rem"] {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+  
+  .saas-details-grid div[style*="display: flex"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.4rem !important;
+  }
+
+  .saas-attachments-pane div[style*="justify-content: space-between"] {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
+  }
+
+  .saas-comment-card.is-reply {
+    margin-left: 1.25rem !important;
+    padding-left: 0.5rem !important;
+  }
+
+  .saas-nav-right {
+    justify-content: space-between !important;
+    display: flex !important;
+    align-items: center !important;
   }
 }

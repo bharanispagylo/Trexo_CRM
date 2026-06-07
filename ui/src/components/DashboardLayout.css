@@ -837,6 +837,74 @@
   .page-title {
     font-size: 1.3rem;
   }
+
+  /* Mobile Grid Dashboard Styles */
+  .saas-dashboard-layout,
+  .saas-main-area,
+  .saas-page-content {
+    background-color: #ffffff !important;
+  }
+
+  .db-overview-page {
+    background-color: #ffffff !important;
+    min-height: 100%;
+    padding: 1rem;
+  }
+
+  .db-mobile-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .db-desktop-panels {
+    display: none !important;
+  }
+
+  .db-tile {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .db-tile:active {
+    transform: scale(0.97);
+  }
+
+  .db-tile-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin-bottom: 0.75rem;
+  }
+
+  .db-tile-count {
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 0.25rem;
+  }
+
+  .db-tile-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
 }
 
 @media (max-width: 480px) {
@@ -844,6 +912,147 @@
     display: none;
   }
 }
+
+/* Desktop Defaults for db styles */
+@media (min-width: 769px) {
+  .db-mobile-grid {
+    display: none !important;
+  }
+  .db-desktop-panels {
+    display: block !important;
+  }
+  .saas-mobile-bottom-nav,
+  .saas-mobile-more-drawer,
+  .saas-mobile-more-backdrop {
+    display: none !important;
+  }
+}
+
+/* ── Mobile Fixed Bottom Tab Bar & More Drawer CSS ── */
+@media (max-width: 768px) {
+  .saas-main-area {
+    padding-bottom: 64px; /* offset for bottom tab bar */
+  }
+
+  .saas-mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 10000;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    padding: 0 0.5rem;
+  }
+
+  .mobile-nav-btn {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.15s;
+    flex: 1;
+  }
+
+  .mobile-nav-btn.active {
+    color: #6366f1;
+  }
+
+  .mobile-nav-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .mobile-nav-label {
+    font-size: 0.68rem;
+    letter-spacing: -0.01em;
+  }
+
+  /* More Drawer overlay card style */
+  .saas-mobile-more-drawer {
+    position: fixed;
+    bottom: 70px;
+    left: 1rem;
+    right: 1rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 1.25rem 1rem;
+    z-index: 10000;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    animation: drawer-slide-up 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes drawer-slide-up {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .more-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    row-gap: 1.25rem;
+    column-gap: 0.5rem;
+    justify-items: center;
+  }
+
+  .more-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    width: 100%;
+    max-width: 70px;
+    text-align: center;
+  }
+
+  .more-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.1s;
+  }
+
+  .more-item:active .more-icon {
+    transform: scale(0.92);
+  }
+
+  .more-label {
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+  }
+}
+
+
 
 
 

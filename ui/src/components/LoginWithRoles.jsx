@@ -7,28 +7,7 @@ import { requestForToken } from "../firebase";
 
 // ── Mock Users Database Removed ──────────────────────────────
 
-// ── Avatar ─────────────────────────────────────────────────
-function Avatar({ initials, image, size = "md", ring = false }) {
-  const sizeClass = `avatar-${size}`;
-  const ringClass = ring ? "avatar-ring" : "";
 
-  if (image) {
-    return (
-      <div className={`avatar ${sizeClass} ${ringClass}`}>
-        <img src={image} alt={initials} className="avatar-img" />
-      </div>
-    );
-  }
-
-  const validInitials = ["RK", "MS", "AK", "PN", "KS"];
-  const gradClass = validInitials.includes(initials) ? `avatar-${initials}` : "avatar-default";
-
-  return (
-    <div className={`avatar ${sizeClass} ${gradClass} ${ringClass}`}>
-      {initials}
-    </div>
-  );
-}
 
 
 // ══════════════════════════════════════════════════════════
@@ -40,24 +19,12 @@ function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }) {
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [demoUsers, setDemoUsers] = useState([]);
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const emailParam = params.get("email");
     if (emailParam) {
       setEmail(emailParam);
     }
-
-    const fetchDemo = async () => {
-      try {
-        const data = await api.get('/users');
-        setDemoUsers(data.slice(0, 5) || []);
-      } catch (err) {
-        console.error("Demo fetch error:", err);
-      }
-    };
-    fetchDemo();
   }, []);
 
   const handleLogin = async () => {
@@ -72,12 +39,6 @@ function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const fillDemo = (u) => {
-    setEmail(u.email);
-    setPassword(u.password);
-    setError("");
   };
 
   return (
@@ -168,39 +129,7 @@ function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }) {
             <button className="auth-switch-btn" onClick={onRegisterClick}>Register now</button>
           </div>
 
-          {/* Demo credentials */}
-          <div className="demo-section">
-            <div className="demo-divider">
-              <div className="demo-divider-line" />
-              <span className="demo-divider-text">Try Registered Accounts</span>
-              <div className="demo-divider-line" />
-            </div>
-            <div className="demo-list">
-              {demoUsers.map(u => (
-                <button
-                  key={u.id}
-                  onClick={() => fillDemo(u)}
-                  className="demo-btn"
-                >
-                  <Avatar
-                    initials={u.firstName?.charAt(0) || u.fullName?.charAt(0) || "U"}
-                    image={u.profileImage}
-                    size="sm"
-                  />
-                  <div className="demo-info">
 
-                    <div className="demo-name">{u.fullName || `${u.firstName} ${u.lastName}`}</div>
-                    <div className="demo-email">{u.email}</div>
-                  </div>
-                  <span className={`role-badge ${(u.role || 'employee').toLowerCase() === "admin" ? "role-badge-admin" : "role-badge-emp"}`}>
-                    {u.role || "Employee"}
-                  </span>
-                </button>
-              ))}
-            </div>
-            {demoUsers.length === 0 && <p className="demo-hint">No registered users yet. Please register or add one via Admin.</p>}
-            {demoUsers.length > 0 && <p className="demo-hint">Click any account to auto-fill credentials</p>}
-          </div>
         </div>
       </div>
     </div>
@@ -446,7 +375,7 @@ function ForgotPasswordPage({ onBackToLogin }) {
               <span>⚠️</span> {error}
             </div>
           )}
-          
+
           {message && (
             <div style={{ padding: '0.75rem', background: '#dcfce7', color: '#166534', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span>✅</span> {message}
@@ -494,7 +423,7 @@ function ForgotPasswordPage({ onBackToLogin }) {
                     className="input-field"
                     style={{ background: '#f8fafc', color: '#64748b', cursor: 'not-allowed', flex: 1 }}
                   />
-                  <button 
+                  <button
                     onClick={() => { setStep(1); setError(""); setMessage(""); }}
                     style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
                   >
@@ -624,50 +553,50 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
 
         (allTasks || []).forEach(task => {
           if (task.status === 'Delivered' || task.status === 'Prod Verified') return;
-          
+
           // 1. Backlog Tasks: if deliveredDate or dueDate is in the past
           let isBacklog = false;
           if (task.deliveredDate) {
-             const d = new Date(task.deliveredDate);
-             d.setHours(0, 0, 0, 0);
-             if (d.getTime() < todayTime) {
-                isBacklog = true;
-             }
+            const d = new Date(task.deliveredDate);
+            d.setHours(0, 0, 0, 0);
+            if (d.getTime() < todayTime) {
+              isBacklog = true;
+            }
           } else if (task.dueDate) {
-             const d = new Date(task.dueDate);
-             d.setHours(0, 0, 0, 0);
-             if (d.getTime() < todayTime) {
-                isBacklog = true;
-             }
+            const d = new Date(task.dueDate);
+            d.setHours(0, 0, 0, 0);
+            if (d.getTime() < todayTime) {
+              isBacklog = true;
+            }
           }
-          
+
           if (isBacklog) {
-             backlogTasks.push(task);
-             return;
+            backlogTasks.push(task);
+            return;
           }
 
           // 2. Today Tasks: based on assignedDate
           let isToday = false;
           if (task.assignedDate) {
-             const a = new Date(task.assignedDate);
-             a.setHours(0, 0, 0, 0);
-             if (a.getTime() === todayTime) {
-                isToday = true;
-             }
+            const a = new Date(task.assignedDate);
+            a.setHours(0, 0, 0, 0);
+            if (a.getTime() === todayTime) {
+              isToday = true;
+            }
           } else {
-             // Fallback to createdAt if assignedDate is not set
-             const c = new Date(task.createdAt || Date.now());
-             c.setHours(0, 0, 0, 0);
-             if (c.getTime() === todayTime) {
-                isToday = true;
-             }
+            // Fallback to createdAt if assignedDate is not set
+            const c = new Date(task.createdAt || Date.now());
+            c.setHours(0, 0, 0, 0);
+            if (c.getTime() === todayTime) {
+              isToday = true;
+            }
           }
 
           if (isToday) {
-             todayTasks.push(task);
+            todayTasks.push(task);
           } else {
-             // 3. Upcoming Tasks: remaining tasks
-             upcomingTasks.push(task);
+            // 3. Upcoming Tasks: remaining tasks
+            upcomingTasks.push(task);
           }
         });
         setTasks({ today: todayTasks, upcoming: upcomingTasks, backlog: backlogTasks });
@@ -693,14 +622,14 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
         ) : (
           tasksList.slice(0, 5).map((t, i) => (
             <div key={i} className="list-item" style={{ cursor: 'pointer', padding: '0.75rem', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '4px' }} onClick={() => handleTaskClick ? handleTaskClick(t) : (setActiveTab && setActiveTab('tasks'))}>
-               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{t.title}</span>
-                  <span className={`status-badge status-${t.status.toLowerCase().replace(' ', '-')}`} style={{ fontSize: '0.7rem' }}>{t.status}</span>
-               </div>
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.taskNo || `TSK-${t.id?.substring(0, 4)}`} • {t.priority}</span>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'No Date'}</span>
-               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{t.title}</span>
+                <span className={`status-badge status-${t.status.toLowerCase().replace(' ', '-')}`} style={{ fontSize: '0.7rem' }}>{t.status}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.taskNo || `TSK-${t.id?.substring(0, 4)}`} • {t.priority}</span>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'No Date'}</span>
+              </div>
             </div>
           ))
         )}
@@ -715,10 +644,104 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
 
 
 
+  // Derived counts for card grid
+  const _now = new Date(); _now.setHours(0, 0, 0, 0);
+  const _all = [...tasks.today, ...tasks.upcoming, ...tasks.backlog];
+  const _overdue = _all.filter(t => { if (!t.dueDate) return false; const d = new Date(t.dueDate); d.setHours(0, 0, 0, 0); return d < _now; }).length;
+  const _prio = _all.filter(t => t.priority === 'High' || t.priority === 'Critical').length;
+
+  const _cards = [
+    {
+      label: 'Today',
+      count: tasks.today.length,
+      bg: 'linear-gradient(135deg,#7c3aed,#6366f1)',
+      icon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      )
+    },
+    {
+      label: 'Overdue',
+      count: _overdue,
+      bg: 'linear-gradient(135deg,#ef4444,#f97316)',
+      icon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+      ),
+      warn: true
+    },
+    {
+      label: 'My Priorities',
+      count: _prio,
+      bg: 'linear-gradient(135deg,#f97316,#fb923c)',
+      icon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+          <line x1="4" y1="22" x2="4" y2="15"></line>
+        </svg>
+      )
+    },
+    {
+      label: 'Upcoming',
+      count: tasks.upcoming.length,
+      bg: 'linear-gradient(135deg,#f59e0b,#fbbf24)',
+      icon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+      )
+    },
+    {
+      label: 'My Tasks',
+      count: _all.length,
+      bg: 'linear-gradient(135deg,#2563eb,#60a5fa)',
+      icon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <polyline points="9 11 12 14 22 4"></polyline>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+        </svg>
+      )
+    },
+    {
+      label: 'Backlog',
+      count: tasks.backlog.length,
+      bg: 'linear-gradient(135deg,#0d9488,#14b8a6)',
+      icon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      )
+    },
+  ];
+
   return (
-    <div className="dashboard-container app-container">
-      <main className="main-content">
-        {/* Task Cards Section */}
+    <div className="db-overview-page">
+      {/* ── Mobile card grid ── */}
+      <div className="db-mobile-grid">
+        {_cards.map((c, i) => (
+          <button key={i} className="db-tile" onClick={() => setActiveTab && setActiveTab('tasks')}>
+            <div className="db-tile-icon" style={{ background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}>
+              {c.icon}
+            </div>
+            <div className="db-tile-count" style={{ color: c.warn && c.count > 0 ? '#ef4444' : '#1e293b' }}>{c.count}</div>
+            <div className="db-tile-label" style={{ color: c.warn && c.count > 0 ? '#ef4444' : '#374151' }}>{c.label}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Desktop panel layout ── */}
+      <div className="db-desktop-panels" style={{ paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem', marginTop: '1rem' }}>
           <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
             <div style={{ flex: '2 1 60%', minWidth: '300px', display: 'flex' }}>
@@ -732,7 +755,7 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
             {renderTaskCard("Backlog Tasks", tasks.backlog, "backlog")}
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
@@ -764,7 +787,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
 
         // 3. Fetch Tasks
         const allTasks = await api.get('/tasks');
-        
+
         // Robust assignee matching
         const myTasks = allTasks.filter(t => {
           if (!t.assignees) return false;
@@ -774,6 +797,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
           const cleanEmailPrefix = cleanEmail.split('@')[0].replace(/[^a-z0-9]/g, '');
 
           return assigneesList.some(assignee => {
+            if (user.id && assignee === user.id.toLowerCase().trim()) return true;
             const cleanAssignee = assignee.replace(/[^a-z0-9]/g, '');
             if (assignee === cleanEmail) return true;
             if (cleanAssignee === cleanEmailPrefix) return true;
@@ -781,7 +805,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
             return false;
           });
         });
-        
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayTime = today.getTime();
@@ -792,50 +816,50 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
 
         myTasks.forEach(task => {
           if (task.status === 'Delivered' || task.status === 'Prod Verified') return; // ignore completed
-          
+
           // 1. Backlog Tasks: if deliveredDate or dueDate is in the past
           let isBacklog = false;
           if (task.deliveredDate) {
-             const d = new Date(task.deliveredDate);
-             d.setHours(0, 0, 0, 0);
-             if (d.getTime() < todayTime) {
-                isBacklog = true;
-             }
+            const d = new Date(task.deliveredDate);
+            d.setHours(0, 0, 0, 0);
+            if (d.getTime() < todayTime) {
+              isBacklog = true;
+            }
           } else if (task.dueDate) {
-             const d = new Date(task.dueDate);
-             d.setHours(0, 0, 0, 0);
-             if (d.getTime() < todayTime) {
-                isBacklog = true;
-             }
+            const d = new Date(task.dueDate);
+            d.setHours(0, 0, 0, 0);
+            if (d.getTime() < todayTime) {
+              isBacklog = true;
+            }
           }
-          
+
           if (isBacklog) {
-             backlogTasks.push(task);
-             return;
+            backlogTasks.push(task);
+            return;
           }
 
           // 2. Today Tasks: based on assignedDate
           let isToday = false;
           if (task.assignedDate) {
-             const a = new Date(task.assignedDate);
-             a.setHours(0, 0, 0, 0);
-             if (a.getTime() === todayTime) {
-                isToday = true;
-             }
+            const a = new Date(task.assignedDate);
+            a.setHours(0, 0, 0, 0);
+            if (a.getTime() === todayTime) {
+              isToday = true;
+            }
           } else {
-             // Fallback to createdAt if assignedDate is not set
-             const c = new Date(task.createdAt || Date.now());
-             c.setHours(0, 0, 0, 0);
-             if (c.getTime() === todayTime) {
-                isToday = true;
-             }
+            // Fallback to createdAt if assignedDate is not set
+            const c = new Date(task.createdAt || Date.now());
+            c.setHours(0, 0, 0, 0);
+            if (c.getTime() === todayTime) {
+              isToday = true;
+            }
           }
 
           if (isToday) {
-             todayTasks.push(task);
+            todayTasks.push(task);
           } else {
-             // 3. Upcoming Tasks: remaining tasks
-             upcomingTasks.push(task);
+            // 3. Upcoming Tasks: remaining tasks
+            upcomingTasks.push(task);
           }
         });
         setTasks({ today: todayTasks, upcoming: upcomingTasks, backlog: backlogTasks });
@@ -859,14 +883,14 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
         ) : (
           tasksList.slice(0, 5).map((t, i) => (
             <div key={i} className="list-item" style={{ cursor: 'pointer', padding: '0.75rem', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '4px' }} onClick={() => handleTaskClick ? handleTaskClick(t) : (setActiveTab && setActiveTab('tasks'))}>
-               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{t.title}</span>
-                  <span className={`status-badge status-${t.status.toLowerCase().replace(' ', '-')}`} style={{ fontSize: '0.7rem' }}>{t.status}</span>
-               </div>
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.taskNo || `TSK-${t.id?.substring(0, 4)}`} • {t.priority}</span>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'No Date'}</span>
-               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{t.title}</span>
+                <span className={`status-badge status-${t.status.toLowerCase().replace(' ', '-')}`} style={{ fontSize: '0.7rem' }}>{t.status}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.taskNo || `TSK-${t.id?.substring(0, 4)}`} • {t.priority}</span>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'No Date'}</span>
+              </div>
             </div>
           ))
         )}
@@ -877,10 +901,104 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
     </div>
   );
 
+  // Employee derived counts
+  const _enow = new Date(); _enow.setHours(0, 0, 0, 0);
+  const _eall = [...tasks.today, ...tasks.upcoming, ...tasks.backlog];
+  const _eovd = _eall.filter(t => { if (!t.dueDate) return false; const d = new Date(t.dueDate); d.setHours(0, 0, 0, 0); return d < _enow; }).length;
+  const _eprio = _eall.filter(t => t.priority === 'High' || t.priority === 'Critical').length;
+
+  const _ecards = [
+    {
+      label: 'Today',
+      count: tasks.today.length,
+      bg: 'linear-gradient(135deg,#7c3aed,#6366f1)',
+      icon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      )
+    },
+    {
+      label: 'Overdue',
+      count: _eovd,
+      bg: 'linear-gradient(135deg,#ef4444,#f97316)',
+      icon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+      ),
+      warn: true
+    },
+    {
+      label: 'My Priorities',
+      count: _eprio,
+      bg: 'linear-gradient(135deg,#f97316,#fb923c)',
+      icon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+          <line x1="4" y1="22" x2="4" y2="15"></line>
+        </svg>
+      )
+    },
+    {
+      label: 'Upcoming',
+      count: tasks.upcoming.length,
+      bg: 'linear-gradient(135deg,#f59e0b,#fbbf24)',
+      icon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+      )
+    },
+    {
+      label: 'My Tasks',
+      count: _eall.length,
+      bg: 'linear-gradient(135deg,#2563eb,#60a5fa)',
+      icon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <polyline points="9 11 12 14 22 4"></polyline>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+        </svg>
+      )
+    },
+    {
+      label: 'Backlog',
+      count: tasks.backlog.length,
+      bg: 'linear-gradient(135deg,#0d9488,#14b8a6)',
+      icon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      )
+    },
+  ];
+
   return (
-    <div className="dashboard-container dashboard-container-emp app-container">
-      <main className="main-content main-content-emp">
-        {/* Task Cards Section */}
+    <div className="db-overview-page">
+      {/* ── Mobile card grid ── */}
+      <div className="db-mobile-grid">
+        {_ecards.map((c, i) => (
+          <button key={i} className="db-tile" onClick={() => setActiveTab && setActiveTab('tasks')}>
+            <div className="db-tile-icon" style={{ background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}>
+              {c.icon}
+            </div>
+            <div className="db-tile-count" style={{ color: c.warn && c.count > 0 ? '#ef4444' : '#1e293b' }}>{c.count}</div>
+            <div className="db-tile-label" style={{ color: c.warn && c.count > 0 ? '#ef4444' : '#374151' }}>{c.label}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Desktop panel layout ── */}
+      <div className="db-desktop-panels" style={{ paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
         <div style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
           <h3 className="tasks-title" style={{ marginBottom: '1rem' }}>My Tasks</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -897,7 +1015,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

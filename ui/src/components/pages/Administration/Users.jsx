@@ -78,7 +78,6 @@ export default function Users({ onAddUser, onEditUser }) {
             <tr>
               <th>Profile</th>
               <th>Name</th>
-              <th>Email</th>
               <th>Phone</th>
               <th>Emp ID</th>
               <th>Role</th>
@@ -88,7 +87,7 @@ export default function Users({ onAddUser, onEditUser }) {
           </thead>
           <tbody>
             {filteredUsers.length === 0 ? (
-              <tr><td colSpan="8" className="status-cell">No users found.</td></tr>
+              <tr><td colSpan="7" className="status-cell">No users found.</td></tr>
             ) : filteredUsers.map(u => (
               <tr key={u.id}>
                 <td className="user-avatar-cell">
@@ -100,9 +99,6 @@ export default function Users({ onAddUser, onEditUser }) {
                 </td>
                 <td className="user-info-cell">
                   <div className="user-name">{u.fullName || `${u.firstName} ${u.lastName}`}</div>
-                </td>
-                <td>
-                  <div className="user-meta">{u.email}</div>
                 </td>
                 <td>
                   <div className="user-meta">{u.phoneNo || '-'}</div>

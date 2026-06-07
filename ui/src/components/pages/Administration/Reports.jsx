@@ -123,9 +123,9 @@ export default function Reports({ user }) {
   const totalActualHours = tasks.reduce((sum, t) => sum + (parseFloat(t.taskActualHours) || 0), 0);
   
   const uniqueProjects = useMemo(() => {
-    const projNames = new Set(tasks.map(t => t.projectName).filter(Boolean));
+    const projNames = new Set(tasks.map(t => t.projectName || projects.find(p => p.id === t.projectId)?.name).filter(Boolean));
     return projNames.size;
-  }, [tasks]);
+  }, [tasks, projects]);
 
   const uniqueAssignees = useMemo(() => {
     const assigns = new Set(tasks.flatMap(t => (t.assignees || '').split(',').map(s => s.trim()).filter(Boolean)));
@@ -138,15 +138,29 @@ export default function Reports({ user }) {
 
   const handleExport = () => {
     const headers = ['Task # No', 'Title', 'Project', 'Assignee', 'Billable Hours', 'Already Billed', 'Delivered Date'];
-    const rows = tasks.map(t => [
-      t.taskNo || '-',
-      `"${(t.title || '').replace(/"/g, '""')}"`,
-      `"${(t.projectName || '-').replace(/"/g, '""')}"`,
-      `"${(t.assignees || '-').replace(/"/g, '""')}"`,
-      formatDecimal(parseFloat(t.taskApprovedHours) || 0),
-      formatDecimal(parseFloat(t.taskActualHours) || 0),
-      t.deliveredDate ? new Date(t.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'
-    ]);
+    const rows = tasks.map(t => {
+      const resolvedProj = t.projectName || (projects.find(p => p.id === t.projectId)?.name) || '-';
+      
+      let resolvedAssignee = 'Unassigned';
+      if (t.assignees) {
+        const ids = t.assignees.split(',').map(id => id.trim()).filter(Boolean);
+        const names = ids.map(id => {
+          const u = assignees.find(user => user.id === id);
+          return u ? (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()) : id;
+        });
+        resolvedAssignee = names.join(', ');
+      }
+
+      return [
+        t.taskNo || '-',
+        `"${(t.title || '').replace(/"/g, '""')}"`,
+        `"${resolvedProj.replace(/"/g, '""')}"`,
+        `"${resolvedAssignee.replace(/"/g, '""')}"`,
+        formatDecimal(parseFloat(t.taskApprovedHours) || 0),
+        formatDecimal(parseFloat(t.taskActualHours) || 0),
+        t.deliveredDate ? new Date(t.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'
+      ];
+    });
     
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -286,7 +300,7 @@ export default function Reports({ user }) {
           </select>
           <select className="reports-select" value={selectedAssignee} onChange={e => setSelectedAssignee(e.target.value)}>
             <option value="All Assignees">All Assignees</option>
-            {assignees.map(u => <option key={u.id} value={u.fullName || `${u.firstName || ''} ${u.lastName || ''}`}>{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`}</option>)}
+            {assignees.map(u => <option key={u.id} value={u.id}>{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`}</option>)}
           </select>
           <button className="reports-apply-btn" onClick={handleApplyFilter}>Apply Filter</button>
         </div>
@@ -343,14 +357,29 @@ export default function Reports({ user }) {
                 <tr key={task.id}>
                   <td>{task.taskNo || '-'}</td>
                   <td className="task-title-cell">{task.title}</td>
-                  <td>{task.projectName || '-'}</td>
+                  <td>{task.projectName || (projects.find(p => p.id === task.projectId)?.name) || '-'}</td>
                   <td>
-                    <div className="assignee-cell">
-                      <div className="assignee-avatar">
-                        {task.assignees ? task.assignees.charAt(0).toUpperCase() : '?'}
-                      </div>
-                      {task.assignees || 'Unassigned'}
-                    </div>
+                    {(() => {
+                      if (!task.assignees) return <div className="assignee-cell"><div className="assignee-avatar">?</div>Unassigned</div>;
+                      const ids = task.assignees.split(',').map(id => id.trim()).filter(Boolean);
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {ids.map(id => {
+                            const uObj = assignees.find(u => u.id === id);
+                            const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : id;
+                            const firstChar = dispName.charAt(0).toUpperCase();
+                            return (
+                              <div key={id} className="assignee-cell">
+                                <div className="assignee-avatar">
+                                  {firstChar}
+                                </div>
+                                {dispName}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td>{formatDecimal(parseFloat(task.taskApprovedHours) || 0)}</td>
                   <td>{formatDecimal(parseFloat(task.taskActualHours) || 0)}</td>

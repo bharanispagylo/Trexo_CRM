@@ -219,3 +219,154 @@
   color: #dc2626;
 }
 
+/* ══════════════════════════════════════════════
+   Add New Team Member Form Styles (Namespaced)
+   ══════════════════════════════════════════════ */
+.track-team-page .add-user-page {
+  padding: 2rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  margin-top: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.track-team-page .page-header {
+  margin-bottom: 2rem;
+}
+
+.track-team-page .page-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 0.25rem;
+}
+
+.track-team-page .page-subtitle {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.track-team-page .saas-form-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.track-team-page .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 2.5rem;
+  row-gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.track-team-page .saas-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.track-team-page .saas-field.full-width {
+  grid-column: span 2;
+}
+
+.track-team-page .saas-label {
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  margin-bottom: 0.25rem;
+}
+
+.track-team-page .saas-input, 
+.track-team-page .saas-select {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0.7rem 1rem !important;
+  border: 1.2px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  font-size: 0.875rem !important;
+  transition: all 0.2s !important;
+  background: #f8fafc !important;
+  box-sizing: border-box !important;
+  height: 42px !important;
+}
+
+.track-team-page .saas-input:focus, 
+.track-team-page .saas-select:focus {
+  border-color: #2563eb !important;
+  background: white !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08) !important;
+  outline: none !important;
+}
+
+.track-team-page .form-actions {
+  display: flex;
+  gap: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #f1f5f9;
+  justify-content: flex-end;
+}
+
+.track-team-page .saas-btn-primary {
+  padding: 0.75rem 2rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.track-team-page .saas-btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.track-team-page .saas-btn-secondary {
+  padding: 0.75rem 2rem;
+  background: white;
+  color: #64748b;
+  border: 1.2px solid #e2e8f0;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.track-team-page .saas-btn-secondary:hover {
+  background: #f8fafc;
+  color: #475569;
+}
+
+@media (max-width: 768px) {
+  .track-team-page .add-user-page {
+    padding: 1.25rem;
+  }
+
+  .track-team-page .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+
+  .track-team-page .saas-field.full-width {
+    grid-column: span 1 !important;
+  }
+
+  .track-team-page .form-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .track-team-page .saas-btn-primary, 
+  .track-team-page .saas-btn-secondary {
+    width: 100%;
+    text-align: center;
+  }
+}

@@ -140,7 +140,7 @@ const timeStrToDecimal = (timeStr) => {
 
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Task Detail View (Separate Page) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialEditMode = false }) {
+export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialEditMode = false }) {
 
   const isEdit = !!(task && task.id);
   const [isEditing, setIsEditing] = useState(true); // Always in edit mode
@@ -279,7 +279,7 @@ function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialE
     const userName = (currentUser?.fullName || currentUser?.name || '').trim().toLowerCase();
     if (!userName) return false;
     const assignees = (task.assignees || '').split(',').map(a => a.trim().toLowerCase());
-    return assignees.includes(userName);
+    return assignees.includes(userName) || (currentUser?.id && assignees.includes(currentUser.id.toLowerCase().trim()));
   };
 
   const canEdit = getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && isAssigned());
@@ -1734,7 +1734,7 @@ function TaskCard({ task, onDragStart, onClick, onDelete, currentUser, listUsers
       <div className="card-clickup-header">
         <span className="card-clickup-title">{task.title || 'Untitled Task'}</span>
         
-        {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (currentUser?.fullName || currentUser?.name) && assignees.map(a => a.toLowerCase()).includes((currentUser?.fullName || currentUser?.name).toLowerCase()))) && (
+        {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (assignees.map(a => a.toLowerCase()).includes(currentUser?.id?.toLowerCase()) || ((currentUser?.fullName || currentUser?.name) && assignees.map(a => a.toLowerCase()).includes((currentUser?.fullName || currentUser?.name).toLowerCase()))))) && (
           <button 
             className="card-clickup-delete-btn" 
             title="Delete Task" 
@@ -1967,7 +1967,7 @@ function TaskCardWithDates({ task, onDragStart, onClick, onDelete, currentUser, 
       <div className="card-clickup-header">
         <span className="card-clickup-title">{task.title || 'Untitled Task'}</span>
         
-        {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (currentUser?.fullName || currentUser?.name) && assignees.map(a => a.toLowerCase()).includes((currentUser?.fullName || currentUser?.name).toLowerCase()))) && (
+        {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (assignees.map(a => a.toLowerCase()).includes(currentUser?.id?.toLowerCase()) || ((currentUser?.fullName || currentUser?.name) && assignees.map(a => a.toLowerCase()).includes((currentUser?.fullName || currentUser?.name).toLowerCase()))))) && (
           <button 
             className="card-clickup-delete-btn" 
             title="Delete Task" 
@@ -2912,11 +2912,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                     </div>
 
                     {/* Task Lists belonging to this Project */}
-                    <div className="project-task-lists-wrapper" style={{
-                      paddingLeft: '1.5rem',
-                      borderLeft: '2px solid #e2e8f0',
-                      marginLeft: '0.75rem'
-                    }}>
+                    <div className="project-task-lists-wrapper">
                       {projGroup.lists.map(list => {
                         const isCollapsed = expandedListId === '__first__'
                           ? list.id !== firstListId
@@ -3029,7 +3025,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                           </td>
                                           <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
                                             <div className="cu-row-actions">
-                                              {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
+                                              {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && ((user?.id && (task.assignees || '').toLowerCase().includes(user.id.toLowerCase())) || ((user?.fullName || user?.name) && (task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))))) && (
                                                 <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task'); }} title="Delete">
                                                   <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                                 </button>
@@ -3246,7 +3242,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
                                   <div className="cu-row-actions">
 
-                                    {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && (user?.fullName || user?.name) && ((task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase())))) && (
+                                    {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && ((user?.id && (task.assignees || '').toLowerCase().includes(user.id.toLowerCase())) || ((user?.fullName || user?.name) && (task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))))) && (
                                       <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task'); }} title="Delete">
                                         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                       </button>

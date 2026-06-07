@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
+import { TaskDetailView } from './Tasks';
 import './Projects.css';
 import './Tasks.css';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -577,224 +578,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     </div>
   );
 
-  const renderTaskFormModal = () => {
-    if (!selectedProject) return null;
-    const rawMembers = (selectedProject.members || '').split(',').map(m => m.trim()).filter(m => m !== "");
-    const projMembers = [...new Set(rawMembers)];
-    const assigneesList = projMembers.length > 0 ? projMembers : users.map(u => u.id);
-
-    return (
-      <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-        <div style={{ background: 'white', borderRadius: '12px', width: '500px', padding: '2rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>
-              {taskFormType === 'create' ? 'Create New Task' : 'Edit Task'}
-            </h3>
-            <button style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#94a3b8' }} onClick={() => setShowTaskFormModal(false)}>✕</button>
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '2rem' }}>
-            <div className="saas-field">
-              <label className="saas-label">Task Title *</label>
-              <input
-                className="saas-input"
-                placeholder="What needs to be done?"
-                value={taskFormFields.title}
-                onChange={e => setTaskFormFields({ ...taskFormFields, title: e.target.value })}
-              />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="saas-field">
-                <label className="saas-label">Assignee</label>
-                <select
-                  className="saas-select"
-                  value={taskFormFields.assignees}
-                  onChange={e => setTaskFormFields({ ...taskFormFields, assignees: e.target.value })}
-                >
-                  <option value="">Unassigned</option>
-                  {assigneesList.map(uId => {
-                    const uObj = users.find(u => u.id === uId) || {};
-                    const displayName = uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown';
-                    return <option key={uId} value={uId}>{displayName}</option>;
-                  })}
-                </select>
-              </div>
-
-              <div className="saas-field">
-                <label className="saas-label">Priority</label>
-                <select
-                  className="saas-select"
-                  value={taskFormFields.priority}
-                  onChange={e => setTaskFormFields({ ...taskFormFields, priority: e.target.value })}
-                >
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="saas-field">
-                <label className="saas-label">Assigned Date</label>
-                <input
-                  type="date"
-                  className="saas-input"
-                  value={taskFormFields.assignedDate}
-                  onChange={e => setTaskFormFields({ ...taskFormFields, assignedDate: e.target.value })}
-                />
-              </div>
-
-              <div className="saas-field">
-                <label className="saas-label">Delivery Date</label>
-                <input
-                  type="date"
-                  className="saas-input"
-                  value={taskFormFields.dueDate}
-                  onChange={e => setTaskFormFields({ ...taskFormFields, dueDate: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="saas-field">
-                <label className="saas-label">Delivered Date</label>
-                <input
-                  type="date"
-                  className="saas-input"
-                  value={taskFormFields.deliveredDate}
-                  onChange={e => setTaskFormFields({ ...taskFormFields, deliveredDate: e.target.value })}
-                />
-              </div>
-
-              <div className="saas-field">
-                <label className="saas-label">Task Type</label>
-                <select
-                  className="saas-select"
-                  value={taskFormFields.taskType}
-                  onChange={e => setTaskFormFields({ ...taskFormFields, taskType: e.target.value })}
-                >
-                  <option value="Feature">Feature</option>
-                  <option value="Bug">Bug</option>
-                  <option value="Enhancement">Enhancement</option>
-                  <option value="Documentation">Documentation</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="saas-field">
-              <label className="saas-label">Status</label>
-              <select
-                className="saas-select"
-                value={taskFormFields.status}
-                onChange={e => setTaskFormFields({ ...taskFormFields, status: e.target.value })}
-              >
-                <option value="To Do">To Do</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </select>
-            </div>
-
-            <div className="saas-field">
-              <label className="saas-label">Description *</label>
-              <textarea
-                className="saas-textarea"
-                placeholder="Task details..."
-                style={{ minHeight: '80px' }}
-                value={taskFormFields.description}
-                onChange={e => setTaskFormFields({ ...taskFormFields, description: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-            <button style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 1.25rem', fontWeight: '600', color: '#64748b', cursor: 'pointer' }} onClick={() => setShowTaskFormModal(false)}>Cancel</button>
-            <button style={{ background: '#0066FF', border: 'none', borderRadius: '8px', padding: '0.6rem 1.25rem', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={handleSaveTask}>
-              {taskFormType === 'create' ? 'Create Task' : 'Save Changes'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderTaskViewModal = () => {
-    if (!viewingTask) return null;
-    return (
-      <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-        <div style={{ background: 'white', borderRadius: '12px', width: '500px', padding: '2rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>Task Details</h3>
-            <button style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#94a3b8' }} onClick={() => { setShowTaskViewModal(false); setViewingTask(null); }}>✕</button>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: '#334155' }}>
-            <div>
-              <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Task ID</strong>
-              <span style={{ fontSize: '0.9rem', fontWeight: '700', color: '#0f172a' }}>#{viewingTask.id.slice(-6).toUpperCase()}</span>
-            </div>
-
-            <div>
-              <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Task Title</strong>
-              <span style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a' }}>{viewingTask.title}</span>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div>
-                <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Assignee</strong>
-                <span style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: '600' }}>{viewingTask.assignees || 'Unassigned'}</span>
-              </div>
-              <div>
-                <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Priority</strong>
-                <span style={{
-                  fontSize: '0.8rem',
-                  fontWeight: '700',
-                  color: viewingTask.priority === 'High' ? '#ef4444' : viewingTask.priority === 'Medium' ? '#f59e0b' : '#64748b'
-                }}>{viewingTask.priority || 'Medium'}</span>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div>
-                <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Start Date</strong>
-                <span style={{ fontSize: '0.9rem', color: '#0f172a' }}>{viewingTask.startDate ? new Date(viewingTask.startDate).toLocaleDateString() : '-'}</span>
-              </div>
-              <div>
-                <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Due Date</strong>
-                <span style={{ fontSize: '0.9rem', color: '#0f172a' }}>{viewingTask.dueDate ? new Date(viewingTask.dueDate).toLocaleDateString() : '-'}</span>
-              </div>
-            </div>
-
-            <div>
-              <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Status</strong>
-              <span style={{
-                background: viewingTask.status === 'Completed' ? '#dcfce7' : viewingTask.status === 'In Progress' ? '#dbeafe' : '#f1f5f9',
-                color: '#000000',
-                padding: '0.25rem 0.5rem',
-                borderRadius: '6px',
-                fontSize: '0.8rem',
-                fontWeight: '700',
-                display: 'inline-block'
-              }}>{viewingTask.status || 'To Do'}</span>
-            </div>
-
-            <div>
-              <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Description</strong>
-              <p style={{ margin: 0, fontSize: '0.9rem', color: '#334155', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
-                {viewingTask.description || 'No description provided.'}
-              </p>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-            <button style={{ background: '#0066FF', border: 'none', borderRadius: '8px', padding: '0.6rem 1.25rem', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={() => { setShowTaskViewModal(false); setViewingTask(null); }}>Close</button>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  // Legacy modals renderTaskFormModal and renderTaskViewModal removed in favor of TaskDetailView side drawer
 
   const renderQueryFormModal = () => {
     if (!selectedProject) return null;
@@ -993,7 +777,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     const projectID = selectedProject.projectNo || `PRJ-2026-${selectedProject.id.substring(0,4).toUpperCase()}`;
 
     return (
-      <div className="projects-page page-container detail-view" style={{ padding: '2rem 3rem', background: '#f8fafc', minHeight: '100vh' }}>
+      <div className="projects-page page-container detail-view" style={{ background: '#f8fafc', minHeight: '100vh' }}>
         
         {/* Breadcrumb Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '600' }}>
@@ -1005,19 +789,91 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         </div>
 
         {showForm && renderForm()}
-        {showTaskFormModal && renderTaskFormModal()}
-        {showTaskViewModal && renderTaskViewModal()}
+        {showTaskFormModal && (
+          <div className="task-drawer-overlay" onClick={e => { if (e.target === e.currentTarget) setShowTaskFormModal(false); }}>
+            <div className="task-drawer-panel">
+              <TaskDetailView
+                task={editingTask}
+                onSave={async (taskData, silent) => {
+                  try {
+                    const payload = {
+                      ...taskData,
+                      projectId: selectedProject.id,
+                      projectName: selectedProject.name,
+                      clientId: selectedProject.clientId,
+                      taskListId: selectedTaskListId
+                    };
+                    if (editingTask && editingTask.id) {
+                      await api.put(`/tasks/${editingTask.id}`, payload);
+                      if (!silent) alert('Task updated successfully!', 'success', 'Success');
+                    } else {
+                      await api.post('/tasks', payload);
+                      if (!silent) alert('Task created successfully!', 'success', 'Success');
+                    }
+                    fetchData(true);
+                    if (!silent) setShowTaskFormModal(false);
+                  } catch (err) {
+                    console.error('Error saving task:', err);
+                    alert('Failed to save task: ' + err.message, 'error', 'Error');
+                  }
+                }}
+                onDelete={async (id) => {
+                  await handleDeleteTask(id);
+                  setShowTaskFormModal(false);
+                }}
+                onClose={() => setShowTaskFormModal(false)}
+                currentUser={user}
+                initialEditMode={taskFormType === 'edit'}
+              />
+            </div>
+          </div>
+        )}
+        {showTaskViewModal && (
+          <div className="task-drawer-overlay" onClick={e => { if (e.target === e.currentTarget) { setShowTaskViewModal(false); setViewingTask(null); } }}>
+            <div className="task-drawer-panel">
+              <TaskDetailView
+                task={viewingTask}
+                onSave={async (taskData, silent) => {
+                  try {
+                    const payload = {
+                      ...taskData,
+                      projectId: selectedProject.id,
+                      projectName: selectedProject.name,
+                      clientId: selectedProject.clientId,
+                      taskListId: viewingTask.taskListId
+                    };
+                    await api.put(`/tasks/${viewingTask.id}`, payload);
+                    if (!silent) alert('Task updated successfully!', 'success', 'Success');
+                    fetchData(true);
+                    if (!silent) { setShowTaskViewModal(false); setViewingTask(null); }
+                  } catch (err) {
+                    console.error('Error saving task:', err);
+                    alert('Failed to save task: ' + err.message, 'error', 'Error');
+                  }
+                }}
+                onDelete={async (id) => {
+                  await handleDeleteTask(id);
+                  setShowTaskViewModal(false);
+                  setViewingTask(null);
+                }}
+                onClose={() => { setShowTaskViewModal(false); setViewingTask(null); }}
+                currentUser={user}
+                initialEditMode={false}
+              />
+            </div>
+          </div>
+        )}
         {showQueryModal && renderQueryFormModal()}
         {showQueryViewModal && renderQueryViewModal()}
 
         {/* Top Profile Card */}
-        <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-            <div style={{ width: '80px', height: '80px', borderRadius: '16px', background: '#f3e8ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9333ea' }}>
+        <div className="detail-profile-card">
+          <div className="detail-profile-left">
+            <div style={{ width: '80px', height: '80px', borderRadius: '16px', background: '#f3e8ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9333ea', flexShrink: 0 }}>
               <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
                 <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '800', color: '#0f172a' }}>{selectedProject.name}</h2>
                 <span style={{ background: '#dcfce7', color: '#16a34a', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '700' }}>{selectedProject.status || 'In Progress'}</span>
               </div>
@@ -1029,7 +885,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <div className="detail-profile-actions">
             <button 
               style={{ padding: '0.5rem 1rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
               onClick={() => {
@@ -1083,7 +939,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
         {/* Metrics Grid */}
         {detailTab === 'General' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+          <div className="detail-metrics-grid">
             <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -1138,7 +994,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         )}
 
         {/* Main Nav Tabs */}
-        <div style={{ display: 'flex', gap: '2rem', borderBottom: '1px solid #e2e8f0', marginBottom: '2rem', padding: '0 0.5rem' }}>
+        <div className="detail-nav-tabs">
           {[
             { id: 'General', label: 'General', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> },
             { id: 'Tasks', label: 'Task Groups', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> },
@@ -1165,7 +1021,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         </div>
 
         {/* Tab Content */}
-        <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '2rem' }}>
+        <div className="detail-tab-content">
           
           {detailTab === 'General' && (
             <div>
@@ -1173,70 +1029,74 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 
                 {/* Information Rows */}
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: '200px', display: 'flex', alignItems: 'center', gap: '1rem', color: '#475569', fontWeight: '600', fontSize: '0.85rem' }}>
+                <div className="detail-info-row">
+                  <div className="detail-info-label">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
                     Project Name
                   </div>
-                  <div style={{ width: '30px', color: '#cbd5e1' }}>:</div>
-                  <div style={{ color: '#0f172a', fontWeight: '700', fontSize: '0.9rem' }}>{selectedProject.name}</div>
+                  <div className="detail-info-sep">:</div>
+                  <div className="detail-info-value">{selectedProject.name}</div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-                  <div style={{ width: '200px', display: 'flex', alignItems: 'center', gap: '1rem', color: '#475569', fontWeight: '600', fontSize: '0.85rem' }}>
+                <div className="detail-info-row align-start">
+                  <div className="detail-info-label">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                     Description
                   </div>
-                  <div style={{ width: '30px', color: '#cbd5e1' }}>:</div>
-                  <div style={{ color: '#0f172a', fontWeight: '500', fontSize: '0.85rem', maxWidth: '600px', lineHeight: '1.6' }}>
+                  <div className="detail-info-sep">:</div>
+                  <div className="detail-info-value desc">
                     {selectedProject.description || '-'}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: '200px', display: 'flex', alignItems: 'center', gap: '1rem', color: '#475569', fontWeight: '600', fontSize: '0.85rem' }}>
+                <div className="detail-info-row">
+                  <div className="detail-info-label">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-3-3.87"></path><path d="M4 21v-2a4 4 0 0 1 3-3.87"></path><circle cx="12" cy="7" r="4"></circle></svg>
                     Client
                   </div>
-                  <div style={{ width: '30px', color: '#cbd5e1' }}>:</div>
-                  <div style={{ color: '#0f172a', fontWeight: '700', fontSize: '0.9rem' }}>{selectedProject.client || '-'}</div>
+                  <div className="detail-info-sep">:</div>
+                  <div className="detail-info-value">{selectedProject.client || '-'}</div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: '200px', display: 'flex', alignItems: 'center', gap: '1rem', color: '#475569', fontWeight: '600', fontSize: '0.85rem' }}>
+                <div className="detail-info-row">
+                  <div className="detail-info-label">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
                     Status
                   </div>
-                  <div style={{ width: '30px', color: '#cbd5e1' }}>:</div>
-                  <div>
+                  <div className="detail-info-sep">:</div>
+                  <div className="detail-info-value">
                     <span style={{ background: '#dcfce7', color: '#16a34a', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '700' }}>
                       {selectedProject.status || 'In Progress'}
                     </span>
                   </div>
                 </div>
 
-                {/* Hours row */}
-                <div style={{ display: 'flex', alignItems: 'center', marginTop: '1rem' }}>
-                  <div style={{ width: '200px', display: 'flex', alignItems: 'center', gap: '1rem', color: '#475569', fontWeight: '600', fontSize: '0.85rem' }}>
+                {/* Hours rows */}
+                <div className="detail-info-row">
+                  <div className="detail-info-label">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     Estimated Hours
                   </div>
-                  <div style={{ width: '30px', color: '#cbd5e1' }}>:</div>
-                  <div style={{ color: '#0f172a', fontWeight: '700', fontSize: '0.9rem', width: '150px' }}>{selectedProject.estimatedHours ? `${selectedProject.estimatedHours} hrs` : '-'}</div>
+                  <div className="detail-info-sep">:</div>
+                  <div className="detail-info-value">{selectedProject.estimatedHours ? `${selectedProject.estimatedHours} hrs` : '-'}</div>
+                </div>
 
-                  <div style={{ width: '150px', display: 'flex', alignItems: 'center', gap: '1rem', color: '#475569', fontWeight: '600', fontSize: '0.85rem' }}>
+                <div className="detail-info-row">
+                  <div className="detail-info-label">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     Billed Hours
                   </div>
-                  <div style={{ width: '30px', color: '#cbd5e1' }}>:</div>
-                  <div style={{ color: '#0f172a', fontWeight: '700', fontSize: '0.9rem', width: '150px' }}>{selectedProject.actualHours ? `${selectedProject.actualHours} hrs` : '-'}</div>
+                  <div className="detail-info-sep">:</div>
+                  <div className="detail-info-value">{selectedProject.actualHours ? `${selectedProject.actualHours} hrs` : '-'}</div>
+                </div>
 
-                  <div style={{ width: '150px', display: 'flex', alignItems: 'center', gap: '1rem', color: '#475569', fontWeight: '600', fontSize: '0.85rem' }}>
+                <div className="detail-info-row">
+                  <div className="detail-info-label">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                     Billable Hours
                   </div>
-                  <div style={{ width: '30px', color: '#cbd5e1' }}>:</div>
-                  <div style={{ color: '#0f172a', fontWeight: '700', fontSize: '0.9rem' }}>{selectedProject.billableHours ? `${selectedProject.billableHours} hrs` : '-'}</div>
+                  <div className="detail-info-sep">:</div>
+                  <div className="detail-info-value">{selectedProject.billableHours ? `${selectedProject.billableHours} hrs` : '-'}</div>
                 </div>
 
               </div>
@@ -1414,19 +1274,25 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                           </div>
                                         </td>
                                         <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                          <div className="cu-avatars" style={{ display: 'flex', justifyContent: 'center', gap: '0.25rem' }}>
+                                          <div className="cu-avatars" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
                                             {assignees.length === 0 ? (
                                               <div className="cu-avatar-empty" title="Unassigned" style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
                                                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                               </div>
-                                            ) : assignees.slice(0, 3).map(a => (
-                                              <div key={a} className={`cu-avatar ${getAvatarColor(a)}`} title={a} style={{ width: '24px', height: '24px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '600' }}>
-                                                {initials(a)}
-                                              </div>
-                                            ))}
-                                            {assignees.length > 3 && (
-                                              <div className="cu-avatar av-blue" style={{ width: '24px', height: '24px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '600', background: '#2563eb' }}>
-                                                +{assignees.length - 3}
+                                            ) : (
+                                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                                                {assignees.map(a => {
+                                                  const uObj = users.find(u => u.id === a);
+                                                  const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
+                                                  return (
+                                                    <div key={a} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                      <div className={`cu-avatar ${getAvatarColor(dispName)}`} title={dispName} style={{ width: '24px', height: '24px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '600' }}>
+                                                        {initials(dispName)}
+                                                      </div>
+                                                      <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{dispName}</span>
+                                                    </div>
+                                                  );
+                                                })}
                                               </div>
                                             )}
                                           </div>
@@ -2342,9 +2208,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Projects...'}</div>;
 
   return (
-    <div className="projects-page page-container" style={{ padding: '2rem 3rem' }}>
+    <div className="projects-page page-container">
       {/* Header matching the screenshot */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+      <div className="projects-page-header">
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', margin: '0 0 0.5rem 0' }}>Projects</h1>
           <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>Manage and track all your projects.</p>
@@ -2376,7 +2242,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       {/* Projects Table Container */}
       <div className="saas-table-container" style={{ padding: '0', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
         {/* Table Top Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', background: 'white' }}>
+        <div className="projects-table-header-bar">
           <span style={{ fontWeight: '700', color: '#0f172a', fontSize: '0.95rem' }}>Total Projects: {filteredProjects.length || 0}</span>
           
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -2393,93 +2259,199 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           </div>
         </div>
 
-        <table className="saas-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', background: 'white' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-              <th style={{ width: '40px', padding: '0.55rem 1.5rem', background: 'white' }}>
-                <input 
-                  type="checkbox" 
-                  style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
-                  checked={filteredProjects.length > 0 && selectedProjectIds.length === filteredProjects.length}
-                  onChange={handleSelectAll}
-                />
-              </th>
-              <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>#</th>
-              <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Project Name</th>
-              <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Status</th>
-              <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Estimated Hours</th>
-              <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Billed Hours</th>
-              <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Billable Hours</th>
-              <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Created On</th>
-              <th style={{ padding: '0.55rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', textAlign: 'center', background: 'white', textTransform: 'capitalize' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>Syncing workspace...</td></tr>
-            ) : filteredProjects.length === 0 ? (
-              <tr><td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No projects in this view.</td></tr>
-            ) : (
-              filteredProjects.map((proj, idx) => {
-                const client = proj.client || '-';
-                const estHours = proj.estimatedHours ? `${proj.estimatedHours} hrs` : '-';
-                const actHours = proj.actualHours ? `${proj.actualHours} hrs` : '-';
-                const bilHours = proj.billableHours ? `${proj.billableHours} hrs` : '-';
-                const createdOn = proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}) : '-';
-                const displayStatus = proj.status || 'In Progress';
-                
-                let statusBg = '#dcfce7'; let statusColor = '#16a34a';
-                if (displayStatus === 'On Hold') { statusBg = '#fef3c7'; statusColor = '#d97706'; }
-                else if (displayStatus === 'Completed') { statusBg = '#e0e7ff'; statusColor = '#4f46e5'; }
-                else if (displayStatus === 'Pending') { statusBg = '#f1f5f9'; statusColor = '#475569'; }
+        {/* Desktop Table View */}
+        <div className="projects-desktop-table-wrapper">
+          <table className="saas-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', background: 'white' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <th style={{ width: '40px', padding: '0.55rem 1.5rem', background: 'white' }}>
+                  <input 
+                    type="checkbox" 
+                    style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
+                    checked={filteredProjects.length > 0 && selectedProjectIds.length === filteredProjects.length}
+                    onChange={handleSelectAll}
+                  />
+                </th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>#</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Project Name</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Status</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Estimated Hours</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Billed Hours</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Billable Hours</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Created On</th>
+                <th style={{ padding: '0.55rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', textAlign: 'center', background: 'white', textTransform: 'capitalize' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>Syncing workspace...</td></tr>
+              ) : filteredProjects.length === 0 ? (
+                <tr><td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No projects in this view.</td></tr>
+              ) : (
+                filteredProjects.map((proj, idx) => {
+                  const client = proj.client || '-';
+                  const estHours = proj.estimatedHours ? `${proj.estimatedHours} hrs` : '-';
+                  const actHours = proj.actualHours ? `${proj.actualHours} hrs` : '-';
+                  const bilHours = proj.billableHours ? `${proj.billableHours} hrs` : '-';
+                  const createdOn = proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}) : '-';
+                  const displayStatus = proj.status || 'In Progress';
+                  
+                  let statusBg = '#dcfce7'; let statusColor = '#16a34a';
+                  if (displayStatus === 'On Hold') { statusBg = '#fef3c7'; statusColor = '#d97706'; }
+                  else if (displayStatus === 'Completed') { statusBg = '#e0e7ff'; statusColor = '#4f46e5'; }
+                  else if (displayStatus === 'Pending') { statusBg = '#f1f5f9'; statusColor = '#475569'; }
 
-                return (
-                  <tr key={proj.id} style={{ borderBottom: '1px solid #f1f5f9', background: 'white' }}>
-                    <td style={{ padding: '0.55rem 1.5rem' }}>
+                  return (
+                    <tr key={proj.id} style={{ borderBottom: '1px solid #f1f5f9', background: 'white' }}>
+                      <td style={{ padding: '0.55rem 1.5rem' }}>
+                        <input 
+                          type="checkbox" 
+                          style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
+                          checked={selectedProjectIds.includes(proj.id)}
+                          onChange={(e) => handleSelectOne(e, proj.id)}
+                        />
+                      </td>
+                      <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#1e293b', fontWeight: '600' }}>
+                        {idx + 1}
+                      </td>
+                      <td style={{ padding: '0.55rem 1rem' }}>
+                        <button 
+                          style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                          onClick={() => {
+                            setSelectedProject(proj);
+                            setCurrentView('detail');
+                          }}
+                        >
+                          {proj.name}
+                        </button>
+                      </td>
+                      <td style={{ padding: '0.55rem 1rem' }}>
+                        <span style={{ background: statusBg, color: statusColor, padding: '0.25rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '700' }}>
+                          {displayStatus}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
+                        {estHours}
+                      </td>
+                      <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
+                        {actHours}
+                      </td>
+                      <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
+                        {bilHours}
+                      </td>
+                      <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
+                        {createdOn}
+                      </td>
+                      <td style={{ padding: '0.55rem 1.5rem', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                          {/* Edit Button */}
+                          <button 
+                            style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '0.25rem' }} 
+                            title="Edit Project"
+                            onClick={() => {
+                              setForm({ 
+                                id: proj.id,
+                                name: proj.name || '', 
+                                status: proj.status || 'Active',
+                                description: proj.description || '',
+                                client: proj.client || '',
+                                estimatedHours: proj.estimatedHours || 0,
+                                actualHours: proj.actualHours || 0,
+                                billableHours: proj.billableHours || 0
+                              });
+                              setShowForm(true);
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                          </button>
+                          
+                          {/* Delete Button */}
+                          {(getLevel('projects', 'delete') === 'All' || (getLevel('projects', 'delete') === 'Self' && (user?.fullName || user?.name) && (proj.members || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))) && (
+                            <button 
+                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }} 
+                              title="Delete Project"
+                              onClick={() => handleRemove(proj.id)}
+                            >
+                              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Cards View */}
+        <div className="projects-mobile-cards-list">
+          {filteredProjects.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8', fontSize: '0.9rem' }}>No projects in this view.</div>
+          ) : (
+            filteredProjects.map((proj, idx) => {
+              const estHours = proj.estimatedHours ? `${proj.estimatedHours} hrs` : '-';
+              const actHours = proj.actualHours ? `${proj.actualHours} hrs` : '-';
+              const bilHours = proj.billableHours ? `${proj.billableHours} hrs` : '-';
+              const createdOn = proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}) : '-';
+              const displayStatus = proj.status || 'In Progress';
+              
+              let statusBg = '#dcfce7'; let statusColor = '#16a34a';
+              if (displayStatus === 'On Hold') { statusBg = '#fef3c7'; statusColor = '#d97706'; }
+              else if (displayStatus === 'Completed') { statusBg = '#e0e7ff'; statusColor = '#4f46e5'; }
+              else if (displayStatus === 'Pending') { statusBg = '#f1f5f9'; statusColor = '#475569'; }
+
+              return (
+                <div className="mobile-project-card" key={proj.id}>
+                  <div className="mp-header">
+                    <div className="mp-title-group">
                       <input 
                         type="checkbox" 
                         style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
                         checked={selectedProjectIds.includes(proj.id)}
                         onChange={(e) => handleSelectOne(e, proj.id)}
+                        className="mp-checkbox"
                       />
-                    </td>
-                    <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#1e293b', fontWeight: '600' }}>
-                      {idx + 1}
-                    </td>
-                    <td style={{ padding: '0.55rem 1rem' }}>
+                      <span className="mp-index">#{idx + 1}</span>
                       <button 
-                        style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                        style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '700', fontSize: '1.05rem', cursor: 'pointer', padding: 0, textAlign: 'left' }}
                         onClick={() => {
                           setSelectedProject(proj);
                           setCurrentView('detail');
                         }}
+                        className="mp-name-link"
                       >
                         {proj.name}
                       </button>
-                    </td>
-                    <td style={{ padding: '0.55rem 1rem' }}>
-                      <span style={{ background: statusBg, color: statusColor, padding: '0.25rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '700' }}>
-                        {displayStatus}
-                      </span>
-                    </td>
-                    <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
-                      {estHours}
-                    </td>
-                    <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
-                      {actHours}
-                    </td>
-                    <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
-                      {bilHours}
-                    </td>
-                    <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
-                      {createdOn}
-                    </td>
-                    <td style={{ padding: '0.55rem 1.5rem', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                        {/* Edit Button */}
+                    </div>
+                    <span style={{ background: statusBg, color: statusColor, padding: '0.25rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>
+                      {displayStatus}
+                    </span>
+                  </div>
+                  <div className="mp-body">
+                    {proj.description && (
+                      <p className="mp-description">{proj.description}</p>
+                    )}
+                    <div className="mp-meta-grid">
+                      <div className="mp-meta-item">
+                        <span className="mp-meta-label">Est. Hours</span>
+                        <span className="mp-meta-value">{estHours}</span>
+                      </div>
+                      <div className="mp-meta-item">
+                        <span className="mp-meta-label">Billed Hours</span>
+                        <span className="mp-meta-value">{actHours}</span>
+                      </div>
+                      <div className="mp-meta-item">
+                        <span className="mp-meta-label">Billable Hours</span>
+                        <span className="mp-meta-value">{bilHours}</span>
+                      </div>
+                    </div>
+                    <div className="mp-footer">
+                      <span className="mp-date">Created: {createdOn}</span>
+                      <div className="mp-actions">
                         <button 
-                          style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '0.25rem' }} 
-                          title="Edit Project"
+                          className="mp-action-btn edit"
                           onClick={() => {
                             setForm({ 
                               id: proj.id,
@@ -2494,30 +2466,27 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                             setShowForm(true);
                           }}
                         >
-                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                          Edit
                         </button>
-                        
-                        {/* Delete Button */}
                         {(getLevel('projects', 'delete') === 'All' || (getLevel('projects', 'delete') === 'Self' && (user?.fullName || user?.name) && (proj.members || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))) && (
                           <button 
-                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }} 
-                            title="Delete Project"
+                            className="mp-action-btn delete"
                             onClick={() => handleRemove(proj.id)}
                           >
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            Delete
                           </button>
                         )}
                       </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
         
         {/* Pagination placeholder matching the image */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', borderTop: '1px solid #e2e8f0', background: 'white' }}>
+        <div className="projects-table-footer-bar">
           <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Showing 1 to {Math.min(10, projects.length || 10)} of {projects.length || 15} entries</span>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', borderRadius: '6px', background: 'white', color: '#64748b', cursor: 'pointer' }}>&lt;</button>

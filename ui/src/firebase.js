@@ -24,9 +24,8 @@ if (firebaseConfig.apiKey) {
 }
 
 export const requestForToken = async (userId, api) => {
-  console.log('FCM VAPID Key in use:', vapidKey);
   if (!messaging) {
-    console.warn("Firebase Messaging is not initialized. Please configure REACT_APP_FIREBASE_... env variables.");
+    // Firebase is not configured, gracefully return null without noisy warnings
     return null;
   }
   

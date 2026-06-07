@@ -11,15 +11,16 @@ export default function EditUser({ userToEdit, onBack }) {
   const { alert } = useAlert();
 
   
+
   const [form, setForm] = useState({ 
-    fullName: userToEdit.fullName || `${userToEdit.firstName || ''} ${userToEdit.lastName || ''}`.trim(),
-    email: userToEdit.email || '',
-    password: userToEdit.password || '',
-    phoneNo: userToEdit.phoneNo || '',
-    empId: userToEdit.empId || '',
-    designation: userToEdit.designation || '',
-    profileImage: userToEdit.profileImage || '',
-    role: userToEdit.role || 'Employee'
+    fullName: userToEdit?.fullName || `${userToEdit?.firstName || ''} ${userToEdit?.lastName || ''}`.trim(),
+    email: userToEdit?.email || '',
+    password: userToEdit?.password || '',
+    phoneNo: userToEdit?.phoneNo || '',
+    empId: userToEdit?.empId || '',
+    designation: userToEdit?.designation || '',
+    profileImage: userToEdit?.profileImage || '',
+    role: userToEdit?.role || 'Employee'
   });
 
   useEffect(() => {
@@ -103,7 +104,10 @@ export default function EditUser({ userToEdit, onBack }) {
     }
   };
 
-
+  // Guard against missing userToEdit
+  if (!userToEdit) {
+    return <div className="loading-screen">Loading user data...</div>;
+  }
 
   if (loading || uploading) return <div className="loading-screen">{loading ? 'Saving Updates...' : 'Uploading Image...'}</div>;
 
