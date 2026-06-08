@@ -3648,7 +3648,7 @@
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.12s;
   justify-content: flex-end;
 }

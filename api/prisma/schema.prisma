@@ -147,6 +147,7 @@ model Task {
   assignedDate DateTime?
   deliveredDate DateTime? @map("delivered_date")
   isBillable  Boolean  @default(false)
+  billableAmount Float? @default(0) @map("billable_amount")
   estimatedHours Float?  @default(0) @map("estimated_hours")
   approvedHours Float?   @default(0)
   actualHours   Float?   @default(0)

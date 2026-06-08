@@ -56,6 +56,7 @@ prisma.$connect()
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS task_type TEXT;',
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS tag TEXT;',
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS "isBillable" BOOLEAN DEFAULT false;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS billable_amount FLOAT DEFAULT 0;',
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS estimated_hours FLOAT DEFAULT 0;',
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS "approvedHours" FLOAT DEFAULT 0;',
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS "actualHours" FLOAT DEFAULT 0;',
@@ -933,6 +934,10 @@ app.put('/api/projects/:id', async (req, res) => {
 
 app.delete('/api/projects/:id', async (req, res) => {
   try {
+    const taskListCount = await prisma.taskList.count({ where: { projectId: req.params.id } });
+    if (taskListCount > 0) {
+      return res.status(400).json({ error: 'Cannot delete project because it has associated task groups.' });
+    }
     await prisma.project.delete({
       where: { id: req.params.id }
     });
@@ -969,6 +974,11 @@ app.post('/api/task-lists', async (req, res) => {
 
 app.delete('/api/task-lists/:id', async (req, res) => {
   try {
+    // Delete all tasks associated with this task list
+    await prisma.task.deleteMany({
+      where: { taskListId: req.params.id }
+    });
+    // Now delete the task list itself
     await prisma.taskList.delete({
       where: { id: req.params.id }
     });
@@ -1046,7 +1056,7 @@ app.post('/api/tasks', async (req, res) => {
     });
 
     // Sanitize numbers
-    ['estimatedHours', 'approvedHours', 'actualHours', 'employeeHours'].forEach(key => {
+    ['estimatedHours', 'approvedHours', 'actualHours', 'employeeHours', 'billableAmount'].forEach(key => {
       if (taskData[key] !== undefined) {
         if (taskData[key] === '' || taskData[key] === null || taskData[key] === undefined) {
           taskData[key] = null;
@@ -1102,7 +1112,7 @@ app.put('/api/tasks/:id', async (req, res) => {
     });
 
     // Sanitize numbers
-    ['estimatedHours', 'approvedHours', 'actualHours', 'employeeHours'].forEach(key => {
+    ['estimatedHours', 'approvedHours', 'actualHours', 'employeeHours', 'billableAmount'].forEach(key => {
       if (taskData[key] !== undefined) {
         if (taskData[key] === '' || taskData[key] === null || taskData[key] === undefined) {
           taskData[key] = null;
@@ -1508,6 +1518,10 @@ app.put('/api/clients/:id', async (req, res) => {
 
 app.delete('/api/clients/:id', async (req, res) => {
   try {
+    const projectsCount = await prisma.project.count({ where: { clientId: req.params.id } });
+    if (projectsCount > 0) {
+      return res.status(400).json({ error: 'Cannot delete client because they have associated projects.' });
+    }
     await prisma.client.delete({
       where: { id: req.params.id }
     });

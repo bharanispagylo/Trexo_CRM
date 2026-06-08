@@ -163,6 +163,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       taskType: 'Feature',
       projectName: '',
       isBillable: false,
+      billableAmount: '',
       estimatedHours: '',
       approvedHours: '',
       actualHours: '',
@@ -222,7 +223,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     
     const keysToCompare = [
       'title', 'description', 'status', 'assignees', 'dueDate', 'deliveredDate', 'priority',
-      'tag', 'taskType', 'isBillable', 'estimatedHours', 'approvedHours', 'actualHours'
+      'tag', 'taskType', 'isBillable', 'billableAmount', 'estimatedHours', 'approvedHours', 'actualHours'
     ];
     
     for (const key of keysToCompare) {
@@ -1121,6 +1122,34 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
                   {form.isBillable && (
                     <>
+                      {/* Billable Amount */}
+                      <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
+                        <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
+                          Billable Amount ($)
+                        </label>
+                        <div>
+                          {isEditing ? (
+                            <input 
+                              type="number" 
+                              value={form.billableAmount !== undefined && form.billableAmount !== null ? form.billableAmount : ''}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setForm(f => ({
+                                  ...f,
+                                  billableAmount: val === '' ? null : parseFloat(val)
+                                }));
+                              }}
+                              className="saas-grid-input"
+                              placeholder="e.g. 500"
+                            />
+                          ) : (
+                            <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
+                              ${Number(form.billableAmount || 0).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
                       {/* Billable Hours */}
                       <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
                         <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>

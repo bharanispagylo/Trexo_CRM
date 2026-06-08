@@ -77,7 +77,7 @@ export default function Clients({ user }) {
         fetchClients();
       } catch (error) {
         console.error('Delete error:', error);
-        alert('Failed to delete client', 'error');
+        alert(error.message || 'Failed to delete client', 'error');
       } finally {
         setIsSaving(false);
       }

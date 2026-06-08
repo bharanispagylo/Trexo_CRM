@@ -329,7 +329,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         fetchData();
       } catch (error) {
         console.error('Delete error:', error);
-        alert('Failed to delete project', 'error', 'Error');
+        alert(error.message || 'Failed to delete project', 'error', 'Error');
       } finally {
         setIsSaving(false);
       }
@@ -343,6 +343,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         fetchData(true);
       } catch (error) {
         console.error('Delete list error:', error);
+        alert(error.message || 'Failed to delete task group', 'error', 'Error');
       }
     }, 'Delete Task Group');
   };
