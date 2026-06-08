@@ -12,7 +12,6 @@ const isAssigneeMatch = (assigneeStr, userId) => {
 
 export default function TrackTeam({ user }) {
   const [tasks, setTasks] = useState([]);
-  const [users, setUsers] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMember, setSelectedMember] = useState(null);
@@ -33,13 +32,11 @@ export default function TrackTeam({ user }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [taskData, userData, teamData] = await Promise.all([
+      const [taskData, teamData] = await Promise.all([
         api.get('/tasks'),
-        api.get('/users'),
         api.get('/teams')
       ]);
       setTasks(taskData || []);
-      setUsers(userData || []);
       setTeamMembers(teamData || []);
     } catch (err) {
       console.error('Error fetching tracker details:', err);
