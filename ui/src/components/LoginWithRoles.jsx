@@ -771,6 +771,7 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
   const _overdue = _all.filter(t => { if (!t.dueDate) return false; const d = new Date(t.dueDate); d.setHours(0, 0, 0, 0); return d < _now; }).length;
   const _prio = _all.filter(t => t.priority === 'High' || t.priority === 'Critical').length;
 
+  // eslint-disable-next-line no-unused-vars
   const _cards = [
     {
       label: 'Today',
@@ -846,6 +847,7 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
     },
   ];
 
+  // eslint-disable-next-line no-unused-vars
   const recents = [
     ..._all.map(t => ({ type: 'task', id: t.id, name: t.title, date: t.createdAt || '' })),
     ...projects.map(p => ({ type: 'project', id: p.id, name: p.name, date: p.createdAt || '' }))
@@ -1031,6 +1033,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
   const _eovd = _eall.filter(t => { if (!t.dueDate) return false; const d = new Date(t.dueDate); d.setHours(0, 0, 0, 0); return d < _enow; }).length;
   const _eprio = _eall.filter(t => t.priority === 'High' || t.priority === 'Critical').length;
 
+  // eslint-disable-next-line no-unused-vars
   const _ecards = [
     {
       label: 'Today',
@@ -1106,6 +1109,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
     },
   ];
 
+  // eslint-disable-next-line no-unused-vars
   const recents = _eall
     .map(t => ({ type: 'task', id: t.id, name: t.title, date: t.createdAt || '' }))
     .sort((a, b) => new Date(b.date) - new Date(a.date))
