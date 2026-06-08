@@ -389,12 +389,6 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
               </div>
               <span className="more-label">Reports</span>
             </div>
-            <div className="more-item" onClick={() => { setActiveTab('projects'); setMobileMoreOpen(false); }}>
-              <div className="more-icon" style={{ background: '#ef4444' }}>
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
-              </div>
-              <span className="more-label">Projects</span>
-            </div>
             <div className="more-item" onClick={() => { setActiveTab('overview'); setMobileMoreOpen(false); }}>
               <div className="more-icon" style={{ background: '#8b5cf6' }}>
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="13" y2="17"></line></svg>
@@ -450,6 +444,10 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         <button className={`mobile-nav-btn ${activeTab === 'tasks' && !mobileMoreOpen ? 'active' : ''}`} onClick={() => { setActiveTab('tasks'); setMobileMoreOpen(false); }}>
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
           <span className="mobile-nav-label">My Tasks</span>
+        </button>
+        <button className={`mobile-nav-btn ${activeTab === 'projects' && !mobileMoreOpen ? 'active' : ''}`} onClick={() => { setActiveTab('projects'); setMobileMoreOpen(false); }}>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+          <span className="mobile-nav-label">Projects</span>
         </button>
         <button className={`mobile-nav-btn ${mobileMoreOpen ? 'active' : ''}`} onClick={() => setMobileMoreOpen(!mobileMoreOpen)}>
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="12" r="2"></circle></svg>
