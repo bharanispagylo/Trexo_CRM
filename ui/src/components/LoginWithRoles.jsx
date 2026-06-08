@@ -532,17 +532,138 @@ function ForgotPasswordPage({ onBackToLogin }) {
 }
 
 // ══════════════════════════════════════════════════════════
+//  MOBILE HOME DASHBOARD (ClickUp-style)
+// ══════════════════════════════════════════════════════════
+function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, priorityCount, upcomingCount, setActiveTab }) {
+  const [taskLists, setTaskLists] = useState([]);
+  const [listTaskCounts, setListTaskCounts] = useState({});
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/task-lists').catch(() => []),
+      api.get('/tasks').catch(() => [])
+    ]).then(([lists, tasks]) => {
+      setTaskLists(lists || []);
+      const counts = {};
+      (tasks || []).forEach(t => {
+        if (t.taskListId) counts[t.taskListId] = (counts[t.taskListId] || 0) + 1;
+      });
+      setListTaskCounts(counts);
+    });
+  }, []);
+
+  const statCards = [
+    {
+      label: 'Today', count: todayCount, iconBg: '#7c3aed',
+      icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    },
+    {
+      label: 'Overdue', count: overdueCount, iconBg: '#ef4444', warn: overdueCount > 0,
+      icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    },
+    {
+      label: 'My Priorities', count: priorityCount, iconBg: '#f97316',
+      icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+    },
+    {
+      label: 'Upcoming', count: upcomingCount, iconBg: '#f59e0b',
+      icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    },
+    {
+      label: 'My Tasks', count: myTasksCount, iconBg: '#2563eb',
+      icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    },
+    {
+      label: 'Reminders', count: 0, iconBg: '#0d9488',
+      icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 16 14"/></svg>
+    },
+    {
+      label: 'Comments', count: 0, iconBg: '#16a34a',
+      icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    },
+  ];
+
+  return (
+    <div className="mhd-wrap">
+      {/* Search bar */}
+      <div className="mhd-search">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#94a3b8" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span className="mhd-search-placeholder">Search</span>
+      </div>
+
+      {/* Stats cards grid */}
+      <div className="mhd-stats-grid">
+        {statCards.map((card, i) => (
+          <button key={i} className="mhd-stat-card" onClick={() => setActiveTab && setActiveTab('tasks')}>
+            <div className="mhd-stat-card-hdr">
+              <div className="mhd-stat-icon" style={{ background: card.iconBg }}>{card.icon}</div>
+              <span className={`mhd-stat-count${card.warn ? ' mhd-warn' : ''}`}>{card.count}</span>
+            </div>
+            <span className={`mhd-stat-label${card.warn ? ' mhd-warn' : ''}`}>{card.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* My Lists section */}
+      <div className="mhd-lists-section">
+        <div className="mhd-lists-hdr">
+          <span className="mhd-lists-title">My Lists</span>
+          <button className="mhd-lists-add-btn" onClick={() => setActiveTab && setActiveTab('tasks')}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+        {taskLists.length === 0 ? (
+          <p className="mhd-lists-empty">No lists yet</p>
+        ) : (
+          taskLists.map(list => (
+            <button key={list.id} className="mhd-list-row" onClick={() => setActiveTab && setActiveTab('tasks')}>
+              <div className="mhd-list-icon-wrap">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              </div>
+              <span className="mhd-list-name">{list.name}</span>
+              <span className="mhd-list-count">{listTaskCounts[list.id] || 0}</span>
+            </button>
+          ))
+        )}
+      </div>
+
+      {/* What's next CTA */}
+      <button className="mhd-whats-next-btn" onClick={() => setActiveTab && setActiveTab('tasks')}>
+        <svg viewBox="0 0 24 24" width="20" height="20">
+          <defs>
+            <linearGradient id="wnGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#6366f1"/>
+              <stop offset="50%" stopColor="#ec4899"/>
+              <stop offset="100%" stopColor="#f97316"/>
+            </linearGradient>
+          </defs>
+          <circle cx="12" cy="12" r="10" fill="url(#wnGrad)"/>
+          <path d="M8 12h8M12 8l4 4-4 4" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        What's next?
+      </button>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════
 //  ADMIN DASHBOARD
 // ══════════════════════════════════════════════════════════
 
 function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
   const [tasks, setTasks] = useState({ today: [], upcoming: [], backlog: [] });
+  const [projects, setProjects] = useState([]);
 
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const allTasks = await api.get('/tasks');
+        const [allTasksRaw, projectsData] = await Promise.all([
+          api.get('/tasks'),
+          api.get('/projects').catch(() => [])
+        ]);
+        const allTasks = allTasksRaw || [];
+        setProjects(projectsData || []);
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -551,7 +672,7 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
         const upcomingTasks = [];
         const backlogTasks = [];
 
-        (allTasks || []).forEach(task => {
+        allTasks.forEach(task => {
           if (task.status === 'Delivered' || task.status === 'Prod Verified') return;
 
           // 1. Backlog Tasks: if deliveredDate or dueDate is in the past
@@ -725,20 +846,23 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
     },
   ];
 
+  const recents = [
+    ..._all.map(t => ({ type: 'task', id: t.id, name: t.title, date: t.createdAt || '' })),
+    ...projects.map(p => ({ type: 'project', id: p.id, name: p.name, date: p.createdAt || '' }))
+  ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 15);
+
   return (
     <div className="db-overview-page">
-      {/* ── Mobile card grid ── */}
-      <div className="db-mobile-grid">
-        {_cards.map((c, i) => (
-          <button key={i} className="db-tile" onClick={() => setActiveTab && setActiveTab('tasks')}>
-            <div className="db-tile-icon" style={{ background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}>
-              {c.icon}
-            </div>
-            <div className="db-tile-count" style={{ color: c.warn && c.count > 0 ? '#ef4444' : '#1e293b' }}>{c.count}</div>
-            <div className="db-tile-label" style={{ color: c.warn && c.count > 0 ? '#ef4444' : '#374151' }}>{c.label}</div>
-          </button>
-        ))}
-      </div>
+      {/* ── Mobile Home (ClickUp-style) ── */}
+      <MobileHomeDashboard
+        user={user}
+        todayCount={tasks.today.length}
+        overdueCount={_overdue}
+        myTasksCount={_all.length}
+        priorityCount={_prio}
+        upcomingCount={tasks.upcoming.length}
+        setActiveTab={setActiveTab}
+      />
 
       {/* ── Desktop panel layout ── */}
       <div className="db-desktop-panels" style={{ paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
@@ -982,20 +1106,23 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
     },
   ];
 
+  const recents = _eall
+    .map(t => ({ type: 'task', id: t.id, name: t.title, date: t.createdAt || '' }))
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 15);
+
   return (
     <div className="db-overview-page">
-      {/* ── Mobile card grid ── */}
-      <div className="db-mobile-grid">
-        {_ecards.map((c, i) => (
-          <button key={i} className="db-tile" onClick={() => setActiveTab && setActiveTab('tasks')}>
-            <div className="db-tile-icon" style={{ background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}>
-              {c.icon}
-            </div>
-            <div className="db-tile-count" style={{ color: c.warn && c.count > 0 ? '#ef4444' : '#1e293b' }}>{c.count}</div>
-            <div className="db-tile-label" style={{ color: c.warn && c.count > 0 ? '#ef4444' : '#374151' }}>{c.label}</div>
-          </button>
-        ))}
-      </div>
+      {/* ── Mobile Home (ClickUp-style) ── */}
+      <MobileHomeDashboard
+        user={user}
+        todayCount={tasks.today.length}
+        overdueCount={_eovd}
+        myTasksCount={_eall.length}
+        priorityCount={_eprio}
+        upcomingCount={tasks.upcoming.length}
+        setActiveTab={setActiveTab}
+      />
 
       {/* ── Desktop panel layout ── */}
       <div className="db-desktop-panels" style={{ paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>

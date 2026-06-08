@@ -337,15 +337,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleRemoveList = async (listId) => {
-    confirm('Delete this task group? All tasks inside will also be removed.', async () => {
-      try {
-        await api.delete(`/task-lists/${listId}`);
-        fetchData(true);
-      } catch (error) {
-        console.error('Delete list error:', error);
-        alert(error.message || 'Failed to delete task group', 'error', 'Error');
-      }
-    }, 'Delete Task Group');
+    try {
+      await api.delete(`/task-lists/${listId}`);
+      fetchData(true);
+    } catch (error) {
+      console.error('Delete list error:', error);
+      alert(error.message || 'Failed to delete task group', 'error', 'Error');
+    }
   };
 
   const handleRenameList = async (listId) => {
@@ -1223,11 +1221,15 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                             )}
                             {can('projects', 'delete') && editingListId !== list.id && (
                               <button
-                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
-                                title="Delete Category"
+                                style={{ background: 'none', border: 'none', color: listTasks.length > 0 ? '#cbd5e1' : '#ef4444', cursor: listTasks.length > 0 ? 'not-allowed' : 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                                title={listTasks.length > 0 ? `Cannot delete — ${listTasks.length} task${listTasks.length > 1 ? 's' : ''} exist in this group` : 'Delete Category'}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  confirm(`Delete "${list.name}" list and all its tasks?`, () => handleRemoveList(list.id), 'Delete Category');
+                                  if (listTasks.length > 0) {
+                                    alert(`"${list.name}" has ${listTasks.length} task${listTasks.length > 1 ? 's' : ''}. Remove all tasks from this group before deleting it.`, 'warning', 'Cannot Delete');
+                                    return;
+                                  }
+                                  confirm(`Delete "${list.name}" task group?`, () => handleRemoveList(list.id), 'Delete Task Group');
                                 }}
                               >
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>

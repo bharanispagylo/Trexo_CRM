@@ -614,10 +614,6 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       newErrors.title = "Title must be 3-100 characters";
     }
 
-    if (!form.projectName?.trim()) {
-      newErrors.projectName = "Project name is required";
-    }
-
     if (form.isBillable && (form.approvedHours < 0 || form.actualHours < 0)) {
       newErrors.billing = "Hours cannot be negative";
     }
@@ -876,32 +872,32 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         
         <div className="saas-nav-right" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           {createdDateToDisplay && (
-            <span style={{ color: '#64748b', fontSize: '0.82rem', marginRight: '0.5rem', fontWeight: 500 }}>
+            <span className="saas-nav-created-date" style={{ color: '#64748b', fontSize: '0.82rem', marginRight: '0.5rem', fontWeight: 500 }}>
               {createdDateToDisplay}
             </span>
           )}
           {isEdit && canDelete && (
-            <button 
-              className="saas-btn-nav saas-btn-danger" 
+            <button
+              className="saas-btn-nav saas-btn-danger"
               onClick={() => confirm('Are you sure you want to delete this task?', () => { onDelete(task.id); onClose(); }, 'Delete Task')}
             >
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-              Delete
+              <span className="saas-btn-delete-text">Delete</span>
             </button>
           )}
 
 
 
-          <button className="saas-btn-nav saas-btn-secondary" onClick={onClose}>
+          <button className="saas-btn-nav saas-btn-secondary saas-nav-cancel-btn" onClick={onClose}>
             Cancel
           </button>
-          <button 
-            className="saas-btn-nav saas-btn-primary" 
-            onClick={submit} 
+          <button
+            className="saas-btn-nav saas-btn-primary"
+            onClick={submit}
             disabled={isEdit && !isChanged()}
-            style={{ 
-              opacity: (isEdit && !isChanged()) ? 0.6 : 1, 
-              cursor: (isEdit && !isChanged()) ? 'not-allowed' : 'pointer' 
+            style={{
+              opacity: (isEdit && !isChanged()) ? 0.6 : 1,
+              cursor: (isEdit && !isChanged()) ? 'not-allowed' : 'pointer'
             }}
           >
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -1003,7 +999,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         title="Due Date"
                       />
                       
-                      <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>→</span>
+                      <span className="saas-date-arrow" style={{ color: '#94a3b8', fontSize: '0.8rem' }}>→</span>
 
                       <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Delivery:</span>
                       <input 
@@ -1045,7 +1041,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               </div>
           
           {isEditing && (
-            <div className="form-actions" style={{ justifyContent: 'flex-end', borderTop: 'none', background: 'transparent', boxShadow: 'none' }}>
+            <div className="form-actions" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', borderTop: 'none', background: 'transparent', boxShadow: 'none' }}>
               <button className="saas-btn-nav saas-btn-secondary" onClick={onClose}>
                 Cancel
               </button>
@@ -1232,29 +1228,29 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   </div>
                 ) : (
                   <>
-                    <div style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', maxWidth: '420px', boxSizing: 'border-box' }}>
                       <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.95rem' }}>Add New Work Log</h4>
-                  <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1rem' }}>
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <label className="saas-field-label" style={{ flexShrink: 0, fontWeight: 600, color: '#475569' }}>Date</label>
-                      <input type="date" className="saas-input" value={workLogForm.logDate} onChange={e => setWorkLogForm({...workLogForm, logDate: e.target.value})} style={{ flex: 1 }} />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Date</label>
+                      <input type="date" className="saas-input" value={workLogForm.logDate} onChange={e => setWorkLogForm({...workLogForm, logDate: e.target.value})} style={{ width: '100%', boxSizing: 'border-box' }} />
                     </div>
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <label className="saas-field-label" style={{ flexShrink: 0, fontWeight: 600, color: '#475569' }}>Hours</label>
-                      <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} style={{ flex: 1 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Hours</label>
+                      <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} style={{ width: '100%', boxSizing: 'border-box' }} />
                     </div>
                   </div>
-                  <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <label className="saas-field-label" style={{ flexShrink: 0, fontWeight: 600, color: '#475569' }}>Description</label>
-                    <input type="text" className="saas-input" placeholder="What did you work on?" value={workLogForm.description} onChange={e => setWorkLogForm({...workLogForm, description: e.target.value})} style={{ flex: 1 }} />
+                  <div style={{ marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Description</label>
+                    <input type="text" className="saas-input" placeholder="What did you work on?" value={workLogForm.description} onChange={e => setWorkLogForm({...workLogForm, description: e.target.value})} style={{ width: '100%', boxSizing: 'border-box' }} />
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button className="saas-btn-primary" onClick={() => handleAddWorkLog(true)} disabled={workLogSaving}>
                       {workLogSaving ? 'Saving...' : (workLogForm.id ? 'Update Billing Log' : 'Add Billing Log')}
                     </button>
                     {workLogForm.id && (
-                      <button 
-                        className="saas-btn-secondary" 
+                      <button
+                        className="saas-btn-secondary"
                         onClick={() => setWorkLogForm({ logDate: new Date().toISOString().split('T')[0], hoursWorked: '', description: '', isBilled: false, id: null })}
                         disabled={workLogSaving}
                         style={{ padding: '0.5rem 1rem' }}
@@ -1671,7 +1667,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     )}
                   </div>
                 )}
-                <div style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                   <span 
                     className="comment-emoji-icon" 
                     title="Insert Emoji"
@@ -1854,7 +1850,7 @@ function TaskCard({ task, onDragStart, onClick, onDelete, currentUser, listUsers
 }
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Kanban Column ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave, isDragOver, onTaskClick, onDelete, currentUser, onAddTaskClick, showAdd = true }) {
+function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave, isDragOver, onTaskClick, onDelete, currentUser, listUsers, onAddTaskClick, showAdd = true }) {
   const meta = STATUS_HEADER_META[col.label] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
 
   return (
@@ -1891,6 +1887,7 @@ function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave
             onClick={onTaskClick}
             onDelete={onDelete}
             currentUser={currentUser}
+            listUsers={listUsers || []}
           />
         ))}
       </div>
@@ -2080,7 +2077,7 @@ function TaskCardWithDates({ task, onDragStart, onClick, onDelete, currentUser, 
   );
 }
 
-function ScheduleColumn({ title, count, tasks, onDragStart, onDrop, onDragOver, onDragLeave, isDragOver, onTaskClick, onDelete, currentUser, onAddTaskClick, colorMeta, showAdd = true }) {
+function ScheduleColumn({ title, count, tasks, onDragStart, onDrop, onDragOver, onDragLeave, isDragOver, onTaskClick, onDelete, currentUser, listUsers, onAddTaskClick, colorMeta, showAdd = true }) {
   return (
     <div
       className={`kanban-col-clickup ${isDragOver ? 'drag-over' : ''}`}
@@ -2116,6 +2113,7 @@ function ScheduleColumn({ title, count, tasks, onDragStart, onDrop, onDragOver, 
             onClick={onTaskClick}
             onDelete={onDelete}
             currentUser={currentUser}
+            listUsers={listUsers || []}
           />
         ))}
       </div>
@@ -2139,8 +2137,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const [tasks, setTasks]       = useState([]);
   const [loading, setLoading]   = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [viewMode, setViewMode] = useState('list'); 
-  const [subTab, setSubTab]     = useState('my'); 
+  const [viewMode, setViewMode] = useState('list');
+  const [subTab, setSubTab]     = useState('my');
+  const [mobileSortBy, setMobileSortBy] = useState('dueDate');
   const [assigneeFilter, setAssigneeFilter] = useState(initialAssigneeFilter);
 
   useEffect(() => {
@@ -2748,6 +2747,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 onTaskClick={openTaskDetail}
                 onDelete={handleDeleteTask}
                 currentUser={user}
+                listUsers={listUsers}
                 onAddTaskClick={col.onAddTask}
                 colorMeta={col.colorMeta}
                 showAdd={subTab !== 'my'}
@@ -2773,6 +2773,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
               onTaskClick={openTaskDetail}
               onDelete={handleDeleteTask}
               currentUser={user}
+              listUsers={listUsers}
               onAddTaskClick={openNewTask}
               showAdd={subTab !== 'my'}
             />
@@ -3173,8 +3174,69 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           byStatus[st].push(task);
         });
 
+        const flatSorted = [...filteredTasks].sort((a, b) => {
+          if (mobileSortBy === 'dueDate') {
+            if (!a.dueDate) return 1; if (!b.dueDate) return -1;
+            return new Date(a.dueDate) - new Date(b.dueDate);
+          }
+          if (mobileSortBy === 'priority') {
+            const order = { Critical: 0, High: 1, Medium: 2, Low: 3, '': 4 };
+            return (order[a.priority] ?? 4) - (order[b.priority] ?? 4);
+          }
+          if (mobileSortBy === 'title') {
+            return (a.title || '').localeCompare(b.title || '');
+          }
+          return 0;
+        });
         return (
-          <div className="cu-list-root my-tasks-list">
+          <>
+            {/* ── Mobile ClickUp-style flat list (hidden on desktop) ── */}
+            <div className="cu-mobile-mytasks-flat">
+              <div className="cu-mobile-sort-bar">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                <span>Sort by:</span>
+                <select className="cu-mobile-sort-select" value={mobileSortBy} onChange={e => setMobileSortBy(e.target.value)}>
+                  <option value="dueDate">Due date</option>
+                  <option value="priority">Priority</option>
+                  <option value="title">Name</option>
+                </select>
+              </div>
+              {flatSorted.length === 0 ? (
+                <div className="cu-flat-empty">No tasks assigned to you.</div>
+              ) : flatSorted.map(task => {
+                const relDate = formatRelativeDueDate(task.dueDate);
+                const tGroup = task.taskListId ? (taskListsData.find(l => l.id === task.taskListId)?.name || '') : '';
+                const dueLbl = task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+                const sMeta = STATUS_HEADER_META[task.status] || { dotColor: '#94a3b8' };
+                return (
+                  <div key={task.id} className="cu-flat-task-row" onClick={() => openTaskDetail(task, false)}>
+                    <span className="cu-flat-circle" style={{ borderColor: sMeta.dotColor }}></span>
+                    <div className="cu-flat-task-content">
+                      <span className="cu-flat-task-title">{task.title || 'Untitled Task'}</span>
+                      {(dueLbl || tGroup) && (
+                        <div className="cu-flat-task-meta">
+                          {dueLbl && (
+                            <span className={`cu-flat-task-date${relDate?.isOverdue ? ' cu-flat-overdue' : relDate?.isToday ? ' cu-flat-today' : ''}`}>
+                              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                              {dueLbl}
+                            </span>
+                          )}
+                          {tGroup && <span className="cu-flat-task-list">{dueLbl ? ' • ' : ''}In {tGroup}</span>}
+                        </div>
+                      )}
+                    </div>
+                    {task.status && (
+                      <span className="cu-flat-status" style={{ background: sMeta.bg, color: sMeta.fg }}>
+                        {task.status}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ── Desktop: status-grouped list (hidden on mobile) ── */}
+            <div className="cu-list-root my-tasks-list">
             {COLUMNS.map(col => {
               const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
               const statusTasks = [...(byStatus[col.id] || [])].sort((a, b) => {
@@ -3227,14 +3289,38 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           {statusTasks.map(task => {
                             const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
                             const relDate = formatRelativeDueDate(task.dueDate);
+                            const taskGroupName = task.taskListId ? (taskListsData.find(l => l.id === task.taskListId)?.name || '') : '';
+                            const dueDateLabel = task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
                             return (
                               <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
                                 <td className="cu-td cu-td-name">
-                                  <span className="cu-status-dot" style={{ color: meta.dotColor, borderColor: meta.dotColor }}>
-                                  <span className="cu-status-dot" style={{ background: meta.dotColor, borderColor: meta.dotColor }}></span>
+                                  {/* Desktop: small filled dot */}
+                                  <span className="cu-status-dot" style={{ background: meta.dotColor }}></span>
+                                  {/* Mobile: dashed ring */}
+                                  <span className="cu-mobile-circle" style={{ borderColor: meta.dotColor }}>
+                                    <span className="cu-mobile-circle-dot" style={{ background: meta.dotColor }}></span>
                                   </span>
-                                  <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
-                                  {task.taskNo && <span className="cu-task-id">{task.taskNo}</span>}
+                                  {/* Title area — always visible */}
+                                  <div className="cu-name-content">
+                                    <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
+                                    {task.taskNo && <span className="cu-task-id">{task.taskNo}</span>}
+                                    {(dueDateLabel || taskGroupName) && (
+                                      <div className="cu-mobile-task-sub">
+                                        {dueDateLabel && (
+                                          <span className={`cu-mobile-due${relDate?.isOverdue ? ' cu-due-overdue' : relDate?.isToday ? ' cu-due-today' : ''}`}>
+                                            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                            {dueDateLabel}
+                                          </span>
+                                        )}
+                                        {taskGroupName && (
+                                          <span className="cu-mobile-in-list">
+                                            {dueDateLabel ? ' • ' : ''}In {taskGroupName}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <svg className="cu-mobile-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#cbd5e1" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                                 </td>
                                 <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
                                   <div className="cu-inline-field-wrapper">
@@ -3374,6 +3460,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
               );
             })}
           </div>
+          </>
         );
       })()}
 

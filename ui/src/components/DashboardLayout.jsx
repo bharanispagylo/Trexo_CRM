@@ -79,7 +79,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const alert = useAlert();
+  const { alert } = useAlert();
 
   useEffect(() => {
     const unsubscribe = onMessageListener((payload) => {
