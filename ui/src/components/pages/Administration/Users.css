@@ -350,39 +350,76 @@
   }
 
   .role-filter-select {
-    flex: 1;
+    flex: 0 0 auto;
+    width: 130px;
     min-width: 0;
     box-sizing: border-box;
   }
 
-  .add-user-btn {
-    white-space: nowrap;
+  /* Add New User → round '+' icon */
+  .add-user-btn-add {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
-    padding: 0.65rem 1.1rem;
-    font-size: 0.875rem;
   }
 
-  /* Table: horizontal scroll so all columns are visible */
+  .add-user-btn-text { display: none; }
+  .add-user-btn-icon { display: inline !important; font-size: 1.5rem; line-height: 1; }
+
+  /* Table: card-per-row layout */
   .users-list-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow-x: visible;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
   }
 
-  .users-list-table {
-    min-width: 620px;
+  .users-list-table { min-width: unset; }
+  .users-list-table thead { display: none; }
+
+  .users-list-table tbody tr {
+    display: block;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+    padding: 0.25rem 0.875rem;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   }
 
-  .users-list-table th,
+  .users-list-table tbody tr:last-child { margin-bottom: 0; }
+
   .users-list-table td {
-    padding: 0.55rem 1rem;
-    font-size: 0.82rem;
-    white-space: nowrap;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.875rem;
+    text-align: left !important;
+    white-space: normal;
   }
 
-  /* Avatar cell stays compact */
-  .user-avatar-cell {
-    width: 36px;
+  .users-list-table td:last-child { border-bottom: none; }
+
+  .users-list-table td::before {
+    content: attr(data-label);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+    margin-right: 1rem;
   }
+
+  .user-avatar-cell { width: auto; }
 
   .user-initials,
   .user-thumbnail {

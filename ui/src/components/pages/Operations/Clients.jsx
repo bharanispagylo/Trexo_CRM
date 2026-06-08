@@ -99,7 +99,10 @@ export default function Clients({ user }) {
     <div className="clients-page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem', width: '100%' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>Client Management</h2>
-        <button className="clients-btn-submit" onClick={() => openForm()}>+ New Client</button>
+        <button className="clients-btn-submit clients-btn-add" onClick={() => openForm()}>
+          <span className="clients-btn-text">+ New Client</span>
+          <span className="clients-btn-icon">+</span>
+        </button>
       </div>
 
       {showForm && (
@@ -137,9 +140,9 @@ export default function Clients({ user }) {
           <tbody>
             {clients.map(client => (
               <tr key={client.id}>
-                <td><strong>{client.company || '-'}</strong></td>
-                <td>{client.name || '-'}</td>
-                <td style={{ textAlign: 'right' }}>
+                <td data-label="Company"><strong>{client.company || '-'}</strong></td>
+                <td data-label="Contact">{client.name || '-'}</td>
+                <td data-label="Actions" style={{ textAlign: 'right' }}>
                   <div style={{ display: 'inline-flex', gap: '0.25rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                     <button 
                       className="client-action-btn" 

@@ -133,9 +133,10 @@ export default function Estimations({ user }) {
           </div>
         </div>
         <div>
-          <button className="estimations-btn-primary" onClick={() => { setForm({ taskName: '', description: '', client: '', clientId: '', projectId: '', estimatedHours: 0 }); setShowForm(true); }}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            New Estimation
+          <button className="estimations-btn-primary estimations-btn-add" onClick={() => { setForm({ taskName: '', description: '', client: '', clientId: '', projectId: '', estimatedHours: 0 }); setShowForm(true); }}>
+            <svg className="estimations-btn-plus-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span className="estimations-btn-text">New Estimation</span>
+            <span className="estimations-btn-icon" style={{ display: 'none' }}>+</span>
           </button>
         </div>
       </div>
@@ -215,9 +216,9 @@ export default function Estimations({ user }) {
                 <tbody>
                   {estimations.map(est => (
                     <tr key={est.id}>
-                      <td style={{ fontWeight: '600', color: '#334155' }}>{est.estimationNo}</td>
-                      <td style={{ fontWeight: '600' }}>{est.taskName}</td>
-                      <td>{(() => {
+                      <td data-label="Est. ID" style={{ fontWeight: '600', color: '#334155' }}>{est.estimationNo}</td>
+                      <td data-label="Task" style={{ fontWeight: '600' }}>{est.taskName}</td>
+                      <td data-label="Company">{(() => {
                         const targetId = est.clientId || est.client_id;
                         const clientObj = clients.find(c => 
                           (targetId && c.id === targetId && targetId !== 'null') ||
@@ -226,14 +227,14 @@ export default function Estimations({ user }) {
                         );
                         return clientObj ? (clientObj.company || clientObj.name) : (est.client || '-');
                       })()}</td>
-                      <td>{est.projectRef?.name || '-'}</td>
-                      <td style={{ fontWeight: '600', color: '#2563eb' }}>{est.estimatedHours} hrs</td>
-                      <td>
+                      <td data-label="Project">{est.projectRef?.name || '-'}</td>
+                      <td data-label="Est. Hrs" style={{ fontWeight: '600', color: '#2563eb' }}>{est.estimatedHours} hrs</td>
+                      <td data-label="Status">
                         <span className={`estimations-status-pill ${est.status?.toLowerCase() === 'converted' ? 'converted' : 'pending'}`}>
                           {est.status || 'Pending'}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td data-label="Actions" style={{ textAlign: 'right' }}>
                         <div className="estimations-action-group">
                           {est.status !== 'Converted' && (
                             <button className="estimations-action-btn convert" onClick={() => handleConvertClick(est)} title="Convert to Task">

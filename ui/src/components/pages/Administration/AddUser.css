@@ -183,6 +183,7 @@
 @media (max-width: 768px) {
   .add-user-page {
     padding: 1rem;
+    padding-bottom: 140px; /* space for fixed button bar + bottom nav */
   }
 
   .add-user-page .form-grid {
@@ -194,7 +195,7 @@
     grid-column: span 1 !important;
   }
 
-  .add-user-page .saas-input, 
+  .add-user-page .saas-input,
   .add-user-page .saas-select {
     max-width: 100% !important;
   }
@@ -206,14 +207,24 @@
     gap: 1rem;
   }
 
+  /* Fixed action bar — always visible above the bottom nav */
   .add-user-page .form-actions {
-    flex-direction: column;
+    position: fixed;
+    bottom: 60px; /* sits directly above the 60px bottom nav bar */
+    left: 0;
+    right: 0;
+    flex-direction: row;
     gap: 0.75rem;
+    background: #ffffff;
+    padding: 0.875rem 1.25rem;
+    border-top: 1px solid #e2e8f0;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.07);
+    z-index: 9500;
   }
 
-  .add-user-page .saas-btn-primary, 
+  .add-user-page .saas-btn-primary,
   .add-user-page .saas-btn-secondary {
-    width: 100%;
+    flex: 1;
     text-align: center;
   }
 }

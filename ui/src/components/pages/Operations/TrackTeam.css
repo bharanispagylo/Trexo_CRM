@@ -182,17 +182,69 @@
   }
 
   .team-list-container {
-    overflow-x: auto;
+    overflow-x: visible;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
   }
 
-  .team-list-table {
-    min-width: 600px;
+  .team-list-table { min-width: unset; }
+  .team-list-table thead { display: none; }
+
+  .team-list-table tbody tr {
+    display: block;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+    padding: 0.25rem 0.875rem;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  .team-list-table tbody tr:last-child { margin-bottom: 0; }
+
+  .team-list-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.875rem;
+    text-align: left !important;
+  }
+
+  .team-list-table td:last-child { border-bottom: none; }
+
+  .team-list-table td::before {
+    content: attr(data-label);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+    margin-right: 1rem;
   }
 
   .modal-content-card {
     width: 95% !important;
     padding: 1.25rem;
   }
+
+  /* Add Member → round '+' icon */
+  .team-btn-add {
+    width: 40px !important;
+    height: 40px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    justify-content: center !important;
+    flex-shrink: 0;
+  }
+
+  .team-btn-text { display: none; }
+  .team-btn-icon { display: inline !important; }
+  .team-btn-plus-svg { display: none; }
 }
 
 .member-action-btn-sm.delete-btn:hover {

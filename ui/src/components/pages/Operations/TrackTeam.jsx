@@ -233,13 +233,14 @@ export default function TrackTeam({ user }) {
             <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>Team Members</h3>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               {user?.role?.toLowerCase() === 'admin' && (
-                <button 
-                  className="saas-btn-submit" 
-                  style={{ background: '#2563eb', color: 'white', border: 'none', padding: '0.5rem 1rem', fontSize: '0.85rem', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center' }}
+                <button
+                  className="saas-btn-submit team-btn-add"
+                  style={{ background: '#2563eb', color: 'white', border: 'none', padding: '0.5rem 1rem', fontSize: '0.85rem', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}
                   onClick={() => setAddingMember(true)}
                 >
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}><path d="M12 5v14M5 12h14"></path></svg>
-                  Add Member
+                  <svg className="team-btn-plus-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"></path></svg>
+                  <span className="team-btn-text">Add Member</span>
+                  <span className="team-btn-icon" style={{ display: 'none', fontSize: '1.5rem', lineHeight: 1 }}>+</span>
                 </button>
               )}
               <button 
@@ -274,7 +275,7 @@ export default function TrackTeam({ user }) {
                       const displayName = m.name || 'Unknown';
                       return (
                         <tr key={m.id}>
-                          <td>
+                          <td data-label="Member">
                             <div className="td-member-info">
                               <div className="member-avatar-sm">
                                 {displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
@@ -282,13 +283,13 @@ export default function TrackTeam({ user }) {
                               <span className="member-name-text">{displayName}</span>
                             </div>
                           </td>
-                          <td>
+                          <td data-label="Role">
                             <span className="role-tag-mini">{m.role || 'Employee'}</span>
                           </td>
-                          <td>
+                          <td data-label="Designation">
                             <span style={{ color: '#475569', fontSize: '0.85rem' }}>{m.designation || '-'}</span>
                           </td>
-                          <td style={{ textAlign: 'right' }}>
+                          <td data-label="Actions" style={{ textAlign: 'right' }}>
                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                               {user?.role?.toLowerCase() === 'admin' && (
                                 <button 

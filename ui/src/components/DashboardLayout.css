@@ -369,6 +369,7 @@
 
 .saas-page-content {
   flex: 1;
+  min-height: 0; /* prevents flex item from overflowing parent, enables scroll */
   overflow-y: auto;
   position: relative;
 }
@@ -934,8 +935,8 @@
 
 /* ── Mobile Fixed Bottom Tab Bar & More Drawer CSS ── */
 @media (max-width: 768px) {
-  .saas-main-area {
-    padding-bottom: 64px; /* offset for bottom tab bar */
+  .saas-page-content {
+    padding-bottom: 80px; /* offset for fixed bottom tab bar */
   }
 
   .saas-mobile-bottom-nav {
