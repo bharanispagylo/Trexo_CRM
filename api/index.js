@@ -1028,9 +1028,14 @@ app.post('/api/teams', async (req, res) => {
 app.get('/api/tasks', async (req, res) => {
   try {
     const tasks = await prisma.task.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: { projectRef: { select: { name: true } } }
     });
-    res.json(tasks);
+    const result = tasks.map(({ projectRef, ...t }) => ({
+      ...t,
+      projectName: projectRef?.name || ''
+    }));
+    res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
