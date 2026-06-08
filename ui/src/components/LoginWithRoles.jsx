@@ -537,6 +537,9 @@ function ForgotPasswordPage({ onBackToLogin }) {
 function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, priorityCount, upcomingCount, setActiveTab }) {
   const [taskLists, setTaskLists] = useState([]);
   const [listTaskCounts, setListTaskCounts] = useState({});
+  const [allTasks, setAllTasks] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -544,6 +547,7 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
       api.get('/tasks').catch(() => [])
     ]).then(([lists, tasks]) => {
       setTaskLists(lists || []);
+      setAllTasks(tasks || []);
       const counts = {};
       (tasks || []).forEach(t => {
         if (t.taskListId) counts[t.taskListId] = (counts[t.taskListId] || 0) + 1;
@@ -551,6 +555,13 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
       setListTaskCounts(counts);
     });
   }, []);
+
+  const filteredTasks = searchQuery.trim()
+    ? allTasks.filter(t =>
+        (t.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (t.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : [];
 
   const statCards = [
     {
@@ -586,9 +597,37 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
   return (
     <div className="mhd-wrap">
       {/* Search bar */}
-      <div className="mhd-search">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#94a3b8" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <span className="mhd-search-placeholder">Search</span>
+      <div className="mhd-search" style={{ position: 'relative' }}>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#94a3b8" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input
+          className="mhd-search-input"
+          value={searchQuery}
+          onChange={e => { setSearchQuery(e.target.value); setShowSearchResults(true); }}
+          onFocus={() => setShowSearchResults(true)}
+          onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+          placeholder="Search tasks..."
+        />
+        {showSearchResults && searchQuery.trim() && (
+          <div className="mhd-search-results">
+            {filteredTasks.length === 0 ? (
+              <div className="mhd-search-no-result">No results for "{searchQuery}"</div>
+            ) : (
+              filteredTasks.slice(0, 8).map(t => (
+                <div key={t.id} className="mhd-search-result-item" onMouseDown={() => {
+                  setSearchQuery('');
+                  setShowSearchResults(false);
+                  setActiveTab && setActiveTab('tasks');
+                }}>
+                  <span className="mhd-search-result-icon">#</span>
+                  <div className="mhd-search-result-content">
+                    <div className="mhd-search-result-title">{t.title}</div>
+                    <div className="mhd-search-result-sub">{t.status} · {t.priority}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* Stats cards grid */}
