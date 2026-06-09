@@ -989,7 +989,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Dates</span>
                   <span className="saas-meta-value">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'nowrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Due:</span>
                       <input 
                         type="date" 
@@ -2570,7 +2570,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         <div className="kanban-header-left">
         </div>
         <div className="kanban-controls">
-          <div style={{ display: 'flex', gap: '0.5rem', marginRight: '1rem', alignItems: 'center' }}>
+          <div className="tasks-filter-row">
             <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Projects</label>
             <select 
               value={filterProjectName} 

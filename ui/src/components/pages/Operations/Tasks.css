@@ -4126,6 +4126,45 @@
   min-width: 0;
 }
 
+/* ── Filter row (Projects + Date + Clear) ── */
+.tasks-filter-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-right: 1rem;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 768px) {
+  .tasks-filter-row {
+    flex-wrap: wrap;
+    margin-right: 0;
+    width: 100%;
+    gap: 0.4rem;
+  }
+
+  .tasks-filter-row label {
+    width: 100%;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+  }
+
+  .tasks-filter-row select,
+  .tasks-filter-row input[type="date"] {
+    flex: 1;
+    min-width: 0;
+    max-width: calc(50% - 0.25rem);
+    padding: 0.4rem 0.5rem !important;
+    font-size: 0.82rem !important;
+  }
+
+  .tasks-filter-row button {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
 @media (max-width: 768px) {
   .project-task-lists-wrapper {
     padding-left: 0 !important;
@@ -4372,11 +4411,21 @@
     border: 1px solid #e2e8f0 !important;
     border-radius: 6px !important;
     padding: 0.2rem 0.4rem !important;
-    font-size: 0.88rem !important;
+    font-size: 0.82rem !important;
     font-weight: 600 !important;
     color: #0f172a !important;
     background: #f8fafc !important;
-    width: 130px !important;
+    width: 120px !important;
+    max-width: 120px !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Due / Delivery date row: wrap on mobile */
+  .saas-meta-value > div {
+    flex-wrap: wrap !important;
+    gap: 0.3rem 0.5rem !important;
+    align-items: center !important;
   }
 
   /* Hide → arrow separator on mobile */
