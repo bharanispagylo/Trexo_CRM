@@ -869,7 +869,7 @@ app.delete('/api/teams/:id', async (req, res) => {
 app.get('/api/projects', async (req, res) => {
   try {
     const projects = await prisma.project.findMany({
-      include: { 
+      include: {
         taskLists: {
           include: { tasks: true }
         },
@@ -878,7 +878,12 @@ app.get('/api/projects', async (req, res) => {
       },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(projects);
+    // Map sentToId → sentTo so frontend stays compatible
+    const mapped = projects.map(p => ({
+      ...p,
+      queries: (p.queries || []).map(q => ({ ...q, sentTo: q.sentToId }))
+    }));
+    res.json(mapped);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1421,7 +1426,7 @@ app.put('/api/tasks/:id/comments/:commentId/react', async (req, res) => {
 app.post('/api/project-queries', async (req, res) => {
   try {
     const { title, description, sentTo, status, solved, priority, projectId } = req.body;
-    
+
     // Auto-generate queryId like QRY-0001
     const count = await prisma.projectQuery.count({ where: { projectId } });
     const queryId = `QRY-${String(count + 1).padStart(4, '0')}`;
@@ -1431,17 +1436,17 @@ app.post('/api/project-queries', async (req, res) => {
         queryId,
         title,
         description,
-        sentTo,
+        sentToId: sentTo || null,
         status: status || 'Open',
         solved: solved === undefined ? false : Boolean(solved),
         priority: priority || 'Medium',
         projectId
       }
     });
-    if (query.sentTo) {
-      createNotification([query.sentTo], `New Query Assigned`, `You have a new query: ${query.title}`);
+    if (query.sentToId) {
+      createNotification([query.sentToId], `New Query Assigned`, `You have a new query: ${query.title}`);
     }
-    res.json(query);
+    res.json({ ...query, sentTo: query.sentToId });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1453,7 +1458,7 @@ app.put('/api/project-queries/:id', async (req, res) => {
     const updateData = {};
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
-    if (sentTo !== undefined) updateData.sentTo = sentTo;
+    if (sentTo !== undefined) updateData.sentToId = sentTo || null;
     if (status !== undefined) updateData.status = status;
     if (solved !== undefined) updateData.solved = Boolean(solved);
     if (priority !== undefined) updateData.priority = priority;
@@ -1462,10 +1467,10 @@ app.put('/api/project-queries/:id', async (req, res) => {
       where: { id: req.params.id },
       data: updateData
     });
-    if (query.sentTo) {
-      createNotification([query.sentTo], `Query Updated`, `Query ${query.title} was updated.`);
+    if (query.sentToId) {
+      createNotification([query.sentToId], `Query Updated`, `Query ${query.title} was updated.`);
     }
-    res.json(query);
+    res.json({ ...query, sentTo: query.sentToId });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
