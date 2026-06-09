@@ -1105,6 +1105,9 @@
 
   .detail-tab-content {
     padding: 1.25rem;
+    box-sizing: border-box;
+    width: 100%;
+    overflow: hidden;
   }
 
   .detail-info-row {
@@ -1494,4 +1497,44 @@
 
   .create-team-member-btn-text { display: none; }
   .create-team-member-btn-icon { display: inline !important; font-size: 1.4rem; line-height: 1; }
+
+  /* Queries filter bar — prevent overflow */
+  .queries-filter-bar,
+  .queries-filter-controls,
+  .queries-selects-row {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Attachments toolbar — prevent overflow */
+  .attach-toolbar {
+    box-sizing: border-box;
+    width: 100%;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .attach-toolbar-left {
+    width: 100%;
+    box-sizing: border-box;
+    flex-wrap: wrap;
+  }
+
+  .attach-search-wrap {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .attach-search-input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 0.82rem !important;
+  }
+
+  .attach-type-select {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.82rem !important;
+  }
 }

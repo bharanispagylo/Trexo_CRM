@@ -2013,11 +2013,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             return (
               <div>
                 {/* Toolbar */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                    <div style={{ position: 'relative' }}>
+                <div className="attach-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div className="attach-toolbar-left" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                    <div className="attach-search-wrap" style={{ position: 'relative' }}>
                       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth="2" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                       <input
+                        className="attach-search-input"
                         placeholder="Search attachments..."
                         value={attachSearch}
                         onChange={e => setAttachSearch(e.target.value)}
@@ -2025,6 +2026,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       />
                     </div>
                     <select
+                      className="attach-type-select"
                       value={attachTypeFilter}
                       onChange={e => { setAttachTypeFilter(e.target.value); setAttachPage(1); }}
                       style={{ padding: '0.5rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', color: '#334155', background: 'white', outline: 'none', cursor: 'pointer' }}
