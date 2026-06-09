@@ -1,0 +1,110 @@
+.teams-page {
+  padding: 2.5rem 3rem;
+}
+
+.teams-form-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.teams-form-inputs {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.teams-form-inputs input {
+  flex: 2;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: white;
+  outline: none;
+}
+
+.teams-form-inputs input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.teams-form-inputs input.members-input {
+  flex: 0 0 100px;
+}
+
+.teams-form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.teams-btn-save {
+  padding: 0.55rem 1.5rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.teams-btn-save:hover {
+  background: #1d4ed8;
+}
+
+.teams-btn-cancel {
+  padding: 0.55rem 1.25rem;
+  background: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.teams-btn-cancel:hover {
+  background: #f8fafc;
+}
+
+@media (max-width: 768px) {
+  .teams-page {
+    padding: 1.25rem 1rem;
+  }
+
+  .teams-form-card {
+    padding: 1rem;
+  }
+
+  .teams-form-inputs {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .teams-form-inputs input,
+  .teams-form-inputs input.members-input {
+    flex: none;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Buttons render inline inside the form card */
+  .teams-form-actions {
+    gap: 0.75rem;
+  }
+
+  .teams-btn-save,
+  .teams-btn-cancel {
+    flex: none;
+    width: auto;
+    padding: 0.65rem 1.5rem;
+    text-align: center;
+  }
+}

@@ -150,10 +150,17 @@
 }
 
 .add-user-page .form-actions {
-  display: flex;
+  display: flex !important;
+  position: static !important;
+  bottom: auto !important;
+  z-index: auto !important;
+  margin: 1.5rem 0 0 0 !important;
+  padding: 1.25rem 0 0 !important;
+  border-top: 1px solid #f1f5f9 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
   gap: 1rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #f1f5f9;
 }
 
 .add-user-page .saas-btn-primary {
@@ -183,48 +190,53 @@
 @media (max-width: 768px) {
   .add-user-page {
     padding: 1rem;
-    padding-bottom: 140px; /* space for fixed button bar + bottom nav */
+    padding-bottom: 2rem;
   }
 
   .add-user-page .form-grid {
-    grid-template-columns: 1fr !important;
-    gap: 1rem;
+    grid-template-columns: 1fr 1fr !important;
+    column-gap: 0.75rem !important;
+    row-gap: 1rem !important;
   }
 
   .add-user-page .saas-field.full-width {
-    grid-column: span 1 !important;
+    grid-column: span 2 !important;
   }
 
   .add-user-page .saas-input,
   .add-user-page .saas-select {
     max-width: 100% !important;
+    font-size: 0.8rem !important;
   }
 
   .add-user-page .image-upload-wrapper {
     flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 1rem;
+    align-items: flex-start;
+    gap: 0.75rem;
   }
 
-  /* Fixed action bar — always visible above the bottom nav */
+  /* Buttons render inline inside the form card — no fixed footer bar */
   .add-user-page .form-actions {
-    position: fixed;
-    bottom: 60px; /* sits directly above the 60px bottom nav bar */
-    left: 0;
-    right: 0;
-    flex-direction: row;
-    gap: 0.75rem;
-    background: #ffffff;
-    padding: 0.875rem 1.25rem;
-    border-top: 1px solid #e2e8f0;
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.07);
-    z-index: 9500;
+    position: static !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+    flex-direction: row !important;
+    gap: 0.75rem !important;
+    background: transparent !important;
+    padding: 1.25rem 0 0 !important;
+    border-top: 1px solid #f1f5f9 !important;
+    box-shadow: none !important;
+    z-index: auto !important;
+    margin: 1.25rem 0 0 0 !important;
+    border-radius: 0 !important;
   }
 
   .add-user-page .saas-btn-primary,
   .add-user-page .saas-btn-secondary {
-    flex: 1;
+    flex: none;
+    width: auto;
+    padding: 0.65rem 1.5rem;
     text-align: center;
   }
 }

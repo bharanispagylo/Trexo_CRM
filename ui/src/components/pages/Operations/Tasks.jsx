@@ -2901,6 +2901,63 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           const firstListId = finalProjectGroups[0]?.lists[0]?.id;
 
           return (
+            <>
+            {/* ── Mobile ClickUp-style All Tasks (hidden on desktop) ── */}
+            <div className="cu-mobile-alltasks-list">
+              {finalProjectGroups.map(projGroup => {
+                const allProjTasks = projGroup.lists.flatMap(l => l.tasks);
+                if (allProjTasks.length === 0) return null;
+                return (
+                  <div key={projGroup.id} className="cu-mob-proj-section">
+                    {/* Project header */}
+                    <div className="cu-mob-proj-header">
+                      <svg viewBox="0 0 10 6" width="10" height="6" fill="#94a3b8" style={{ flexShrink: 0 }}><path d="M0 0l5 6 5-6z"/></svg>
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563eb" strokeWidth="2" style={{ flexShrink: 0 }}>
+                        <circle cx="12" cy="12" r="10"/>
+                        <circle cx="12" cy="12" r="3" fill="#2563eb" stroke="none"/>
+                      </svg>
+                      <span className="cu-mob-proj-name">{projGroup.name}</span>
+                    </div>
+
+                    {COLUMNS.map(col => {
+                      const statusTasks = allProjTasks.filter(t => (t.status || 'To Do') === col.id);
+                      if (statusTasks.length === 0) return null;
+                      const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#ffffff', dotColor: '#94a3b8' };
+                      return (
+                        <div key={col.id} className="cu-mob-status-group">
+                          <div className="cu-mob-status-header">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <svg viewBox="0 0 10 6" width="9" height="9" fill="#94a3b8"><path d="M0 0l5 6 5-6z"/></svg>
+                              <span className="cu-mob-status-pill" style={{ background: meta.bg }}>
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: meta.dotColor, display: 'inline-block', marginRight: '6px', flexShrink: 0 }}></span>
+                                {col.label.toUpperCase()}
+                              </span>
+                              <span className="cu-mob-status-count">{statusTasks.length} Task{statusTasks.length !== 1 ? 's' : ''}</span>
+                            </div>
+                            {can('tasks', 'create') && (
+                              <button className="cu-mob-add-btn" onClick={e => {
+                                e.stopPropagation();
+                                const list = projGroup.lists[0];
+                                const p = taskProjects.find(pr => pr.id === projGroup.id);
+                                openNewTask(col.id, projGroup.name, projGroup.id, list && !String(list.id).startsWith('gen_') ? list.id : null, p ? p.clientId : null);
+                              }}>+ Add</button>
+                            )}
+                          </div>
+                          {statusTasks.map(task => (
+                            <div key={task.id} className="cu-mob-task-row" onClick={() => openTaskDetail(task, false)}>
+                              <span className="cu-mob-task-sq" style={{ background: meta.dotColor }}></span>
+                              <span className="cu-mob-task-title">{task.title || 'Untitled Task'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ── Desktop: project → task list view (hidden on mobile) ── */}
             <div className="cu-list-root all-tasks-list">
               {finalProjectGroups.map(projGroup => {
                 return (
@@ -3162,6 +3219,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 );
               })}
             </div>
+            </>
           );
         }
 
@@ -3203,36 +3261,52 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
               </div>
               {flatSorted.length === 0 ? (
                 <div className="cu-flat-empty">No tasks assigned to you.</div>
-              ) : flatSorted.map(task => {
-                const relDate = formatRelativeDueDate(task.dueDate);
-                const tGroup = task.taskListId ? (taskListsData.find(l => l.id === task.taskListId)?.name || '') : '';
-                const dueLbl = task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
-                const sMeta = STATUS_HEADER_META[task.status] || { dotColor: '#94a3b8' };
+              ) : (() => {
+                const priorityOrder = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+                const sortedCols = [...COLUMNS].sort((a, b) => {
+                  const aTasks = flatSorted.filter(t => (t.status || 'To Do') === a.id);
+                  const bTasks = flatSorted.filter(t => (t.status || 'To Do') === b.id);
+                  if (aTasks.length === 0 && bTasks.length === 0) return 0;
+                  if (aTasks.length === 0) return 1;
+                  if (bTasks.length === 0) return -1;
+                  if (mobileSortBy === 'dueDate') {
+                    const aMin = aTasks.map(t => t.dueDate ? new Date(t.dueDate).getTime() : Infinity).reduce((m, v) => Math.min(m, v), Infinity);
+                    const bMin = bTasks.map(t => t.dueDate ? new Date(t.dueDate).getTime() : Infinity).reduce((m, v) => Math.min(m, v), Infinity);
+                    return aMin - bMin;
+                  }
+                  if (mobileSortBy === 'priority') {
+                    const aBest = aTasks.map(t => priorityOrder[t.priority] ?? 99).reduce((m, v) => Math.min(m, v), 99);
+                    const bBest = bTasks.map(t => priorityOrder[t.priority] ?? 99).reduce((m, v) => Math.min(m, v), 99);
+                    return aBest - bBest;
+                  }
+                  return COLUMNS.indexOf(a) - COLUMNS.indexOf(b);
+                });
+                return sortedCols.map(col => {
+                const groupTasks = flatSorted.filter(t => (t.status || 'To Do') === col.id);
+                if (groupTasks.length === 0) return null;
+                const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#ffffff', dotColor: '#94a3b8' };
                 return (
-                  <div key={task.id} className="cu-flat-task-row" onClick={() => openTaskDetail(task, false)}>
-                    <span className="cu-flat-circle" style={{ borderColor: sMeta.dotColor }}></span>
-                    <div className="cu-flat-task-content">
-                      <span className="cu-flat-task-title">{task.title || 'Untitled Task'}</span>
-                      {(dueLbl || tGroup) && (
-                        <div className="cu-flat-task-meta">
-                          {dueLbl && (
-                            <span className={`cu-flat-task-date${relDate?.isOverdue ? ' cu-flat-overdue' : relDate?.isToday ? ' cu-flat-today' : ''}`}>
-                              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                              {dueLbl}
-                            </span>
-                          )}
-                          {tGroup && <span className="cu-flat-task-list">{dueLbl ? ' • ' : ''}In {tGroup}</span>}
-                        </div>
-                      )}
-                    </div>
-                    {task.status && (
-                      <span className="cu-flat-status" style={{ background: sMeta.bg, color: sMeta.fg }}>
-                        {task.status}
+                  <div key={col.id} className="cu-mobile-status-group">
+                    {/* Status group header */}
+                    <div className="cu-mobile-group-header">
+                      <span className="cu-mobile-group-pill" style={{ background: meta.bg, color: '#ffffff' }}>
+                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: meta.dotColor, display: 'inline-block', marginRight: '6px', flexShrink: 0 }}></span>
+                        {col.label.toUpperCase()}
                       </span>
-                    )}
+                      <span className="cu-mobile-group-count">{groupTasks.length}</span>
+                    </div>
+                    {/* Tasks in this group */}
+                    {groupTasks.map(task => {
+                      return (
+                        <div key={task.id} className="cu-flat-task-row" onClick={() => openTaskDetail(task, false)}>
+                          <span className="cu-flat-circle" style={{ borderColor: meta.dotColor }}></span>
+                          <span className="cu-flat-task-title">{task.title || 'Untitled Task'}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
-              })}
+              }); })()}
             </div>
 
             {/* ── Desktop: status-grouped list (hidden on mobile) ── */}

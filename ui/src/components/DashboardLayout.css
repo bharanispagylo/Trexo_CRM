@@ -597,6 +597,25 @@
   color: #0f172a;
 }
 
+.saas-back-nav-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.saas-back-nav-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
 
 .saas-breadcrumbs {
   display: flex;

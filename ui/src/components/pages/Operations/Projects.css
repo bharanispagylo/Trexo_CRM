@@ -44,6 +44,8 @@
   border-radius: 12px;
   padding: 2rem;
   margin-bottom: 2.5rem;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .form-header {
@@ -65,6 +67,69 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   margin-bottom: 2rem;
+}
+
+/* Project form — 2-column desktop grid */
+.project-form-grid {
+  grid-template-columns: 1fr 1fr !important;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.proj-span-2 {
+  grid-column: span 2;
+}
+
+/* All inputs/selects/textareas inside the project form fill their column */
+.saas-form-card .saas-input,
+.saas-form-card .saas-select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.saas-form-card .saas-textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Project form — always-inline action buttons (override global sticky) */
+.saas-form-card .form-actions {
+  position: static !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  margin: 1.5rem 0 0 0 !important;
+  padding: 1.25rem 0 0 !important;
+  border-top: 1px solid #e2e8f0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  z-index: auto !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  flex-wrap: nowrap !important;
+}
+
+.saas-btn-cancel {
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.proj-btn {
+  flex: none !important;
+  width: auto !important;
+  min-width: 0 !important;
+  align-self: auto !important;
 }
 
 /* Input Fields */
@@ -506,7 +571,45 @@
 .detail-profile-actions {
   display: flex;
   gap: 0.75rem;
+  align-items: center;
+  flex-shrink: 0;
 }
+
+.detail-edit-btn {
+  padding: 0.5rem 1rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  transition: background 0.15s;
+}
+
+.detail-edit-btn:hover { background: #f8fafc; }
+
+.detail-addtask-btn {
+  padding: 0.5rem 1rem;
+  background: #2563eb;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  transition: background 0.15s;
+}
+
+.detail-addtask-btn:hover { background: #1d4ed8; }
+
+.detail-btn-icon { display: none; }
 
 .detail-metrics-grid {
   display: grid;
@@ -544,7 +647,7 @@
   width: 200px;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.5rem;
   color: #475569;
   font-weight: 600;
   font-size: 0.85rem;
@@ -569,6 +672,124 @@
   max-width: 600px;
   line-height: 1.6;
 }
+
+/* Queries stats grid */
+.queries-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+/* Queries filter bar */
+.queries-filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.queries-filter-controls {
+  display: flex;
+  gap: 0.75rem;
+  flex: 1;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.queries-selects-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.queries-search-wrap {
+  position: relative;
+  width: 280px;
+}
+
+.queries-search-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.queries-filter-select {
+  width: 130px;
+}
+
+.queries-reset-btn {
+  background: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 38px;
+  white-space: nowrap;
+}
+
+.queries-filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.queries-new-btn {
+  background: #0066FF;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 38px;
+  white-space: nowrap;
+}
+
+.queries-filters-btn {
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 38px;
+  white-space: nowrap;
+}
+
+/* Desktop: show text */
+.queries-btn-text { display: inline; }
+.queries-btn-icon { display: none; }
+
+/* Desktop: show text for upload button */
+.attach-upload-btn-text { display: inline; }
+
+/* Desktop: show text, hide icon for Add Task Group button */
+.add-taskgroup-btn-icon { display: none; }
+.add-taskgroup-btn-text { display: inline; }
+
+/* Desktop: show text, hide icon for Add/Create Member buttons */
+.add-team-member-btn-icon { display: none; }
+.add-team-member-btn-text { display: inline; }
+.create-team-member-btn-icon { display: none; }
+.create-team-member-btn-text { display: inline; }
 
 @media (max-width: 768px) {
   .projects-3col-layout {
@@ -792,12 +1013,15 @@
   }
 
   .mp-action-btn {
-    padding: 0.4rem 0.75rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 8px;
     cursor: pointer;
     border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     transition: background 0.15s, color 0.15s;
   }
 
@@ -821,27 +1045,47 @@
 
   /* Detail view responsive classes overrides */
   .detail-profile-card {
-    flex-direction: column;
-    gap: 1.25rem;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
     padding: 1.25rem;
   }
 
   .detail-profile-left {
+    flex: 1;
+    min-width: 0;
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem;
+    gap: 0.25rem;
   }
 
   .detail-profile-actions {
-    width: 100%;
+    width: auto;
     justify-content: flex-end;
+    flex-shrink: 0;
   }
 
-  .detail-profile-actions button {
-    flex: 1;
+  /* Edit → icon only */
+  .detail-edit-btn {
+    width: 38px;
+    height: 38px;
+    padding: 0;
     justify-content: center;
+    border-radius: 8px;
   }
+
+  /* Add Task → round '+' icon */
+  .detail-addtask-btn {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .detail-btn-text { display: none; }
+  .detail-btn-icon { display: inline; font-size: 1.4rem; line-height: 1; }
 
   .detail-metrics-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -866,7 +1110,7 @@
   .detail-info-row {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.25rem;
+    gap: 0.4rem;
   }
 
   .detail-info-sep {
@@ -875,6 +1119,16 @@
 
   .detail-info-label {
     width: 100%;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+  }
+
+  .detail-info-value {
+    font-size: 0.92rem;
+    padding-left: 0.25rem;
   }
 
   .form-grid {
@@ -882,9 +1136,72 @@
     gap: 1rem;
   }
 
+  /* Project "Launch / Edit" form — 2-column grid that fits the screen */
+  .saas-form-card {
+    padding: 1rem !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .project-form-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.6rem !important;
+    margin-bottom: 0 !important;
+  }
+
+  .proj-span-2 {
+    grid-column: span 2 !important;
+  }
+
+  .saas-form-card .saas-input,
+  .saas-form-card .saas-select {
+    box-sizing: border-box !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    font-size: 0.78rem !important;
+    padding: 0.55rem 0.65rem !important;
+  }
+
+  .saas-form-card .saas-textarea {
+    box-sizing: border-box !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    font-size: 0.78rem !important;
+    padding: 0.55rem 0.65rem !important;
+  }
+
+  .saas-form-card .saas-label {
+    font-size: 0.65rem !important;
+  }
+
+  .saas-form-card .form-actions {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 0.6rem !important;
+    margin-top: 1rem !important;
+  }
+
+  .proj-btn {
+    padding: 0.6rem 1.1rem !important;
+    font-size: 0.8rem !important;
+    flex: none !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
   .saas-textarea {
     grid-column: span 1 !important;
     max-width: 100% !important;
+  }
+
+  .query-desc-textarea {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    resize: none;
   }
 
   .saas-input, .saas-select {
@@ -907,4 +1224,274 @@
     display: flex;
     flex-direction: row;
   }
+
+  /* Add Task Group → round '+' icon on mobile */
+  .add-taskgroup-btn {
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .add-taskgroup-btn-text { display: none; }
+  .add-taskgroup-btn-icon { display: inline !important; font-size: 1.4rem; line-height: 1; }
+
+  /* Task Group input — fixed narrow width on mobile */
+  .add-list-inline .saas-input {
+    width: 150px !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  /* Upload Attachment inline card — extra top spacing on mobile */
+  .upload-attachment-card {
+    margin-top: 1.25rem !important;
+  }
+
+  /* Attachments — Upload Files → round icon on mobile, right-aligned */
+  .attach-upload-btn {
+    width: 40px !important;
+    height: 40px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .attach-upload-btn svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .attach-upload-btn-text { display: none; }
+
+  /* Queries stats grid — 3 columns on mobile */
+  .queries-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .queries-stats-grid > div {
+    padding: 0.75rem 0.6rem !important;
+    gap: 0.5rem !important;
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+
+  .queries-stats-grid > div > div:first-child {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .queries-stats-grid > div > div:first-child svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .queries-stats-grid > div > div:last-child > div:first-child {
+    font-size: 0.65rem !important;
+    line-height: 1.3;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .queries-stats-grid > div > div:last-child > div:last-child {
+    font-size: 1.2rem !important;
+  }
+
+  /* Queries filter bar — mobile layout */
+  .queries-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+
+  /* Row 1: search full width */
+  .queries-filter-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .queries-search-wrap {
+    width: 100%;
+  }
+
+  /* Row 2: 3 selects + Reset icon in one flex row */
+  .queries-selects-row {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .queries-filter-select {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.75rem !important;
+    padding: 0 0.4rem !important;
+    height: 36px !important;
+  }
+
+  /* Hide text, show icon-only on mobile */
+  .queries-btn-text { display: none; }
+  .queries-btn-icon { display: inline !important; font-size: 1.4rem; line-height: 1; }
+
+  /* All three action buttons → 36px circles */
+  .queries-reset-btn,
+  .queries-new-btn,
+  .queries-filters-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    justify-content: center !important;
+    flex: unset !important;
+    flex-shrink: 0;
+  }
+
+  .queries-filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+
+  /* Queries table — card-per-row on mobile */
+  .queries-table-container {
+    overflow-x: visible !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  .queries-table-container > div { overflow-x: visible !important; }
+  .queries-table { min-width: unset !important; }
+  .queries-table thead { display: none; }
+
+  .queries-table tbody tr {
+    display: block;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+    padding: 0.25rem 0.875rem;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  .queries-table tbody tr:last-child { margin-bottom: 0; }
+
+  .queries-table td {
+    display: flex !important;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 0.6rem 0 !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    font-size: 0.875rem;
+    text-align: left !important;
+    white-space: normal !important;
+    max-width: unset !important;
+  }
+
+  .queries-table td:last-child { border-bottom: none !important; }
+
+  .queries-table td::before {
+    content: attr(data-label);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+    min-width: 110px;
+    margin-right: 1rem;
+  }
+
+  /* Attachments table — card-per-row on mobile */
+  .attachments-table-container {
+    overflow-x: visible !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  .attachments-table-container > div { overflow-x: visible !important; }
+  .attachments-table { min-width: unset !important; }
+  .attachments-table thead { display: none; }
+
+  .attachments-table tbody tr {
+    display: block;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+    padding: 0.25rem 0.875rem;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  .attachments-table tbody tr:last-child { margin-bottom: 0; }
+
+  .attachments-table td {
+    display: flex !important;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 0.6rem 0 !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    font-size: 0.875rem;
+    text-align: left !important;
+    white-space: normal !important;
+    max-width: unset !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+  }
+
+  .attachments-table td:last-child { border-bottom: none !important; }
+
+  .attachments-table td::before {
+    content: attr(data-label);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+    min-width: 110px;
+    margin-right: 1rem;
+  }
+
+  /* Add Member → round '+' icon on mobile */
+  .add-team-member-btn {
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .add-team-member-btn-text { display: none; }
+  .add-team-member-btn-icon { display: inline !important; font-size: 1.4rem; line-height: 1; }
+
+  /* Create Member → round '+' icon on mobile */
+  .create-team-member-btn {
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .create-team-member-btn-text { display: none; }
+  .create-team-member-btn-icon { display: inline !important; font-size: 1.4rem; line-height: 1; }
 }

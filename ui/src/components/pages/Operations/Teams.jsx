@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useAlert } from '../../../context/AlertContext';
+import './Teams.css';
 
 export default function Teams() {
   const [teams, setTeams] = useState([]);
@@ -64,16 +65,16 @@ export default function Teams() {
 
       {/* Add Team Form */}
       {showForm && (
-        <div className="data-card" style={{ marginBottom: '1.5rem', backgroundColor: '#f8fafc' }}>
-          <h3 style={{ marginTop: 0 }}>New Team</h3>
-          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-            <input type="text" placeholder="Team Name *" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="btn btn-outline" style={{ flex: 2, backgroundColor: 'white' }} />
-            <input type="text" placeholder="Team Lead" value={form.lead} onChange={e => setForm({...form, lead: e.target.value})} className="btn btn-outline" style={{ flex: 2, backgroundColor: 'white' }} />
-            <input type="number" placeholder="Members" value={form.members} onChange={e => setForm({...form, members: e.target.value})} className="btn btn-outline" style={{ width: '100px', backgroundColor: 'white' }} />
+        <div className="teams-form-card">
+          <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem', fontWeight: '700', color: '#0f172a' }}>New Team</h3>
+          <div className="teams-form-inputs">
+            <input type="text" placeholder="Team Name *" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+            <input type="text" placeholder="Team Lead" value={form.lead} onChange={e => setForm({...form, lead: e.target.value})} />
+            <input type="number" placeholder="Members" value={form.members} onChange={e => setForm({...form, members: e.target.value})} className="members-input" />
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button className="btn btn-primary btn-save" onClick={handleAdd}>Save</button>
-            <button className="btn btn-outline" onClick={() => setShowForm(false)}>Cancel</button>
+          <div className="teams-form-actions">
+            <button className="teams-btn-save" onClick={handleAdd}>Save</button>
+            <button className="teams-btn-cancel" onClick={() => setShowForm(false)}>Cancel</button>
           </div>
         </div>
       )}

@@ -4098,6 +4098,16 @@
   display: none;
 }
 
+/* ── Mobile ClickUp All Tasks list — hidden on desktop ── */
+.cu-mobile-alltasks-list {
+  display: none;
+}
+
+/* All Tasks mobile view — hidden on desktop */
+.cu-mobile-alltasks-list {
+  display: none;
+}
+
 /* RESPONSIVE DESIGN */
 /* Mobile-only elements hidden on desktop */
 .cu-mobile-circle,
@@ -4666,6 +4676,115 @@
     padding: 0;
   }
 
+  /* All Tasks mobile view */
+  .cu-mobile-alltasks-list {
+    display: block;
+    background: #f1f5f9;
+    padding: 0.75rem 0;
+  }
+
+  /* Hide desktop All Tasks list on mobile */
+  .cu-list-root.all-tasks-list {
+    display: none !important;
+  }
+
+  .cu-mob-proj-section {
+    background: #ffffff;
+    border-radius: 12px;
+    margin: 0 0.75rem 1rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+
+  .cu-mob-proj-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+  }
+
+  .cu-mob-proj-name {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #0f172a;
+    flex: 1;
+  }
+
+  .cu-mob-status-group {
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .cu-mob-status-group:last-child {
+    border-bottom: none;
+  }
+
+  .cu-mob-status-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 1rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .cu-mob-status-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.22rem 0.65rem;
+    border-radius: 20px;
+    color: #ffffff;
+    text-transform: uppercase;
+  }
+
+  .cu-mob-status-count {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  .cu-mob-add-btn {
+    background: none;
+    border: none;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #2563eb;
+    cursor: pointer;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .cu-mob-task-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 1rem;
+    border-bottom: 1px solid #f8fafc;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+
+  .cu-mob-task-row:active {
+    background: #f8fafc;
+  }
+
+  .cu-mob-task-sq {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    opacity: 0.85;
+  }
+
+  .cu-mob-task-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #0f172a;
+  }
+
   /* Sort bar */
   .cu-mobile-sort-bar {
     display: flex;
@@ -4692,9 +4811,9 @@
   /* Each task row */
   .cu-flat-task-row {
     display: flex;
-    align-items: flex-start;
-    gap: 0.85rem;
-    padding: 0.875rem 1rem;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.5rem 1rem;
     border-bottom: 1px solid #f1f5f9;
     cursor: pointer;
     background: #ffffff;
@@ -4780,5 +4899,143 @@
     text-align: center;
     color: #94a3b8;
     font-size: 0.9rem;
+  }
+
+  /* Grouped status sections in mobile My Tasks */
+  .cu-mobile-status-group {
+    margin-bottom: 0.5rem;
+  }
+
+  .cu-mobile-group-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .cu-mobile-group-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.22rem 0.65rem;
+    border-radius: 20px;
+    text-transform: uppercase;
+  }
+
+  .cu-mobile-group-count {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #94a3b8;
+  }
+
+  /* ── All Tasks mobile ClickUp view ── */
+  .cu-mobile-alltasks-list {
+    display: block;
+    background: #ffffff;
+  }
+
+  /* Hide desktop all-tasks list on mobile */
+  .all-tasks-list {
+    display: none !important;
+  }
+
+  /* Project section */
+  .cu-mob-proj-section {
+    margin-bottom: 0.25rem;
+    border-bottom: 6px solid #f1f5f9;
+  }
+
+  .cu-mob-proj-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem 0.6rem;
+    background: #ffffff;
+  }
+
+  .cu-mob-proj-name {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #0f172a;
+    flex: 1;
+  }
+
+  /* Status sub-section */
+  .cu-mob-status-group {
+    background: #ffffff;
+  }
+
+  .cu-mob-status-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.45rem 1rem 0.45rem 1.25rem;
+    background: #f8fafc;
+    border-top: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .cu-mob-status-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #ffffff;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    text-transform: uppercase;
+  }
+
+  .cu-mob-status-count {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-left: 0.5rem;
+  }
+
+  .cu-mob-add-btn {
+    background: none;
+    border: none;
+    color: #2563eb;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+  }
+
+  /* Task row inside status group */
+  .cu-mob-task-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 1rem 0.55rem 1.5rem;
+    border-bottom: 1px solid #f8fafc;
+    background: #ffffff;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+
+  .cu-mob-task-row:active {
+    background: #f8fafc;
+  }
+
+  .cu-mob-task-sq {
+    width: 13px;
+    height: 13px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .cu-mob-task-title {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: #0f172a;
+    flex: 1;
   }
 }

@@ -129,7 +129,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [queryFormType, setQueryFormType] = useState('create'); // 'create' or 'edit'
   const [editingQuery, setEditingQuery] = useState(null);
   const [viewingQuery, setViewingQuery] = useState(null);
-  const [showQueryViewModal, setShowQueryViewModal] = useState(false);
   const [querySearchText, setQuerySearchText] = useState('');
   const [queryStatusFilter, setQueryStatusFilter] = useState('All Status');
   const [querySentToFilter, setQuerySentToFilter] = useState('All Sent To');
@@ -522,17 +521,17 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         <h3 className="form-title">{form.id ? 'Edit Project' : 'Launch New Project'}</h3>
         <button className="action-btn" style={{ color: '#94A3B8' }} onClick={() => setShowForm(false)}>✕</button>
       </div>
-      
-      <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+
+      <div className="form-grid project-form-grid">
         <div className="saas-field">
           <label className="saas-label">Project Name *</label>
           <input className="saas-input" placeholder="e.g. Phoenix Redesign" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
         </div>
         <div className="saas-field">
           <label className="saas-label">Client *</label>
-          <select 
-            className="saas-select" 
-            value={form.clientId || ''} 
+          <select
+            className="saas-select"
+            value={form.clientId || ''}
             onChange={e => {
               const clientObj = clients.find(c => c.id === e.target.value);
               setForm({...form, clientId: clientObj?.id || null, client: clientObj?.name || ''});
@@ -542,7 +541,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
-        <div className="saas-field" style={{ gridColumn: 'span 2' }}>
+        <div className="saas-field proj-span-2">
           <label className="saas-label">Description *</label>
           <textarea className="saas-textarea" style={{ minHeight: '60px' }} placeholder="Project description..." value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
         </div>
@@ -570,9 +569,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         </div>
       </div>
 
-      <div className="form-actions" style={{ display: 'flex', gap: '1rem' }}>
-        <button className="saas-btn-submit" onClick={handleAdd}>{form.id ? 'Save Changes' : 'Create Project'}</button>
-        <button className="saas-btn-cancel" onClick={() => setShowForm(false)} style={{ background: 'white', border: '1px solid #e2e8f0', padding: '0.65rem 1.25rem', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Discard</button>
+      <div className="form-actions project-form-actions">
+        <button className="saas-btn-submit proj-btn" onClick={handleAdd}>{form.id ? 'Save Changes' : 'Create Project'}</button>
+        <button className="saas-btn-cancel proj-btn" onClick={() => setShowForm(false)}>Discard</button>
       </div>
     </div>
   );
@@ -582,175 +581,206 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const renderQueryFormModal = () => {
     if (!selectedProject) return null;
     const rawMembers = (selectedProject.members || '').split(',').map(m => m.trim()).filter(m => m !== "");
-    const projMembers = [...new Set(rawMembers)];
-    const assigneesList = projMembers.length > 0 ? projMembers : users.map(u => u.id);
+    const memberIds = [...new Set(rawMembers)];
+    const assigneesList = (memberIds.length > 0 ? memberIds : users.map(u => u.id))
+      .map(id => {
+        const u = users.find(x => x.id === id);
+        return u ? { id: u.id, name: u.name || u.username || u.email || id } : null;
+      })
+      .filter(Boolean);
 
     return (
-      <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-        <div style={{ background: 'white', borderRadius: '12px', width: '500px', padding: '2rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>
-              {queryFormType === 'create' ? 'Create New Query' : 'Edit Query'}
-            </h3>
-            <button style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#94a3b8' }} onClick={() => setShowQueryModal(false)}>✕</button>
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '2rem' }}>
-            <div className="saas-field">
-              <label className="saas-label">Query Title *</label>
-              <input
-                className="saas-input"
-                placeholder="What is the query about?"
-                value={queryFormFields.title}
-                onChange={e => setQueryFormFields({ ...queryFormFields, title: e.target.value })}
-              />
-            </div>
+      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', maxWidth: '780px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>
+            {queryFormType === 'create' ? 'Create New Query' : 'Edit Query'}
+          </h3>
+          <button style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#94a3b8' }} onClick={() => setShowQueryModal(false)}>✕</button>
+        </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="saas-field">
-                <label className="saas-label">Sent To</label>
-                <select
-                  className="saas-select"
-                  value={queryFormFields.sentTo}
-                  onChange={e => setQueryFormFields({ ...queryFormFields, sentTo: e.target.value })}
-                >
-                  <option value="">Choose employee...</option>
-                  {assigneesList.map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="saas-field">
-                <label className="saas-label">Priority</label>
-                <select
-                  className="saas-select"
-                  value={queryFormFields.priority}
-                  onChange={e => setQueryFormFields({ ...queryFormFields, priority: e.target.value })}
-                >
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="saas-field">
-                <label className="saas-label">Status</label>
-                <select
-                  className="saas-select"
-                  value={queryFormFields.status}
-                  onChange={e => setQueryFormFields({ ...queryFormFields, status: e.target.value })}
-                >
-                  <option value="Open">Open</option>
-                  <option value="In Discussion">In Discussion</option>
-                  <option value="Solved">Solved</option>
-                  <option value="Closed">Closed</option>
-                </select>
-              </div>
-
-              <div className="saas-field">
-                <label className="saas-label">Solved (Yes/No)</label>
-                <select
-                  className="saas-select"
-                  value={queryFormFields.solved ? "true" : "false"}
-                  onChange={e => setQueryFormFields({ ...queryFormFields, solved: e.target.value === "true" })}
-                >
-                  <option value="false">No</option>
-                  <option value="true">Yes</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="saas-field">
-              <label className="saas-label">Description</label>
-              <textarea
-                className="saas-textarea"
-                placeholder="Query details..."
-                style={{ minHeight: '80px' }}
-                value={queryFormFields.description}
-                onChange={e => setQueryFormFields({ ...queryFormFields, description: e.target.value })}
-              />
-            </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', marginBottom: '1.25rem' }}>
+          <div className="saas-field" style={{ gridColumn: 'span 2' }}>
+            <label className="saas-label">Query Title *</label>
+            <input
+              className="saas-input"
+              placeholder="What is the query about?"
+              value={queryFormFields.title}
+              onChange={e => setQueryFormFields({ ...queryFormFields, title: e.target.value })}
+            />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-            <button style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 1.25rem', fontWeight: '600', color: '#64748b', cursor: 'pointer' }} onClick={() => setShowQueryModal(false)}>Cancel</button>
-            <button style={{ background: '#0066FF', border: 'none', borderRadius: '8px', padding: '0.6rem 1.25rem', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={handleSaveQuery}>
-              {queryFormType === 'create' ? 'Submit Query' : 'Save Changes'}
-            </button>
+          <div className="saas-field">
+            <label className="saas-label">Sent To</label>
+            <select
+              className="saas-select"
+              value={queryFormFields.sentTo}
+              onChange={e => setQueryFormFields({ ...queryFormFields, sentTo: e.target.value })}
+            >
+              <option value="">Choose employee...</option>
+              {assigneesList.map(u => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
           </div>
+
+          <div className="saas-field">
+            <label className="saas-label">Priority</label>
+            <select
+              className="saas-select"
+              value={queryFormFields.priority}
+              onChange={e => setQueryFormFields({ ...queryFormFields, priority: e.target.value })}
+            >
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+            </select>
+          </div>
+
+          <div className="saas-field">
+            <label className="saas-label">Status</label>
+            <select
+              className="saas-select"
+              value={queryFormFields.status}
+              onChange={e => setQueryFormFields({ ...queryFormFields, status: e.target.value })}
+            >
+              <option value="Open">Open</option>
+              <option value="In Discussion">In Discussion</option>
+              <option value="Solved">Solved</option>
+              <option value="Closed">Closed</option>
+            </select>
+          </div>
+
+          <div className="saas-field">
+            <label className="saas-label">Solved (Yes/No)</label>
+            <select
+              className="saas-select"
+              value={queryFormFields.solved ? "true" : "false"}
+              onChange={e => setQueryFormFields({ ...queryFormFields, solved: e.target.value === "true" })}
+            >
+              <option value="false">No</option>
+              <option value="true">Yes</option>
+            </select>
+          </div>
+
+          <div className="saas-field" style={{ gridColumn: 'span 2' }}>
+            <label className="saas-label">Description</label>
+            <textarea
+              className="saas-textarea"
+              placeholder="Query details..."
+              style={{ minHeight: '80px', resize: 'vertical' }}
+              value={queryFormFields.description}
+              onChange={e => setQueryFormFields({ ...queryFormFields, description: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem' }}>
+          <button style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 1.25rem', fontWeight: '600', color: '#64748b', cursor: 'pointer' }} onClick={() => setShowQueryModal(false)}>Cancel</button>
+          <button style={{ background: '#0066FF', border: 'none', borderRadius: '8px', padding: '0.6rem 1.5rem', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={handleSaveQuery}>
+            {queryFormType === 'create' ? 'Submit Query' : 'Save Changes'}
+          </button>
         </div>
       </div>
     );
   };
 
-  const renderQueryViewModal = () => {
+  const renderQueryDetailInline = () => {
     if (!viewingQuery) return null;
+    const sentUser = users.find(u => u.id === viewingQuery.sentTo);
+    const sentName = sentUser
+      ? (sentUser.fullName || sentUser.name || sentUser.username || sentUser.email)
+      : (viewingQuery.sentTo || 'Unassigned');
+
+    const closeDetail = () => setViewingQuery(null);
+
+    const labelStyle = { fontSize: '0.7rem', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' };
+    const valueStyle = { fontSize: '0.92rem', fontWeight: '600', color: '#0f172a' };
+
     return (
-      <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-        <div style={{ background: 'white', borderRadius: '12px', width: '500px', padding: '2rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>Query Details</h3>
-            <button style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#94a3b8' }} onClick={() => { setShowQueryViewModal(false); setViewingQuery(null); }}>✕</button>
+      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.75rem', marginBottom: '1.5rem' }}>
+
+        {/* Header row */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button
+              onClick={closeDetail}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#f1f5f9', border: 'none', borderRadius: '8px', padding: '0.4rem 0.85rem', fontSize: '0.8rem', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
+            >
+              ← Back
+            </button>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '800', color: '#0f172a' }}>Query Details</h3>
+          </div>
+          <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#a21caf' }}>
+            {viewingQuery.queryId || `QRY-${viewingQuery.id.slice(-4).toUpperCase()}`}
+          </span>
+        </div>
+
+        {/* Fields grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem 2rem' }}>
+
+          {/* Title — full width */}
+          <div style={{ gridColumn: 'span 2' }}>
+            <div style={labelStyle}>Title</div>
+            <div style={{ ...valueStyle, fontSize: '1rem', fontWeight: '800' }}>{viewingQuery.title}</div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: '#334155' }}>
-            <div>
-              <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Query ID</strong>
-              <span style={{ fontSize: '0.9rem', fontWeight: '700', color: '#a21caf' }}>{viewingQuery.queryId || `QRY-${viewingQuery.id.slice(-4).toUpperCase()}`}</span>
-            </div>
-
-            <div>
-              <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Query Title</strong>
-              <span style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a' }}>{viewingQuery.title}</span>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div>
-                <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Sent To</strong>
-                <span style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: '600' }}>{viewingQuery.sentTo || 'Unassigned'}</span>
+          {/* Sent To */}
+          <div>
+            <div style={labelStyle}>Sent To</div>
+            {sentUser ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#2563eb', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: '800', flexShrink: 0 }}>
+                  {sentName.charAt(0).toUpperCase()}
+                </div>
+                <span style={valueStyle}>{sentName}</span>
               </div>
-              <div>
-                <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Priority</strong>
-                <span style={{
-                  fontSize: '0.8rem',
-                  fontWeight: '700',
-                  color: viewingQuery.priority === 'High' ? '#ef4444' : viewingQuery.priority === 'Medium' ? '#ea580c' : '#16a34a'
-                }}>{viewingQuery.priority || 'Medium'}</span>
-              </div>
-            </div>
+            ) : (
+              <div style={{ ...valueStyle, color: '#94a3b8' }}>Unassigned</div>
+            )}
+          </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div>
-                <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Status</strong>
-                <span style={{
-                  background: viewingQuery.status === 'Solved' || viewingQuery.solved ? '#dcfce7' : viewingQuery.status === 'In Discussion' ? '#f3e8ff' : '#dbeafe',
-                  color: viewingQuery.status === 'Solved' || viewingQuery.solved ? '#16a34a' : viewingQuery.status === 'In Discussion' ? '#9333ea' : '#2563eb',
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '6px',
-                  fontSize: '0.8rem',
-                  fontWeight: '700',
-                  display: 'inline-block'
-                }}>{viewingQuery.status || 'Open'}</span>
-              </div>
-              <div>
-                <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Solved</strong>
-                <span style={{ fontSize: '0.9rem', color: viewingQuery.solved ? '#16a34a' : '#ef4444', fontWeight: '700' }}>{viewingQuery.solved ? 'Yes' : 'No'}</span>
-              </div>
-            </div>
-
-            <div>
-              <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Description</strong>
-              <p style={{ margin: 0, fontSize: '0.9rem', color: '#334155', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
-                {viewingQuery.description || 'No description provided.'}
-              </p>
+          {/* Priority */}
+          <div>
+            <div style={labelStyle}>Priority</div>
+            <div style={{ ...valueStyle, color: viewingQuery.priority === 'High' ? '#ef4444' : viewingQuery.priority === 'Medium' ? '#ea580c' : '#16a34a' }}>
+              {viewingQuery.priority || 'Medium'}
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-            <button style={{ background: '#0066FF', border: 'none', borderRadius: '8px', padding: '0.6rem 1.25rem', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={() => { setShowQueryViewModal(false); setViewingQuery(null); }}>Close</button>
+          {/* Status */}
+          <div>
+            <div style={labelStyle}>Status</div>
+            <span style={{
+              background: viewingQuery.status === 'Solved' || viewingQuery.solved ? '#dcfce7' : viewingQuery.status === 'In Discussion' ? '#f3e8ff' : '#dbeafe',
+              color: viewingQuery.status === 'Solved' || viewingQuery.solved ? '#16a34a' : viewingQuery.status === 'In Discussion' ? '#9333ea' : '#2563eb',
+              padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '700', display: 'inline-block'
+            }}>{viewingQuery.status || 'Open'}</span>
+          </div>
+
+          {/* Solved */}
+          <div>
+            <div style={labelStyle}>Solved</div>
+            <span style={{
+              background: viewingQuery.solved ? '#dcfce7' : '#fee2e2',
+              color: viewingQuery.solved ? '#15803d' : '#b91c1c',
+              padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '700', display: 'inline-block'
+            }}>{viewingQuery.solved ? 'Yes' : 'No'}</span>
+          </div>
+
+          {/* Created On */}
+          <div>
+            <div style={labelStyle}>Created On</div>
+            <div style={valueStyle}>
+              {viewingQuery.createdAt ? new Date(viewingQuery.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+            </div>
+          </div>
+
+          {/* Description — full width */}
+          <div style={{ gridColumn: 'span 2' }}>
+            <div style={labelStyle}>Description</div>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: '#334155', whiteSpace: 'pre-wrap', lineHeight: '1.6', background: '#f8fafc', borderRadius: '8px', padding: '0.75rem 1rem', border: '1px solid #f1f5f9' }}>
+              {viewingQuery.description || '—'}
+            </p>
           </div>
         </div>
       </div>
@@ -862,22 +892,16 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             </div>
           </div>
         )}
-        {showQueryModal && renderQueryFormModal()}
-        {showQueryViewModal && renderQueryViewModal()}
-
         {/* Top Profile Card */}
         <div className="detail-profile-card">
           <div className="detail-profile-left">
-            <div style={{ width: '80px', height: '80px', borderRadius: '16px', background: '#f3e8ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9333ea', flexShrink: 0 }}>
-              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
-            </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
                 <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '800', color: '#0f172a' }}>{selectedProject.name}</h2>
                 <span style={{ background: '#dcfce7', color: '#16a34a', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '700' }}>{selectedProject.status || 'In Progress'}</span>
               </div>
               <div style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                Client: <span style={{ color: '#2563eb', fontWeight: '600' }}>{selectedProject.client || 'Spagylo Technologies'}</span>
+                Client: <span style={{ color: '#2563eb', fontWeight: '600' }}>{selectedProject.client || '-'}</span>
               </div>
               <div style={{ color: '#64748b', fontSize: '0.85rem' }}>
                 Project ID: <span style={{ fontWeight: '500' }}>{projectID}</span>
@@ -885,8 +909,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             </div>
           </div>
           <div className="detail-profile-actions">
-            <button 
-              style={{ padding: '0.5rem 1rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            <button
+              className="detail-edit-btn"
+              title="Edit Project"
               onClick={() => {
                 setForm({
                   id: selectedProject.id,
@@ -902,11 +927,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 setShowForm(true);
               }}
             >
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-              Edit Project
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              <span className="detail-btn-text">Edit Project</span>
             </button>
-            <button 
-              style={{ padding: '0.5rem 1rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            <button
+              className="detail-addtask-btn"
+              title="Add Task"
               onClick={() => {
                 if (onNavigateToTasks) {
                   onNavigateToTasks({ projectName: selectedProject.name });
@@ -917,21 +943,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     setSelectedTaskListId(firstList.id);
                     setTaskFormType('create');
                     setEditingTask(null);
-                    setTaskFormFields({
-                      title: '',
-                      assignees: '',
-                      status: 'To Do',
-                      priority: 'Medium',
-                      startDate: '',
-                      dueDate: '',
-                      description: ''
-                    });
+                    setTaskFormFields({ title: '', assignees: '', status: 'To Do', priority: 'Medium', startDate: '', dueDate: '', description: '' });
                     setShowTaskFormModal(true);
                   }
                 }
               }}
             >
-              + Add Task
+              <span className="detail-btn-text">+ Add Task</span>
+              <span className="detail-btn-icon">+</span>
             </button>
           </div>
         </div>
@@ -1003,7 +1022,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => { setDetailTab(tab.id); setSelectedTaskListId(null); }}
+              onClick={() => { setDetailTab(tab.id); setSelectedTaskListId(null); setViewingQuery(null); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none',
                 padding: '0.75rem 0', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer',
@@ -1115,12 +1134,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       value={newListName}
                       onChange={e => setNewListName(e.target.value)}
                     />
-                    <button 
-                      className="saas-btn-submit" 
+                    <button
+                      className="saas-btn-submit add-taskgroup-btn"
                       style={{ padding: '0 1rem', height: '36px', fontSize: '0.8rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
                       onClick={handleAddList}
                     >
-                      Add Task Group
+                      <span className="add-taskgroup-btn-text">Add Task Group</span>
+                      <span className="add-taskgroup-btn-icon">+</span>
                     </button>
                   </div>
                 )}
@@ -1368,18 +1388,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>Team Members</h3>
                 {can('projects', 'assign') && (
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button 
-                      className="saas-btn-submit" 
-                      style={{ background: '#0066FF', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }} 
+                    <button
+                      className="saas-btn-submit add-team-member-btn"
+                      style={{ background: '#0066FF', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
                       onClick={() => setShowAddMemberModal(true)}
                     >
-                      + Add Member
-                    </button>
-                    <button 
-                      style={{ background: 'white', color: '#0066FF', border: '1px solid #0066FF', borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }} 
-                      onClick={() => setShowCreateMemberModal(true)}
-                    >
-                      Create Member
+                      <span className="add-team-member-btn-text">+ Add Member</span>
+                      <span className="add-team-member-btn-icon">+</span>
                     </button>
                   </div>
                 )}
@@ -1557,7 +1572,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 const closedQueries = queriesList.filter(q => q.status === 'Closed').length;
 
                 return (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+                  <div className="queries-stats-grid">
                     {/* Total Queries Card */}
                     <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                       <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#EFF6FF', color: '#0066FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1616,13 +1631,17 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 );
               })()}
 
+              {/* Inline query form */}
+              {showQueryModal && renderQueryFormModal()}
+
+              {viewingQuery ? renderQueryDetailInline() : (<>
               {/* Filter controls row */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', gap: '0.75rem', flex: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+              <div className="queries-filter-bar">
+                <div className="queries-filter-controls">
                   {/* Search box */}
-                  <div style={{ position: 'relative', width: '280px' }}>
-                    <input 
-                      className="saas-input"
+                  <div className="queries-search-wrap">
+                    <input
+                      className="saas-input queries-search-input"
                       placeholder="Search queries by title, description..."
                       value={querySearchText}
                       onChange={e => setQuerySearchText(e.target.value)}
@@ -1633,77 +1652,80 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     </svg>
                   </div>
 
-                  {/* Status filter dropdown */}
-                  <select 
-                    className="saas-select" 
-                    value={queryStatusFilter} 
-                    onChange={e => setQueryStatusFilter(e.target.value)} 
-                    style={{ width: '130px', height: '38px', fontSize: '0.85rem' }}
-                  >
-                    <option value="All Status">All Status</option>
-                    <option value="Open">Open</option>
-                    <option value="In Discussion">In Discussion</option>
-                    <option value="Solved">Solved</option>
-                    <option value="Closed">Closed</option>
-                  </select>
+                  {/* Selects + Reset in one row */}
+                  <div className="queries-selects-row">
+                    {/* Status filter dropdown */}
+                    <select
+                      className="saas-select queries-filter-select"
+                      value={queryStatusFilter}
+                      onChange={e => setQueryStatusFilter(e.target.value)}
+                      style={{ height: '38px', fontSize: '0.85rem' }}
+                    >
+                      <option value="All Status">All Status</option>
+                      <option value="Open">Open</option>
+                      <option value="In Discussion">In Discussion</option>
+                      <option value="Solved">Solved</option>
+                      <option value="Closed">Closed</option>
+                    </select>
 
-                  {/* Sent To filter dropdown */}
-                  <select 
-                    className="saas-select" 
-                    value={querySentToFilter} 
-                    onChange={e => setQuerySentToFilter(e.target.value)} 
-                    style={{ width: '140px', height: '38px', fontSize: '0.85rem' }}
-                  >
-                    <option value="All Sent To">All Sent To</option>
-                    {projMembers.map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
+                    {/* Sent To filter dropdown */}
+                    <select
+                      className="saas-select queries-filter-select"
+                      value={querySentToFilter}
+                      onChange={e => setQuerySentToFilter(e.target.value)}
+                      style={{ height: '38px', fontSize: '0.85rem' }}
+                    >
+                      <option value="All Sent To">All Sent To</option>
+                      {projMembers.map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
 
-                  {/* Priority filter dropdown */}
-                  <select 
-                    className="saas-select" 
-                    value={queryPriorityFilter} 
-                    onChange={e => setQueryPriorityFilter(e.target.value)} 
-                    style={{ width: '130px', height: '38px', fontSize: '0.85rem' }}
-                  >
-                    <option value="All Priority">All Priority</option>
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                  </select>
+                    {/* Priority filter dropdown */}
+                    <select
+                      className="saas-select queries-filter-select"
+                      value={queryPriorityFilter}
+                      onChange={e => setQueryPriorityFilter(e.target.value)}
+                      style={{ height: '38px', fontSize: '0.85rem' }}
+                    >
+                      <option value="All Priority">All Priority</option>
+                      <option value="High">High</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Low">Low</option>
+                    </select>
 
-                  {/* Reset Filters button */}
-                  <button 
-                    onClick={() => {
-                      setQuerySearchText('');
-                      setQueryStatusFilter('All Status');
-                      setQuerySentToFilter('All Sent To');
-                      setQueryPriorityFilter('All Priority');
-                    }}
-                    style={{ background: 'none', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0.5rem 0.85rem', color: '#475569', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', height: '38px' }}
-                  >
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-                    Reset
-                  </button>
+                    {/* Reset Filters button */}
+                    <button
+                      className="queries-reset-btn"
+                      onClick={() => {
+                        setQuerySearchText('');
+                        setQueryStatusFilter('All Status');
+                        setQuerySentToFilter('All Sent To');
+                        setQueryPriorityFilter('All Priority');
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                      <span className="queries-btn-text">Reset</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div className="queries-filter-actions">
                   {/* New Query Button */}
                   {can('tasks', 'create') && (
-                    <button 
-                      className="saas-btn-submit" 
+                    <button
+                      className="saas-btn-submit queries-new-btn"
                       onClick={handleOpenCreateQueryModal}
-                      style={{ background: '#0066FF', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', height: '38px' }}
                     >
-                      + New Query
+                      <span className="queries-btn-text">+ New Query</span>
+                      <span className="queries-btn-icon">+</span>
                     </button>
                   )}
 
                   {/* Filters Button */}
-                  <button style={{ background: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0.5rem 1rem', color: '#475569', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', height: '38px' }}>
+                  <button className="queries-filters-btn">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-                    Filters
+                    <span className="queries-btn-text">Filters</span>
                   </button>
                 </div>
               </div>
@@ -1725,9 +1747,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 });
 
                 return (
-                  <div className="saas-table-container" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div className="saas-table-container queries-table-container" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
                     <div style={{ overflowX: 'auto' }}>
-                      <table className="saas-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '950px' }}>
+                      <table className="saas-table queries-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '950px' }}>
                         <thead>
                           <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                             <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '100px' }}>Query ID</th>
@@ -1765,42 +1787,46 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                               return (
                                 <tr key={q.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                  <td style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', fontWeight: '700', color: '#a21caf' }}>
+                                  <td data-label="Query ID" style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', fontWeight: '700', color: '#a21caf' }}>
                                     {q.queryId || `QRY-${q.id.slice(-4).toUpperCase()}`}
                                   </td>
-                                  <td style={{ padding: '1rem 1.5rem', fontSize: '0.85rem', color: '#0f172a', fontWeight: '600' }}>
+                                  <td data-label="Title" style={{ padding: '1rem 1.5rem', fontSize: '0.85rem', color: '#0f172a', fontWeight: '600' }}>
                                     {q.title}
                                   </td>
-                                  <td style={{ padding: '1rem 1.5rem', fontSize: '0.85rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '250px' }} title={q.description}>
+                                  <td data-label="Description" style={{ padding: '1rem 1.5rem', fontSize: '0.85rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '250px' }} title={q.description}>
                                     {q.description || '-'}
                                   </td>
-                                  <td style={{ padding: '1rem 1.5rem' }}>
-                                    {q.sentTo ? (
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: getAvatarColor(q.sentTo), color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.65rem' }}>
-                                          {getInitials(q.sentTo)}
+                                  <td data-label="Sent To" style={{ padding: '1rem 1.5rem' }}>
+                                    {q.sentTo ? (() => {
+                                      const sentUser = users.find(u => u.id === q.sentTo);
+                                      const displayName = sentUser ? (sentUser.name || sentUser.username || sentUser.email) : q.sentTo;
+                                      return (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                          <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: getAvatarColor(displayName), color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.65rem' }}>
+                                            {getInitials(displayName)}
+                                          </div>
+                                          <span style={{ fontSize: '0.8rem', fontWeight: '500', color: '#334155' }}>{displayName}</span>
                                         </div>
-                                        <span style={{ fontSize: '0.8rem', fontWeight: '500', color: '#334155' }}>{q.sentTo}</span>
-                                      </div>
-                                    ) : (
+                                      );
+                                    })() : (
                                       <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Unassigned</span>
                                     )}
                                   </td>
-                                  <td style={{ padding: '1rem 1.5rem' }}>
-                                    <span style={{ 
-                                      background: q.status === 'Solved' || q.solved ? '#dcfce7' : q.status === 'In Discussion' ? '#f3e8ff' : '#dbeafe', 
-                                      color: q.status === 'Solved' || q.solved ? '#16a34a' : q.status === 'In Discussion' ? '#9333ea' : '#2563eb', 
-                                      padding: '0.25rem 0.5rem', 
-                                      borderRadius: '6px', 
-                                      fontSize: '0.75rem', 
-                                      fontWeight: '700' 
+                                  <td data-label="Status" style={{ padding: '1rem 1.5rem' }}>
+                                    <span style={{
+                                      background: q.status === 'Solved' || q.solved ? '#dcfce7' : q.status === 'In Discussion' ? '#f3e8ff' : '#dbeafe',
+                                      color: q.status === 'Solved' || q.solved ? '#16a34a' : q.status === 'In Discussion' ? '#9333ea' : '#2563eb',
+                                      padding: '0.25rem 0.5rem',
+                                      borderRadius: '6px',
+                                      fontSize: '0.75rem',
+                                      fontWeight: '700'
                                     }}>
                                       {q.status || 'Open'}
                                     </span>
                                   </td>
-                                  <td style={{ padding: '1rem 1.5rem' }}>
-                                    <span style={{ 
-                                      background: q.solved ? '#dcfce7' : '#fee2e2', 
+                                  <td data-label="Solved" style={{ padding: '1rem 1.5rem' }}>
+                                    <span style={{
+                                      background: q.solved ? '#dcfce7' : '#fee2e2',
                                       color: q.solved ? '#15803d' : '#b91c1c', 
                                       padding: '0.2rem 0.5rem', 
                                       borderRadius: '4px', 
@@ -1810,25 +1836,25 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                       {q.solved ? 'Yes' : 'No'}
                                     </span>
                                   </td>
-                                  <td style={{ padding: '1rem 1.5rem' }}>
-                                    <span style={{ 
-                                      color: q.priority === 'High' ? '#ef4444' : q.priority === 'Medium' ? '#ea580c' : '#16a34a', 
-                                      fontSize: '0.75rem', 
-                                      fontWeight: '700' 
+                                  <td data-label="Priority" style={{ padding: '1rem 1.5rem' }}>
+                                    <span style={{
+                                      color: q.priority === 'High' ? '#ef4444' : q.priority === 'Medium' ? '#ea580c' : '#16a34a',
+                                      fontSize: '0.75rem',
+                                      fontWeight: '700'
                                     }}>
                                       {q.priority || 'Medium'}
                                     </span>
                                   </td>
-                                  <td style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', color: '#64748b' }}>
+                                  <td data-label="Created On" style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', color: '#64748b' }}>
                                     {new Date(q.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                                   </td>
-                                  <td style={{ padding: '1rem 1.5rem', textAlign: 'center' }}>
+                                  <td data-label="Action" style={{ padding: '1rem 1.5rem', textAlign: 'center' }}>
                                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                                       {/* View button */}
                                       <button 
                                         style={{ background: 'none', border: 'none', color: '#0066FF', cursor: 'pointer', padding: '0.25rem' }} 
                                         title="View Details"
-                                        onClick={() => { setViewingQuery(q); setShowQueryViewModal(true); }}
+                                        onClick={() => setViewingQuery(q)}
                                       >
                                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                       </button>
@@ -1883,7 +1909,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     </div>
                   </div>
                 );
-              })()}
+              })()}</>)}
             </div>
           )}
 
@@ -2016,20 +2042,21 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
                     {can('projects', 'create') && (
                       <button
+                        className="attach-upload-btn"
                         onClick={() => setShowUploadModal(true)}
                         style={{ padding: '0.5rem 1rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                       >
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                        Upload Files
+                        <span className="attach-upload-btn-text">Upload Files</span>
                       </button>
                     )}
                   </div>
                 </div>
 
                 {/* Table */}
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+                <div className="attachments-table-container" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
                   <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
+                    <table className="attachments-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                           <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Name</th>
@@ -2045,14 +2072,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                           <tr><td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8', fontSize: '0.9rem' }}>No attachments found.</td></tr>
                         ) : paginated.map(a => (
                           <tr key={a.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
-                            <td style={{ padding: '0.85rem 1.25rem' }}>
+                            <td data-label="Name" style={{ padding: '0.85rem 1.25rem' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                 {getFileIcon(a.name)}
                                 <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{a.name}</span>
                               </div>
                             </td>
-                            <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.description || '-'}</td>
-                            <td style={{ padding: '0.85rem 1.25rem' }}>
+                            <td data-label="Description" style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.description || '-'}</td>
+                            <td data-label="Uploaded By" style={{ padding: '0.85rem 1.25rem' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#dbeafe', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: '800' }}>
                                   {(a.uploadedBy || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2)}
@@ -2060,11 +2087,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                 <span style={{ fontSize: '0.85rem', color: '#334155', fontWeight: '500' }}>{a.uploadedBy}</span>
                               </div>
                             </td>
-                            <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569', fontWeight: '500' }}>{a.fileSize || '-'}</td>
-                            <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569' }}>
+                            <td data-label="File Size" style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569', fontWeight: '500' }}>{a.fileSize || '-'}</td>
+                            <td data-label="Uploaded On" style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569' }}>
                               {new Date(a.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}, {new Date(a.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
                             </td>
-                            <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                            <td data-label="Actions" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
                               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', alignItems: 'center' }}>
                                 {a.fileUrl && (
                                   <a href={a.fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', cursor: 'pointer', display: 'flex' }} title="Download">
@@ -2107,62 +2134,58 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                 {/* Upload Modal */}
                 {showUploadModal && (
-                  <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                    <div style={{ background: 'white', borderRadius: '16px', width: '500px', padding: '2rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                        <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>Upload Attachment</h3>
-                        <button onClick={() => setShowUploadModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#94a3b8' }}>✕</button>
-                      </div>
+                  <div className="upload-attachment-card" style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', maxWidth: '600px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>Upload Attachment</h3>
+                      <button onClick={() => setShowUploadModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#94a3b8' }}>✕</button>
+                    </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#334155', marginBottom: '0.35rem' }}>File Name *</label>
-                          <input
-                            value={uploadForm.name}
-                            onChange={e => setUploadForm({ ...uploadForm, name: e.target.value })}
-                            placeholder="e.g. Project_Requirements.pdf"
-                            style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#334155', marginBottom: '0.35rem' }}>Description</label>
-                          <textarea
-                            value={uploadForm.description}
-                            onChange={e => setUploadForm({ ...uploadForm, description: e.target.value })}
-                            placeholder="Brief description of the file..."
-                            rows={3}
-                            style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#334155', marginBottom: '0.35rem' }}>Choose File</label>
-                          <div
-                            onClick={() => attachFileRef.current?.click()}
-                            style={{ border: '2px dashed #cbd5e1', borderRadius: '10px', padding: '1.5rem', textAlign: 'center', cursor: 'pointer', background: '#f8fafc', transition: 'border-color 0.2s' }}
-                            onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
-                            onMouseLeave={e => e.currentTarget.style.borderColor = '#cbd5e1'}
-                          >
-                            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#94a3b8" strokeWidth="1.5" style={{ margin: '0 auto 0.5rem' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                            <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>
-                              {uploadForm.file ? uploadForm.file.name : 'Click to browse or drag & drop'}
-                            </p>
-                            {uploadForm.file && <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>{(uploadForm.file.size / (1024 * 1024)).toFixed(2)} MB</p>}
-                          </div>
-                          <input ref={attachFileRef} type="file" style={{ display: 'none' }} onChange={e => {
-                            const f = e.target.files[0];
-                            if (f) {
-                              setUploadForm(prev => ({ ...prev, file: f, name: prev.name || f.name }));
-                            }
-                          }} />
-                        </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>File Name *</label>
+                        <input
+                          value={uploadForm.name}
+                          onChange={e => setUploadForm({ ...uploadForm, name: e.target.value })}
+                          placeholder="e.g. Project_Requirements.pdf"
+                          style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
+                        />
                       </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Description</label>
+                        <textarea
+                          value={uploadForm.description}
+                          onChange={e => setUploadForm({ ...uploadForm, description: e.target.value })}
+                          placeholder="Brief description of the file..."
+                          rows={3}
+                          style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Choose File</label>
+                        <div
+                          onClick={() => attachFileRef.current?.click()}
+                          style={{ border: '2px dashed #cbd5e1', borderRadius: '10px', padding: '1.5rem', textAlign: 'center', cursor: 'pointer', background: '#f8fafc', transition: 'border-color 0.2s' }}
+                          onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
+                          onMouseLeave={e => e.currentTarget.style.borderColor = '#cbd5e1'}
+                        >
+                          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#94a3b8" strokeWidth="1.5" style={{ margin: '0 auto 0.5rem', display: 'block' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>
+                            {uploadForm.file ? uploadForm.file.name : 'Click to browse or drag & drop'}
+                          </p>
+                          {uploadForm.file && <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>{(uploadForm.file.size / (1024 * 1024)).toFixed(2)} MB</p>}
+                        </div>
+                        <input ref={attachFileRef} type="file" style={{ display: 'none' }} onChange={e => {
+                          const f = e.target.files[0];
+                          if (f) setUploadForm(prev => ({ ...prev, file: f, name: prev.name || f.name }));
+                        }} />
+                      </div>
+                    </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                        <button onClick={() => setShowUploadModal(false)} style={{ padding: '0.6rem 1.25rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', color: '#64748b', cursor: 'pointer', fontSize: '0.85rem' }}>Cancel</button>
-                        <button onClick={handleUpload} disabled={uploading} style={{ padding: '0.6rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: uploading ? 'wait' : 'pointer', fontSize: '0.85rem', opacity: uploading ? 0.7 : 1 }}>
-                          {uploading ? 'Uploading...' : 'Upload'}
-                        </button>
-                      </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem' }}>
+                      <button onClick={() => setShowUploadModal(false)} style={{ padding: '0.6rem 1.25rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', color: '#64748b', cursor: 'pointer', fontSize: '0.85rem' }}>Cancel</button>
+                      <button onClick={handleUpload} disabled={uploading} style={{ padding: '0.6rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: uploading ? 'wait' : 'pointer', fontSize: '0.85rem', opacity: uploading ? 0.7 : 1 }}>
+                        {uploading ? 'Uploading...' : 'Upload'}
+                      </button>
                     </div>
                   </div>
                 )}
@@ -2454,12 +2477,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     <div className="mp-footer">
                       <span className="mp-date">Created: {createdOn}</span>
                       <div className="mp-actions">
-                        <button 
+                        <button
                           className="mp-action-btn edit"
+                          title="Edit Project"
                           onClick={() => {
-                            setForm({ 
+                            setForm({
                               id: proj.id,
-                              name: proj.name || '', 
+                              name: proj.name || '',
                               status: proj.status || 'Active',
                               description: proj.description || '',
                               client: proj.client || '',
@@ -2470,14 +2494,15 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                             setShowForm(true);
                           }}
                         >
-                          Edit
+                          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
                         {(getLevel('projects', 'delete') === 'All' || (getLevel('projects', 'delete') === 'Self' && (user?.fullName || user?.name) && (proj.members || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))) && (
-                          <button 
+                          <button
                             className="mp-action-btn delete"
+                            title="Delete Project"
                             onClick={() => handleRemove(proj.id)}
                           >
-                            Delete
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                           </button>
                         )}
                       </div>
