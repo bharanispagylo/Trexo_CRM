@@ -207,8 +207,6 @@ export default function Roles() {
     <div className="roles-page">
       <div className="roles-header">
         <div className="header-info">
-          <h2>Role Permission Assignment</h2>
-          <p>Click checkboxes to toggle 'All' or 'Self' access for each action.</p>
           {isEditing && (
             <div className="quick-actions" style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button className="quick-btn grant" onClick={handleGrantAll}>Grant All Permissions</button>

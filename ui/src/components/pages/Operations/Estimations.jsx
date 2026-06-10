@@ -125,15 +125,7 @@ export default function Estimations({ user }) {
     <>
     <div className="estimations-page">
       <div className="estimations-header">
-        <div className="estimations-header-left">
-          <div className="estimations-icon-wrapper">
-             <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-          </div>
-          <div>
-            <h1 className="estimations-title">Estimations</h1>
-            <p className="estimations-subtitle">Manage task estimations before converting them to actual tasks.</p>
-          </div>
-        </div>
+        <div className="estimations-header-left"></div>
         <div>
           {can('estimations', 'create') && (
             <button className="estimations-btn-primary estimations-btn-add" onClick={() => { setForm({ taskName: '', description: '', client: '', clientId: '', projectId: '', estimatedHours: 0 }); setShowForm(true); }}>

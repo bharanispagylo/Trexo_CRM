@@ -442,7 +442,7 @@
   }
 
   /* Hide desktop table on mobile */
-  .table-responsive {
+  .roles-page .table-responsive {
     display: none;
   }
 

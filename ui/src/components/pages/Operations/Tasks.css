@@ -1808,6 +1808,7 @@
   resize: vertical;
   background: white;
   transition: all 0.15s ease;
+  box-sizing: border-box;
 }
 
 .saas-grid-textarea:focus {
@@ -4689,6 +4690,22 @@
   .saas-meta-value > div {
     flex-wrap: wrap !important;
     gap: 0.5rem !important;
+  }
+
+  .saas-content-pane > * {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .saas-grid-textarea {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .saas-content-pane div[style*="padding: 0.5rem 0"] {
+    max-width: 100% !important;
+    overflow: hidden !important;
   }
 
   .billing-field-row {

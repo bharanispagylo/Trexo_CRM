@@ -241,7 +241,7 @@ export default function TrackTeam({ user }) {
         {/* TEAM MEMBER LIST */}
         <div className="team-list-section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>Team Members</h3>
+          <span></span>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               {user?.role?.toLowerCase() === 'admin' && (
                 <button

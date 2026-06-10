@@ -377,7 +377,9 @@
 /* Page Common Styles Override */
 .page-container {
   padding: 2.5rem 3rem;
-  max-width: none;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
   margin: 0;
 }
 
@@ -845,6 +847,9 @@
   /* General Page container adjustments */
   .page-container {
     padding: 1.25rem 1rem;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .page-header {

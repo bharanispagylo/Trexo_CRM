@@ -344,10 +344,10 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const getHeaderInfo = () => {
     switch (activeTab) {
       case 'salary': return { title: 'Payroll Management', back: 'HR', id: 'Salary' };
-      case 'projects': return { title: 'Project Portfolio', back: 'Operations', id: 'Projects' };
+      case 'projects': return { title: 'Projects', back: 'Operations', id: 'Projects' };
       case 'track-team': return { title: 'Track your Team', back: 'Operations', id: 'TrackTeam' };
       case 'estimations': return { title: 'Estimations', back: 'Operations', id: 'Estimations' };
-      case 'clients': return { title: 'Client Management', back: 'Operations', id: 'Clients' };
+      case 'clients': return { title: 'Clients', back: 'Operations', id: 'Clients' };
       case 'tasks': return isTaskDetailOpen
         ? { title: 'Task Details', back: 'Tasks', id: 'TaskDetails' }
         : { title: 'Tasks', back: 'Operations', id: 'Tasks' };

@@ -42,13 +42,13 @@ const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 
 
 const STATUS_HEADER_META = {
-  'To Do':         { bg: '#f1f5f9', fg: '#000000', dotColor: '#94a3b8', isDone: false },
-  'In Progress':   { bg: '#2563eb', fg: '#000000', dotColor: '#bfdbfe', isDone: false },
-  'In Testing':    { bg: '#7c3aed', fg: '#000000', dotColor: '#e9d5ff', isDone: false },
-  'Re-opened':     { bg: '#db2777', fg: '#000000', dotColor: '#fecdd3', isDone: false },
-  'Prod Deployed': { bg: '#ea580c', fg: '#000000', dotColor: '#fde68a', isDone: false },
-  'Prod Verified': { bg: '#0d9488', fg: '#000000', dotColor: '#bbf7d0', isDone: false },
-  'Delivered':     { bg: '#16a34a', fg: '#000000', dotColor: '#99f6e4', isDone: true  },
+  'To Do':         { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false },
+  'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', isDone: false },
+  'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', isDone: false },
+  'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', isDone: false },
+  'Prod Deployed': { bg: '#ea580c', fg: '#ffffff', dotColor: '#fde68a', isDone: false },
+  'Prod Verified': { bg: '#0d9488', fg: '#ffffff', dotColor: '#bbf7d0', isDone: false },
+  'Delivered':     { bg: '#16a34a', fg: '#ffffff', dotColor: '#99f6e4', isDone: true  },
 };
 
 const PRIORITY_FLAGS = {
@@ -110,6 +110,25 @@ const formatRelativeDueDate = (dateStr) => {
       isOverdue: false 
     };
   }
+};
+
+const formatMobileDueDate = (dateStr) => {
+  if (!dateStr) return null;
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return null;
+  
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[date.getMonth()];
+  const day = String(date.getDate()).padStart(2, '0');
+  const formatted = `${month} ${day}`;
+  
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const due = new Date(dateStr);
+  due.setHours(0,0,0,0);
+  const isOverdue = due < today;
+  
+  return { text: formatted, isOverdue };
 };
 
 const initials = (name) => name ? name.split(' ').map(w => w[0]).join('').toUpperCase() : '?';
@@ -1030,9 +1049,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
                 <div style={{ padding: '0.5rem 0' }}>
                   {isEditing ? (
-                    <textarea value={form.description} onChange={e => set('description', e.target.value)} className="saas-grid-textarea" style={{ minHeight: '120px', width: '100%', border: 'none', background: '#f8fafc', outline: 'none', fontSize: '0.95rem', padding: '1rem', borderRadius: '8px' }} placeholder="Add description, or write with AI..." />
+                    <textarea value={form.description} onChange={e => set('description', e.target.value)} className="saas-grid-textarea" style={{ minHeight: '120px', width: '100%', maxWidth: '100%', border: 'none', background: '#f8fafc', outline: 'none', fontSize: '0.95rem', padding: '1rem', borderRadius: '8px', boxSizing: 'border-box' }} placeholder="Add description, or write with AI..." />
                   ) : (
-                    <div style={{ color: form.description ? '#334155' : '#94a3b8', whiteSpace: 'pre-wrap', fontSize: '0.95rem', minHeight: '60px', cursor: 'text', padding: '0.5rem' }} onClick={() => setIsEditing(true)}>
+                    <div style={{ color: form.description ? '#334155' : '#94a3b8', whiteSpace: 'pre-wrap', fontSize: '0.95rem', minHeight: '60px', cursor: 'text', padding: '0.5rem', wordBreak: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }} onClick={() => setIsEditing(true)}>
                       {form.description || 'Add description, or write with AI...'}
                     </div>
                   )}
@@ -1063,8 +1082,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         )}
 
             {activeTab === 'billing' && currentUser?.role?.toLowerCase() === 'admin' && (
-              <div className="saas-billing-pane animate-fade-in" style={{ padding: '1.5rem 2rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '2rem', color: '#0f172a' }}>
+              <div className="saas-billing-pane animate-fade-in" style={{ padding: '0.25rem 0' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '700', margin: '0 0 2rem 0', color: '#0f172a' }}>
                   Billing Information
                 </h2>
                 
@@ -1316,7 +1335,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
 
             {activeTab === 'attachments' && (
-              <div className="saas-attachments-pane animate-fade-in" style={{ padding: '1.5rem 0' }}>
+              <div className="saas-attachments-pane animate-fade-in" style={{ padding: '0.25rem 0' }}>
                 
                 {/* Header row with Title and Add Button */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', maxWidth: '100%', margin: '0 auto 1.5rem' }}>
@@ -2088,7 +2107,6 @@ function ScheduleColumn({ title, count, tasks, onDragStart, onDrop, onDragOver, 
     >
       <div className="col-clickup-header">
         <div className="col-clickup-badge" style={{ backgroundColor: colorMeta.bg, color: colorMeta.fg }}>
-          <span className="col-clickup-symbol" style={{ width: "8px", height: "8px", borderRadius: "50%", background: colorMeta.dotColor, display: "inline-block" }}></span>
           <span className="col-clickup-label">{title.toUpperCase()}</span>
           <span className="col-clickup-count">{count}</span>
         </div>
@@ -2139,7 +2157,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const [isSaving, setIsSaving] = useState(false);
   const [viewMode, setViewMode] = useState('list');
   const [subTab, setSubTab]     = useState('my');
-  const [mobileSortBy, setMobileSortBy] = useState('dueDate');
+  const mobileSortBy = 'dueDate';
   const [assigneeFilter, setAssigneeFilter] = useState(initialAssigneeFilter);
 
   useEffect(() => {
@@ -2928,8 +2946,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           <div className="cu-mob-status-header">
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <svg viewBox="0 0 10 6" width="9" height="9" fill="#94a3b8"><path d="M0 0l5 6 5-6z"/></svg>
-                              <span className="cu-mob-status-pill" style={{ background: meta.bg }}>
-                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: meta.dotColor, display: 'inline-block', marginRight: '6px', flexShrink: 0 }}></span>
+                              <span className="cu-mob-status-pill" style={{ background: meta.bg, color: col.id === 'To Do' ? '#475569' : '#ffffff', fontWeight: col.id === 'To Do' ? '700' : '600' }}>
                                 {col.label.toUpperCase()}
                               </span>
                               <span className="cu-mob-status-count">{statusTasks.length} Task{statusTasks.length !== 1 ? 's' : ''}</span>
@@ -3250,37 +3267,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           <>
             {/* ── Mobile ClickUp-style flat list (hidden on desktop) ── */}
             <div className="cu-mobile-mytasks-flat">
-              <div className="cu-mobile-sort-bar">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                <span>Sort by:</span>
-                <select className="cu-mobile-sort-select" value={mobileSortBy} onChange={e => setMobileSortBy(e.target.value)}>
-                  <option value="dueDate">Due date</option>
-                  <option value="priority">Priority</option>
-                  <option value="title">Name</option>
-                </select>
-              </div>
               {flatSorted.length === 0 ? (
                 <div className="cu-flat-empty">No tasks assigned to you.</div>
               ) : (() => {
-                const priorityOrder = { Critical: 0, High: 1, Medium: 2, Low: 3 };
-                const sortedCols = [...COLUMNS].sort((a, b) => {
-                  const aTasks = flatSorted.filter(t => (t.status || 'To Do') === a.id);
-                  const bTasks = flatSorted.filter(t => (t.status || 'To Do') === b.id);
-                  if (aTasks.length === 0 && bTasks.length === 0) return 0;
-                  if (aTasks.length === 0) return 1;
-                  if (bTasks.length === 0) return -1;
-                  if (mobileSortBy === 'dueDate') {
-                    const aMin = aTasks.map(t => t.dueDate ? new Date(t.dueDate).getTime() : Infinity).reduce((m, v) => Math.min(m, v), Infinity);
-                    const bMin = bTasks.map(t => t.dueDate ? new Date(t.dueDate).getTime() : Infinity).reduce((m, v) => Math.min(m, v), Infinity);
-                    return aMin - bMin;
-                  }
-                  if (mobileSortBy === 'priority') {
-                    const aBest = aTasks.map(t => priorityOrder[t.priority] ?? 99).reduce((m, v) => Math.min(m, v), 99);
-                    const bBest = bTasks.map(t => priorityOrder[t.priority] ?? 99).reduce((m, v) => Math.min(m, v), 99);
-                    return aBest - bBest;
-                  }
-                  return COLUMNS.indexOf(a) - COLUMNS.indexOf(b);
-                });
+                const sortedCols = COLUMNS;
                 return sortedCols.map(col => {
                 const groupTasks = flatSorted.filter(t => (t.status || 'To Do') === col.id);
                 if (groupTasks.length === 0) return null;
@@ -3289,18 +3279,29 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                   <div key={col.id} className="cu-mobile-status-group">
                     {/* Status group header */}
                     <div className="cu-mobile-group-header">
-                      <span className="cu-mobile-group-pill" style={{ background: meta.bg, color: '#ffffff' }}>
-                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: meta.dotColor, display: 'inline-block', marginRight: '6px', flexShrink: 0 }}></span>
+                      <span className="cu-mobile-group-pill" style={{ background: meta.bg, color: col.id === 'To Do' ? '#475569' : '#ffffff', fontWeight: col.id === 'To Do' ? '700' : '600' }}>
                         {col.label.toUpperCase()}
                       </span>
                       <span className="cu-mobile-group-count">{groupTasks.length}</span>
                     </div>
                     {/* Tasks in this group */}
                     {groupTasks.map(task => {
+                      const dueDateInfo = formatMobileDueDate(task.dueDate);
                       return (
-                        <div key={task.id} className="cu-flat-task-row" onClick={() => openTaskDetail(task, false)}>
-                          <span className="cu-flat-circle" style={{ borderColor: meta.dotColor }}></span>
-                          <span className="cu-flat-task-title">{task.title || 'Untitled Task'}</span>
+                        <div key={task.id} className="cu-flat-task-row" onClick={() => openTaskDetail(task, false)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="cu-flat-task-title" style={{ flex: 1, marginRight: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {task.title || 'Untitled Task'}
+                          </span>
+                          {dueDateInfo && (
+                            <span style={{ 
+                              fontSize: '0.8rem', 
+                              fontWeight: '600', 
+                              color: dueDateInfo.isOverdue ? '#ef4444' : '#2563eb',
+                              flexShrink: 0
+                            }}>
+                              {dueDateInfo.text}
+                            </span>
+                          )}
                         </div>
                       );
                     })}
@@ -3329,8 +3330,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                       <span className="cu-section-chevron">
                         <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
                       </span>
-                      <span className="cu-status-pill" style={{ background: meta.bg, color: meta.fg }}>
-                        <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: meta.dotColor, display: "inline-block", marginRight: "6px", flexShrink: 0 }}></span>
+                      <span className="cu-status-pill" style={{ background: meta.bg, color: meta.fg, fontWeight: col.id === 'To Do' ? '700' : '600' }}>
                         {col.label.toUpperCase()}
                       </span>
                       <span className="cu-section-count">{statusTasks.length}</span>

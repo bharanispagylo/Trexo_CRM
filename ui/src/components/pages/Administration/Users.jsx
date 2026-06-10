@@ -50,10 +50,7 @@ export default function Users({ onAddUser, onEditUser }) {
   return (
     <div className="users-page page-container">
       <div className="users-header-row">
-        <div className="header-left">
-          <h2>User Management</h2>
-          <p>Manage access and details for all your team members.</p>
-        </div>
+        <div className="header-left"></div>
         <div className="header-right">
           <select 
             className="role-filter-select" 

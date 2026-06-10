@@ -102,9 +102,14 @@ export default function Reports({ user }) {
         ]);
         setProjects(projectsData || []);
         setAssignees(usersData || []);
-        setClients(clientsData || []);
-        if (clientsData && clientsData.length > 0) {
-          setSelectedClient(clientsData[0].id);
+        const sortedClients = (clientsData || []).sort((a, b) => {
+          const nameA = (a.company || a.name || '').toLowerCase();
+          const nameB = (b.company || b.name || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+        setClients(sortedClients);
+        if (sortedClients.length > 0) {
+          setSelectedClient(sortedClients[0].id);
         }
       }
     } catch (err) {
@@ -202,27 +207,7 @@ export default function Reports({ user }) {
   return (
     <div className="reports-container">
       <div className="reports-header-section">
-        <div className="reports-title-area">
-          <div className="reports-icon-wrapper">
-             <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-          </div>
-          <div className="reports-title-text">
-            <h2>
-              {reportType === 'monthly' 
-                ? 'Monthly Report' 
-                : reportType === 'weekly' 
-                  ? 'Weekly Report' 
-                  : 'Custom Report'}
-            </h2>
-            <p>
-              {reportType === 'monthly' 
-                ? 'View delivered tasks summary for the selected month.'
-                : reportType === 'weekly'
-                  ? 'View delivered tasks summary for the selected week (Monday to Sunday).'
-                  : 'View delivered tasks summary for a custom date range.'}
-            </p>
-          </div>
-        </div>
+        <div className="reports-title-area"></div>
         
         <div className="reports-actions">
           <div className="report-type-toggle">

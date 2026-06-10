@@ -1219,7 +1219,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                               </div>
                             ) : (
                               <>
-                                <span className="cu-section-title" style={{ fontWeight: '700', fontSize: '0.8rem', color: '#1e293b', textTransform: 'uppercase' }}>{list.name}</span>
+                                <span className="cu-section-title" style={{ fontWeight: '700', fontSize: '0.8rem', color: '#2563eb', textTransform: 'uppercase' }}>{list.name}</span>
                                 <span className="cu-section-count" style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#64748b', background: '#f1f5f9', padding: '0.15rem 0.4rem', borderRadius: '12px', fontWeight: '700' }}>{listTasks.length}</span>
                               </>
                             )}
@@ -1400,8 +1400,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 )}
               </div>
 
-              {/* Members Table */}
-              <div className="saas-table-container" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+              {/* Members Table — Desktop */}
+              <div className="saas-table-container team-table-desktop" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
                 <table className="saas-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
@@ -1501,6 +1501,68 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Members Cards — Mobile */}
+              <div className="team-cards-mobile">
+                {projMembers.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No members assigned.</div>
+                ) : (
+                  projMembers.map((m, idx) => {
+                    const usr = users.find(u => u.id === m) || {};
+                    const displayName = usr.fullName || `${usr.firstName || ''} ${usr.lastName || ''}`.trim() || 'Unknown';
+                    const isActive = true;
+                    const statusVal = 'Active';
+                    const designation = 'Member';
+                    const loggedInId = user?.id || '';
+                    const isYou = loggedInId && m === loggedInId;
+                    const getInitials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                    const getAvatarColor = (name) => {
+                      let hash = 0;
+                      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+                      const colors = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899'];
+                      return colors[Math.abs(hash) % colors.length];
+                    };
+
+                    return (
+                      <div key={`mobile-${m}-${idx}`} className="team-member-card">
+                        <div className="tmc-left">
+                          <span className="tmc-index">{idx + 1}</span>
+                          {usr.profileImage ? (
+                            <img src={usr.profileImage} alt={m} className="tmc-avatar" />
+                          ) : (
+                            <div className="tmc-avatar" style={{ backgroundColor: getAvatarColor(displayName) }}>
+                              {getInitials(displayName)}
+                            </div>
+                          )}
+                          <div className="tmc-info">
+                            <div className="tmc-name-row">
+                              <span className="tmc-name">{displayName}</span>
+                              {isYou && <span className="tmc-you-badge">You</span>}
+                            </div>
+                            <span className="tmc-designation">{designation}</span>
+                          </div>
+                        </div>
+                        <div className="tmc-right">
+                          <span className="tmc-status" style={{
+                            background: isActive ? '#dcfce7' : '#fee2e2',
+                            color: isActive ? '#15803d' : '#b91c1c'
+                          }}>
+                            <span className="tmc-status-dot" style={{ backgroundColor: isActive ? '#15803d' : '#b91c1c' }}></span>
+                            {statusVal}
+                          </span>
+                          {can('projects', 'assign') && (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="tmc-delete-icon" onClick={() => {
+                              confirm(`Delete member "${displayName}" from this project?`, () => toggleMemberDetail(m), 'Remove Member');
+                            }}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
 
               {/* Footer / Pagination */}
@@ -2239,10 +2301,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     <div className="projects-page page-container">
       {/* Header matching the screenshot */}
       <div className="projects-page-header">
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', margin: '0 0 0.5rem 0' }}>Projects</h1>
-          <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>Manage and track all your projects.</p>
-        </div>
+        <div></div>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <select 
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', color: '#334155', cursor: 'pointer', outline: 'none' }}
@@ -2420,10 +2479,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8', fontSize: '0.9rem' }}>No projects in this view.</div>
           ) : (
             filteredProjects.map((proj, idx) => {
-              const estHours = proj.estimatedHours ? `${proj.estimatedHours} hrs` : '-';
-              const actHours = proj.actualHours ? `${proj.actualHours} hrs` : '-';
-              const bilHours = proj.billableHours ? `${proj.billableHours} hrs` : '-';
-              const createdOn = proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}) : '-';
               const displayStatus = proj.status || 'In Progress';
               
               let statusBg = '#dcfce7'; let statusColor = '#16a34a';
@@ -2432,82 +2487,60 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               else if (displayStatus === 'Pending') { statusBg = '#f1f5f9'; statusColor = '#475569'; }
 
               return (
-                <div className="mobile-project-card" key={proj.id}>
-                  <div className="mp-header">
-                    <div className="mp-title-group">
-                      <input 
-                        type="checkbox" 
-                        style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
-                        checked={selectedProjectIds.includes(proj.id)}
-                        onChange={(e) => handleSelectOne(e, proj.id)}
-                        className="mp-checkbox"
-                      />
-                      <span className="mp-index">#{idx + 1}</span>
-                      <button 
-                        style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '700', fontSize: '1.05rem', cursor: 'pointer', padding: 0, textAlign: 'left' }}
-                        onClick={() => {
-                          setSelectedProject(proj);
-                          setCurrentView('detail');
-                        }}
-                        className="mp-name-link"
-                      >
-                        {proj.name}
-                      </button>
-                    </div>
-                    <span style={{ background: statusBg, color: statusColor, padding: '0.25rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>
+                <div className="mobile-project-row" key={proj.id}>
+                  <div className="mpr-left">
+                    <input 
+                      type="checkbox" 
+                      style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
+                      checked={selectedProjectIds.includes(proj.id)}
+                      onChange={(e) => handleSelectOne(e, proj.id)}
+                      className="mp-checkbox"
+                    />
+                    <span className="mp-index">#{idx + 1}</span>
+                    <button 
+                      style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '700', fontSize: '0.95rem', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                      onClick={() => {
+                        setSelectedProject(proj);
+                        setCurrentView('detail');
+                      }}
+                      className="mp-name-link"
+                    >
+                      {proj.name}
+                    </button>
+                  </div>
+                  <div className="mpr-right">
+                    <span style={{ background: statusBg, color: statusColor, padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase' }}>
                       {displayStatus}
                     </span>
-                  </div>
-                  <div className="mp-body">
-                    {proj.description && (
-                      <p className="mp-description">{proj.description}</p>
-                    )}
-                    <div className="mp-meta-grid">
-                      <div className="mp-meta-item">
-                        <span className="mp-meta-label">Est. Hours</span>
-                        <span className="mp-meta-value">{estHours}</span>
-                      </div>
-                      <div className="mp-meta-item">
-                        <span className="mp-meta-label">Billed Hours</span>
-                        <span className="mp-meta-value">{actHours}</span>
-                      </div>
-                      <div className="mp-meta-item">
-                        <span className="mp-meta-label">Billable Hours</span>
-                        <span className="mp-meta-value">{bilHours}</span>
-                      </div>
-                    </div>
-                    <div className="mp-footer">
-                      <span className="mp-date">Created: {createdOn}</span>
-                      <div className="mp-actions">
+                    <div className="mpr-actions">
+                      <button
+                        className="mp-action-btn edit"
+                        title="Edit Project"
+                        onClick={() => {
+                          setForm({
+                            id: proj.id,
+                            name: proj.name || '',
+                            status: proj.status || 'Active',
+                            description: proj.description || '',
+                            client: proj.client || '',
+                            estimatedHours: proj.estimatedHours || 0,
+                            actualHours: proj.actualHours || 0,
+                            billableHours: proj.billableHours || 0
+                          });
+                          setShowForm(true);
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                      </button>
+                      {(getLevel('projects', 'delete') === 'All' || (getLevel('projects', 'delete') === 'Self' && (user?.fullName || user?.name) && (proj.members || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))) && (
                         <button
-                          className="mp-action-btn edit"
-                          title="Edit Project"
-                          onClick={() => {
-                            setForm({
-                              id: proj.id,
-                              name: proj.name || '',
-                              status: proj.status || 'Active',
-                              description: proj.description || '',
-                              client: proj.client || '',
-                              estimatedHours: proj.estimatedHours || 0,
-                              actualHours: proj.actualHours || 0,
-                              billableHours: proj.billableHours || 0
-                            });
-                            setShowForm(true);
-                          }}
+                          className="mp-action-btn delete"
+                          title="Delete Project"
+                          onClick={() => handleRemove(proj.id)}
                         >
-                          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         </button>
-                        {(getLevel('projects', 'delete') === 'All' || (getLevel('projects', 'delete') === 'Self' && (user?.fullName || user?.name) && (proj.members || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))) && (
-                          <button
-                            className="mp-action-btn delete"
-                            title="Delete Project"
-                            onClick={() => handleRemove(proj.id)}
-                          >
-                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                          </button>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
