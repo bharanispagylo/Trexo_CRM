@@ -4139,24 +4139,33 @@
   .tasks-filter-row {
     flex-wrap: wrap;
     margin-right: 0;
-    width: 100%;
+    width: auto;
     gap: 0.4rem;
   }
 
   .tasks-filter-row label {
     width: 100%;
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     font-weight: 600;
     color: #64748b;
   }
 
-  .tasks-filter-row select,
-  .tasks-filter-row input[type="date"] {
-    flex: 1;
+  .tasks-filter-row select {
+    flex: none;
     min-width: 0;
-    max-width: calc(50% - 0.25rem);
-    padding: 0.4rem 0.5rem !important;
-    font-size: 0.82rem !important;
+    width: 110px;
+    max-width: 110px;
+    padding: 0.35rem 0.4rem !important;
+    font-size: 0.78rem !important;
+  }
+
+  .tasks-filter-row input[type="date"] {
+    flex: none;
+    min-width: 0;
+    width: 105px;
+    max-width: 105px;
+    padding: 0.35rem 0.4rem !important;
+    font-size: 0.78rem !important;
   }
 
   .tasks-filter-row button {
@@ -4192,16 +4201,19 @@
   .kanban-controls {
     width: 100%;
     flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
+    align-items: flex-start;
+    gap: 0.6rem;
   }
 
   .view-toggle {
-    width: 100%;
+    width: fit-content;
+    align-self: flex-start;
   }
 
   .view-toggle button {
-    flex: 1;
+    flex: none;
+    padding: 0.4rem 0.55rem;
+    font-size: 0.78rem;
     text-align: center;
   }
 
@@ -4786,7 +4798,6 @@
     letter-spacing: 0.04em;
     padding: 0.22rem 0.65rem;
     border-radius: 20px;
-    color: #ffffff;
     text-transform: uppercase;
   }
 

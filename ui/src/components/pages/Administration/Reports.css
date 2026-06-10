@@ -448,12 +448,12 @@
     padding: 0 0.75rem;
   }
 
-  /* Left (← + date): single row, reduced width */
+  /* Left (← + date): single row, full width */
   .reports-filter-left {
     flex-direction: row;
     align-items: center;
     width: 100%;
-    max-width: 360px;
+    max-width: 100%;
     gap: 0.5rem;
     flex-wrap: nowrap;
   }
@@ -467,10 +467,28 @@
     min-width: 0;
     width: auto;
     box-sizing: border-box;
+    padding: 0.4rem 0.6rem;
+    overflow: hidden;
   }
 
   .reports-date-selector select {
     max-width: 72px;
+  }
+
+  /* Custom date range: both pickers side-by-side, each takes half the space */
+  .reports-custom-date-range {
+    width: 100%;
+    flex-wrap: nowrap;
+    gap: 0.3rem !important;
+  }
+
+  .reports-custom-date-input {
+    flex: 1;
+    min-width: 0;
+    width: 0;
+    font-size: 0.78rem !important;
+    padding: 0.2rem 0.15rem !important;
+    box-sizing: border-box;
   }
 
   /* Right (dropdowns + apply): stacked, reduced width */

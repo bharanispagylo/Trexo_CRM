@@ -210,13 +210,13 @@ export default function Roles() {
           <h2>Role Permission Assignment</h2>
           <p>Click checkboxes to toggle 'All' or 'Self' access for each action.</p>
           {isEditing && (
-            <div className="quick-actions" style={{ marginTop: '0.75rem', display: 'flex', gap: '1rem' }}>
+            <div className="quick-actions" style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button className="quick-btn grant" onClick={handleGrantAll}>Grant All Permissions</button>
               <button className="quick-btn revoke" onClick={handleRevokeAll}>Revoke All Access</button>
             </div>
           )}
         </div>
-        <div className="header-actions" style={{ display: 'flex', gap: '1rem' }}>
+        <div className="header-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           {!isEditing ? (
             <button className="edit-roles-btn" onClick={() => setIsEditing(true)}>
               Edit Permissions
@@ -277,55 +277,107 @@ export default function Roles() {
         )}
 
         <div className={`permissions-grid-container ${!isEditing ? 'readonly' : ''}`}>
+          {/* Desktop table */}
           <div className="table-responsive">
-<table className="sketch-table">
-            <thead>
-              <tr>
-                <th>Permission</th>
-                <th>All</th>
-                <th>Self</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MODULES.map(mod => {
-                const isExpanded = expandedModules.includes(mod.id);
-                return (
-                  <React.Fragment key={mod.id}>
-                    <tr className="module-header-row" onClick={() => toggleModule(mod.id)} style={{ cursor: 'pointer' }}>
-                      <td colSpan="3">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <span style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s', fontSize: '0.7rem' }}>▶</span>
-                          {mod.label}
-                        </div>
-                      </td>
-                    </tr>
-                    {isExpanded && ACTIONS.map(act => (
-                      <tr key={act.id} className="action-row">
-                        <td className="action-label">{act.label}</td>
-                        <td className="check-cell">
-                          <div 
-                            className={`sketch-checkbox ${permissions[selectedRole]?.[mod.id]?.[act.id] === 'All' ? 'checked' : ''}`}
-                            onClick={() => togglePerm(mod.id, act.id, 'All')}
-                          >
-                            {permissions[selectedRole]?.[mod.id]?.[act.id] === 'All' && '✓'}
-                          </div>
-                        </td>
-                        <td className="check-cell">
-                          <div 
-                            className={`sketch-checkbox ${permissions[selectedRole]?.[mod.id]?.[act.id] === 'Self' ? 'checked' : ''}`}
-                            onClick={() => togglePerm(mod.id, act.id, 'Self')}
-                          >
-                            {permissions[selectedRole]?.[mod.id]?.[act.id] === 'Self' && '✓'}
+            <table className="sketch-table">
+              <thead>
+                <tr>
+                  <th>Permission</th>
+                  <th>All</th>
+                  <th>Self</th>
+                </tr>
+              </thead>
+              <tbody>
+                {MODULES.map(mod => {
+                  const isExpanded = expandedModules.includes(mod.id);
+                  return (
+                    <React.Fragment key={mod.id}>
+                      <tr className="module-header-row" onClick={() => toggleModule(mod.id)} style={{ cursor: 'pointer' }}>
+                        <td colSpan="3">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <span style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s', fontSize: '0.7rem' }}>▶</span>
+                            {mod.label}
                           </div>
                         </td>
                       </tr>
-                    ))}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-</div>
+                      {isExpanded && ACTIONS.map(act => (
+                        <tr key={act.id} className="action-row">
+                          <td className="action-label">{act.label}</td>
+                          <td className="check-cell">
+                            <div
+                              className={`sketch-checkbox ${permissions[selectedRole]?.[mod.id]?.[act.id] === 'All' ? 'checked' : ''}`}
+                              onClick={() => togglePerm(mod.id, act.id, 'All')}
+                            >
+                              {permissions[selectedRole]?.[mod.id]?.[act.id] === 'All' && '✓'}
+                            </div>
+                          </td>
+                          <td className="check-cell">
+                            <div
+                              className={`sketch-checkbox ${permissions[selectedRole]?.[mod.id]?.[act.id] === 'Self' ? 'checked' : ''}`}
+                              onClick={() => togglePerm(mod.id, act.id, 'Self')}
+                            >
+                              {permissions[selectedRole]?.[mod.id]?.[act.id] === 'Self' && '✓'}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card layout — no horizontal scroll */}
+          <div className="mob-perms">
+            {MODULES.map(mod => {
+              const isExpanded = expandedModules.includes(mod.id);
+              return (
+                <div key={mod.id} className="mob-module-card">
+                  <div className="mob-module-header" onClick={() => toggleModule(mod.id)}>
+                    <span className={`mob-module-chevron ${isExpanded ? 'open' : ''}`}>▶</span>
+                    <span className="mob-module-name">{mod.label}</span>
+                    {isExpanded && (
+                      <div className="mob-col-labels">
+                        <span className="mob-col-lbl">All</span>
+                        <span className="mob-col-lbl">Self</span>
+                      </div>
+                    )}
+                  </div>
+                  {isExpanded && (
+                    <div className="mob-action-rows">
+                      {ACTIONS.map(act => {
+                        const val = permissions[selectedRole]?.[mod.id]?.[act.id];
+                        return (
+                          <div key={act.id} className="mob-action-row">
+                            <span className="mob-action-name">{act.label}</span>
+                            <div className="mob-checks">
+                              <div className="mob-check-cell">
+                                <div
+                                  className={`mob-checkbox ${val === 'All' ? 'checked' : ''} ${!isEditing ? 'readonly' : ''}`}
+                                  onClick={() => togglePerm(mod.id, act.id, 'All')}
+                                >
+                                  {val === 'All' && '✓'}
+                                </div>
+                              </div>
+                              <div className="mob-check-cell">
+                                <div
+                                  className={`mob-checkbox ${val === 'Self' ? 'checked' : ''} ${!isEditing ? 'readonly' : ''}`}
+                                  onClick={() => togglePerm(mod.id, act.id, 'Self')}
+                                >
+                                  {val === 'Self' && '✓'}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

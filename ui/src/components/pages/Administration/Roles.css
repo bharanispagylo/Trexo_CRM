@@ -51,6 +51,21 @@
   cursor: not-allowed;
 }
 
+.cancel-roles-btn {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 0.75rem 1.75rem;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-roles-btn:hover {
+  background: #e2e8f0;
+}
+
 .roles-container {
   display: grid;
   grid-template-columns: 260px 1fr;
@@ -378,6 +393,11 @@
   border-color: #cbd5e1;
 }
 
+/* ── Mobile card layout ── */
+.mob-perms {
+  display: none;
+}
+
 /* RESPONSIVE DESIGN */
 @media (max-width: 768px) {
   .roles-page {
@@ -390,21 +410,172 @@
     gap: 1.25rem;
   }
 
-  .save-roles-btn, .edit-roles-btn {
-    width: 100%;
-    text-align: center;
+  .header-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    width: auto;
+  }
+
+  .save-roles-btn, .edit-roles-btn, .cancel-roles-btn {
+    width: auto !important;
+    padding: 0.55rem 1.1rem;
+    font-size: 0.82rem;
+  }
+
+  .quick-actions {
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    gap: 0.5rem !important;
+    margin-top: 0.5rem !important;
+  }
+
+  .quick-btn {
+    width: auto !important;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.78rem;
   }
 
   .roles-container {
     grid-template-columns: 1fr !important;
-    gap: 1.5rem;
+    gap: 1rem;
   }
 
-  .permissions-grid-container {
-    overflow-x: auto;
+  /* Hide desktop table on mobile */
+  .table-responsive {
+    display: none;
   }
 
-  .sketch-table {
-    min-width: 650px;
+  /* Show mobile card layout */
+  .mob-perms {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Module card */
+  .mob-module-card {
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .mob-module-card:last-child {
+    border-bottom: none;
+  }
+
+  /* Module header row */
+  .mob-module-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.85rem 1rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .mob-module-chevron {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    width: 12px;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+  }
+
+  .mob-module-chevron.open {
+    transform: rotate(90deg);
+  }
+
+  .mob-module-name {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #1e293b;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    flex: 1;
+  }
+
+  /* Column labels inside header */
+  .mob-col-labels {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .mob-col-lbl {
+    width: 44px;
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+  }
+
+  /* Action rows */
+  .mob-action-rows {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mob-action-row {
+    display: flex;
+    align-items: center;
+    padding: 0.65rem 1rem 0.65rem 2rem;
+    border-bottom: 1px solid #f8fafc;
+  }
+
+  .mob-action-row:last-child {
+    border-bottom: none;
+  }
+
+  .mob-action-name {
+    flex: 1;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .mob-checks {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .mob-check-cell {
+    width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mob-checkbox {
+    width: 26px;
+    height: 26px;
+    border: 2px solid #cbd5e1;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 900;
+    color: white;
+    font-size: 0.9rem;
+    background: white;
+  }
+
+  .mob-checkbox.checked {
+    background: #2563eb;
+    border-color: #2563eb;
+    box-shadow: 0 2px 4px rgba(37,99,235,0.2);
+  }
+
+  .mob-checkbox.readonly {
+    cursor: not-allowed;
+    background: #f8fafc;
+    border-color: #e2e8f0;
+  }
+
+  .mob-checkbox.readonly.checked {
+    background: #cbd5e1;
+    border-color: #cbd5e1;
   }
 }

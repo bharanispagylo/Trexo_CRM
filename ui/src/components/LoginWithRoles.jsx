@@ -538,16 +538,25 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
   const [taskLists, setTaskLists] = useState([]);
   const [listTaskCounts, setListTaskCounts] = useState({});
   const [allTasks, setAllTasks] = useState([]);
+  const [allProjects, setAllProjects] = useState([]);
+  const [allClients, setAllClients] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
 
   useEffect(() => {
     Promise.all([
       api.get('/task-lists').catch(() => []),
-      api.get('/tasks').catch(() => [])
-    ]).then(([lists, tasks]) => {
+      api.get('/tasks').catch(() => []),
+      api.get('/projects').catch(() => []),
+      api.get('/clients').catch(() => []),
+      api.get('/users').catch(() => [])
+    ]).then(([lists, tasks, projects, clients, users]) => {
       setTaskLists(lists || []);
       setAllTasks(tasks || []);
+      setAllProjects(projects || []);
+      setAllClients(clients || []);
+      setAllUsers(users || []);
       const counts = {};
       (tasks || []).forEach(t => {
         if (t.taskListId) counts[t.taskListId] = (counts[t.taskListId] || 0) + 1;
@@ -556,12 +565,66 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
     });
   }, []);
 
-  const filteredTasks = searchQuery.trim()
-    ? allTasks.filter(t =>
-        (t.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (t.description || '').toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : [];
+  const q = searchQuery.trim().toLowerCase();
+
+  const searchResults = q ? [
+    ...allTasks
+      .filter(t => (t.title || '').toLowerCase().includes(q) || (t.taskNo || '').toLowerCase().includes(q))
+      .slice(0, 4)
+      .map(t => ({
+        type: 'task', tab: 'tasks', id: t.id,
+        title: t.title,
+        sub: `${t.status || 'Task'} · ${t.priority || ''}`,
+        badge: 'Task', badgeColor: '#2563eb', badgeBg: '#eff6ff',
+        icon: (
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#2563eb" strokeWidth="2">
+            <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+        )
+      })),
+    ...allProjects
+      .filter(p => (p.name || '').toLowerCase().includes(q))
+      .slice(0, 3)
+      .map(p => ({
+        type: 'project', tab: 'projects', id: p.id,
+        title: p.name,
+        sub: `Project · ${p.status || 'Active'}`,
+        badge: 'Project', badgeColor: '#7c3aed', badgeBg: '#f5f3ff',
+        icon: (
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#7c3aed" strokeWidth="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+        )
+      })),
+    ...allClients
+      .filter(c => (c.name || c.companyName || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q))
+      .slice(0, 3)
+      .map(c => ({
+        type: 'client', tab: 'clients', id: c.id,
+        title: c.name || c.companyName || c.email,
+        sub: `Client · ${c.email || ''}`,
+        badge: 'Client', badgeColor: '#0d9488', badgeBg: '#f0fdfa',
+        icon: (
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#0d9488" strokeWidth="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        )
+      })),
+    ...allUsers
+      .filter(u => (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q))
+      .slice(0, 2)
+      .map(u => ({
+        type: 'user', tab: 'users', id: u.id,
+        title: u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email,
+        sub: `${u.role ? u.role.charAt(0).toUpperCase() + u.role.slice(1) : 'User'} · ${u.email || ''}`,
+        badge: 'User', badgeColor: '#ea580c', badgeBg: '#fff7ed',
+        icon: (
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#ea580c" strokeWidth="2">
+            <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+          </svg>
+        )
+      })),
+  ] : [];
 
   const statCards = [
     {
@@ -604,25 +667,34 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
           value={searchQuery}
           onChange={e => { setSearchQuery(e.target.value); setShowSearchResults(true); }}
           onFocus={() => setShowSearchResults(true)}
-          onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
-          placeholder="Search tasks..."
+          onBlur={() => setTimeout(() => setShowSearchResults(false), 250)}
+          placeholder="Search tasks, projects, clients..."
         />
         {showSearchResults && searchQuery.trim() && (
           <div className="mhd-search-results">
-            {filteredTasks.length === 0 ? (
+            {searchResults.length === 0 ? (
               <div className="mhd-search-no-result">No results for "{searchQuery}"</div>
             ) : (
-              filteredTasks.slice(0, 8).map(t => (
-                <div key={t.id} className="mhd-search-result-item" onMouseDown={() => {
-                  setSearchQuery('');
-                  setShowSearchResults(false);
-                  setActiveTab && setActiveTab('tasks');
-                }}>
-                  <span className="mhd-search-result-icon">#</span>
+              searchResults.map((r, i) => (
+                <div
+                  key={`${r.type}-${r.id}-${i}`}
+                  className="mhd-search-result-item"
+                  onMouseDown={() => {
+                    setSearchQuery('');
+                    setShowSearchResults(false);
+                    setActiveTab && setActiveTab(r.tab);
+                  }}
+                >
+                  <span className="mhd-search-result-icon" style={{ background: r.badgeBg }}>
+                    {r.icon}
+                  </span>
                   <div className="mhd-search-result-content">
-                    <div className="mhd-search-result-title">{t.title}</div>
-                    <div className="mhd-search-result-sub">{t.status} · {t.priority}</div>
+                    <div className="mhd-search-result-title">{r.title}</div>
+                    <div className="mhd-search-result-sub">{r.sub}</div>
                   </div>
+                  <span className="mhd-search-result-badge" style={{ color: r.badgeColor, background: r.badgeBg }}>
+                    {r.badge}
+                  </span>
                 </div>
               ))
             )}
@@ -633,7 +705,7 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
       {/* Stats cards grid */}
       <div className="mhd-stats-grid">
         {statCards.map((card, i) => (
-          <button key={i} className="mhd-stat-card" onClick={() => setActiveTab && setActiveTab('tasks')}>
+          <button key={i} className={`mhd-stat-card${card.label === 'Reminders' ? ' mhd-stat-card--reminders' : ''}`} onClick={() => setActiveTab && setActiveTab('tasks')}>
             <div className="mhd-stat-card-hdr">
               <div className="mhd-stat-icon" style={{ background: card.iconBg }}>{card.icon}</div>
               <span className={`mhd-stat-count${card.warn ? ' mhd-warn' : ''}`}>{card.count}</span>
@@ -1193,6 +1265,43 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
 // ══════════════════════════════════════════════════════════
 //  ROOT — ENTRY POINT
 // ══════════════════════════════════════════════════════════
+function LoginSuccessToast({ user: u, onClose }) {
+  const name = u?.fullName || `${u?.firstName || ''} ${u?.lastName || ''}`.trim() || u?.email || 'User';
+  const role = u?.role ? (u.role.charAt(0).toUpperCase() + u.role.slice(1)) : 'User';
+  const isAdmin = u?.role?.toLowerCase() === 'admin';
+
+  useEffect(() => {
+    const t = setTimeout(onClose, 3000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+
+  return (
+    <div className="login-toast-overlay" onClick={onClose}>
+      <div className="login-toast-card" onClick={e => e.stopPropagation()}>
+        <div className="login-toast-icon-wrap">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" strokeWidth="2.5">
+            <circle cx="12" cy="12" r="10" fill="#22c55e" stroke="#22c55e"/>
+            <polyline points="9 12 11.5 14.5 16 9.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+        <div className="login-toast-title">Login Successfully!</div>
+        <div className="login-toast-name">Welcome back, <strong>{name}</strong></div>
+        <div className={`login-toast-role-pill ${isAdmin ? 'login-toast-role-admin' : 'login-toast-role-user'}`}>
+          {isAdmin ? (
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          ) : (
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          )}
+          {role}
+        </div>
+        <div className="login-toast-bar">
+          <div className="login-toast-bar-fill" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LoginWithRoles() {
   const [user, setUser] = useState(() => {
     // Restore session from localStorage on hard refresh
@@ -1205,6 +1314,7 @@ export default function LoginWithRoles() {
   });
   const [isRegistering, setIsRegistering] = useState(false);
   const [isForgotPwd, setIsForgotPwd] = useState(false);
+  const [loginToast, setLoginToast] = useState(null);
 
   useEffect(() => {
     if (user && user.id) {
@@ -1215,6 +1325,7 @@ export default function LoginWithRoles() {
   const handleLogin = (u) => {
     setUser(u);
     localStorage.setItem('crm_user', JSON.stringify(u));
+    setLoginToast(u);
   };
 
   const handleLogout = () => {
@@ -1232,17 +1343,22 @@ export default function LoginWithRoles() {
     }
     return <LoginPage onLogin={handleLogin} onRegisterClick={() => setIsRegistering(true)} onForgotPasswordClick={() => setIsForgotPwd(true)} />;
   }
-  if (user.role?.toLowerCase() === "admin") {
-    return (
-      <PermissionProvider userRole={user.role}>
-        <DashboardLayout user={user} onLogout={handleLogout} renderOverview={(setActiveTab, handleTaskClick) => <AdminDashboard user={user} onLogout={handleLogout} setActiveTab={setActiveTab} handleTaskClick={handleTaskClick} />} />
-      </PermissionProvider>
-    );
-  }
-  return (
+
+  const dashboard = user.role?.toLowerCase() === "admin" ? (
+    <PermissionProvider userRole={user.role}>
+      <DashboardLayout user={user} onLogout={handleLogout} renderOverview={(setActiveTab, handleTaskClick) => <AdminDashboard user={user} onLogout={handleLogout} setActiveTab={setActiveTab} handleTaskClick={handleTaskClick} />} />
+    </PermissionProvider>
+  ) : (
     <PermissionProvider userRole={user.role}>
       <DashboardLayout user={user} onLogout={handleLogout} renderOverview={(setActiveTab, handleTaskClick) => <EmployeeDashboard user={user} onLogout={handleLogout} setActiveTab={setActiveTab} handleTaskClick={handleTaskClick} />} />
     </PermissionProvider>
+  );
+
+  return (
+    <>
+      {dashboard}
+      {loginToast && <LoginSuccessToast user={loginToast} onClose={() => setLoginToast(null)} />}
+    </>
   );
 }
 

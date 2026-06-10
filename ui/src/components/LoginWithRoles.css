@@ -593,3 +593,135 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   LOGIN SUCCESS TOAST
+══════════════════════════════════════════════════════════ */
+.login-toast-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 1rem;
+  animation: toastOverlayIn 0.25s ease-out;
+}
+
+@keyframes toastOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.login-toast-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 2rem 2.5rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(0, 0, 0, 0.08);
+  min-width: 280px;
+  max-width: 340px;
+  width: 100%;
+  animation: toastCardIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes toastCardIn {
+  from { opacity: 0; transform: scale(0.8) translateY(20px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.login-toast-icon-wrap {
+  margin-bottom: 0.25rem;
+  animation: toastIconPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+
+@keyframes toastIconPop {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.login-toast-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.login-toast-name {
+  font-size: 0.9rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.login-toast-name strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.login-toast-role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-top: 0.15rem;
+}
+
+.login-toast-role-admin {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.login-toast-role-user {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.login-toast-bar {
+  width: 100%;
+  height: 3px;
+  background: #f1f5f9;
+  border-radius: 2px;
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+.login-toast-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  border-radius: 2px;
+  animation: toastBarDrain 3s linear forwards;
+}
+
+@keyframes toastBarDrain {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .login-toast-card {
+    padding: 1.75rem 1.5rem 1.5rem;
+    min-width: 0;
+    max-width: 90vw;
+    border-radius: 18px;
+  }
+
+  .login-toast-title {
+    font-size: 1.1rem;
+  }
+
+  .login-toast-name {
+    font-size: 0.85rem;
+  }
+}

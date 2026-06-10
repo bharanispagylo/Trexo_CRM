@@ -1198,9 +1198,18 @@
     text-align: center;
   }
 
+  .mhd-search-result-badge {
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 50px;
+    white-space: nowrap;
+  }
+
   .mhd-stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 0.55rem;
   }
 
@@ -1222,6 +1231,10 @@
 
   .mhd-stat-card:active {
     transform: scale(0.95);
+  }
+
+  .mhd-stat-card--reminders {
+    display: none;
   }
 
   .mhd-stat-card-hdr {
