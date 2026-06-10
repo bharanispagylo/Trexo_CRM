@@ -13,6 +13,7 @@ const isAssigneeMatch = (assigneeStr, userId) => {
 export default function TrackTeam({ user }) {
   const [tasks, setTasks] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMember, setSelectedMember] = useState(null);
   const [viewingEmployeeTasks, setViewingEmployeeTasks] = useState(null);
@@ -32,12 +33,14 @@ export default function TrackTeam({ user }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [taskData, teamData] = await Promise.all([
+      const [taskData, teamData, userData] = await Promise.all([
         api.get('/tasks'),
-        api.get('/teams')
+        api.get('/teams'),
+        api.get('/users')
       ]);
       setTasks(taskData || []);
       setTeamMembers(teamData || []);
+      setUsers(userData || []);
     } catch (err) {
       console.error('Error fetching tracker details:', err);
     } finally {
@@ -145,9 +148,17 @@ export default function TrackTeam({ user }) {
     );
   }
 
-  // Filter tasks assigned to currently selected member
-  const selectedMemberTasks = selectedMember 
-    ? tasks.filter(t => isAssigneeMatch(t.assignees, selectedMember.id))
+  // Filter tasks assigned to currently selected member by matching name
+  const selectedUser = selectedMember
+    ? users.find(u => {
+        const uName = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).trim().toLowerCase();
+        const mName = (selectedMember.name || '').trim().toLowerCase();
+        return uName === mName;
+      })
+    : null;
+
+  const selectedMemberTasks = selectedUser 
+    ? tasks.filter(t => isAssigneeMatch(t.assignees, selectedUser.id))
     : [];
 
   if (addingMember) {
@@ -274,7 +285,7 @@ export default function TrackTeam({ user }) {
                     {teamMembers.map(m => {
                       const displayName = m.name || 'Unknown';
                       return (
-                        <tr key={m.id}>
+                        <tr key={m.id} onClick={() => setSelectedMember(m)} style={{ cursor: 'pointer' }}>
                           <td data-label="Member">
                             <div className="td-member-info">
                               <div className="member-avatar-sm">

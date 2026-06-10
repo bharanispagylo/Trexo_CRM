@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import "./LoginWithRoles.css";
 import DashboardLayout from "./DashboardLayout";
 import { api } from "../api/client";
-import { PermissionProvider } from "../hooks/usePermissions";
+import { PermissionProvider, usePermissions } from "../hooks/usePermissions";
 import { requestForToken } from "../firebase";
 
 // ── Mock Users Database Removed ──────────────────────────────
@@ -1344,21 +1344,41 @@ export default function LoginWithRoles() {
     return <LoginPage onLogin={handleLogin} onRegisterClick={() => setIsRegistering(true)} onForgotPasswordClick={() => setIsForgotPwd(true)} />;
   }
 
-  const dashboard = user.role?.toLowerCase() === "admin" ? (
-    <PermissionProvider userRole={user.role}>
-      <DashboardLayout user={user} onLogout={handleLogout} renderOverview={(setActiveTab, handleTaskClick) => <AdminDashboard user={user} onLogout={handleLogout} setActiveTab={setActiveTab} handleTaskClick={handleTaskClick} />} />
-    </PermissionProvider>
-  ) : (
-    <PermissionProvider userRole={user.role}>
-      <DashboardLayout user={user} onLogout={handleLogout} renderOverview={(setActiveTab, handleTaskClick) => <EmployeeDashboard user={user} onLogout={handleLogout} setActiveTab={setActiveTab} handleTaskClick={handleTaskClick} />} />
-    </PermissionProvider>
-  );
-
   return (
     <>
-      {dashboard}
+      <PermissionProvider userRole={user.role}>
+        <DashboardContainer user={user} onLogout={handleLogout} />
+      </PermissionProvider>
       {loginToast && <LoginSuccessToast user={loginToast} onClose={() => setLoginToast(null)} />}
     </>
+  );
+}
+
+function DashboardContainer({ user, onLogout }) {
+  const { getLevel } = usePermissions();
+  const dashboardView = getLevel('dashboard', 'view');
+
+  const renderOverview = (setActiveTab, handleTaskClick) => {
+    if (dashboardView === 'None' && user.role?.toLowerCase() !== 'admin') {
+      return (
+        <div className="db-overview-page" style={{ padding: '2rem 3rem' }}>
+          <h3>Access Denied</h3>
+          <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '0.5rem' }}>You do not have permission to view the dashboard overview.</p>
+        </div>
+      );
+    }
+    if (dashboardView === 'All' || user.role?.toLowerCase() === 'admin') {
+      return <AdminDashboard user={user} onLogout={onLogout} setActiveTab={setActiveTab} handleTaskClick={handleTaskClick} />;
+    }
+    return <EmployeeDashboard user={user} onLogout={onLogout} setActiveTab={setActiveTab} handleTaskClick={handleTaskClick} />;
+  };
+
+  return (
+    <DashboardLayout 
+      user={user} 
+      onLogout={onLogout} 
+      renderOverview={renderOverview} 
+    />
   );
 }
 

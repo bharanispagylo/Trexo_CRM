@@ -52,6 +52,20 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         setActiveTab('overview');
       } else if (activeTab === 'clients' && !can('clients', 'view') && user?.role?.toLowerCase() !== 'admin') {
         setActiveTab('overview');
+      } else if (activeTab === 'track-team' && !can('teams', 'view') && user?.role?.toLowerCase() !== 'admin') {
+        setActiveTab('overview');
+      } else if (activeTab === 'estimations' && !can('estimations', 'view') && user?.role?.toLowerCase() !== 'admin') {
+        setActiveTab('overview');
+      } else if (activeTab === 'tasks' && !can('tasks', 'view') && user?.role?.toLowerCase() !== 'admin') {
+        setActiveTab('overview');
+      } else if (activeTab === 'reports' && !can('reports', 'view') && user?.role?.toLowerCase() !== 'admin') {
+        setActiveTab('overview');
+      } else if (activeTab === 'roles' && !can('roles', 'view') && user?.role?.toLowerCase() !== 'admin') {
+        setActiveTab('overview');
+      } else if (activeTab === 'add-user' && !can('users', 'create') && user?.role?.toLowerCase() !== 'admin') {
+        setActiveTab('overview');
+      } else if (activeTab === 'edit-user' && !can('users', 'edit') && user?.role?.toLowerCase() !== 'admin') {
+        setActiveTab('overview');
       }
     }
   }, [activeTab, loading, can, user]);
@@ -215,7 +229,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         />
       );
       case 'estimations': 
-        if (['employee', 'intern', 'guest', 'team lead'].includes(user?.role?.toLowerCase())) {
+        if (!can('estimations', 'view') && user?.role?.toLowerCase() !== 'admin') {
           return renderOverview(setActiveTab, (taskData) => {
             setSearchSelectedTask(taskData);
             setIsTaskDetailOpen(true);
@@ -224,7 +238,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         }
         return <Estimations user={user} />;
       case 'clients': 
-        if (user?.role?.toLowerCase() !== 'admin') {
+        if (!can('clients', 'view') && user?.role?.toLowerCase() !== 'admin') {
           return renderOverview(setActiveTab, (taskData) => {
             setSearchSelectedTask(taskData);
             setIsTaskDetailOpen(true);
@@ -233,7 +247,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         }
         return <Clients user={user} />;
       case 'track-team':
-        if (user?.role?.toLowerCase() !== 'admin') {
+        if (!can('teams', 'view') && user?.role?.toLowerCase() !== 'admin') {
           return renderOverview(setActiveTab, (taskData) => {
             setSearchSelectedTask(taskData);
             setIsTaskDetailOpen(true);
@@ -241,7 +255,15 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
           });
         }
         return <TrackTeam user={user} />;
-      case 'tasks': return (
+      case 'tasks': 
+        if (!can('tasks', 'view') && user?.role?.toLowerCase() !== 'admin') {
+          return renderOverview(setActiveTab, (taskData) => {
+            setSearchSelectedTask(taskData);
+            setIsTaskDetailOpen(true);
+            setActiveTab('tasks');
+          });
+        }
+        return (
         <Tasks
           user={user}
           initialSelectedTask={searchSelectedTask}
@@ -249,11 +271,51 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
           onDetailViewChange={(open) => setIsTaskDetailOpen(open)}
         />
       );
-      case 'users': return <Users user={user} onAddUser={() => setActiveTab('add-user')} onEditUser={(u) => { setUserToEdit(u); setActiveTab('edit-user'); }} />;
-      case 'roles': return <Roles user={user} />;
-      case 'add-user': return <AddUser user={user} onBack={() => setActiveTab('users')} />;
-      case 'edit-user': return <EditUser userToEdit={userToEdit} onBack={() => setActiveTab('users')} />;
-      case 'reports': return <Reports user={user} />;
+      case 'users': 
+        if (!can('users', 'view') && user?.role?.toLowerCase() !== 'admin') {
+          return renderOverview(setActiveTab, (taskData) => {
+            setSearchSelectedTask(taskData);
+            setIsTaskDetailOpen(true);
+            setActiveTab('tasks');
+          });
+        }
+        return <Users user={user} onAddUser={() => setActiveTab('add-user')} onEditUser={(u) => { setUserToEdit(u); setActiveTab('edit-user'); }} />;
+      case 'roles': 
+        if (!can('roles', 'view') && user?.role?.toLowerCase() !== 'admin') {
+          return renderOverview(setActiveTab, (taskData) => {
+            setSearchSelectedTask(taskData);
+            setIsTaskDetailOpen(true);
+            setActiveTab('tasks');
+          });
+        }
+        return <Roles user={user} />;
+      case 'add-user': 
+        if (!can('users', 'create') && user?.role?.toLowerCase() !== 'admin') {
+          return renderOverview(setActiveTab, (taskData) => {
+            setSearchSelectedTask(taskData);
+            setIsTaskDetailOpen(true);
+            setActiveTab('tasks');
+          });
+        }
+        return <AddUser user={user} onBack={() => setActiveTab('users')} />;
+      case 'edit-user': 
+        if (!can('users', 'edit') && user?.role?.toLowerCase() !== 'admin') {
+          return renderOverview(setActiveTab, (taskData) => {
+            setSearchSelectedTask(taskData);
+            setIsTaskDetailOpen(true);
+            setActiveTab('tasks');
+          });
+        }
+        return <EditUser userToEdit={userToEdit} onBack={() => setActiveTab('users')} />;
+      case 'reports': 
+        if (!can('reports', 'view') && user?.role?.toLowerCase() !== 'admin') {
+          return renderOverview(setActiveTab, (taskData) => {
+            setSearchSelectedTask(taskData);
+            setIsTaskDetailOpen(true);
+            setActiveTab('tasks');
+          });
+        }
+        return <Reports user={user} />;
       default: return renderOverview(
         setActiveTab,
         (taskData) => {

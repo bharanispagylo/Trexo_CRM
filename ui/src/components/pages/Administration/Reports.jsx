@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../../../api/client';
 import './Reports.css';
+import { usePermissions } from '../../../hooks/usePermissions';
 
 const formatDecimal = (hours) => {
   if (hours === undefined || hours === null) return '0.0';
@@ -190,8 +191,10 @@ export default function Reports({ user }) {
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
-  if (user?.role?.toLowerCase() !== 'admin') {
-    return <div className="reports-container"><h3>Access Denied. Only Admins can view reports.</h3></div>;
+  const { can } = usePermissions();
+
+  if (!can('reports', 'view') && user?.role?.toLowerCase() !== 'admin') {
+    return <div className="reports-container"><h3>Access Denied. You do not have permission to view reports.</h3></div>;
   }
 
   if (loading) return <div className="loading-screen">Loading Reports...</div>;

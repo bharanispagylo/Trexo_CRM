@@ -50,6 +50,14 @@
   vertical-align: middle;
 }
 
+.team-list-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.team-list-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
 .team-list-table tr:last-child td {
   border-bottom: none;
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
 import { useAlert } from '../../../context/AlertContext';
 import './Clients.css';
+import { usePermissions } from '../../../hooks/usePermissions';
 
 export default function Clients({ user }) {
   const [clients, setClients] = useState([]);
@@ -10,6 +11,7 @@ export default function Clients({ user }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ id: '', name: '', company: '' });
   const { alert, confirm } = useAlert();
+  const { can } = usePermissions();
 
   useEffect(() => {
     fetchClients();
@@ -19,7 +21,12 @@ export default function Clients({ user }) {
     setLoading(true);
     try {
       const data = await api.get('/clients');
-      setClients(data || []);
+      const sorted = (data || []).sort((a, b) => {
+        const compA = (a.company || '').trim().toLowerCase();
+        const compB = (b.company || '').trim().toLowerCase();
+        return compA.localeCompare(compB);
+      });
+      setClients(sorted);
     } catch (error) {
       console.error('Fetch error:', error);
     }
@@ -99,10 +106,12 @@ export default function Clients({ user }) {
     <div className="clients-page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem', width: '100%' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>Client Management</h2>
-        <button className="clients-btn-submit clients-btn-add" onClick={() => openForm()}>
-          <span className="clients-btn-text">+ New Client</span>
-          <span className="clients-btn-icon">+</span>
-        </button>
+        {can('clients', 'create') && (
+          <button className="clients-btn-submit clients-btn-add" onClick={() => openForm()}>
+            <span className="clients-btn-text">+ New Client</span>
+            <span className="clients-btn-icon">+</span>
+          </button>
+        )}
       </div>
 
       {showForm && (
@@ -144,26 +153,30 @@ export default function Clients({ user }) {
                 <td data-label="Contact">{client.name || '-'}</td>
                 <td data-label="Actions" style={{ textAlign: 'right' }}>
                   <div style={{ display: 'inline-flex', gap: '0.25rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                    <button 
-                      className="client-action-btn" 
-                      title="Edit Client"
-                      onClick={() => openForm(client)}
-                    >
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'block' }}>
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                      </svg>
-                    </button>
-                    <button 
-                      className="client-action-btn delete" 
-                      title="Delete Client"
-                      onClick={() => handleDelete(client.id)}
-                    >
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'block' }}>
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                      </svg>
-                    </button>
+                    {can('clients', 'edit') && (
+                      <button 
+                        className="client-action-btn" 
+                        title="Edit Client"
+                        onClick={() => openForm(client)}
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'block' }}>
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                      </button>
+                    )}
+                    {can('clients', 'delete') && (
+                      <button 
+                        className="client-action-btn delete" 
+                        title="Delete Client"
+                        onClick={() => handleDelete(client.id)}
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'block' }}>
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
