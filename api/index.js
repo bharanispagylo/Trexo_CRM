@@ -256,7 +256,11 @@ const sanitizeTaskData = (taskData) => {
   const sanitized = {};
   Object.keys(taskData).forEach(key => {
     if (key in prisma.task.fields) {
-      sanitized[key] = taskData[key];
+      let val = taskData[key];
+      if ((key === 'clientId' || key === 'projectId' || key === 'taskListId') && val === '') {
+        val = null;
+      }
+      sanitized[key] = val;
     }
   });
   return sanitized;
@@ -896,6 +900,7 @@ app.post('/api/projects', async (req, res) => {
     if (estimatedHours !== undefined) data.estimatedHours = parseFloat(estimatedHours) || 0;
     if (actualHours !== undefined) data.actualHours = parseFloat(actualHours) || 0;
     if (billableHours !== undefined) data.billableHours = parseFloat(billableHours) || 0;
+    if (data.clientId === '') data.clientId = null;
 
     const project = await prisma.project.create({ data });
     if (project.members) {
@@ -923,6 +928,7 @@ app.put('/api/projects/:id', async (req, res) => {
     if (estimatedHours !== undefined) data.estimatedHours = parseFloat(estimatedHours) || 0;
     if (actualHours !== undefined) data.actualHours = parseFloat(actualHours) || 0;
     if (billableHours !== undefined) data.billableHours = parseFloat(billableHours) || 0;
+    if (data.clientId === '') data.clientId = null;
 
     const project = await prisma.project.update({
       where: { id: req.params.id },
