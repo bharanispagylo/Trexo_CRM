@@ -8,13 +8,13 @@ import { usePermissions } from '../../../hooks/usePermissions';
 import { useAlert } from '../../../context/AlertContext';
 
 const STATUS_HEADER_META = {
-  'To Do':         { bg: '#f1f5f9', fg: '#000000', dotColor: '#94a3b8', isDone: false },
-  'In Progress':   { bg: '#2563eb', fg: '#000000', dotColor: '#bfdbfe', isDone: false },
-  'In Testing':    { bg: '#7c3aed', fg: '#000000', dotColor: '#e9d5ff', isDone: false },
-  'Re-opened':     { bg: '#db2777', fg: '#000000', dotColor: '#fecdd3', isDone: false },
-  'Prod Deployed': { bg: '#ea580c', fg: '#000000', dotColor: '#fde68a', isDone: false },
-  'Prod Verified': { bg: '#0d9488', fg: '#000000', dotColor: '#bbf7d0', isDone: false },
-  'Delivered':     { bg: '#16a34a', fg: '#000000', dotColor: '#99f6e4', isDone: true  },
+  'To Do':         { bg: '#78350f', fg: '#ffffff', border: '1px solid #5c2c06', dotColor: '#78350f', isDone: false },
+  'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', isDone: false },
+  'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', isDone: false },
+  'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', isDone: false },
+  'Prod Deployed': { bg: '#ea580c', fg: '#ffffff', dotColor: '#fde68a', isDone: false },
+  'Prod Verified': { bg: '#0d9488', fg: '#ffffff', dotColor: '#bbf7d0', isDone: false },
+  'Delivered':     { bg: '#16a34a', fg: '#ffffff', dotColor: '#99f6e4', isDone: true  },
 };
 
 const PRIORITY_FLAGS = {
@@ -1324,6 +1324,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                           <span style={{
                                             background: meta.bg,
                                             color: meta.fg,
+                                            border: meta.border || 'none',
                                             padding: '0.2rem 0.6rem',
                                             borderRadius: '12px',
                                             fontSize: '0.75rem',

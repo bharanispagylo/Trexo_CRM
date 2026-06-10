@@ -42,7 +42,7 @@ const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 
 
 const STATUS_HEADER_META = {
-  'To Do':         { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false },
+  'To Do':         { bg: '#78350f', fg: '#ffffff', border: '1px solid #5c2c06', dotColor: '#78350f', isDone: false },
   'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', isDone: false },
   'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', isDone: false },
   'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', isDone: false },
@@ -1880,7 +1880,7 @@ function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave
       onDragLeave={onDragLeave}
     >
       <div className="col-clickup-header">
-        <div className="col-clickup-badge" style={{ backgroundColor: meta.bg, color: meta.fg }}>
+        <div className="col-clickup-badge" style={{ backgroundColor: meta.bg, color: meta.fg, border: meta.border || 'none' }}>
           <span className="col-clickup-label">{col.label.toUpperCase()}</span>
           <span className="col-clickup-count">{tasks.length}</span>
         </div>
@@ -2946,7 +2946,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           <div className="cu-mob-status-header">
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <svg viewBox="0 0 10 6" width="9" height="9" fill="#94a3b8"><path d="M0 0l5 6 5-6z"/></svg>
-                              <span className="cu-mob-status-pill" style={{ background: meta.bg, color: col.id === 'To Do' ? '#475569' : '#ffffff', fontWeight: col.id === 'To Do' ? '700' : '600' }}>
+                              <span className="cu-mob-status-pill" style={{ background: meta.bg, color: meta.fg, border: meta.border || 'none', fontWeight: col.id === 'To Do' ? '700' : '600' }}>
                                 {col.label.toUpperCase()}
                               </span>
                               <span className="cu-mob-status-count">{statusTasks.length} Task{statusTasks.length !== 1 ? 's' : ''}</span>
@@ -3279,7 +3279,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                   <div key={col.id} className="cu-mobile-status-group">
                     {/* Status group header */}
                     <div className="cu-mobile-group-header">
-                      <span className="cu-mobile-group-pill" style={{ background: meta.bg, color: col.id === 'To Do' ? '#475569' : '#ffffff', fontWeight: col.id === 'To Do' ? '700' : '600' }}>
+                      <span className="cu-mobile-group-pill" style={{ background: meta.bg, color: meta.fg, border: meta.border || 'none', fontWeight: col.id === 'To Do' ? '700' : '600' }}>
                         {col.label.toUpperCase()}
                       </span>
                       <span className="cu-mobile-group-count">{groupTasks.length}</span>
@@ -3330,7 +3330,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                       <span className="cu-section-chevron">
                         <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
                       </span>
-                      <span className="cu-status-pill" style={{ background: meta.bg, color: meta.fg, fontWeight: col.id === 'To Do' ? '700' : '600' }}>
+                      <span className="cu-status-pill" style={{ background: meta.bg, color: meta.fg, border: meta.border || 'none', fontWeight: col.id === 'To Do' ? '700' : '600' }}>
                         {col.label.toUpperCase()}
                       </span>
                       <span className="cu-section-count">{statusTasks.length}</span>
