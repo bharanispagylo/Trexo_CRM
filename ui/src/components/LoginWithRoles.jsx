@@ -7,6 +7,23 @@ import { requestForToken } from "../firebase";
 
 // ── Mock Users Database Removed ──────────────────────────────
 
+const PasswordToggleIcon = ({ show }) => {
+  if (show) {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+};
+
 
 
 
@@ -35,7 +52,7 @@ function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }) {
       const user = await api.post('/login', { email, password });
       onLogin(user);
     } catch (err) {
-      setError("Invalid email or password. Please try again.");
+      setError(err.message || "Invalid email or password. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -59,7 +76,7 @@ function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }) {
 
 
 
-        <div className="login-footer">© 2025 Spagylo CRM · All rights reserved</div>
+        <div className="login-footer">© 2026 Spagylo CRM · All rights reserved</div>
       </div>
 
       {/* Right panel — login form */}
@@ -106,9 +123,12 @@ function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }) {
                 className="input-field input-field-pwd"
               />
               <button
+                type="button"
                 onClick={() => setShowPwd(v => !v)}
                 className="pwd-toggle-btn"
-              >{showPwd ? "" : ""}</button>
+              >
+                <PasswordToggleIcon show={showPwd} />
+              </button>
             </div>
           </div>
 
@@ -147,21 +167,23 @@ function RegisterPage({ onRegister, onLoginClick }) {
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handleRegister = async () => {
     setError("");
     if (!name || !email || !password) { setError("Please fill all fields."); return; }
     setLoading(true);
     try {
-      const newUser = await api.post('/users', {
+      await api.post('/users', {
         firstName: name.split(' ')[0],
         lastName: name.split(' ').slice(1).join(' '),
         email,
         password,
-        role: 'admin',
-        empId: `ADM-${Math.floor(1000 + Math.random() * 9000)}`
+        role: 'Employee',
+        status: 'Pending',
+        empId: `EMP-${Math.floor(1000 + Math.random() * 9000)}`
       });
-      onRegister(newUser);
+      setSuccessMessage("Your registration request was submitted successfully! It is currently pending admin approval. You can sign in once approved.");
     } catch (err) {
       setError(err.message || "Registration failed. Email might already be in use.");
     } finally {
@@ -169,6 +191,40 @@ function RegisterPage({ onRegister, onLoginClick }) {
     }
   };
 
+  if (successMessage) {
+    return (
+      <div className="login-container app-container">
+        {/* Left panel */}
+        <div className="login-left-panel">
+          <div className="login-bg-gradient" />
+          <div className="login-bg-pattern" />
+          <div className="login-bg-glow-1" />
+          <div className="login-bg-glow-2" />
+
+          <div className="logo-container">
+            <img src="/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.75rem', height: 'auto', objectFit: 'contain' }} />
+            <div>
+              <div className="logo-text">Spagylo CRM</div>
+            </div>
+          </div>
+
+          <div className="login-footer">© 2026 Spagylo CRM · All rights reserved</div>
+        </div>
+
+        {/* Right panel */}
+        <div className="login-right-panel">
+          <div className="login-form-container" style={{ textAlign: 'center' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', background: '#dcfce7', color: '#16a34a', borderRadius: '50%', marginBottom: '1.5rem', fontSize: '1.75rem', fontWeight: 'bold' }}>✓</div>
+            <h1 className="login-heading" style={{ fontSize: '1.75rem', color: '#16a34a', marginBottom: '0.75rem' }}>Registration Successful</h1>
+            <p className="login-subheading" style={{ color: '#475569', fontSize: '0.92rem', lineHeight: '1.6', marginBottom: '2rem', padding: '0 0.5rem' }}>
+              {successMessage}
+            </p>
+            <button className="btn-primary" onClick={onLoginClick}>Back to Sign In</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="login-container app-container">
@@ -186,8 +242,7 @@ function RegisterPage({ onRegister, onLoginClick }) {
           </div>
         </div>
 
-
-        <div className="login-footer">© 2025 Spagylo CRM · All rights reserved</div>
+        <div className="login-footer">© 2026 Spagylo CRM · All rights reserved</div>
       </div>
 
       {/* Right panel */}
@@ -203,7 +258,7 @@ function RegisterPage({ onRegister, onLoginClick }) {
 
           {error && (
             <div className="error-message">
-              <span></span> {error}
+              <span>⚠️</span> {error}
             </div>
           )}
 
@@ -241,12 +296,14 @@ function RegisterPage({ onRegister, onLoginClick }) {
                 className="input-field input-field-pwd"
               />
               <button
+                type="button"
                 onClick={() => setShowPwd(v => !v)}
                 className="pwd-toggle-btn"
-              >{showPwd ? "👁️" : "🔒"}</button>
+              >
+                <PasswordToggleIcon show={showPwd} />
+              </button>
             </div>
           </div>
-
 
           <button
             onClick={handleRegister}
@@ -256,7 +313,7 @@ function RegisterPage({ onRegister, onLoginClick }) {
             {loading ? (
               <><span className="spinner"></span> Registering...</>
             ) : (
-              <><span></span> Sign Up</>
+              <>Sign Up</>
             )}
           </button>
 
@@ -489,7 +546,7 @@ function ForgotPasswordPage({ onBackToLogin }) {
                     className="pwd-toggle-btn"
                     style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer' }}
                   >
-                    {showPwd ? "👁️" : "🔒"}
+                    <PasswordToggleIcon show={showPwd} />
                   </button>
                 </div>
               </div>

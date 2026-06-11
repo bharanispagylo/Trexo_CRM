@@ -110,7 +110,7 @@ export default function Users({ onAddUser, onEditUser }) {
                   </span>
                 </td>
                 <td data-label="Status">
-                  <span className="status-badge active">{u.status || 'Active'}</span>
+                  <span className={`status-badge ${(u.status || 'Active').toLowerCase()}`}>{u.status || 'Active'}</span>
                 </td>
                 <td data-label="Actions" className="actions-cell">
                   <div style={{ display: 'flex', gap: '0.25rem' }}>

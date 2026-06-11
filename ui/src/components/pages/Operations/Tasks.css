@@ -772,12 +772,12 @@
 }
 
 .saas-content-pane {
-  flex: 1;
+  flex: 1 1;
   padding: 2.5rem 4rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0rem;
 }
 
 .saas-sidebar {
@@ -3355,7 +3355,7 @@
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.65rem;
-  border-radius: 20px;
+  border-radius: 5px;
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.06em;

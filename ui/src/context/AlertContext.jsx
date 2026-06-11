@@ -41,6 +41,7 @@ const TYPE_STYLES = {
 
 export function AlertProvider({ children }) {
   const [queue, setQueue] = useState([]);
+  const [toasts, setToasts] = useState([]);
 
   const showAlert = useCallback(({ title, message, type = 'info', onConfirm, confirmText = 'OK', showCancel = false, cancelText = 'Cancel' }) => {
     const id = Date.now();
@@ -55,10 +56,34 @@ export function AlertProvider({ children }) {
     setQueue(prev => prev.filter(i => i.id !== id));
   }, [queue]);
 
+  const toast = useCallback((message, type = 'success', title = '', duration = 4000) => {
+    const id = Date.now() + Math.random();
+    
+    // Simplify message: lowercase, remove "successfully", remove trailing punctuation
+    let cleanMessage = typeof message === 'string' ? message : String(message || '');
+    
+    // Simplify backend push notifications
+    cleanMessage = cleanMessage.replace(/ has been updated by a team member/i, ' updated');
+    cleanMessage = cleanMessage.replace(/ has been created by a team member/i, ' created');
+    cleanMessage = cleanMessage.replace(/ has been deleted by a team member/i, ' deleted');
+    // Suppress toasts completely for comments and mentions as requested
+    if (/.* commented: .*/i.test(message) || /.* mentioned you: .*/i.test(message)) {
+      return;
+    }
+
+    cleanMessage = cleanMessage.replace(/\s*successfully[!.]*$/i, '').replace(/[!.]*$/, '').toLowerCase();
+
+    const resolvedTitle = title || (type === 'success' ? 'Success' : type === 'error' ? 'Error' : type === 'warning' ? 'Warning' : 'Info');
+    setToasts(prev => [...prev, { id, title: resolvedTitle, message: cleanMessage, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, duration);
+  }, []);
+
   // Convenience helpers
   const alert = useCallback((message, type = 'info', title) => {
-    showAlert({ title: title || (type === 'error' ? 'Error' : type === 'success' ? 'Success' : type === 'warning' ? 'Warning' : 'Notice'), message, type });
-  }, [showAlert]);
+    toast(message, type, title);
+  }, [toast]);
 
   const confirm = useCallback((message, onConfirm, title = 'Confirm Action') => {
     showAlert({ title, message, type: 'warning', onConfirm, confirmText: 'Confirm', showCancel: true });
@@ -68,7 +93,7 @@ export function AlertProvider({ children }) {
   const styles = current ? TYPE_STYLES[current.type] : null;
 
   return (
-    <AlertContext.Provider value={{ alert, confirm, showAlert }}>
+    <AlertContext.Provider value={{ alert, confirm, showAlert, toast }}>
       {children}
       {current && (
         <div
@@ -144,9 +169,49 @@ export function AlertProvider({ children }) {
           </div>
         </div>
       )}
+
+      {/* Toast Notifications Container */}
+      <div
+        style={{
+          position: 'fixed',
+          top: '24px',
+          right: '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          zIndex: 100000,
+          pointerEvents: 'none'
+        }}
+      >
+        {toasts.map(t => {
+          return (
+            <div
+              key={t.id}
+              style={{
+                background: '#334155', // subtle dark background
+                color: '#f8fafc',
+                borderRadius: '6px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                padding: '10px 16px',
+                fontSize: '0.85rem',
+                fontWeight: 500,
+                pointerEvents: 'auto',
+                animation: 'toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                display: 'flex',
+                alignItems: 'center',
+                minWidth: '150px'
+              }}
+            >
+              <span>{t.message}</span>
+            </div>
+          );
+        })}
+      </div>
+
       <style>{`
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(24px) scale(0.96); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+        @keyframes toastSlideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
       `}</style>
     </AlertContext.Provider>
   );

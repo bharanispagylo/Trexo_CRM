@@ -154,7 +154,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
   const [statusFilter, setStatusFilter] = useState('All');
   const { can, getLevel } = usePermissions();
-  const { alert, confirm } = useAlert();
+  const { alert, confirm, toast } = useAlert();
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -279,7 +279,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       });
       setNewListName('');
       await fetchData(true);
-      alert('Task group created successfully!', 'success');
+      toast('Task group created successfully!', 'success');
     } catch (error) {
       console.error('Add list error:', error);
       alert('Failed to create task group', 'error');
@@ -298,10 +298,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     try {
       if (form.id) {
         await api.put(`/projects/${form.id}`, form);
-        alert('Project updated successfully!', 'success', 'Success');
+        toast('Project updated successfully!', 'success');
       } else {
         await api.post('/projects', form);
-        alert('Project created successfully!', 'success', 'Success');
+        toast('Project created successfully!', 'success');
       }
       setForm({ name: '', status: 'Active', description: '', client: '', clientId: '', estimatedHours: 0, actualHours: 0, billableHours: 0 });
       setShowForm(false);
@@ -324,7 +324,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       setIsSaving(true);
       try {
         await api.delete(`/projects/${id}`);
-        alert('Project deleted successfully.', 'success', 'Deleted');
+        toast('Project deleted successfully.', 'success');
         fetchData();
       } catch (error) {
         console.error('Delete error:', error);
@@ -413,10 +413,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
       if (taskFormType === 'edit' && editingTask) {
         await api.put(`/tasks/${editingTask.id}`, payload);
-        alert('Task updated successfully!', 'success', 'Success');
+        toast('Task updated successfully!', 'success');
       } else {
         await api.post('/tasks', payload);
-        alert('Task created successfully!', 'success', 'Success');
+        toast('Task created successfully!', 'success');
       }
 
       setShowTaskFormModal(false);
@@ -1289,9 +1289,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                       <tr key={task.id} className="cu-row" onClick={() => { setViewingTask(task); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
                                         <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem' }}>
                                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <span className="cu-status-dot" style={{ color: meta.dotColor, borderColor: meta.dotColor, display: 'flex', alignItems: 'center' }}>
-                                              <span className="cu-status-dot" style={{ background: meta.dotColor, borderColor: meta.dotColor, width: '6px', height: '6px', borderRadius: '50%', display: 'inline-block' }}></span>
-                                            </span>
                                             <span className="cu-task-title" style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{task.title || 'Untitled Task'}</span>
                                             {task.taskNo && <span className="cu-task-id" style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: '0.5rem', fontWeight: '500' }}>{task.taskNo}</span>}
                                           </div>

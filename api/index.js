@@ -439,6 +439,10 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    if (user.status !== 'Active') {
+      return res.status(403).json({ error: 'Your account is pending admin approval or has been deactivated.' });
+    }
+
     res.json(user);
   } catch (error) {
     console.error('POST /api/login error:', error);
@@ -1153,11 +1157,11 @@ app.put('/api/tasks/:id', async (req, res) => {
     
     // Notify assignees about task update
     if (task.assignees) {
-      createNotification(task.assignees, `Task Updated: ${task.title}`, `Task has been updated by a team member.`);
+      createNotification(task.assignees, `Task Assigned: ${task.title}`, `Task has been updated by a team member.`);
       const { taskListName, projectName } = await getTaskDetailsForEmail(task);
-      notifyEmailsByNames(task.assignees, `Task Updated: ${task.title}`, {
+      notifyEmailsByNames(task.assignees, `Task Assigned: ${task.title}`, {
         author: 'A team member',
-        action: 'updated or reassigned you to',
+        action: 'assigned you to',
         itemTitle: task.title,
         boardName: taskListName,
         projectName: projectName,

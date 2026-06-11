@@ -292,6 +292,20 @@
   background: #16a34a;
 }
 
+.status-badge.pending {
+  color: #ca8a04;
+}
+.status-badge.pending::before {
+  background: #ca8a04;
+}
+
+.status-badge.inactive {
+  color: #dc2626;
+}
+.status-badge.inactive::before {
+  background: #dc2626;
+}
+
 .actions-cell {
   display: flex;
   gap: 0.75rem;

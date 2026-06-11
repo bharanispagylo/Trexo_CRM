@@ -2172,7 +2172,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const setView = () => {};
   const setSelectedTask = () => {};
 
-  const [collapsedGroups, setCollapsedGroups] = useState({});
+  const [expandedGroupId, setExpandedGroupId] = useState('To Do');
   // Inline add state
   const [inlineAdd, setInlineAdd] = useState(null);
   const [inlineTitle, setInlineTitle] = useState('');
@@ -2186,7 +2186,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const [drawerTask, setDrawerTask] = useState(null);
   const [listUsers, setListUsers] = useState([]);
   const toggleGroup = (key) => {
-    setCollapsedGroups(prev => ({ ...prev, [key]: !prev[key] }));
+    setExpandedGroupId(prev => prev === key ? null : key);
   };
   // Accordion state for All Tasks grouped by task list (null = none open, string = open list id)
   const [expandedListId, setExpandedListId] = useState('__first__');
@@ -2245,7 +2245,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
   const dragId = useRef(null);
   const { can, getLevel } = usePermissions();
-  const { alert, confirm: showConfirm } = useAlert();
+  const { alert, confirm: showConfirm, toast } = useAlert();
 
   // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ FETCH from API ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const fetchTasks = async () => {
@@ -2358,10 +2358,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     try {
       if (taskData.id) {
         await api.put(`/tasks/${taskData.id}`, taskData);
-        if (!silent) alert('Task updated successfully!', 'success', 'Success');
+        if (!silent) toast('Task updated successfully!', 'success');
       } else {
         await api.post('/tasks', taskData);
-        alert('Task created successfully!', 'success', 'Success');
+        toast('Task created successfully!', 'success');
       }
       const data = await api.get('/tasks');
       setTasks(data || []);
@@ -2378,7 +2378,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     try {
       await api.delete(`/tasks/${id}`);
       setTasks(prev => prev.filter(t => t.id !== id));
-      alert('Task deleted successfully.', 'success', 'Deleted');
+      toast('Task deleted successfully.', 'success');
       fetchTasks();
     } catch (error) {
       console.error('Delete error:', error);
@@ -3090,9 +3090,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                       return (
                                         <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
                                           <td className="cu-td cu-td-name">
-                                            <span className="cu-status-dot" style={{ color: meta.dotColor, borderColor: meta.dotColor }}>
-                                              <span className="cu-status-dot" style={{ background: meta.dotColor, borderColor: meta.dotColor }}></span>
-                                            </span>
                                             <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
                                             {task.taskNo && <span className="cu-task-id">{task.taskNo}</span>}
                                           </td>
@@ -3107,8 +3104,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                           </td>
                                           <td className="cu-td cu-td-list" onClick={e => e.stopPropagation()}>
                                             <div className="cu-inline-field-wrapper">
-                                              <span className="cu-inline-status-dot" style={{ background: meta.dotColor }}></span>
-                                              <select className="cu-inline-dropdown" value={task.status || 'To Do'} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Delivered' && !task.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${task.id}`, updateData); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: meta.fg, fontWeight: 700 }}>
+                                              <select className="cu-inline-dropdown" value={task.status || 'To Do'} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Delivered' && !task.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${task.id}`, updateData); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: meta.dotColor, fontWeight: 'bold' }}>
                                                 {COLUMNS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                                               </select>
                                             </div>
@@ -3116,7 +3112,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                           <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
                                             <div className="cu-inline-field-wrapper">
                                               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                              <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                              <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                             </div>
                                           </td>
                                           <td className="cu-td cu-td-priority" onClick={e => e.stopPropagation()}>
@@ -3319,7 +3315,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 if (!b.dueDate) return -1;
                 return new Date(a.dueDate) - new Date(b.dueDate);
               });
-              const isCollapsed = !!collapsedGroups[col.id];
+              const isCollapsed = expandedGroupId !== col.id;
               const isInline = inlineAdd && inlineAdd.statusId === col.id && !inlineAdd.taskListId;
 
               return (
@@ -3369,7 +3365,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                               <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
                                 <td className="cu-td cu-td-name">
                                   {/* Desktop: small filled dot */}
-                                  <span className="cu-status-dot" style={{ background: meta.dotColor }}></span>
                                   {/* Mobile: dashed ring */}
                                   <span className="cu-mobile-circle" style={{ borderColor: meta.dotColor }}>
                                     <span className="cu-mobile-circle-dot" style={{ background: meta.dotColor }}></span>
@@ -3417,7 +3412,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                 <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
                                   <div className="cu-inline-field-wrapper">
                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                    <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                    <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                   </div>
                                 </td>
                                 <td className="cu-td cu-td-priority" onClick={e => e.stopPropagation()}>

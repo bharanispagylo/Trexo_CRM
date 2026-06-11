@@ -93,13 +93,13 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const { alert } = useAlert();
+  const { alert, toast } = useAlert();
 
   useEffect(() => {
     const unsubscribe = onMessageListener((payload) => {
       const title = payload?.notification?.title || 'New Notification';
       const body = payload?.notification?.body || 'You have a new update.';
-      alert(body, 'info', title);
+      toast(body, 'info', title);
       fetchNotifications(); // Refresh dropdown
     });
     

@@ -65,8 +65,8 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
         
         <!-- Top header with logo -->
         <div style="border-top: 4px solid #000000; text-align: center; padding: 20px 0; border-bottom: 1px solid #e5e7eb;">
-          <h1 style="margin:0; font-size:20px; font-weight:700; color:#1a1d1f; display:flex; align-items:center; justify-content:center;">
-             <span style="color:#2563eb; margin-right:8px;">●</span> Trexo CRM
+          <h1 style="margin:0; padding-left:40px; font-size:20px; font-weight:700; color:#1a1d1f; display:flex;">
+             Trexo CRM
           </h1>
         </div>
         
@@ -120,17 +120,6 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
         </div>
       </div>
       
-      <!-- Footer -->
-      <div style="text-align: center; padding: 32px 20px 20px;">
-        <p style="font-size: 12px; color: #6b7280; margin: 0 0 16px 0;">
-          Not interested in receiving email notifications?<br/>
-          <a href="#" style="color: #2563eb; text-decoration: none;">Unsubscribe here</a>
-        </p>
-        <p style="font-size: 12px; color: #6b7280; margin: 0;">
-          Want to manage your work on the go?<br/>
-          <a href="#" style="color: #2563eb; text-decoration: none;">Download our mobile app</a>
-        </p>
-      </div>
     </div>
   `;
 

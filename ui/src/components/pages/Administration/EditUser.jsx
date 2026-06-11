@@ -20,7 +20,8 @@ export default function EditUser({ userToEdit, onBack }) {
     empId: userToEdit?.empId || '',
     designation: userToEdit?.designation || '',
     profileImage: userToEdit?.profileImage || '',
-    role: userToEdit?.role || 'Employee'
+    role: userToEdit?.role || 'Employee',
+    status: userToEdit?.status || 'Active'
   });
 
   useEffect(() => {
@@ -186,6 +187,14 @@ export default function EditUser({ userToEdit, onBack }) {
             <label className="saas-label">Role</label>
             <select className="saas-select" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
               {roles.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+          <div className="saas-field">
+            <label className="saas-label">Status</label>
+            <select className="saas-select" value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
+              <option value="Active">Active</option>
+              <option value="Pending">Pending</option>
+              <option value="Inactive">Inactive</option>
             </select>
           </div>
           <div className="saas-field full-width">
