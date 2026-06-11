@@ -415,6 +415,7 @@
     width: 100%;
     flex-direction: row;
     align-items: center;
+    justify-content: space-between;
     gap: 0.5rem;
     flex-wrap: nowrap;
   }
@@ -432,11 +433,13 @@
     white-space: nowrap;
   }
 
-  /* Export: takes remaining space */
+  /* Export: compact layout, does not stretch */
   .reports-export-btn {
-    flex: 1;
+    flex: none;
+    width: auto;
+    min-width: 110px;
     justify-content: center;
-    padding: 0.45rem 0.75rem;
+    padding: 0.45rem 0.875rem;
     font-size: 0.82rem;
   }
 
@@ -465,7 +468,7 @@
   .reports-date-selector {
     flex: 1;
     min-width: 0;
-    width: auto;
+    max-width: 280px;
     box-sizing: border-box;
     padding: 0.4rem 0.6rem;
     overflow: hidden;
@@ -484,7 +487,7 @@
 
   .reports-custom-date-input {
     flex: 1;
-    min-width: 0;
+    min-width: 80px;
     width: 0;
     font-size: 0.78rem !important;
     padding: 0.2rem 0.15rem !important;
@@ -496,23 +499,24 @@
     flex-direction: column;
     align-items: stretch;
     width: 100%;
-    max-width: 360px;
+    max-width: 200px;
     gap: 0.6rem;
   }
 
-  .reports-select,
-  .reports-apply-btn {
+  .reports-select {
     width: 100%;
     box-sizing: border-box;
-  }
-
-  .reports-select {
     min-width: unset;
     padding: 0.55rem 2rem 0.55rem 0.875rem;
     font-size: 0.875rem;
   }
 
   .reports-apply-btn {
+    width: auto;
+    min-width: 120px;
+    max-width: 160px;
+    align-self: flex-start;
+    box-sizing: border-box;
     padding: 0.6rem 1rem;
     font-size: 0.875rem;
   }
