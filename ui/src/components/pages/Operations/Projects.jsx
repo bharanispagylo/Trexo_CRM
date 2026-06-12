@@ -1323,7 +1323,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                             color: meta.fg,
                                             border: meta.border || 'none',
                                             padding: '0.2rem 0.6rem',
-                                            borderRadius: '12px',
+                                            borderRadius: '5px',
                                             fontSize: '0.75rem',
                                             fontWeight: '700',
                                             textTransform: 'uppercase',

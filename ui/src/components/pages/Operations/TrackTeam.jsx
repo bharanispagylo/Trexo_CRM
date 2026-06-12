@@ -235,6 +235,133 @@ export default function TrackTeam({ user }) {
     );
   }
 
+  if (selectedMember && !viewingEmployeeTasks) {
+    const memberName = selectedMember.name || selectedMember.fullName || `${selectedMember.firstName || ''} ${selectedMember.lastName || ''}`.trim() || 'Unknown';
+    const avatarInitials = (selectedMember.name || selectedMember.fullName || selectedMember.firstName || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+    return (
+      <div className="track-team-page" style={{ padding: '2rem 3rem' }}>
+        <button 
+          style={{ 
+            background: 'none', 
+            border: 'none', 
+            color: '#2563eb', 
+            fontSize: '0.85rem', 
+            fontWeight: '600', 
+            cursor: 'pointer', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.25rem',
+            padding: 0,
+            marginBottom: '1.5rem'
+          }}
+          onClick={() => setSelectedMember(null)}
+        >
+          ← Back to Team Members
+        </button>
+
+        <div className="add-user-page">
+          <div className="page-header" style={{ marginBottom: '1.5rem' }}>
+            <h2 className="page-title" style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>Member Profile & Tasks</h2>
+            <p className="page-subtitle" style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>View details and tasks assigned to this team member.</p>
+          </div>
+
+          <div className="saas-form-container" style={{ padding: '2rem' }}>
+            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1.5rem' }}>
+              <div className="member-avatar-lg" style={{ width: '60px', height: '60px', fontSize: '1.3rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f5f9', borderRadius: '50%', fontWeight: '700', color: '#475569' }}>
+                {avatarInitials}
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>{memberName}</h4>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+                  {selectedMember.designation || selectedMember.role || 'Employee'} • ID: #{selectedMember.id.substring(0, 8)} • {selectedMember.type || 'Employee'}
+                </p>
+              </div>
+            </div>
+
+            {/* ASSIGNED TASKS WORKLOAD LIST */}
+            <div>
+              <h4 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', fontWeight: '800', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#0f172a' }}>
+                <span>Assigned Tasks</span>
+                <span style={{ fontSize: '0.8rem', background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>
+                  {selectedMemberTasks.length} Tasks
+                </span>
+              </h4>
+
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', marginBottom: '1.5rem' }}>
+                <div className="table-responsive">
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        <th style={{ padding: '0.75rem 1rem', color: '#475569', fontWeight: '700' }}>Task</th>
+                        <th style={{ padding: '0.75rem 1rem', color: '#475569', fontWeight: '700' }}>Status</th>
+                        <th style={{ padding: '0.75rem 1rem', color: '#475569', fontWeight: '700' }}>Priority</th>
+                        <th style={{ padding: '0.75rem 1rem', color: '#475569', fontWeight: '700' }}>Due Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedMemberTasks.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>
+                            No tasks assigned to this team member.
+                          </td>
+                        </tr>
+                      ) : (
+                        selectedMemberTasks.map(task => (
+                          <tr key={task.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '0.75rem 1rem', fontWeight: '600', color: '#0f172a' }}>
+                              {task.title}
+                              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '1px' }}>#{task.id.slice(-6).toUpperCase()}</div>
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem' }}>
+                              <span style={{
+                                background: task.status === 'Completed' || task.status === 'Delivered' ? '#dcfce7' : task.status === 'In Progress' ? '#dbeafe' : '#f1f5f9',
+                                color: task.status === 'Completed' || task.status === 'Delivered' ? '#16a34a' : task.status === 'In Progress' ? '#2563eb' : '#475569',
+                                padding: '4px 8px',
+                                borderRadius: '5px',
+                                fontSize: '0.75rem',
+                                fontWeight: '700'
+                              }}>
+                                {task.status || 'To Do'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem' }}>
+                              <span style={{
+                                color: task.priority === 'High' || task.priority === 'Critical' ? '#ef4444' : task.priority === 'Medium' ? '#ea580c' : '#64748b',
+                                fontSize: '0.75rem',
+                                fontWeight: '700'
+                              }}>
+                                {task.priority || 'Medium'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem', color: '#64748b' }}>
+                              {task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '-'}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem' }}>
+              <button 
+                className="saas-btn-primary" 
+                style={{ background: '#2563eb', padding: '0.6rem 1.5rem', color: 'white', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600' }}
+                onClick={() => setSelectedMember(null)}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
   return (
     <div className="track-team-page">
       <div className="track-main-layout">
@@ -327,104 +454,7 @@ export default function TrackTeam({ user }) {
         </div>
       </div>
 
-      {/* DETAIL & ASSIGNED TASKS MODAL */}
-      {selectedMember && !viewingEmployeeTasks && (
-        <div className="activity-detail-modal" onClick={() => setSelectedMember(null)}>
-          <div className="modal-content-card animate-slide-up" onClick={e => e.stopPropagation()} style={{ width: '700px', maxWidth: '95%' }}>
-            <div className="modal-header">
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800' }}>Member Profile & Tasks</h3>
-              <button className="modal-close" onClick={() => setSelectedMember(null)}>✕</button>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1.25rem' }}>
-              <div className="member-avatar-lg" style={{ width: '60px', height: '60px', fontSize: '1.3rem' }}>
-                {(selectedMember.fullName || selectedMember.firstName || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-              </div>
-              <div style={{ flex: 1 }}>
-                <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1.15rem', fontWeight: '800' }}>{selectedMember.fullName || `${selectedMember.firstName || ''} ${selectedMember.lastName || ''}`.trim()}</h4>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>{selectedMember.designation || selectedMember.role} • ID: #{selectedMember.id.substring(0, 8)} • {selectedMember.type || 'Employee'}</p>
-              </div>
-            </div>
 
-            {/* ASSIGNED TASKS WORKLOAD LIST */}
-            <div>
-              <h4 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', fontWeight: '800', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>Assigned Tasks</span>
-                <span style={{ fontSize: '0.8rem', background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: '12px' }}>
-                  {selectedMemberTasks.length} Tasks
-                </span>
-              </h4>
-
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', maxHeight: '250px', overflowY: 'auto' }}>
-                <div className="table-responsive">
-<table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
-                  <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                      <th style={{ padding: '0.75rem 1rem', color: '#475569', fontWeight: '700' }}>Task</th>
-                      <th style={{ padding: '0.75rem 1rem', color: '#475569', fontWeight: '700' }}>Status</th>
-                      <th style={{ padding: '0.75rem 1rem', color: '#475569', fontWeight: '700' }}>Priority</th>
-                      <th style={{ padding: '0.75rem 1rem', color: '#475569', fontWeight: '700' }}>Due Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedMemberTasks.length === 0 ? (
-                      <tr>
-                        <td colSpan="4" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>
-                          No tasks assigned to this team member.
-                        </td>
-                      </tr>
-                    ) : (
-                      selectedMemberTasks.map(task => (
-                        <tr key={task.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '0.75rem 1rem', fontWeight: '600', color: '#0f172a' }}>
-                            {task.title}
-                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '1px' }}>#{task.id.slice(-6).toUpperCase()}</div>
-                          </td>
-                          <td style={{ padding: '0.75rem 1rem' }}>
-                            <span style={{
-                              background: task.status === 'Completed' || task.status === 'Delivered' ? '#dcfce7' : task.status === 'In Progress' ? '#dbeafe' : '#f1f5f9',
-                              color: task.status === 'Completed' || task.status === 'Delivered' ? '#16a34a' : task.status === 'In Progress' ? '#2563eb' : '#475569',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              fontSize: '0.75rem',
-                              fontWeight: '700'
-                            }}>
-                              {task.status || 'To Do'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '0.75rem 1rem' }}>
-                            <span style={{
-                              color: task.priority === 'High' || task.priority === 'Critical' ? '#ef4444' : task.priority === 'Medium' ? '#ea580c' : '#64748b',
-                              fontSize: '0.75rem',
-                              fontWeight: '700'
-                            }}>
-                              {task.priority || 'Medium'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '0.75rem 1rem', color: '#64748b' }}>
-                            {task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '-'}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-</div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem', marginTop: '1.25rem' }}>
-              <button 
-                className="saas-btn-submit" 
-                style={{ background: '#2563eb', padding: '0.6rem 1.5rem', color: 'white', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600' }}
-                onClick={() => setSelectedMember(null)}
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

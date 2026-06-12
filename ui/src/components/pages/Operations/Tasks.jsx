@@ -2927,15 +2927,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 if (allProjTasks.length === 0) return null;
                 return (
                   <div key={projGroup.id} className="cu-mob-proj-section">
-                    {/* Project header */}
-                    <div className="cu-mob-proj-header">
-                      <svg viewBox="0 0 10 6" width="10" height="6" fill="#94a3b8" style={{ flexShrink: 0 }}><path d="M0 0l5 6 5-6z"/></svg>
-                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563eb" strokeWidth="2" style={{ flexShrink: 0 }}>
-                        <circle cx="12" cy="12" r="10"/>
-                        <circle cx="12" cy="12" r="3" fill="#2563eb" stroke="none"/>
-                      </svg>
-                      <span className="cu-mob-proj-name">{projGroup.name}</span>
-                    </div>
+
 
                     {COLUMNS.map(col => {
                       const statusTasks = allProjTasks.filter(t => (t.status || 'To Do') === col.id);
@@ -2962,7 +2954,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           </div>
                           {statusTasks.map(task => (
                             <div key={task.id} className="cu-mob-task-row" onClick={() => openTaskDetail(task, false)}>
-                              <span className="cu-mob-task-sq" style={{ background: meta.dotColor }}></span>
                               <span className="cu-mob-task-title">{task.title || 'Untitled Task'}</span>
                             </div>
                           ))}
