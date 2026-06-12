@@ -30,6 +30,8 @@ const TABLE = {
   tasks:      'tasks',
   bugs:       'bugs',
   users:      'users',
+  comments:   'comments',
+  notifications: 'notifications'
 };
 
 /**
@@ -48,6 +50,47 @@ export const api = {
 
   // ── GET /api/<table> ────────────────────────────────────
   async get(route) {
+    const clean = route.replace(/^\/api\//, '');
+    const parts = clean.split('/');
+
+    // 1. tasks/:id/comments
+    if (parts[0] === 'tasks' && parts[2] === 'comments') {
+      const taskId = parts[1];
+      const { data, error } = await supabase
+        .from('comments')
+        .select('*, user:users(*)')
+        .eq('taskId', taskId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw new Error(error.message);
+      return (data || []).map(c => ({
+        ...c,
+        author: c.user?.fullName || c.user?.firstName || 'Anonymous'
+      }));
+    }
+
+    // 2. notifications/:userId
+    if (parts[0] === 'notifications' && parts[1]) {
+      const userId = parts[1];
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw new Error(error.message);
+      return (data || []).map(n => ({
+        id: n.id,
+        userId: n.user_id,
+        title: n.title,
+        message: n.message,
+        isRead: n.is_read,
+        createdAt: n.created_at,
+        updatedAt: n.updated_at
+      }));
+    }
+
     const { table } = parseRoute(route);
     const { data, error } = await supabase
       .from(table)
@@ -60,6 +103,45 @@ export const api = {
 
   // ── POST /api/<table> ───────────────────────────────────
   async post(route, body) {
+    const clean = route.replace(/^\/api\//, '');
+    const parts = clean.split('/');
+
+    // 1. tasks/:id/comments
+    if (parts[0] === 'tasks' && parts[2] === 'comments') {
+      const taskId = parts[1];
+      const authorName = body.author || 'Anonymous';
+
+      // Look up authorId
+      const { data: users } = await supabase
+        .from('users')
+        .select('id, fullName, firstName')
+        .or(`fullName.ilike.%${authorName}%,firstName.ilike.%${authorName}%`);
+
+      let authorId = users?.[0]?.id;
+      if (!authorId) {
+        const { data: firstUser } = await supabase.from('users').select('id').limit(1);
+        authorId = firstUser?.[0]?.id;
+      }
+
+      const { data: comment, error } = await supabase
+        .from('comments')
+        .insert([{
+          taskId: taskId,
+          text: body.text,
+          author: authorId,
+          parentId: body.parentId || null
+        }])
+        .select('*, user:users(*)')
+        .single();
+
+      if (error) throw new Error(error.message);
+
+      return {
+        ...comment,
+        author: comment.user?.fullName || comment.user?.firstName || authorName
+      };
+    }
+
     const { table } = parseRoute(route);
 
     // attendance: ensure date is ISO string
@@ -79,6 +161,77 @@ export const api = {
 
   // ── PUT /api/<table>/:id ────────────────────────────────
   async put(route, body) {
+    const clean = route.replace(/^\/api\//, '');
+    const parts = clean.split('/');
+
+    // 1. tasks/:id/comments/:commentId/react
+    if (parts[0] === 'tasks' && parts[2] === 'comments' && parts[4] === 'react') {
+      const commentId = parts[3];
+      const { data: comment } = await supabase
+        .from('comments')
+        .select('reactions')
+        .eq('id', commentId)
+        .single();
+
+      let reactions = comment?.reactions || {};
+      if (typeof reactions === 'string') reactions = JSON.parse(reactions);
+      
+      if (!reactions[body.emoji]) reactions[body.emoji] = [];
+      const idx = reactions[body.emoji].indexOf(body.user);
+      if (idx > -1) {
+        reactions[body.emoji].splice(idx, 1);
+        if (reactions[body.emoji].length === 0) delete reactions[body.emoji];
+      } else {
+        reactions[body.emoji].push(body.user);
+      }
+
+      const { data: updated, error } = await supabase
+        .from('comments')
+        .update({ reactions })
+        .eq('id', commentId)
+        .select()
+        .single();
+
+      if (error) throw new Error(error.message);
+      return updated;
+    }
+
+    // 2. notifications/user/:userId/read-all
+    if (parts[0] === 'notifications' && parts[1] === 'user' && parts[3] === 'read-all') {
+      const userId = parts[2];
+      const { data, error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', userId)
+        .eq('is_read', false)
+        .select();
+
+      if (error) throw new Error(error.message);
+      return data;
+    }
+
+    // 3. notifications/:id/read
+    if (parts[0] === 'notifications' && parts[2] === 'read') {
+      const id = parts[1];
+      const { data, error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw new Error(error.message);
+      return {
+        id: data.id,
+        userId: data.user_id,
+        title: data.title,
+        message: data.message,
+        isRead: data.is_read,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
+    }
+
     const { table, id } = parseRoute(route);
     if (!id) throw new Error(`PUT requires an id: ${route}`);
 

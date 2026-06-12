@@ -163,7 +163,7 @@ export default function TrackTeam({ user }) {
 
   if (addingMember) {
     return (
-      <div className="track-team-page" style={{ padding: '2rem 3rem' }}>
+      <div className="track-team-page">
         <button 
           style={{ 
             background: 'none', 
@@ -240,7 +240,7 @@ export default function TrackTeam({ user }) {
     const avatarInitials = (selectedMember.name || selectedMember.fullName || selectedMember.firstName || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
     return (
-      <div className="track-team-page" style={{ padding: '2rem 3rem' }}>
+      <div className="track-team-page">
         <button 
           style={{ 
             background: 'none', 
@@ -266,7 +266,7 @@ export default function TrackTeam({ user }) {
             <p className="page-subtitle" style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>View details and tasks assigned to this team member.</p>
           </div>
 
-          <div className="saas-form-container" style={{ padding: '2rem' }}>
+          <div className="saas-form-container profile-card-container">
             <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1.5rem' }}>
               <div className="member-avatar-lg" style={{ width: '60px', height: '60px', fontSize: '1.3rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f5f9', borderRadius: '50%', fontWeight: '700', color: '#475569' }}>
                 {avatarInitials}
@@ -290,13 +290,13 @@ export default function TrackTeam({ user }) {
 
               <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', marginBottom: '1.5rem' }}>
                 <div className="table-responsive">
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+                  <table className="team-list-table">
                     <thead>
-                      <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                        <th style={{ padding: '0.75rem 1rem', color: '#475569', fontWeight: '700' }}>Task</th>
-                        <th style={{ padding: '0.75rem 1rem', color: '#475569', fontWeight: '700' }}>Status</th>
-                        <th style={{ padding: '0.75rem 1rem', color: '#475569', fontWeight: '700' }}>Priority</th>
-                        <th style={{ padding: '0.75rem 1rem', color: '#475569', fontWeight: '700' }}>Due Date</th>
+                      <tr>
+                        <th>Task</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Due Date</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -308,34 +308,43 @@ export default function TrackTeam({ user }) {
                         </tr>
                       ) : (
                         selectedMemberTasks.map(task => (
-                          <tr key={task.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '0.75rem 1rem', fontWeight: '600', color: '#0f172a' }}>
-                              {task.title}
-                              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '1px' }}>#{task.id.slice(-6).toUpperCase()}</div>
+                          <tr key={task.id}>
+                            <td data-label="Task">
+                              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                                <span style={{ fontWeight: '600', color: '#0f172a', wordBreak: 'break-word' }}>{task.title}</span>
+                                <span style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '1px' }}>#{task.id.slice(-6).toUpperCase()}</span>
+                              </div>
                             </td>
-                            <td style={{ padding: '0.75rem 1rem' }}>
-                              <span style={{
-                                background: task.status === 'Completed' || task.status === 'Delivered' ? '#dcfce7' : task.status === 'In Progress' ? '#dbeafe' : '#f1f5f9',
-                                color: task.status === 'Completed' || task.status === 'Delivered' ? '#16a34a' : task.status === 'In Progress' ? '#2563eb' : '#475569',
-                                padding: '4px 8px',
-                                borderRadius: '5px',
-                                fontSize: '0.75rem',
-                                fontWeight: '700'
-                              }}>
-                                {task.status || 'To Do'}
-                              </span>
+                            <td data-label="Status">
+                              <div style={{ flex: 1, display: 'flex' }}>
+                                <span style={{
+                                  background: task.status === 'Completed' || task.status === 'Delivered' ? '#dcfce7' : task.status === 'In Progress' ? '#dbeafe' : '#f1f5f9',
+                                  color: task.status === 'Completed' || task.status === 'Delivered' ? '#16a34a' : task.status === 'In Progress' ? '#2563eb' : '#475569',
+                                  padding: '4px 8px',
+                                  borderRadius: '5px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '700',
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  {task.status || 'To Do'}
+                                </span>
+                              </div>
                             </td>
-                            <td style={{ padding: '0.75rem 1rem' }}>
-                              <span style={{
-                                color: task.priority === 'High' || task.priority === 'Critical' ? '#ef4444' : task.priority === 'Medium' ? '#ea580c' : '#64748b',
-                                fontSize: '0.75rem',
-                                fontWeight: '700'
-                              }}>
-                                {task.priority || 'Medium'}
-                              </span>
+                            <td data-label="Priority">
+                              <div style={{ flex: 1 }}>
+                                <span style={{
+                                  color: task.priority === 'High' || task.priority === 'Critical' ? '#ef4444' : task.priority === 'Medium' ? '#ea580c' : '#64748b',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '700'
+                                }}>
+                                  {task.priority || 'Medium'}
+                                </span>
+                              </div>
                             </td>
-                            <td style={{ padding: '0.75rem 1rem', color: '#64748b' }}>
-                              {task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '-'}
+                            <td data-label="Due Date">
+                              <div style={{ flex: 1, color: '#64748b' }}>
+                                {task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '-'}
+                              </div>
                             </td>
                           </tr>
                         ))
