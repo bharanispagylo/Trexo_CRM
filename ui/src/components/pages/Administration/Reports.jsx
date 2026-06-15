@@ -169,9 +169,10 @@ export default function Reports({ user }) {
     });
     
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
+    a.style.display = 'none';
     a.href = url;
     let downloadFilename;
     if (reportType === 'monthly') {
@@ -183,8 +184,12 @@ export default function Reports({ user }) {
       downloadFilename = `Custom_Report_${customStartDate}_to_${customEndDate}.csv`;
     }
     a.download = downloadFilename;
+    document.body.appendChild(a);
     a.click();
-    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+    }, 100);
   };
 
   const months = [
