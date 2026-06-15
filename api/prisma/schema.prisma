@@ -161,6 +161,10 @@ model Task {
   estimations Estimation[]
   workLogs    WorkLog[]
 
+  parentId     String?   @map("parent_id")
+  parentTask   Task?     @relation("SubTasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subTasks     Task[]    @relation("SubTasks")
+
   @@map("tasks")
 }
 

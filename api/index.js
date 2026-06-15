@@ -62,6 +62,7 @@ prisma.$connect()
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS "actualHours" FLOAT DEFAULT 0;',
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS attachments TEXT;',
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS "taskListId" TEXT;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS parent_id TEXT;',
     ];
 
     for (const sql of taskColumnFixes) {
@@ -129,6 +130,30 @@ prisma.$connect()
       console.log('[Self-Healing] Cleared all database records with empty client ID.');
     } catch (e) {
       console.warn('[Self-Healing] Database clean empty client ID warning:', e.message);
+    }
+
+    try {
+      const tasksWithoutNo = await prisma.task.findMany({
+        where: {
+          OR: [
+            { taskNo: null },
+            { taskNo: '' }
+          ]
+        }
+      });
+      if (tasksWithoutNo.length > 0) {
+        console.log(`[Self-Healing] Generating task numbers for ${tasksWithoutNo.length} tasks...`);
+        for (const t of tasksWithoutNo) {
+          const generatedNo = `TSK-${Math.floor(Math.random() * 900000) + 100000}`;
+          await prisma.task.update({
+            where: { id: t.id },
+            data: { taskNo: generatedNo }
+          });
+        }
+        console.log(`[Self-Healing] Successfully updated task numbers.`);
+      }
+    } catch (e) {
+      console.warn('[Self-Healing] Failed to backfill task numbers:', e.message);
     }
   })
   .catch(console.error);
@@ -257,7 +282,7 @@ const sanitizeTaskData = (taskData) => {
   Object.keys(taskData).forEach(key => {
     if (key in prisma.task.fields) {
       let val = taskData[key];
-      if ((key === 'clientId' || key === 'projectId' || key === 'taskListId') && val === '') {
+      if ((key === 'clientId' || key === 'projectId' || key === 'taskListId' || key === 'parentId') && val === '') {
         val = null;
       }
       sanitized[key] = val;
@@ -1060,6 +1085,10 @@ app.post('/api/tasks', async (req, res) => {
   try {
     console.log('POST /api/tasks body:', req.body);
     let { id, comments, createdAt, ...taskData } = req.body;
+
+    if (!taskData.taskNo) {
+      taskData.taskNo = `TSK-${Math.floor(Math.random() * 900000) + 100000}`;
+    }
     
     // Sanitize and convert dates
     ['dueDate', 'assignedDate', 'deliveredDate'].forEach(key => {
