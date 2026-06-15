@@ -131,30 +131,6 @@ prisma.$connect()
     } catch (e) {
       console.warn('[Self-Healing] Database clean empty client ID warning:', e.message);
     }
-
-    try {
-      const tasksWithoutNo = await prisma.task.findMany({
-        where: {
-          OR: [
-            { taskNo: null },
-            { taskNo: '' }
-          ]
-        }
-      });
-      if (tasksWithoutNo.length > 0) {
-        console.log(`[Self-Healing] Generating task numbers for ${tasksWithoutNo.length} tasks...`);
-        for (const t of tasksWithoutNo) {
-          const generatedNo = `TSK-${Math.floor(Math.random() * 900000) + 100000}`;
-          await prisma.task.update({
-            where: { id: t.id },
-            data: { taskNo: generatedNo }
-          });
-        }
-        console.log(`[Self-Healing] Successfully updated task numbers.`);
-      }
-    } catch (e) {
-      console.warn('[Self-Healing] Failed to backfill task numbers:', e.message);
-    }
   })
   .catch(console.error);
 
@@ -1085,10 +1061,6 @@ app.post('/api/tasks', async (req, res) => {
   try {
     console.log('POST /api/tasks body:', req.body);
     let { id, comments, createdAt, ...taskData } = req.body;
-
-    if (!taskData.taskNo) {
-      taskData.taskNo = `TSK-${Math.floor(Math.random() * 900000) + 100000}`;
-    }
     
     // Sanitize and convert dates
     ['dueDate', 'assignedDate', 'deliveredDate'].forEach(key => {
