@@ -157,6 +157,14 @@ const timeStrToDecimal = (timeStr) => {
   return hours + (minutes / 60);
 };
 
+const getDisplayId = (f) => {
+  if (!f) return '';
+  const no = f.taskNo || '';
+  const digits = no.replace(/\D/g, '');
+  const prefix = f.parentId ? 'S' : 'T';
+  return `${prefix}${digits}`;
+};
+
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Task Detail View (Separate Page) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialEditMode = false, tasks = [], onRefresh, onSelectTask }) {
@@ -230,6 +238,15 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       };
       setForm(loadedForm);
       setInitialForm(loadedForm);
+      if (task.parentId) {
+        if (activeTab !== 'general' && activeTab !== 'worklog') {
+          setActiveTab('general');
+        }
+      } else {
+        if (activeTab === 'worklog') {
+          setActiveTab('general');
+        }
+      }
     } else {
       setInitialForm(form);
     }
@@ -951,7 +968,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           <button className="saas-back-btn" onClick={onClose}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
           </button>
-          <span className="saas-breadcrumb-active">Task Details</span>
+          <span className="saas-breadcrumb-active">Task Details - {getDisplayId(form)}</span>
         </div>
         
         <div className="saas-nav-right" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -1040,7 +1057,15 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             >
               General
             </button>
-            {currentUser?.role?.toLowerCase() === 'admin' && (
+            {task?.parentId && (
+              <button 
+                className={`saas-tab-header-btn ${activeTab === 'worklog' ? 'active' : ''}`}
+                onClick={() => setActiveTab('worklog')}
+              >
+                Work Log
+              </button>
+            )}
+            {currentUser?.role?.toLowerCase() === 'admin' && !task?.parentId && (
               <button 
                 className={`saas-tab-header-btn ${activeTab === 'billing' ? 'active' : ''}`}
                 onClick={() => setActiveTab('billing')}
@@ -1048,13 +1073,15 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 Billing
               </button>
             )}
-            <button 
-              className={`saas-tab-header-btn ${activeTab === 'attachments' ? 'active' : ''}`}
-              onClick={() => setActiveTab('attachments')}
-            >
-              Attachments
-            </button>
-            {isEdit && (
+            {!task?.parentId && (
+              <button 
+                className={`saas-tab-header-btn ${activeTab === 'attachments' ? 'active' : ''}`}
+                onClick={() => setActiveTab('attachments')}
+              >
+                Attachments
+              </button>
+            )}
+            {isEdit && !task?.parentId && (
               <button 
                 className={`saas-tab-header-btn ${activeTab === 'subtasks' ? 'active' : ''}`}
                 onClick={() => setActiveTab('subtasks')}
@@ -1062,7 +1089,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 Subtasks ({tasks.filter(t => t.parentId === task.id).length})
               </button>
             )}
-            {currentUser?.role?.toLowerCase() === 'admin' && (
+            {currentUser?.role?.toLowerCase() === 'admin' && !task?.parentId && (
               <button 
                 className={`saas-tab-header-btn ${activeTab === 'worklogs' ? 'active' : ''}`}
                 onClick={() => setActiveTab('worklogs')}
@@ -1333,6 +1360,95 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               </div>
             )}
 
+
+            {activeTab === 'worklog' && task?.parentId && (
+              <div className="saas-details-grid animate-fade-in" style={{ display: 'block' }}>
+                {!isEdit ? (
+                  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                    <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginBottom: '1rem', opacity: 0.5 }}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <p style={{ margin: 0, fontSize: '0.95rem' }}>Please create and save the task first before adding work logs.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', maxWidth: '420px', boxSizing: 'border-box' }}>
+                      <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.95rem', fontWeight: '700' }}>Add Work Log</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Date</label>
+                          <input type="date" className="saas-input" value={workLogForm.logDate} onChange={e => setWorkLogForm({...workLogForm, logDate: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Worked Hrs</label>
+                          <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button className="saas-btn-primary" onClick={() => handleAddWorkLog(false)} disabled={workLogSaving} style={{ padding: '0.5rem 1rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                          {workLogSaving ? 'Saving...' : (workLogForm.id ? 'Update Work Log' : 'Add Work Log')}
+                        </button>
+                        {workLogForm.id && (
+                          <button
+                            className="saas-btn-secondary"
+                            onClick={() => setWorkLogForm({ logDate: new Date().toISOString().split('T')[0], hoursWorked: '', description: '', isBilled: false, id: null })}
+                            disabled={workLogSaving}
+                            style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}
+                          >
+                            Cancel Edit
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.95rem', fontWeight: '700' }}>Recent Work Logs</h4>
+                      {workLogs.filter(log => !log.isBilled).length === 0 ? (
+                        <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No work logs found for this subtask.</p>
+                      ) : (
+                        <div className="table-responsive">
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                            <thead>
+                              <tr style={{ background: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
+                                <th style={{ padding: '0.75rem', fontWeight: 600 }}>Date</th>
+                                <th style={{ padding: '0.75rem', fontWeight: 600 }}>User</th>
+                                <th style={{ padding: '0.75rem', fontWeight: 600 }}>Worked Hrs</th>
+                                <th style={{ padding: '0.75rem', fontWeight: 600 }}>Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {workLogs.filter(log => !log.isBilled).map(log => (
+                                <tr key={log.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                  <td style={{ padding: '0.75rem' }}>{formatDate(log.logDate)}</td>
+                                  <td style={{ padding: '0.75rem' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
+                                  <td style={{ padding: '0.75rem', fontWeight: 600, color: '#0f172a' }}>{log.hoursWorked}h</td>
+                                  <td style={{ padding: '0.75rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                      <button title="Edit" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer' }} onClick={() => {
+                                        setWorkLogForm({
+                                          id: log.id,
+                                          logDate: new Date(log.logDate).toISOString().split('T')[0],
+                                          hoursWorked: String(log.hoursWorked),
+                                          description: log.description || '',
+                                          isBilled: false
+                                        });
+                                      }}>
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                      </button>
+                                      <button title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {activeTab === 'worklogs' && currentUser?.role?.toLowerCase() === 'admin' && (
               <div className="saas-details-grid animate-fade-in" style={{ display: 'block' }}>
@@ -1760,7 +1876,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                     >
                                       {sub.title || 'Untitled Subtask'}
                                     </button>
-                                    {sub.taskNo && <span style={{ color: '#94a3b8', fontSize: '0.72rem' }}>({sub.taskNo})</span>}
+                                    {sub.taskNo && <span style={{ color: '#94a3b8', fontSize: '0.72rem' }}>({getDisplayId(sub)})</span>}
                                   </div>
                                 </td>
                                 <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>
@@ -3265,11 +3381,146 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                               }}>+ Add</button>
                             )}
                           </div>
-                          {statusTasks.map(task => (
-                            <div key={task.id} className="cu-mob-task-row" onClick={() => openTaskDetail(task, false)}>
-                              <span className="cu-mob-task-title">{task.title || 'Untitled Task'}</span>
-                            </div>
-                          ))}
+                          {(() => {
+                             const mainTasks = statusTasks.filter(t => !t.parentId || !allProjTasks.some(p => p.id === t.parentId));
+                             
+                             return mainTasks.flatMap(task => {
+                               const subTasks = tasks.filter(t => t.parentId === task.id);
+                               const isExpanded = !!expandedSubtaskIds[task.id];
+                               
+                               const parentRow = (
+                                 <div key={task.id} className="cu-mob-task-row" onClick={() => openTaskDetail(task, false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0 }}>
+                                     {subTasks.length > 0 ? (
+                                        <button
+                                          style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleSubtaskExpand(task.id);
+                                          }}
+                                        >
+                                          <svg viewBox="0 0 10 6" width="7" height="7" fill="currentColor" style={{ transform: isExpanded ? "none" : "rotate(-90deg)", transition: "transform 0.15s", color: "#64748b" }}><path d="M0 0l5 6 5-6z"/></svg>
+                                        </button>
+                                      ) : (
+                                        <button
+                                          style={{ background: 'none', border: 'none', padding: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, visibility: 'hidden' }}
+                                          disabled
+                                        >
+                                          <svg viewBox="0 0 10 6" width="7" height="7"><path d="M0 0l5 6 5-6z"/></svg>
+                                        </button>
+                                      )}
+                                     <span className="cu-mob-task-title" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                       {task.title || 'Untitled Task'}
+                                     </span>
+                                     {subTasks.length > 0 && (
+                                       <span 
+                                         style={{ 
+                                           display: 'inline-flex', 
+                                           alignItems: 'center', 
+                                           gap: '2px', 
+                                           fontSize: '0.65rem', 
+                                           fontWeight: '700', 
+                                           color: '#2563eb', 
+                                           background: '#eff6ff', 
+                                           padding: '1px 4px', 
+                                           borderRadius: '3px',
+                                           border: '1px solid #bfdbfe'
+                                         }}
+                                         onClick={(e) => {
+                                           e.stopPropagation();
+                                           toggleSubtaskExpand(task.id);
+                                         }}
+                                       >
+                                         {subTasks.length}
+                                       </span>
+                                     )}
+                                   </div>
+                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                                     <button
+                                        className="cu-mob-hover-subtask-btn"
+                                        onClick={(e) => {
+                                         e.stopPropagation();
+                                         setExpandedSubtaskIds(prev => ({ ...prev, [task.id]: true }));
+                                         setAddingSubtaskParentId(task.id);
+                                         setSubtaskTitle('');
+                                         setSubtaskAssignee('');
+                                         setSubtaskDueDate('');
+                                         setSubtaskPriority('Medium');
+                                       }}
+                                       title="Add Subtask"
+                                     >
+                                       <svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                         <line x1="12" y1="5" x2="12" y2="19"></line>
+                                         <line x1="5" y1="12" x2="19" y2="12"></line>
+                                       </svg>
+                                     </button>
+                                   </div>
+                                 </div>
+                               );
+                               
+                               const rows = [parentRow];
+                               
+                               if (isExpanded) {
+                                 subTasks.forEach(sub => {
+                                   rows.push(
+                                     <div key={sub.id} className="cu-mob-task-row subtask-row" onClick={() => openTaskDetail(sub, false)} style={{ paddingLeft: '1.25rem', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0 }}>
+                                         <span style={{ color: '#cbd5e1', fontSize: '0.8rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
+                                         <span className="cu-mob-task-title" style={{ color: '#475569', fontSize: '0.85rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                           {sub.title || 'Untitled Subtask'}
+                                         </span>
+                                       </div>
+                                     </div>
+                                   );
+                                 });
+                               }
+                               
+                               const isAddingSubtask = addingSubtaskParentId === task.id;
+                               if (isAddingSubtask) {
+                                 rows.push(
+                                   <div key={`mob-add-sub-${task.id}`} className="cu-mob-task-row" style={{ paddingLeft: '1.25rem', background: '#f8fafc' }}>
+                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '100%' }}>
+                                       <span style={{ color: '#cbd5e1', fontSize: '0.8rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
+                                       <input
+                                         type="text"
+                                         placeholder="Subtask name..."
+                                         value={subtaskTitle}
+                                         onChange={e => setSubtaskTitle(e.target.value)}
+                                         onKeyDown={e => {
+                                           if (e.key === 'Enter') submitSubtask(task);
+                                           if (e.key === 'Escape') setAddingSubtaskParentId(null);
+                                         }}
+                                         autoFocus
+                                         style={{
+                                           flex: 1,
+                                           border: '1px solid #cbd5e1',
+                                           borderRadius: '4px',
+                                           padding: '2px 6px',
+                                           fontSize: '0.82rem',
+                                           outline: 'none',
+                                           background: '#ffffff'
+                                         }}
+                                       />
+                                       <button 
+                                         style={{ background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '3px', padding: '2px 6px', fontSize: '0.75rem', cursor: 'pointer' }}
+                                         onClick={() => submitSubtask(task)}
+                                       >
+                                         Save
+                                       </button>
+                                       <button 
+                                         style={{ background: 'none', color: '#64748b', border: 'none', padding: '2px 4px', fontSize: '0.75rem', cursor: 'pointer' }}
+                                         onClick={() => setAddingSubtaskParentId(null)}
+                                       >
+                                         Cancel
+                                       </button>
+                                     </div>
+                                   </div>
+                                 );
+                               }
+                               
+                               return rows;
+                             });
+                           })()}
                         </div>
                       );
                     })}
@@ -3381,7 +3632,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                       <th className="cu-th cu-th-assignee">ASSIGNEE</th>
                                       <th className="cu-th cu-th-list">STATUS</th>
                                       <th className="cu-th cu-th-delivery">DUE DATE</th>
-                                      <th className="cu-th cu-th-priority">PRIORITY</th>
+                                      <th className="cu-th cu-th-priority">P</th>
                                       <th className="cu-th cu-th-actions"></th>
                                     </tr>
                                   </thead>
@@ -3402,7 +3653,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                 {/* Expand/Collapse Chevron */}
                                                 <button
-                                                  style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                  style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', visibility: subTasks.length > 0 ? 'visible' : 'hidden' }}
                                                   onClick={(e) => {
                                                     e.stopPropagation();
                                                     toggleSubtaskExpand(task.id);
@@ -3413,7 +3664,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </button>
                                                 
                                                 <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
-                                                {task.taskNo && <span className="cu-task-id">{task.taskNo}</span>}
+                                                
                                                 
                                                 {/* Subtask count badge */}
                                                 {subTasks.length > 0 && (
@@ -3487,9 +3738,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               </div>
                                             </td>
                                             <td className="cu-td cu-td-priority" onClick={e => e.stopPropagation()}>
-                                              <div className="cu-inline-field-wrapper">
+                                              <div className="cu-inline-field-wrapper cu-priority-wrapper">
                                                 <PriorityFlag priority={task.priority} />
-                                                <select className="cu-inline-dropdown" value={task.priority || 'Medium'} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { priority: val }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, priority: val } : t)); } catch(err) { console.error(err); } }}>
+                                                <select className="cu-inline-dropdown cu-priority-select" value={task.priority || 'Medium'} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { priority: val }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, priority: val } : t)); } catch(err) { console.error(err); } }}>
                                                   {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
                                                 </select>
                                               </div>
@@ -3519,7 +3770,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
                                                     <span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
-                                                    {sub.taskNo && <span className="cu-task-id" style={{ fontSize: '0.7rem' }}>{sub.taskNo}</span>}
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
@@ -3545,9 +3795,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-priority" onClick={e => e.stopPropagation()}>
-                                                  <div className="cu-inline-field-wrapper">
+                                                  <div className="cu-inline-field-wrapper cu-priority-wrapper">
                                                     <PriorityFlag priority={sub.priority} />
-                                                    <select className="cu-inline-dropdown" value={sub.priority || 'Medium'} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { priority: val }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, priority: val } : t)); } catch(err) { console.error(err); } }}>
+                                                    <select className="cu-inline-dropdown cu-priority-select" value={sub.priority || 'Medium'} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { priority: val }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, priority: val } : t)); } catch(err) { console.error(err); } }}>
                                                       {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
                                                     </select>
                                                   </div>
@@ -3771,26 +4021,169 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                       <span className="cu-mobile-group-count">{groupTasks.length}</span>
                     </div>
                     {/* Tasks in this group */}
-                    {groupTasks.map(task => {
-                      const dueDateInfo = formatMobileDueDate(task.dueDate);
-                      return (
-                        <div key={task.id} className="cu-flat-task-row" onClick={() => openTaskDetail(task, false)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span className="cu-flat-task-title" style={{ flex: 1, marginRight: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {task.title || 'Untitled Task'}
-                          </span>
-                          {dueDateInfo && (
-                            <span style={{ 
-                              fontSize: '0.8rem', 
-                              fontWeight: '600', 
-                              color: dueDateInfo.isOverdue ? '#ef4444' : '#2563eb',
-                              flexShrink: 0
-                            }}>
-                              {dueDateInfo.text}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
+                    {(() => {
+                      const mainTasks = groupTasks.filter(t => !t.parentId || !flatSorted.some(p => p.id === t.parentId));
+                      
+                      return mainTasks.flatMap(task => {
+                        const subTasks = tasks.filter(t => t.parentId === task.id);
+                        const isExpanded = !!expandedSubtaskIds[task.id];
+                        const dueDateInfo = formatMobileDueDate(task.dueDate);
+                        
+                        const parentRow = (
+                          <div key={task.id} className="cu-flat-task-row" onClick={() => openTaskDetail(task, false)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0 }}>
+                              {subTasks.length > 0 ? (
+                                        <button
+                                          style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleSubtaskExpand(task.id);
+                                          }}
+                                        >
+                                          <svg viewBox="0 0 10 6" width="7" height="7" fill="currentColor" style={{ transform: isExpanded ? "none" : "rotate(-90deg)", transition: "transform 0.15s", color: "#64748b" }}><path d="M0 0l5 6 5-6z"/></svg>
+                                        </button>
+                                      ) : (
+                                        <button
+                                          style={{ background: 'none', border: 'none', padding: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, visibility: 'hidden' }}
+                                          disabled
+                                        >
+                                          <svg viewBox="0 0 10 6" width="7" height="7"><path d="M0 0l5 6 5-6z"/></svg>
+                                        </button>
+                                      )}
+                              <span className="cu-flat-task-title" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {task.title || 'Untitled Task'}
+                              </span>
+                              {subTasks.length > 0 && (
+                                <span 
+                                  style={{ 
+                                    display: 'inline-flex', 
+                                    alignItems: 'center', 
+                                    gap: '2px', 
+                                    fontSize: '0.65rem', 
+                                    fontWeight: '700', 
+                                    color: '#2563eb', 
+                                    background: '#eff6ff', 
+                                    padding: '1px 4px', 
+                                    borderRadius: '3px',
+                                    border: '1px solid #bfdbfe'
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleSubtaskExpand(task.id);
+                                  }}
+                                >
+                                  {subTasks.length}
+                                </span>
+                              )}
+                            </div>
+                            
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                              {dueDateInfo && (
+                                <span style={{ 
+                                  fontSize: '0.8rem', 
+                                  fontWeight: '600', 
+                                  color: dueDateInfo.isOverdue ? '#ef4444' : '#2563eb',
+                                  marginRight: '4px'
+                                }}>
+                                  {dueDateInfo.text}
+                                </span>
+                              )}
+                              <button
+                                className="cu-mob-hover-subtask-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedSubtaskIds(prev => ({ ...prev, [task.id]: true }));
+                                  setAddingSubtaskParentId(task.id);
+                                  setSubtaskTitle('');
+                                  setSubtaskAssignee('');
+                                  setSubtaskDueDate('');
+                                  setSubtaskPriority('Medium');
+                                }}
+                                title="Add Subtask"
+                              >
+                                <svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                        
+                        const rows = [parentRow];
+                        
+                        if (isExpanded) {
+                          subTasks.forEach(sub => {
+                            const subDueDateInfo = formatMobileDueDate(sub.dueDate);
+                            rows.push(
+                              <div key={sub.id} className="cu-flat-task-row subtask-row" onClick={() => openTaskDetail(sub, false)} style={{ paddingLeft: '1.25rem', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0 }}>
+                                  <span style={{ color: '#cbd5e1', fontSize: '0.8rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
+                                  <span className="cu-flat-task-title" style={{ color: '#475569', fontSize: '0.82rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {sub.title || 'Untitled Subtask'}
+                                  </span>
+                                </div>
+                                {subDueDateInfo && (
+                                  <span style={{ 
+                                    fontSize: '0.75rem', 
+                                    fontWeight: '600', 
+                                    color: subDueDateInfo.isOverdue ? '#ef4444' : '#2563eb',
+                                    flexShrink: 0
+                                  }}>
+                                    {subDueDateInfo.text}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          });
+                        }
+                        
+                        const isAddingSubtask = addingSubtaskParentId === task.id;
+                        if (isAddingSubtask) {
+                          rows.push(
+                            <div key={`mob-add-sub-${task.id}`} className="cu-flat-task-row" style={{ paddingLeft: '1.25rem', background: '#f8fafc' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '100%' }}>
+                                <span style={{ color: '#cbd5e1', fontSize: '0.8rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
+                                <input
+                                  type="text"
+                                  placeholder="Subtask name..."
+                                  value={subtaskTitle}
+                                  onChange={e => setSubtaskTitle(e.target.value)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') submitSubtask(task);
+                                    if (e.key === 'Escape') setAddingSubtaskParentId(null);
+                                  }}
+                                  autoFocus
+                                  style={{
+                                    flex: 1,
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '4px',
+                                    padding: '2px 6px',
+                                    fontSize: '0.82rem',
+                                    outline: 'none',
+                                    background: '#ffffff'
+                                  }}
+                                />
+                                <button 
+                                  style={{ background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '3px', padding: '2px 6px', fontSize: '0.75rem', cursor: 'pointer' }}
+                                  onClick={() => submitSubtask(task)}
+                                >
+                                  Save
+                                </button>
+                                <button 
+                                  style={{ background: 'none', color: '#64748b', border: 'none', padding: '2px 4px', fontSize: '0.75rem', cursor: 'pointer' }}
+                                  onClick={() => setAddingSubtaskParentId(null)}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        return rows;
+                      });
+                    })()}
                   </div>
                 );
               }); })()}
@@ -3837,11 +4230,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                         <thead>
                           <tr className="cu-thead-row">
                             <th className="cu-th cu-th-name">NAME</th>
-                            <th className="cu-th cu-th-assignee">ASSIGNEE</th>
                             <th className="cu-th cu-th-project">PROJECT</th>
-                            <th className="cu-th cu-th-list">TASK GROUP</th>
                             <th className="cu-th cu-th-delivery">DUE DATE</th>
-                            <th className="cu-th cu-th-priority">PRIORITY</th>
+                            <th className="cu-th cu-th-priority">P</th>
                             <th className="cu-th cu-th-actions"></th>
                           </tr>
                         </thead>
@@ -3863,7 +4254,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                 {/* Expand/Collapse Chevron */}
                                                 <button
-                                                  style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                  style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', visibility: subTasks.length > 0 ? 'visible' : 'hidden' }}
                                                   onClick={(e) => {
                                                     e.stopPropagation();
                                                     toggleSubtaskExpand(task.id);
@@ -3875,7 +4266,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 
                                                 <div className="cu-name-content">
                                                   <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
-                                                  {task.taskNo && <span className="cu-task-id">{task.taskNo}</span>}
                                                   {(dueDateLabel || taskGroupName) && (
                                                     <div className="cu-mobile-task-sub">
                                                       {dueDateLabel && (
@@ -3942,22 +4332,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </button>
                                               </div>
                                             </td>
-                                            <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
-                                              <div className="cu-inline-field-wrapper">
-                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#64748b" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                                <select className="cu-inline-dropdown" value={task.assignees || ''} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { await api.put(`/tasks/${task.id}`, { assignees: e.target.value }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }}>
-                                                  <option value="">Unassigned</option>
-                                                  {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
-                                                </select>
-                                              </div>
-                                            </td>
                                             <td className="cu-td cu-td-project">
                                               {task.projectName ? (
                                                 <span className="cu-project-badge">{task.projectName}</span>
                                               ) : <span className="cu-empty-cell">-</span>}
-                                            </td>
-                                            <td className="cu-td cu-td-list">
-                                              {task.taskListId && taskListsData.length ? (taskListsData.find(l => l.id === task.taskListId)?.name || '-') : <span className="cu-empty-cell">-</span>}
                                             </td>
                                             <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
                                               <div className="cu-inline-field-wrapper">
@@ -3966,9 +4344,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               </div>
                                             </td>
                                             <td className="cu-td cu-td-priority" onClick={e => e.stopPropagation()}>
-                                              <div className="cu-inline-field-wrapper">
+                                              <div className="cu-inline-field-wrapper cu-priority-wrapper">
                                                 <PriorityFlag priority={task.priority} />
-                                                <select className="cu-inline-dropdown" value={task.priority || 'Medium'} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { priority: val }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, priority: val } : t)); } catch(err) { console.error(err); } }}>
+                                                <select className="cu-inline-dropdown cu-priority-select" value={task.priority || 'Medium'} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { priority: val }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, priority: val } : t)); } catch(err) { console.error(err); } }}>
                                                   {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
                                                 </select>
                                               </div>
@@ -3998,25 +4376,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
                                                     <span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
-                                                    {sub.taskNo && <span className="cu-task-id" style={{ fontSize: '0.7rem' }}>{sub.taskNo}</span>}
-                                                  </div>
-                                                </td>
-                                                <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
-                                                  <div className="cu-inline-field-wrapper">
-                                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#64748b" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                                    <select className="cu-inline-dropdown" value={sub.assignees || ''} onChange={async (e) => { e.stopPropagation(); const updated = { ...sub, assignees: e.target.value }; try { await api.put(`/tasks/${sub.id}`, { assignees: e.target.value }); setTasks(ts => ts.map(t => t.id === sub.id ? updated : t)); } catch(err) { console.error(err); } }}>
-                                                      <option value="">Unassigned</option>
-                                                      {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
-                                                    </select>
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-project">
                                                   {sub.projectName ? (
                                                     <span className="cu-project-badge">{sub.projectName}</span>
                                                   ) : <span className="cu-empty-cell">-</span>}
-                                                </td>
-                                                <td className="cu-td cu-td-list">
-                                                  {sub.taskListId && taskListsData.length ? (taskListsData.find(l => l.id === sub.taskListId)?.name || '-') : <span className="cu-empty-cell">-</span>}
                                                 </td>
                                                 <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
                                                   <div className="cu-inline-field-wrapper">
@@ -4025,9 +4390,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-priority" onClick={e => e.stopPropagation()}>
-                                                  <div className="cu-inline-field-wrapper">
+                                                  <div className="cu-inline-field-wrapper cu-priority-wrapper">
                                                     <PriorityFlag priority={sub.priority} />
-                                                    <select className="cu-inline-dropdown" value={sub.priority || 'Medium'} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { priority: val }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, priority: val } : t)); } catch(err) { console.error(err); } }}>
+                                                    <select className="cu-inline-dropdown cu-priority-select" value={sub.priority || 'Medium'} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { priority: val }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, priority: val } : t)); } catch(err) { console.error(err); } }}>
                                                       {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
                                                     </select>
                                                   </div>
@@ -4048,7 +4413,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                           if (isAddingSubtask) {
                                             rows.push(
                                               <tr key={`add-sub-${task.id}`} className="cu-inline-row animate-fade-in" style={{ background: '#f8fafc' }}>
-                                                <td colSpan="7" style={{ paddingLeft: '2.5rem' }}>
+                                                <td colSpan="5" style={{ paddingLeft: '2.5rem' }}>
                                                   <div className="new-task-inline-bar" style={{ borderLeft: '2px solid #2563eb', paddingLeft: '8px' }}>
                                                     <div className="ntib-left">
                                                       <span className="ntib-dotted-circle"></span>
@@ -4109,7 +4474,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           {/* Inline Add Row */}
                           {isInline ? (
                             <tr className="cu-inline-row animate-fade-in">
-                              <td colSpan="7" style={{ padding: '8px' }}>
+                              <td colSpan="5" style={{ padding: '8px' }}>
                                 <div className="new-task-inline-bar">
                                   <div className="ntib-left">
                                     <span className="ntib-dotted-circle"></span>
@@ -4182,7 +4547,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           ) : (
                             can('tasks', 'create') && subTab !== 'my' && (
                               <tr className="cu-add-row" onClick={() => openInlineAdd('', col.id)}>
-                                <td colSpan="7">
+                                <td colSpan="5">
                                   <span className="cu-add-icon">+</span>
                                   <span className="cu-add-text">Add Task</span>
                                 </td>
