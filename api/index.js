@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const fs = require('fs');
 const path = require('path');
 
@@ -30,7 +32,6 @@ if (!process.env.VERCEL) {
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
-require('dotenv').config();
 const { sendNotificationEmail, sendOtpEmail } = require('./emailSender');
 
 const app = express();
