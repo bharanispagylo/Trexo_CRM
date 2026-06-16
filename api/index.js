@@ -62,6 +62,7 @@ prisma.$connect()
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS "actualHours" FLOAT DEFAULT 0;',
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS attachments TEXT;',
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS "taskListId" TEXT;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS parent_id TEXT;',
     ];
 
     for (const sql of taskColumnFixes) {
@@ -257,7 +258,7 @@ const sanitizeTaskData = (taskData) => {
   Object.keys(taskData).forEach(key => {
     if (key in prisma.task.fields) {
       let val = taskData[key];
-      if ((key === 'clientId' || key === 'projectId' || key === 'taskListId') && val === '') {
+      if ((key === 'clientId' || key === 'projectId' || key === 'taskListId' || key === 'parentId') && val === '') {
         val = null;
       }
       sanitized[key] = val;
