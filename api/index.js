@@ -207,6 +207,7 @@ const notifyAdmins = async (title, message) => {
 const notifyEmailsByNames = async (userIds, subject, message, type) => {
   if (!userIds) return;
   const names = (typeof userIds === 'string' ? userIds.split(',') : userIds).map(u => u.trim()).filter(Boolean);
+  if (names.length === 0) return;
   try {
     const users = await prisma.user.findMany({
       where: {
@@ -1106,7 +1107,8 @@ app.post('/api/tasks', async (req, res) => {
         itemTitle: task.title,
         boardName: taskListName,
         projectName: projectName,
-        buttonText: 'View Item'
+        buttonText: 'View Item',
+        taskId: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')
       }, 'task');
     }
     res.json(task);
@@ -1121,6 +1123,14 @@ app.put('/api/tasks/:id', async (req, res) => {
     console.log('PUT /api/tasks body:', req.body);
     let { id, createdAt, comments, ...taskData } = req.body;
     
+    // Fetch existing task to compare assignees
+    const existingTask = await prisma.task.findUnique({
+      where: { id: req.params.id }
+    });
+    if (!existingTask) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
     // Sanitize and convert dates
     ['dueDate', 'assignedDate', 'deliveredDate'].forEach(key => {
       if (taskData[key]) {
@@ -1159,17 +1169,32 @@ app.put('/api/tasks/:id', async (req, res) => {
       data: taskData
     });
     
-    // Notify assignees about task update
-    if (task.assignees) {
-      createNotification(task.assignees, `Task Assigned: ${task.title}`, `Task has been updated by a team member.`);
+    // Determine newly added assignees to avoid spamming existing assignees
+    const getAssigneesList = (assigneesStr) => {
+      if (!assigneesStr) return [];
+      return assigneesStr.split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
+    };
+
+    let addedAssigneesStr = '';
+    if (taskData.assignees !== undefined) {
+      const oldAssigneesNormalized = getAssigneesList(existingTask.assignees);
+      const newAssigneesRaw = (taskData.assignees || '').split(',').map(a => a.trim()).filter(Boolean);
+      const addedAssigneesRaw = newAssigneesRaw.filter(a => !oldAssigneesNormalized.includes(a.toLowerCase()));
+      addedAssigneesStr = addedAssigneesRaw.join(', ');
+    }
+
+    // Notify newly assigned users about task assignment
+    if (addedAssigneesStr) {
+      createNotification(addedAssigneesStr, `Task Assigned: ${task.title}`, `You have been assigned to this task.`);
       const { taskListName, projectName } = await getTaskDetailsForEmail(task);
-      notifyEmailsByNames(task.assignees, `Task Assigned: ${task.title}`, {
+      notifyEmailsByNames(addedAssigneesStr, `Task Assigned: ${task.title}`, {
         author: 'A team member',
         action: 'assigned you to',
         itemTitle: task.title,
         boardName: taskListName,
         projectName: projectName,
-        buttonText: 'View Item'
+        buttonText: 'View Item',
+        taskId: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')
       }, 'task');
     }
 
@@ -1368,7 +1393,8 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
           boardName: taskListName,
           projectName: projectName,
           commentText: comment.text,
-          buttonText: 'Reply on Trexo CRM'
+          buttonText: 'Reply on Trexo CRM',
+          taskId: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')
         }, 'comment');
       }
       
@@ -1393,7 +1419,8 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
           boardName: taskListName,
           projectName: projectName,
           commentText: comment.text,
-          buttonText: 'Reply on Trexo CRM'
+          buttonText: 'Reply on Trexo CRM',
+          taskId: task ? (task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')) : ''
         }, 'comment');
       }
     } catch (e) {

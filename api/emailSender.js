@@ -68,6 +68,11 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
           <h1 style="margin:0; padding-left:40px; font-size:20px; font-weight:700; color:#1a1d1f; display:flex;">
              Trexo CRM
           </h1>
+          ${context.taskId ? `
+            <div style="margin:0; padding-left:40px; font-size:13px; font-weight:600; color:#6b7280; display:flex; margin-top:2px;">
+              (${context.taskId})
+            </div>
+          ` : ''}
         </div>
         
         <!-- Main Content -->
