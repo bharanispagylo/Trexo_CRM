@@ -132,7 +132,7 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
 
   // Redirect recipient in development mode
   let recipients = Array.isArray(to) ? to : [to];
-  if (process.env.NODE_ENV === 'DEV' || process.env.NODE_ENV === 'development') {
+  if ((process.env.NODE_ENV === 'DEV' || process.env.NODE_ENV === 'development') && process.env.SEND_REAL_EMAILS !== 'true') {
     const devEmails = getDevEmails();
     if (devEmails.length > 0) {
       recipients = devEmails;
@@ -201,7 +201,7 @@ async function sendOtpEmail(to, otp) {
   `;
 
   let recipients = [to];
-  if (process.env.NODE_ENV === 'DEV' || process.env.NODE_ENV === 'development') {
+  if ((process.env.NODE_ENV === 'DEV' || process.env.NODE_ENV === 'development') && process.env.SEND_REAL_EMAILS !== 'true') {
     const devEmails = getDevEmails();
     if (devEmails.length > 0) {
       recipients = devEmails;

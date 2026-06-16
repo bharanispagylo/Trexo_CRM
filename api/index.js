@@ -174,7 +174,8 @@ const createNotification = async (userIds, title, message) => {
             OR: [
               { fullName: { contains: nameWithSpaces, mode: 'insensitive' } },
               { firstName: { contains: nameWithSpaces, mode: 'insensitive' } },
-              { lastName: { contains: nameWithSpaces, mode: 'insensitive' } }
+              { lastName: { contains: nameWithSpaces, mode: 'insensitive' } },
+              { email: { contains: item, mode: 'insensitive' } }
             ]
           }
         });
@@ -238,6 +239,15 @@ const notifyEmailsByNames = async (userIds, subject, message, type) => {
   } catch (err) {
     console.error('[Email Notification Error]', err.message);
   }
+};
+
+const getTaskDisplayId = (task) => {
+  if (!task) return '';
+  const no = task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '');
+  const digits = no.replace(/\D/g, '');
+  if (!digits) return no;
+  const prefix = task.parentId ? 'S' : 'T';
+  return `${prefix}${digits}`;
 };
 
 const getTaskDetailsForEmail = async (task) => {
@@ -1108,7 +1118,7 @@ app.post('/api/tasks', async (req, res) => {
         boardName: taskListName,
         projectName: projectName,
         buttonText: 'View Item',
-        taskId: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')
+        taskId: getTaskDisplayId(task)
       }, 'task');
     }
     res.json(task);
@@ -1185,16 +1195,20 @@ app.put('/api/tasks/:id', async (req, res) => {
 
     // Notify newly assigned users about task assignment
     if (addedAssigneesStr) {
-      createNotification(addedAssigneesStr, `Task Assigned: ${task.title}`, `You have been assigned to this task.`);
+      const isReassignment = existingTask.assignees && existingTask.assignees.trim().length > 0;
+      const notificationTitle = isReassignment ? `Task Reassigned: ${task.title}` : `Task Assigned: ${task.title}`;
+      const notificationMsg = isReassignment ? `You have been reassigned to this task.` : `You have been assigned to this task.`;
+
+      createNotification(addedAssigneesStr, notificationTitle, notificationMsg);
       const { taskListName, projectName } = await getTaskDetailsForEmail(task);
-      notifyEmailsByNames(addedAssigneesStr, `Task Assigned: ${task.title}`, {
+      notifyEmailsByNames(addedAssigneesStr, notificationTitle, {
         author: 'A team member',
-        action: 'assigned you to',
+        action: isReassignment ? 'reassigned you to' : 'assigned you to',
         itemTitle: task.title,
         boardName: taskListName,
         projectName: projectName,
         buttonText: 'View Item',
-        taskId: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')
+        taskId: getTaskDisplayId(task)
       }, 'task');
     }
 
@@ -1344,20 +1358,33 @@ app.delete('/api/worklogs/:logId', async (req, res) => {
 app.post('/api/tasks/:id/comments', async (req, res) => {
   try {
     const authorName = req.body.author || 'Anonymous';
-    
-    // Find the author's user ID since Prisma requires it
-    const userRecord = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { fullName: authorName },
-          { firstName: authorName },
-          { lastName: authorName },
-          { email: authorName }
-        ]
-      }
-    });
+    let authorId = req.body.authorId;
 
-    let authorId = userRecord?.id;
+    if (authorId) {
+      // Verify authorId exists in the database
+      const userExists = await prisma.user.findUnique({
+        where: { id: authorId }
+      });
+      if (!userExists) {
+        authorId = null;
+      }
+    }
+
+    if (!authorId) {
+      // Find the author's user ID since Prisma requires it
+      const userRecord = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { fullName: authorName },
+            { firstName: authorName },
+            { lastName: authorName },
+            { email: authorName }
+          ]
+        }
+      });
+      authorId = userRecord?.id;
+    }
+
     if (!authorId) {
        const fallbackUser = await prisma.user.findFirst();
        authorId = fallbackUser?.id;
@@ -1394,7 +1421,7 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
           projectName: projectName,
           commentText: comment.text,
           buttonText: 'Reply on Trexo CRM',
-          taskId: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')
+          taskId: getTaskDisplayId(task)
         }, 'comment');
       }
       
@@ -1420,7 +1447,7 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
           projectName: projectName,
           commentText: comment.text,
           buttonText: 'Reply on Trexo CRM',
-          taskId: task ? (task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '')) : ''
+          taskId: getTaskDisplayId(task)
         }, 'comment');
       }
     } catch (e) {
@@ -1462,6 +1489,39 @@ app.put('/api/tasks/:id/comments/:commentId/react', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+app.put('/api/comments/:id', async (req, res) => {
+  try {
+    const comment = await prisma.comment.update({
+      where: { id: req.params.id },
+      data: {
+        text: req.body.text
+      },
+      include: { user: true }
+    });
+    res.json({
+      ...comment,
+      author: comment.user?.fullName || comment.user?.firstName || 'Anonymous'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/comments/:id', async (req, res) => {
+  try {
+    await prisma.comment.deleteMany({
+      where: { parentId: req.params.id }
+    });
+    await prisma.comment.delete({
+      where: { id: req.params.id }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // 9. Project Queries
 app.post('/api/project-queries', async (req, res) => {
