@@ -296,6 +296,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const [mentionState, setMentionState] = useState({ isOpen: false, filter: '' });
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
   const [workLogs, setWorkLogs] = useState([]);
   const [workLogForm, setWorkLogForm] = useState({
     logDate: new Date().toISOString().split('T')[0],
@@ -545,6 +547,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       await api.post(`/tasks/${task.id}/comments`, {
         text: commentText,
         author: currentUser?.fullName || currentUser?.name || 'User',
+        authorId: currentUser?.id,
         parentId
       });
 
@@ -571,6 +574,40 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     } catch (err) {
       console.error('React error:', err);
     }
+  };
+
+  const handleStartEditComment = (commentId, currentText) => {
+    const { cleanText } = parseCommentAttachment(currentText);
+    setEditingCommentId(commentId);
+    setEditingCommentText(cleanText);
+  };
+
+  const handleSaveEditComment = async (commentId, originalText) => {
+    if (!editingCommentText.trim()) return;
+    const attachmentMatch = originalText.match(/\[ATTACHMENT:[^\]]+\]/);
+    let updatedText = editingCommentText.trim();
+    if (attachmentMatch) {
+      updatedText = `${updatedText} ${attachmentMatch[0]}`.trim();
+    }
+    try {
+      await api.put(`/comments/${commentId}`, { text: updatedText });
+      setEditingCommentId(null);
+      setEditingCommentText('');
+      fetchComments();
+    } catch (err) {
+      console.error('Edit comment error:', err);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    confirm('Are you sure you want to delete this comment?', async () => {
+      try {
+        await api.delete(`/comments/${commentId}`);
+        fetchComments();
+      } catch (err) {
+        console.error('Delete comment error:', err);
+      }
+    }, 'Delete Comment');
   };
   
   const handleAddWorkLog = async (isBilledArg = false) => {
@@ -825,6 +862,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
   const renderComment = (c, isReply = false) => {
     const { cleanText, attachment } = parseCommentAttachment(c.text);
+    const isOwnComment = 
+      (c.authorId && currentUser?.id && c.authorId.toLowerCase() === currentUser.id.toLowerCase()) ||
+      (c.author && (currentUser?.fullName || currentUser?.name) && c.author.trim().toLowerCase() === (currentUser?.fullName || currentUser?.name).trim().toLowerCase());
+
     return (
       <div key={c.id} className={`saas-comment-card ${isReply ? 'is-reply' : ''}`}>
         <div className="comment-header">
@@ -832,35 +873,148 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             {initials(c.author)}
           </div>
           <div className="comment-content-block" style={{ width: '100%' }}>
-            <div className="comment-author-row">
-              <span className="comment-author-name">
-                {c.author}
-                {isReply && <span style={{ color: '#94a3b8', fontSize: '0.7rem', fontWeight: '500', marginLeft: '0.4rem', fontStyle: 'italic' }}>replied</span>}
-              </span>
-              <span className="comment-post-time">
-                {new Date(c.createdAt).toLocaleDateString('en-GB', {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric'
-                })}, {new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
+            <div className="comment-author-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span className="comment-author-name">
+                  {c.author}
+                  {isReply && <span style={{ color: '#94a3b8', fontSize: '0.7rem', fontWeight: '500', marginLeft: '0.4rem', fontStyle: 'italic' }}>replied</span>}
+                </span>
+                <span className="comment-post-time">
+                  {new Date(c.createdAt).toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                  })}, {new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              {isOwnComment && (
+                <div className="comment-meta-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <button
+                    type="button"
+                    title="Edit Comment"
+                    onClick={() => handleStartEditComment(c.id, c.text)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: '2px',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'color 0.15s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#2563eb'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
+                  >
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                      <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    title="Delete Comment"
+                    onClick={() => handleDeleteComment(c.id)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: '2px',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'color 0.15s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
+                  >
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="comment-text-body">
-              {cleanText.split('\n').map((line, i) => {
-                const parts = line.split(/(@[a-zA-Z0-9_-]+)/g);
-                return (
-                  <div key={i}>
-                    {parts.map((part, idx) => {
-                      if (part.startsWith('@') && part.length > 1) {
-                        return <strong key={idx} style={{ fontWeight: '700' }}>{part}</strong>;
-                      }
-                      return part;
-                    })}
-                  </div>
-                );
-              })}
-              {attachment && renderCommentAttachmentPill(attachment)}
-            </div>
+            {editingCommentId === c.id ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.4rem', marginBottom: '0.4rem' }}>
+                <textarea
+                  value={editingCommentText}
+                  onChange={e => setEditingCommentText(e.target.value)}
+                  className="reply-inline-input"
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    minHeight: '50px',
+                    padding: '0.4rem 0.6rem',
+                    fontSize: '0.85rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    resize: 'vertical'
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSaveEditComment(c.id, c.text);
+                    }
+                  }}
+                />
+                <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => {
+                      setEditingCommentId(null);
+                      setEditingCommentText('');
+                    }}
+                    style={{
+                      padding: '0.2rem 0.5rem',
+                      fontSize: '0.72rem',
+                      borderRadius: '4px',
+                      border: '1px solid #cbd5e1',
+                      background: 'white',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      color: '#475569'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleSaveEditComment(c.id, c.text)}
+                    style={{
+                      padding: '0.2rem 0.5rem',
+                      fontSize: '0.72rem',
+                      borderRadius: '4px',
+                      border: 'none',
+                      background: '#2563eb',
+                      color: 'white',
+                      cursor: 'pointer',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="comment-text-body">
+                {cleanText.split('\n').map((line, i) => {
+                  const parts = line.split(/(@[a-zA-Z0-9_-]+)/g);
+                  return (
+                    <div key={i}>
+                      {parts.map((part, idx) => {
+                        if (part.startsWith('@') && part.length > 1) {
+                          return <strong key={idx} style={{ fontWeight: '700' }}>{part}</strong>;
+                        }
+                        return part;
+                      })}
+                    </div>
+                  );
+                })}
+                {attachment && renderCommentAttachmentPill(attachment)}
+              </div>
+            )}
           <div className="comment-actions-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '0.25rem', position: 'relative' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', fontWeight: '600', color: '#64748b' }}>
               <div 
@@ -1990,10 +2144,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       handleAddComment(); 
                     } 
                   }} 
-                  placeholder={commentUploading ? "Uploading..." : "Write a comment... (Type @ to mention)"}
+                  placeholder={commentUploading ? "Uploading..." : "Write a comment..."}
                   className="comment-main-text-input"
                   style={{
-                    paddingRight: '4rem',
+                    paddingRight: '4.5rem',
                     resize: 'none',
                     height: '38px',
                     minHeight: '38px',
@@ -2056,7 +2210,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     )}
                   </div>
                 )}
-                <div style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                <div style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <span 
                     className="comment-emoji-icon" 
                     title="Insert Emoji"

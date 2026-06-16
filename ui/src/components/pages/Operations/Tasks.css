@@ -2363,6 +2363,12 @@
   color: #0f172a;
   outline: none;
   transition: all 0.15s ease;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.comment-main-text-input::-webkit-scrollbar {
+  display: none;
 }
 
 .comment-main-text-input:focus {
@@ -2372,8 +2378,6 @@
 }
 
 .comment-emoji-icon {
-  position: absolute;
-  right: 0.75rem;
   cursor: pointer;
   font-size: 1rem;
   user-select: none;
