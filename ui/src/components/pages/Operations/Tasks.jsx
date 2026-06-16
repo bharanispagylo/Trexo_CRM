@@ -3541,7 +3541,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                   <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#64748b', marginBottom: '0.5rem' }}>No tasks yet</p>
                   {can('tasks', 'create') && (
                     <button
-                      onClick={() => openInlineAdd('', 'To Do')}
+                      onClick={() => openNewTask('To Do')}
                       style={{ marginTop: '0.5rem', padding: '0.5rem 1.25rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
                     >
                       + Add Task
