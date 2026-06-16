@@ -1,0 +1,38 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /var/projects/Trexo_CRM
+
+            # Pull latest code
+            git pull origin main
+
+            # --- API ---
+            cd /var/projects/Trexo_CRM/api
+            npm install --production
+            npx prisma generate
+            pm2 restart trexo-api || pm2 start npm --name "trexo-api" -- start
+            pm2 save
+
+            # --- UI ---
+            cd /var/projects/Trexo_CRM/ui
+            npm install
+            npm run build
+
+            echo "Deployment complete"
