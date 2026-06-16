@@ -123,6 +123,22 @@ prisma.$connect()
       }
     }
 
+    // Ensure users table has firstName, lastName, and fullName columns
+    const usersColumnFixes = [
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS "firstName" TEXT;',
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS "lastName" TEXT;',
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS "fullName" TEXT;',
+    ];
+    for (const sql of usersColumnFixes) {
+      try {
+        await prisma.$executeRawUnsafe(sql);
+        const colName = sql.match(/ADD COLUMN IF NOT EXISTS "?(\w+)"?/i)?.[1];
+        console.log(`[Self-Healing] Users column ${colName} verified/added successfully.`);
+      } catch (e) {
+        console.warn(`[Self-Healing] Warning for: ${sql.substring(0, 60)}...`, e.message);
+      }
+    }
+
     try {
       await prisma.task.deleteMany({ where: { clientId: '' } });
       await prisma.project.deleteMany({ where: { clientId: '' } });
@@ -135,7 +151,7 @@ prisma.$connect()
   })
   .catch(console.error);
 
-const { sendPushNotification } = require('./firebaseSender');
+
 
 // Helper to create notifications for multiple users
 const createNotification = async (userIds, title, message) => {
@@ -174,8 +190,7 @@ const createNotification = async (userIds, title, message) => {
         data: { userId: uid, title, message }
       });
     }
-    // Fire off FCM push notification asynchronously
-    sendPushNotification(uniqueUserIds, title, message, prisma).catch(err => console.error('FCM Error:', err));
+
   } catch (err) {
     console.error('[Notification Error]', err.message);
   }
@@ -572,20 +587,7 @@ app.post('/api/forgot-password/reset-password', async (req, res) => {
     res.status(500).json({ error: 'Failed to reset password', details: error.message });
   }
 });
-app.post('/api/users/update-fcm-token', async (req, res) => {
-  try {
-    const { userId, fcmToken } = req.body;
-    if (!userId || !fcmToken) return res.status(400).json({ error: 'Missing userId or fcmToken' });
-    await prisma.user.update({
-      where: { id: userId },
-      data: { fcmToken }
-    });
-    res.json({ success: true });
-  } catch (error) {
-    console.error('POST /api/users/update-fcm-token error:', error);
-    res.status(500).json({ error: 'Failed to update FCM token', details: error.message });
-  }
-});
+
 
 
 app.put('/api/users/:id', async (req, res) => {
