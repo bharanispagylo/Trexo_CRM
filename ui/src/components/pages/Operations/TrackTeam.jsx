@@ -191,15 +191,55 @@ export default function TrackTeam({ user }) {
 
           <div className="saas-form-container">
             <div className="form-grid">
-              <div className="saas-field full-width">
+              <div className="saas-field">
                 <label className="saas-label">Name *</label>
-                <input 
-                  className="saas-input" 
-                  placeholder="Enter member name" 
+                <select 
+                  className="saas-select" 
                   value={memberForm.name} 
-                  onChange={e => setMemberForm({...memberForm, name: e.target.value})} 
-                />
+                  onChange={e => {
+                    const selectedName = e.target.value;
+                    const matchedUser = users.find(u => {
+                      const displayName = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).trim() || u.email || 'Unknown';
+                      return displayName === selectedName;
+                    });
+                    
+                    if (matchedUser) {
+                      const userRoleLower = (matchedUser.role || 'Employee').toLowerCase();
+                      const matchingRole = roles.find(r => r.toLowerCase() === userRoleLower) || 'Employee';
+                      
+                      setMemberForm({
+                        name: selectedName,
+                        role: matchingRole,
+                        designation: matchedUser.designation || ''
+                      });
+                    } else {
+                      setMemberForm({
+                        ...memberForm,
+                        name: selectedName
+                      });
+                    }
+                  }} 
+                >
+                  <option value="">Select Member...</option>
+                  {users
+                    .filter(u => {
+                      const uName = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).trim().toLowerCase();
+                      return !teamMembers.some(m => (m.name || '').trim().toLowerCase() === uName);
+                    })
+                    .slice()
+                    .sort((a, b) => {
+                      const nameA = (a.fullName || `${a.firstName || ''} ${a.lastName || ''}`).trim();
+                      const nameB = (b.fullName || `${b.firstName || ''} ${b.lastName || ''}`).trim();
+                      return nameA.localeCompare(nameB);
+                    })
+                    .map(u => {
+                      const displayName = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).trim() || u.email || 'Unknown';
+                      return <option key={u.id} value={displayName}>{displayName}</option>;
+                    })}
+                </select>
               </div>
+
+              <div className="saas-field"></div>
 
               <div className="saas-field">
                 <label className="saas-label">Role</label>

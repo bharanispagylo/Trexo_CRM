@@ -52,7 +52,7 @@ export default function Estimations({ user }) {
     if (!form.taskName?.trim() || !form.client?.trim() || !form.projectId || form.estimatedHours <= 0) {
       setErrors({
         taskName: !form.taskName?.trim() ? 'Task Name is required' : '',
-        client: !form.client?.trim() ? 'Company Name is required' : '',
+        client: !form.client?.trim() ? 'Client Name is required' : '',
         projectId: !form.projectId ? 'Project is required' : '',
         estimatedHours: form.estimatedHours <= 0 ? 'Estimated hours must be greater than 0' : ''
       });
@@ -148,7 +148,7 @@ export default function Estimations({ user }) {
                 {errors.taskName && <span className="estimations-error-text">{errors.taskName}</span>}
               </div>
               <div className="estimations-field">
-                <label className="estimations-label">Company Name *</label>
+                <label className="estimations-label">Client Name *</label>
                 <select 
                   className={`estimations-select ${errors.client ? 'error' : ''}`} 
                   value={form.clientId || ''} 
@@ -157,7 +157,7 @@ export default function Estimations({ user }) {
                     setForm({...form, clientId: clientObj?.id || null, client: clientObj?.company || clientObj?.name || ''});
                   }}
                 >
-                  <option value="">Select a Company Name</option>
+                  <option value="">Select a Client Name</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
                 </select>
                 {errors.client && <span className="estimations-error-text">{errors.client}</span>}
@@ -202,7 +202,7 @@ export default function Estimations({ user }) {
                   <tr>
                     <th>Est. ID</th>
                     <th>Task Name</th>
-                    <th>Company</th>
+                    <th>Client</th>
                     <th>Project</th>
                     <th>Estimation Hrs</th>
                     <th>Status</th>
@@ -214,7 +214,7 @@ export default function Estimations({ user }) {
                     <tr key={est.id}>
                       <td data-label="Est. ID" style={{ fontWeight: '600', color: '#334155' }}>{est.estimationNo}</td>
                       <td data-label="Task" style={{ fontWeight: '600' }}>{est.taskName}</td>
-                      <td data-label="Company">{(() => {
+                      <td data-label="Client">{(() => {
                         const targetId = est.clientId || est.client_id;
                         const clientObj = clients.find(c => 
                           (targetId && c.id === targetId && targetId !== 'null') ||

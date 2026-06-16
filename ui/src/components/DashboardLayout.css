@@ -1411,6 +1411,10 @@
   }
 }
 
+.saas-page-content.tasks-page-active {
+  overflow-y: hidden;
+}
+
 
 
 

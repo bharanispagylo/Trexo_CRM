@@ -689,6 +689,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const handleInlineSave = async (updatedForm) => {
+    if (!updatedForm.assignees || !updatedForm.assignees.trim()) {
+      alert("Assignee is required", "warning", "Validation Error");
+      setForm(form);
+      return;
+    }
     try {
       const { comments, taskList, ...payload } = updatedForm;
       await onSave(payload, true);
@@ -705,10 +710,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       newErrors.taskNo = "Task ID is required";
     }
 
-    if (!form.title.trim()) {
+    if (!form.title || !form.title.trim()) {
       newErrors.title = "Title is required";
     } else if (!titleRegex.test(form.title)) {
       newErrors.title = "Title must be 3-100 characters";
+    }
+
+    if (!form.assignees || !form.assignees.trim()) {
+      newErrors.assignees = "Assignee is required";
     }
 
     if (form.isBillable && (form.approvedHours < 0 || form.actualHours < 0)) {
@@ -1037,7 +1046,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 value={form.title} 
                 onChange={e => set('title', e.target.value)} 
                 className="saas-title-input"
-                placeholder="Task Title"
+                placeholder="Task Title *"
                 style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem', fontSize: '1.75rem', fontWeight: '800' }}
               />
             ) : (
@@ -1108,10 +1117,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     </select>
                   </span>
                   
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconAssignee /> Assignee</span>
+                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconAssignee /> Assignee *</span>
                   <span className="saas-meta-value">
                     <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
-                      <option value="">Empty</option>
+                      <option value="">Select Assignee...</option>
                       {(form.projectName && projects.find(p => p.name === form.projectName)?.members ? projects.find(p => p.name === form.projectName).members.split(',').map(m => m.trim()).filter(Boolean) : users.map(u => u.id)).map(uId => {
                         const uObj = users.find(u => u.id === uId) || {};
                         const displayName = uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown';
@@ -1254,33 +1263,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
                   {form.isBillable && (
                     <>
-                      {/* Billable Amount */}
-                      <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
-                        <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
-                          Billable Amount ($)
-                        </label>
-                        <div>
-                          {isEditing ? (
-                            <input 
-                              type="number" 
-                              value={form.billableAmount !== undefined && form.billableAmount !== null ? form.billableAmount : ''}
-                              onChange={e => {
-                                const val = e.target.value;
-                                setForm(f => ({
-                                  ...f,
-                                  billableAmount: val === '' ? null : parseFloat(val)
-                                }));
-                              }}
-                              className="saas-grid-input"
-                              placeholder="e.g. 500"
-                            />
-                          ) : (
-                            <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
-                              ${Number(form.billableAmount || 0).toFixed(2)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+
 
                       {/* Billable Hours */}
                       <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
@@ -3285,7 +3268,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           
           taskListsData.forEach(list => {
             const listTasks = byList[list.id] || [];
-            if (listTasks.length === 0) return;
             
             const sortedTasks = [...listTasks].sort((a, b) => {
               if (!a.dueDate) return 1;
@@ -3356,8 +3338,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             });
           }
           
-          const finalProjectGroups = Object.values(projectGroupsMap)
+          let finalProjectGroups = Object.values(projectGroupsMap)
             .filter(projGroup => projGroup.lists.length > 0);
+
+          if (filterProjectName) {
+            finalProjectGroups = finalProjectGroups.filter(projGroup => projGroup.name === filterProjectName);
+          }
 
           finalProjectGroups.forEach(projGroup => {
             projGroup.lists.forEach(list => {

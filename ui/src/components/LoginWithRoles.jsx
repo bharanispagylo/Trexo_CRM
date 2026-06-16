@@ -109,10 +109,7 @@ function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }) {
             </div>
 
             <div className="input-group input-group-mb-lg">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                <label className="input-label" style={{ marginBottom: 0 }}>Password</label>
-                <button type="button" onClick={onForgotPasswordClick} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.8rem', cursor: 'pointer', padding: 0, fontWeight: 500 }}>Forgot password?</button>
-              </div>
+              <label className="input-label">Password</label>
               <div style={{ position: "relative" }}>
                 <input
                   type={showPwd ? "text" : "password"}
@@ -128,6 +125,9 @@ function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }) {
                 >
                   <PasswordToggleIcon show={showPwd} />
                 </button>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.35rem' }}>
+                <button type="button" onClick={onForgotPasswordClick} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.8rem', cursor: 'pointer', padding: 0, fontWeight: 500 }}>Forgot password?</button>
               </div>
             </div>
 
