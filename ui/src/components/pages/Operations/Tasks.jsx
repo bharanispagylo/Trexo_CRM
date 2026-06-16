@@ -3632,7 +3632,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                       <th className="cu-th cu-th-assignee">ASSIGNEE</th>
                                       <th className="cu-th cu-th-list">STATUS</th>
                                       <th className="cu-th cu-th-delivery">DUE DATE</th>
-                                      <th className="cu-th cu-th-priority">P</th>
                                       <th className="cu-th cu-th-actions"></th>
                                     </tr>
                                   </thead>
@@ -3737,16 +3736,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                               </div>
                                             </td>
-                                            <td className="cu-td cu-td-priority" onClick={e => e.stopPropagation()}>
-                                              <div className="cu-inline-field-wrapper cu-priority-wrapper">
-                                                <PriorityFlag priority={task.priority} />
-                                                <select className="cu-inline-dropdown cu-priority-select" value={task.priority || 'Medium'} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { priority: val }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, priority: val } : t)); } catch(err) { console.error(err); } }}>
-                                                  {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-                                                </select>
-                                              </div>
-                                            </td>
                                             <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
                                               <div className="cu-row-actions">
+                                                <PriorityFlag priority={task.priority} />
                                                 {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && ((user?.id && (task.assignees || '').toLowerCase().includes(user.id.toLowerCase())) || ((user?.fullName || user?.name) && (task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))))) && (
                                                   <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task'); }} title="Delete">
                                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -3794,16 +3786,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                     <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                                   </div>
                                                 </td>
-                                                <td className="cu-td cu-td-priority" onClick={e => e.stopPropagation()}>
-                                                  <div className="cu-inline-field-wrapper cu-priority-wrapper">
-                                                    <PriorityFlag priority={sub.priority} />
-                                                    <select className="cu-inline-dropdown cu-priority-select" value={sub.priority || 'Medium'} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { priority: val }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, priority: val } : t)); } catch(err) { console.error(err); } }}>
-                                                      {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-                                                    </select>
-                                                  </div>
-                                                </td>
                                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
                                                   <div className="cu-row-actions">
+                                                    <PriorityFlag priority={sub.priority} />
                                                     {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && ((user?.id && (sub.assignees || '').toLowerCase().includes(user.id.toLowerCase())) || ((user?.fullName || user?.name) && (sub.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))))) && (
                                                       <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this subtask?', () => handleDeleteTask(sub.id), 'Delete Subtask'); }} title="Delete">
                                                         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -3818,7 +3803,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                           if (isAddingSubtask) {
                                             rows.push(
                                               <tr key={`add-sub-${task.id}`} className="cu-inline-row animate-fade-in" style={{ background: '#f8fafc' }}>
-                                                <td colSpan="6" style={{ paddingLeft: '2.5rem' }}>
+                                                <td colSpan="5" style={{ paddingLeft: '2.5rem' }}>
                                                   <div className="new-task-inline-bar" style={{ borderLeft: '2px solid #2563eb', paddingLeft: '8px' }}>
                                                     <div className="ntib-left">
                                                       <span className="ntib-dotted-circle"></span>
@@ -3879,7 +3864,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                     {/* Inline Add Row */}
                                     {isInline ? (
                                       <tr className="cu-inline-row animate-fade-in">
-                                        <td colSpan="6" style={{ padding: '8px' }}>
+                                        <td colSpan="5" style={{ padding: '8px' }}>
                                           <div className="new-task-inline-bar">
                                             <div className="ntib-left">
                                               <span className="ntib-dotted-circle"></span>
@@ -3952,7 +3937,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                     ) : (
                                       can('tasks', 'create') && (
                                         <tr className="cu-add-row" onClick={() => openInlineAdd('', 'To Do', list.id)}>
-                                          <td colSpan="6">
+                                          <td colSpan="5">
                                             <span className="cu-add-icon">+</span>
                                             <span className="cu-add-text">Add Task</span>
                                           </td>
@@ -4232,7 +4217,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                             <th className="cu-th cu-th-name">NAME</th>
                             <th className="cu-th cu-th-project">PROJECT</th>
                             <th className="cu-th cu-th-delivery">DUE DATE</th>
-                            <th className="cu-th cu-th-priority">P</th>
                             <th className="cu-th cu-th-actions"></th>
                           </tr>
                         </thead>
@@ -4343,16 +4327,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                               </div>
                                             </td>
-                                            <td className="cu-td cu-td-priority" onClick={e => e.stopPropagation()}>
-                                              <div className="cu-inline-field-wrapper cu-priority-wrapper">
-                                                <PriorityFlag priority={task.priority} />
-                                                <select className="cu-inline-dropdown cu-priority-select" value={task.priority || 'Medium'} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { priority: val }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, priority: val } : t)); } catch(err) { console.error(err); } }}>
-                                                  {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-                                                </select>
-                                              </div>
-                                            </td>
                                             <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
                                               <div className="cu-row-actions">
+                                                <PriorityFlag priority={task.priority} />
                                                 {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && ((user?.id && (task.assignees || '').toLowerCase().includes(user.id.toLowerCase())) || ((user?.fullName || user?.name) && (task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))))) && (
                                                   <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task'); }} title="Delete">
                                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -4389,16 +4366,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                     <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                                   </div>
                                                 </td>
-                                                <td className="cu-td cu-td-priority" onClick={e => e.stopPropagation()}>
-                                                  <div className="cu-inline-field-wrapper cu-priority-wrapper">
-                                                    <PriorityFlag priority={sub.priority} />
-                                                    <select className="cu-inline-dropdown cu-priority-select" value={sub.priority || 'Medium'} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { priority: val }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, priority: val } : t)); } catch(err) { console.error(err); } }}>
-                                                      {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-                                                    </select>
-                                                  </div>
-                                                </td>
                                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
                                                   <div className="cu-row-actions">
+                                                    <PriorityFlag priority={sub.priority} />
                                                     {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && ((user?.id && (sub.assignees || '').toLowerCase().includes(user.id.toLowerCase())) || ((user?.fullName || user?.name) && (sub.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))))) && (
                                                       <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this subtask?', () => handleDeleteTask(sub.id), 'Delete Subtask'); }} title="Delete">
                                                         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -4413,7 +4383,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                           if (isAddingSubtask) {
                                             rows.push(
                                               <tr key={`add-sub-${task.id}`} className="cu-inline-row animate-fade-in" style={{ background: '#f8fafc' }}>
-                                                <td colSpan="5" style={{ paddingLeft: '2.5rem' }}>
+                                                <td colSpan="4" style={{ paddingLeft: '2.5rem' }}>
                                                   <div className="new-task-inline-bar" style={{ borderLeft: '2px solid #2563eb', paddingLeft: '8px' }}>
                                                     <div className="ntib-left">
                                                       <span className="ntib-dotted-circle"></span>
@@ -4474,7 +4444,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           {/* Inline Add Row */}
                           {isInline ? (
                             <tr className="cu-inline-row animate-fade-in">
-                              <td colSpan="5" style={{ padding: '8px' }}>
+                              <td colSpan="4" style={{ padding: '8px' }}>
                                 <div className="new-task-inline-bar">
                                   <div className="ntib-left">
                                     <span className="ntib-dotted-circle"></span>
@@ -4547,7 +4517,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           ) : (
                             can('tasks', 'create') && subTab !== 'my' && (
                               <tr className="cu-add-row" onClick={() => openInlineAdd('', col.id)}>
-                                <td colSpan="5">
+                                <td colSpan="4">
                                   <span className="cu-add-icon">+</span>
                                   <span className="cu-add-text">Add Task</span>
                                 </td>
