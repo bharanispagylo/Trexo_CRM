@@ -1564,7 +1564,7 @@
 .saas-breadcrumb-active {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #94a3b8;
 }
 
 .saas-btn-nav {
@@ -1697,6 +1697,7 @@
   color: #64748b;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .saas-tab-header-btn:hover {
@@ -4306,9 +4307,8 @@
     align-items: center !important;
   }
 
-  /* Hide created-date and Cancel button from nav (back arrow = cancel on mobile) */
-  .saas-nav-created-date,
-  .saas-nav-cancel-btn {
+  /* Hide created-date from nav on mobile */
+  .saas-nav-created-date {
     display: none !important;
   }
 
@@ -4324,14 +4324,25 @@
     font-size: 0.8rem !important;
   }
 
-  /* Delete button: icon only on mobile */
-  .saas-btn-danger .saas-btn-delete-text {
-    display: none;
+  /* ── Bottom form-action buttons on mobile ── */
+  .form-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 0.75rem !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    margin: 1.5rem 0 0 0 !important;
+    padding: 1.25rem 0 0 !important;
+    border-top: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
   }
 
-  /* ── Hide duplicate bottom form-action buttons on mobile ── */
-  .form-actions {
-    display: none !important;
+  .form-actions .saas-btn-primary,
+  .form-actions .saas-btn-secondary,
+  .form-actions .saas-btn-nav {
+    width: auto !important;
+    flex: none !important;
   }
 
   /* ── Detail Tabs – scrollable on mobile ── */
@@ -4699,6 +4710,7 @@
     box-shadow: 0 -4px 12px rgba(0,0,0,0.08) !important;
     background: #ffffff !important;
     border-top: 1px solid #e2e8f0 !important;
+    padding: 0.75rem !important;
   }
 
   .saas-meta-value > div {

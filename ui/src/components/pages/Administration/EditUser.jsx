@@ -13,6 +13,8 @@ export default function EditUser({ userToEdit, onBack }) {
   
 
   const [form, setForm] = useState({ 
+    firstName: userToEdit?.firstName || '',
+    lastName: userToEdit?.lastName || '',
     fullName: userToEdit?.fullName || `${userToEdit?.firstName || ''} ${userToEdit?.lastName || ''}`.trim(),
     email: userToEdit?.email || '',
     password: userToEdit?.password || '',
@@ -23,6 +25,22 @@ export default function EditUser({ userToEdit, onBack }) {
     role: userToEdit?.role || 'Employee',
     status: userToEdit?.status || 'Active'
   });
+
+  const handleFirstNameChange = (val) => {
+    setForm(prev => ({
+      ...prev,
+      firstName: val,
+      fullName: `${val} ${prev.lastName || ''}`.trim()
+    }));
+  };
+
+  const handleLastNameChange = (val) => {
+    setForm(prev => ({
+      ...prev,
+      lastName: val,
+      fullName: `${prev.firstName || ''} ${val}`.trim()
+    }));
+  };
 
   useEffect(() => {
     const fetchRoles = async () => {
@@ -73,10 +91,13 @@ export default function EditUser({ userToEdit, onBack }) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\+?[\d\s-]{10,}$/;
     const empIdRegex = /^[A-Z0-9-]{3,10}$/i;
-    const nameRegex = /^[a-z\s]{3,50}$/i;
+    const singleNameRegex = /^[a-z\s]{2,50}$/i;
 
-    if (!form.fullName) newErrors.fullName = "Full name is required";
-    else if (!nameRegex.test(form.fullName)) newErrors.fullName = "Letters only, min 3 chars";
+    if (!form.firstName) newErrors.firstName = "First name is required";
+    else if (!singleNameRegex.test(form.firstName)) newErrors.firstName = "Letters only, min 2 chars";
+
+    if (!form.lastName) newErrors.lastName = "Last name is required";
+    else if (!singleNameRegex.test(form.lastName)) newErrors.lastName = "Letters only, min 2 chars";
 
     if (!form.email) newErrors.email = "Email is required";
     else if (!emailRegex.test(form.email)) newErrors.email = "Invalid email format";
@@ -121,16 +142,27 @@ export default function EditUser({ userToEdit, onBack }) {
 
       <div className="saas-form-container">
         <div className="form-grid">
-          <div className="saas-field full-width">
-            <label className="saas-label">Full Name *</label>
+          <div className="saas-field">
+            <label className="saas-label">First Name *</label>
             <input 
-              className={`saas-input ${errors.fullName ? 'error' : ''}`} 
-              placeholder="John Doe" 
-              value={form.fullName} 
+              className={`saas-input ${errors.firstName ? 'error' : ''}`} 
+              placeholder="First Name" 
+              value={form.firstName} 
               autoComplete="off" 
-              onChange={e => setForm({...form, fullName: e.target.value})} 
+              onChange={e => handleFirstNameChange(e.target.value)} 
             />
-            {errors.fullName && <span className="error-text">{errors.fullName}</span>}
+            {errors.firstName && <span className="error-text">{errors.firstName}</span>}
+          </div>
+          <div className="saas-field">
+            <label className="saas-label">Last Name *</label>
+            <input 
+              className={`saas-input ${errors.lastName ? 'error' : ''}`} 
+              placeholder="Second Name" 
+              value={form.lastName} 
+              autoComplete="off" 
+              onChange={e => handleLastNameChange(e.target.value)} 
+            />
+            {errors.lastName && <span className="error-text">{errors.lastName}</span>}
           </div>
           <div className="saas-field">
             <label className="saas-label">Email Address *</label>

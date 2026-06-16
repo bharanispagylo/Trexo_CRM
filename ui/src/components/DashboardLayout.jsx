@@ -12,8 +12,8 @@ import Roles from './pages/Administration/Roles';
 import AddUser from './pages/Administration/AddUser';
 import EditUser from './pages/Administration/EditUser';
 import Reports from './pages/Administration/Reports';
-import { useAlert } from '../context/AlertContext';
-import { onMessageListener } from '../firebase';
+
+
 export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const [activeTab, setActiveTab] = useState(() => {
     const path = window.location.pathname.substring(1);
@@ -93,21 +93,9 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const { toast } = useAlert();
 
-  useEffect(() => {
-    const unsubscribe = onMessageListener((payload) => {
-      const title = payload?.notification?.title || 'New Notification';
-      const body = payload?.notification?.body || 'You have a new update.';
-      toast(body, 'info', title);
-      fetchNotifications(); // Refresh dropdown
-    });
-    
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+
 
   const handleMarkAsRead = async (id) => {
     try {

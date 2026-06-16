@@ -242,10 +242,6 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         if (activeTab !== 'general' && activeTab !== 'worklog') {
           setActiveTab('general');
         }
-      } else {
-        if (activeTab === 'worklog') {
-          setActiveTab('general');
-        }
       }
     } else {
       setInitialForm(form);
@@ -968,7 +964,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           <button className="saas-back-btn" onClick={onClose}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
           </button>
-          <span className="saas-breadcrumb-active">Task Details - {getDisplayId(form)}</span>
+          <span className="saas-breadcrumb-active">{getDisplayId(form)}</span>
         </div>
         
         <div className="saas-nav-right" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -1057,14 +1053,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             >
               General
             </button>
-            {task?.parentId && (
-              <button 
-                className={`saas-tab-header-btn ${activeTab === 'worklog' ? 'active' : ''}`}
-                onClick={() => setActiveTab('worklog')}
-              >
-                Work Log
-              </button>
-            )}
+            <button 
+              className={`saas-tab-header-btn ${activeTab === 'worklog' ? 'active' : ''}`}
+              onClick={() => setActiveTab('worklog')}
+            >
+              Work Log
+            </button>
             {currentUser?.role?.toLowerCase() === 'admin' && !task?.parentId && (
               <button 
                 className={`saas-tab-header-btn ${activeTab === 'billing' ? 'active' : ''}`}
@@ -1361,7 +1355,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             )}
 
 
-            {activeTab === 'worklog' && task?.parentId && (
+            {activeTab === 'worklog' && (
               <div className="saas-details-grid animate-fade-in" style={{ display: 'block' }}>
                 {!isEdit ? (
                   <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
@@ -1402,7 +1396,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     <div>
                       <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.95rem', fontWeight: '700' }}>Recent Work Logs</h4>
                       {workLogs.filter(log => !log.isBilled).length === 0 ? (
-                        <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No work logs found for this subtask.</p>
+                        <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No work logs found for this task.</p>
                       ) : (
                         <div className="table-responsive">
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
@@ -1977,8 +1971,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             )}
             <div className="comment-box-flex-row">
               <div className="comment-input-field-wrapper" style={{ position: 'relative' }}>
-                <input 
-                  type="text" 
+                <textarea 
                   value={newComment} 
                   onChange={e => {
                     const val = e.target.value;
@@ -2009,11 +2002,23 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       }
                       return;
                     }
-                    if (e.key === 'Enter') handleAddComment(); 
+                    if (e.key === 'Enter' && !e.shiftKey) { 
+                      e.preventDefault();
+                      handleAddComment(); 
+                    } 
                   }} 
                   placeholder={commentUploading ? "Uploading..." : "Write a comment... (Type @ to mention)"}
                   className="comment-main-text-input"
-                  style={{ paddingRight: '4rem' }}
+                  style={{
+                    paddingRight: '4rem',
+                    resize: 'none',
+                    height: '38px',
+                    minHeight: '38px',
+                    boxSizing: 'border-box',
+                    paddingTop: '8px',
+                    paddingBottom: '8px',
+                    borderRadius: '20px'
+                  }}
                   disabled={commentUploading}
                 />
                 
@@ -2924,6 +2929,25 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   });
 
   const pageTitle = subTab === 'my' ? '' : 'All Tasks';
+
+  if (drawerOpen) {
+    return (
+      <TaskDetailView
+        task={drawerTask}
+        tasks={tasks}
+        onRefresh={fetchTasks}
+        onSelectTask={(t) => setDrawerTask(t)}
+        onSave={async (taskData, silent) => {
+          await handleSaveTask(taskData, silent);
+          if (!silent) closeDrawer();
+        }}
+        onDelete={async (id) => { await handleDeleteTask(id); closeDrawer(); }}
+        onClose={closeDrawer}
+        currentUser={user}
+        initialEditMode={taskDetailMode}
+      />
+    );
+  }
 
   return (
     <div className="tasks-3col-layout">

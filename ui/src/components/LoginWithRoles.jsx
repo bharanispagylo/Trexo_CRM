@@ -3,7 +3,7 @@ import "./LoginWithRoles.css";
 import DashboardLayout from "./DashboardLayout";
 import { api } from "../api/client";
 import { PermissionProvider, usePermissions } from "../hooks/usePermissions";
-import { requestForToken } from "../firebase";
+
 
 // ── Mock Users Database Removed ──────────────────────────────
 
@@ -96,60 +96,58 @@ function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }) {
             </div>
           )}
 
-          <div className="input-group">
-            <label className="input-label">Email Address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleLogin()}
-              placeholder="you@officecrm.in"
-              className="input-field"
-            />
-          </div>
-
-          <div className="input-group input-group-mb-lg">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-              <label className="input-label" style={{ marginBottom: 0 }}>Password</label>
-              <button type="button" onClick={onForgotPasswordClick} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.8rem', cursor: 'pointer', padding: 0, fontWeight: 500 }}>Forgot password?</button>
-            </div>
-            <div style={{ position: "relative" }}>
+          <form onSubmit={e => { e.preventDefault(); handleLogin(); }} style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div className="input-group">
+              <label className="input-label">Email Address</label>
               <input
-                type={showPwd ? "text" : "password"}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleLogin()}
-                placeholder="Enter your password"
-                className="input-field input-field-pwd"
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@officecrm.in"
+                className="input-field"
               />
-              <button
-                type="button"
-                onClick={() => setShowPwd(v => !v)}
-                className="pwd-toggle-btn"
-              >
-                <PasswordToggleIcon show={showPwd} />
-              </button>
             </div>
-          </div>
 
-          <button
-            onClick={handleLogin}
-            disabled={loading}
-            className="btn-primary"
-          >
-            {loading ? (
-              <><span className="spinner"></span> Signing in...</>
-            ) : (
-              <><span></span> Sign In</>
-            )}
-          </button>
+            <div className="input-group input-group-mb-lg">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                <label className="input-label" style={{ marginBottom: 0 }}>Password</label>
+                <button type="button" onClick={onForgotPasswordClick} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.8rem', cursor: 'pointer', padding: 0, fontWeight: 500 }}>Forgot password?</button>
+              </div>
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPwd ? "text" : "password"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="input-field input-field-pwd"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(v => !v)}
+                  className="pwd-toggle-btn"
+                >
+                  <PasswordToggleIcon show={showPwd} />
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary"
+            >
+              {loading ? (
+                <><span className="spinner"></span> Signing in...</>
+              ) : (
+                <><span></span> Sign In</>
+              )}
+            </button>
+          </form>
 
           <div className="auth-switch-prompt">
             <span className="auth-switch-text">Don't have an account? </span>
             <button className="auth-switch-btn" onClick={onRegisterClick}>Register now</button>
           </div>
-
-
         </div>
       </div>
     </div>
@@ -262,60 +260,61 @@ function RegisterPage({ onRegister, onLoginClick }) {
             </div>
           )}
 
-          <div className="input-group">
-            <label className="input-label">Full Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="John Doe"
-              className="input-field"
-            />
-          </div>
-
-          <div className="input-group">
-            <label className="input-label">Email Address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@officecrm.in"
-              className="input-field"
-            />
-          </div>
-
-          <div className="input-group input-group-mb-lg">
-            <label className="input-label">Password</label>
-            <div style={{ position: "relative" }}>
+          <form onSubmit={e => { e.preventDefault(); handleRegister(); }} style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div className="input-group">
+              <label className="input-label">Full Name</label>
               <input
-                type={showPwd ? "text" : "password"}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleRegister()}
-                placeholder="Create a password"
-                className="input-field input-field-pwd"
+                type="text"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="John Doe"
+                className="input-field"
               />
-              <button
-                type="button"
-                onClick={() => setShowPwd(v => !v)}
-                className="pwd-toggle-btn"
-              >
-                <PasswordToggleIcon show={showPwd} />
-              </button>
             </div>
-          </div>
 
-          <button
-            onClick={handleRegister}
-            disabled={loading}
-            className="btn-primary"
-          >
-            {loading ? (
-              <><span className="spinner"></span> Registering...</>
-            ) : (
-              <>Sign Up</>
-            )}
-          </button>
+            <div className="input-group">
+              <label className="input-label">Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@officecrm.in"
+                className="input-field"
+              />
+            </div>
+
+            <div className="input-group input-group-mb-lg">
+              <label className="input-label">Password</label>
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPwd ? "text" : "password"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Create a password"
+                  className="input-field input-field-pwd"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(v => !v)}
+                  className="pwd-toggle-btn"
+                >
+                  <PasswordToggleIcon show={showPwd} />
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary"
+            >
+              {loading ? (
+                <><span className="spinner"></span> Registering...</>
+              ) : (
+                <>Sign Up</>
+              )}
+            </button>
+          </form>
 
           <div className="auth-switch-prompt">
             <span className="auth-switch-text">Already have an account? </span>
@@ -1373,11 +1372,7 @@ export default function LoginWithRoles() {
   const [isForgotPwd, setIsForgotPwd] = useState(false);
   const [loginToast, setLoginToast] = useState(null);
 
-  useEffect(() => {
-    if (user && user.id) {
-      requestForToken(user.id, api).catch(err => console.error("Error registering FCM token:", err));
-    }
-  }, [user]);
+
 
   const handleLogin = (u) => {
     setUser(u);

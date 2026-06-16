@@ -290,8 +290,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
   // ── LIST HANDLERS ──
   const handleAdd = async () => {
-    if (!form.name?.trim() || !form.client?.trim() || !form.description?.trim()) {
-      alert("Please fill out all mandatory fields: Project Name, Client, and Description.", 'warning', 'Required Fields');
+    if (!form.name?.trim() || !form.client?.trim()) {
+      alert("Please fill out all mandatory fields: Project Name and Client.", 'warning', 'Required Fields');
       return;
     }
     setIsSaving(true);
@@ -542,7 +542,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           </select>
         </div>
         <div className="saas-field proj-span-2">
-          <label className="saas-label">Description *</label>
+          <label className="saas-label">Description</label>
           <textarea className="saas-textarea" style={{ minHeight: '60px' }} placeholder="Project description..." value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
         </div>
         <div className="saas-field">
@@ -930,28 +930,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
               <span className="detail-btn-text">Edit Project</span>
             </button>
-            <button
-              className="detail-addtask-btn"
-              title="Add Task"
-              onClick={() => {
-                if (onNavigateToTasks) {
-                  onNavigateToTasks({ projectName: selectedProject.name });
-                } else {
-                  setDetailTab('Tasks');
-                  const firstList = selectedProject.taskLists?.[0];
-                  if (firstList) {
-                    setSelectedTaskListId(firstList.id);
-                    setTaskFormType('create');
-                    setEditingTask(null);
-                    setTaskFormFields({ title: '', assignees: '', status: 'To Do', priority: 'Medium', startDate: '', dueDate: '', description: '' });
-                    setShowTaskFormModal(true);
-                  }
-                }
-              }}
-            >
-              <span className="detail-btn-text">+ Add Task</span>
-              <span className="detail-btn-icon">+</span>
-            </button>
           </div>
         </div>
 
@@ -1226,6 +1204,32 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                           </div>
                           
                           <div className="cu-section-right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            {can('tasks', 'create') && (
+                              <button
+                                style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                                title="Add Task to Group"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedTaskListId(list.id);
+                                  setTaskFormType('create');
+                                  setEditingTask(null);
+                                  setTaskFormFields({
+                                    title: '',
+                                    assignees: '',
+                                    status: 'To Do',
+                                    priority: 'Medium',
+                                    assignedDate: '',
+                                    dueDate: '',
+                                    deliveredDate: '',
+                                    description: '',
+                                    taskType: 'Feature'
+                                  });
+                                  setShowTaskFormModal(true);
+                                }}
+                              >
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                              </button>
+                            )}
                             {can('projects', 'edit') && editingListId !== list.id && (
                               <button
                                 style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
