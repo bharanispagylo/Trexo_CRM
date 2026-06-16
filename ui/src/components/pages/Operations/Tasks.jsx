@@ -3531,6 +3531,24 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
             {/* ── Desktop: project → task list view (hidden on mobile) ── */}
             <div className="cu-list-root all-tasks-list">
+              {finalProjectGroups.length === 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 2rem', color: '#94a3b8' }}>
+                  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#cbd5e1" strokeWidth="1.5" style={{ marginBottom: '1rem' }}>
+                    <rect x="3" y="3" width="18" height="18" rx="3"/>
+                    <line x1="8" y1="8" x2="16" y2="8"/>
+                    <line x1="8" y1="12" x2="14" y2="12"/>
+                  </svg>
+                  <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#64748b', marginBottom: '0.5rem' }}>No tasks yet</p>
+                  {can('tasks', 'create') && (
+                    <button
+                      onClick={() => openInlineAdd('', 'To Do')}
+                      style={{ marginTop: '0.5rem', padding: '0.5rem 1.25rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      + Add Task
+                    </button>
+                  )}
+                </div>
+              )}
               {finalProjectGroups.map(projGroup => {
                 return (
                   <div key={projGroup.id} className="project-group-container" style={{ marginBottom: '2.5rem' }}>
