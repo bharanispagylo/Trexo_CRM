@@ -4675,8 +4675,17 @@
   /* Mobile Details & Comments layout fixes */
   .saas-task-page {
     overflow-y: auto !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
+    height: calc(100vh - 124px) !important;
+    max-height: calc(100vh - 124px) !important;
+  }
+
+  .task-drawer-panel .saas-task-page {
+    height: 100% !important;
+    max-height: 100% !important;
+  }
+
+  .task-drawer-overlay {
+    z-index: 100001 !important;
   }
 
   .saas-main-container {
@@ -4711,7 +4720,7 @@
 
   .comment-post-input-box {
     position: sticky !important;
-    bottom: 60px !important;
+    bottom: 0 !important;
     z-index: 9999 !important;
     box-shadow: 0 -4px 12px rgba(0,0,0,0.08) !important;
     background: #ffffff !important;

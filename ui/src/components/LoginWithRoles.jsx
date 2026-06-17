@@ -911,7 +911,7 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
           tasksList.slice(0, 5).map((t, i) => (
             <div key={i} className="list-item" style={{ cursor: 'pointer', padding: '0.75rem', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '4px' }} onClick={() => handleTaskClick ? handleTaskClick(t) : (setActiveTab && setActiveTab('tasks'))}>
               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{t.title}</span>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: type === 'backlog' ? '#ef4444' : '#1e293b' }}>{t.title}</span>
                 <span className={`status-badge status-${t.status.toLowerCase().replace(' ', '-')}`} style={{ fontSize: '0.7rem' }}>{t.status}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
@@ -1177,7 +1177,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
           tasksList.slice(0, 5).map((t, i) => (
             <div key={i} className="list-item" style={{ cursor: 'pointer', padding: '0.75rem', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '4px' }} onClick={() => handleTaskClick ? handleTaskClick(t) : (setActiveTab && setActiveTab('tasks'))}>
               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{t.title}</span>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: type === 'backlog' ? '#ef4444' : '#1e293b' }}>{t.title}</span>
                 <span className={`status-badge status-${t.status.toLowerCase().replace(' ', '-')}`} style={{ fontSize: '0.7rem' }}>{t.status}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>

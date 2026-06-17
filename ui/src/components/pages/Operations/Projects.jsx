@@ -95,6 +95,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [currentView, setCurrentView] = useState('list'); // 'list' or 'detail'
   const [selectedProject, setSelectedProject] = useState(null);
   const [newListName, setNewListName] = useState('');
+  const [listNameError, setListNameError] = useState(false);
   const [editingListId, setEditingListId] = useState(null);
   const [editingListName, setEditingListName] = useState('');
   const [detailTab, setDetailTab] = useState('General');
@@ -270,11 +271,18 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
 
-  const handleAddList = async () => {
-    if (!newListName.trim() || !selectedProject) return;
+  const handleAddList = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!newListName.trim()) {
+      setListNameError(true);
+      alert('Task Group name is required.', 'warning', 'Required Field');
+      return;
+    }
+    setListNameError(false);
+    if (!selectedProject) return;
     try {
       await api.post('/task-lists', {
-        name: newListName,
+        name: newListName.trim(),
         projectId: selectedProject.id
       });
       setNewListName('');
@@ -832,15 +840,20 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       clientId: selectedProject.clientId,
                       taskListId: selectedTaskListId
                     };
+                    let savedTask = null;
                     if (editingTask && editingTask.id) {
-                      await api.put(`/tasks/${editingTask.id}`, payload);
+                      savedTask = await api.put(`/tasks/${editingTask.id}`, payload);
                       if (!silent) alert('Task updated successfully!', 'success', 'Success');
                     } else {
-                      await api.post('/tasks', payload);
+                      savedTask = await api.post('/tasks', payload);
                       if (!silent) alert('Task created successfully!', 'success', 'Success');
                     }
                     fetchData(true);
-                    if (!silent) setShowTaskFormModal(false);
+                    if (!silent) {
+                      setShowTaskFormModal(false);
+                    } else if (savedTask) {
+                      setEditingTask(savedTask);
+                    }
                   } catch (err) {
                     console.error('Error saving task:', err);
                     alert('Failed to save task: ' + err.message, 'error', 'Error');
@@ -871,10 +884,15 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       clientId: selectedProject.clientId,
                       taskListId: viewingTask.taskListId
                     };
-                    await api.put(`/tasks/${viewingTask.id}`, payload);
+                    const savedTask = await api.put(`/tasks/${viewingTask.id}`, payload);
                     if (!silent) alert('Task updated successfully!', 'success', 'Success');
                     fetchData(true);
-                    if (!silent) { setShowTaskViewModal(false); setViewingTask(null); }
+                    if (!silent) {
+                      setShowTaskViewModal(false);
+                      setViewingTask(null);
+                    } else if (savedTask) {
+                      setViewingTask(savedTask);
+                    }
                   } catch (err) {
                     console.error('Error saving task:', err);
                     alert('Failed to save task: ' + err.message, 'error', 'Error');
@@ -1104,23 +1122,50 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#0f172a' }}>Task Groups</h3>
                 {can('projects', 'create') && (
-                  <div className="add-list-inline" style={{ marginTop: 0, display: 'flex', gap: '0.5rem' }}>
-                    <input 
-                      className="saas-input" 
-                      placeholder="New Task Group..." 
-                      style={{ width: '200px', height: '36px', fontSize: '0.85rem', padding: '0 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none' }}
-                      value={newListName}
-                      onChange={e => setNewListName(e.target.value)}
-                    />
+                  <form 
+                    onSubmit={handleAddList}
+                    className="add-list-inline" 
+                    style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  >
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input 
+                        className="saas-input" 
+                        placeholder="New Task Group..." 
+                        style={{ 
+                          width: '200px', 
+                          height: '36px', 
+                          fontSize: '0.85rem', 
+                          padding: '0 1.5rem 0 0.75rem', 
+                          borderRadius: '8px', 
+                          border: listNameError ? '1.5px solid #ef4444' : '1px solid #e2e8f0', 
+                          outline: 'none',
+                          boxShadow: listNameError ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : 'none',
+                          transition: 'all 0.2s'
+                        }}
+                        value={newListName}
+                        onChange={e => {
+                          setNewListName(e.target.value);
+                          if (e.target.value.trim()) setListNameError(false);
+                        }}
+                      />
+                      <span style={{ 
+                        position: 'absolute', 
+                        right: '10px', 
+                        color: '#ef4444', 
+                        fontWeight: 'bold', 
+                        fontSize: '1rem',
+                        pointerEvents: 'none'
+                      }}>*</span>
+                    </div>
                     <button
+                      type="submit"
                       className="saas-btn-submit add-taskgroup-btn"
                       style={{ padding: '0 1rem', height: '36px', fontSize: '0.8rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
-                      onClick={handleAddList}
                     >
                       <span className="add-taskgroup-btn-text">Add Task Group</span>
                       <span className="add-taskgroup-btn-icon">+</span>
                     </button>
-                  </div>
+                  </form>
                 )}
               </div>
 

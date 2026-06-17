@@ -255,7 +255,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     
     const keysToCompare = [
       'title', 'description', 'status', 'assignees', 'dueDate', 'deliveredDate', 'priority',
-      'tag', 'taskType', 'isBillable', 'billableAmount', 'estimatedHours', 'approvedHours', 'actualHours'
+      'tag', 'taskType', 'isBillable', 'billableAmount', 'estimatedHours', 'approvedHours', 'actualHours', 'attachments'
     ];
     
     for (const key of keysToCompare) {
@@ -356,8 +356,18 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         const data = await response.json();
         if (data.secure_url) {
           const current = form.attachments ? form.attachments.split(',') : [];
-          set('attachments', [...current, data.secure_url].join(','));
+          const updatedAttachments = [...current, data.secure_url].join(',');
+          set('attachments', updatedAttachments);
           setUploading(false);
+          if (isEdit) {
+            try {
+              const updatedTask = { ...form, attachments: updatedAttachments };
+              const { comments, taskList, ...payload } = updatedTask;
+              await onSave(payload, true);
+            } catch (err) {
+              console.error('Failed to save uploaded file:', err);
+            }
+          }
           return;
         }
       } catch (err) {
@@ -368,10 +378,20 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     // Local base64 file reader fallback (100% robust offline & without Cloudinary credentials!)
     try {
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const current = form.attachments ? form.attachments.split(',') : [];
-        set('attachments', [...current, reader.result].join(','));
+        const updatedAttachments = [...current, reader.result].join(',');
+        set('attachments', updatedAttachments);
         setUploading(false);
+        if (isEdit) {
+          try {
+            const updatedTask = { ...form, attachments: updatedAttachments };
+            const { comments, taskList, ...payload } = updatedTask;
+            await onSave(payload, true);
+          } catch (err) {
+            console.error('Failed to save uploaded file:', err);
+          }
+        }
       };
       reader.onerror = () => {
         alert('Failed to read file locally.', 'error', 'Error');
@@ -740,6 +760,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     }
   };
   const submit = () => {
+    if (isEdit && !isChanged()) {
+      onClose();
+      return;
+    }
     const newErrors = {};
     const titleRegex = /^.{3,100}$/;
     
@@ -825,10 +849,28 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       fileName = `attachment_file.${ext}`;
     }
 
-    const uploadedBy = currentUser?.fullName || currentUser?.name || 'Rajesh Kumar';
-    const uploadedOn = task?.createdAt 
+    // Attempt to find the uploader from comments
+    let uploaderName = '';
+    let uploadedTime = '';
+    
+    if (comments && comments.length > 0) {
+      const matchingComment = comments.find(c => c.text && c.text.includes(url));
+      if (matchingComment) {
+        uploaderName = matchingComment.author;
+        uploadedTime = new Date(matchingComment.createdAt).toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      }
+    }
+
+    if (!uploaderName) {
+      uploaderName = currentUser
+        ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
+        : 'Admin';
+    }
+
+    const uploadedBy = uploaderName;
+    const uploadedOn = uploadedTime || (task?.createdAt 
       ? new Date(task.createdAt).toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-      : '12 May 2026, 10:30 AM';
+      : '12 May 2026, 10:30 AM');
     
     const sizeInKb = (fileName.length * 17) % 950 + 50;
     const fileSize = sizeInKb > 500 ? `${(sizeInKb / 1000).toFixed(1)} MB` : `${sizeInKb} KB`;
@@ -1154,10 +1196,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           <button
             className="saas-btn-nav saas-btn-primary"
             onClick={submit}
-            disabled={isEdit && !isChanged()}
             style={{
-              opacity: (isEdit && !isChanged()) ? 0.6 : 1,
-              cursor: (isEdit && !isChanged()) ? 'not-allowed' : 'pointer'
+              cursor: 'pointer'
             }}
           >
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -1195,16 +1235,36 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               </div>
             )}
             {isEditing ? (
-              <input 
-                type="text" 
+              <textarea 
                 value={form.title} 
-                onChange={e => set('title', e.target.value)} 
+                onChange={e => set('title', e.target.value.slice(0, 100))} 
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submit();
+                  }
+                }}
                 className="saas-title-input"
                 placeholder="Task Title *"
-                style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem', fontSize: '1.75rem', fontWeight: '800' }}
+                maxLength={100}
+                rows={2}
+                style={{ 
+                  border: 'none',
+                  borderBottom: '1px solid #e2e8f0', 
+                  paddingBottom: '0.5rem', 
+                  fontSize: '1.15rem', 
+                  fontWeight: '600', 
+                  width: '100%', 
+                  outline: 'none',
+                  resize: 'none',
+                  fontFamily: 'inherit',
+                  lineHeight: '1.4',
+                  background: 'transparent',
+                  boxSizing: 'border-box'
+                }}
               />
             ) : (
-              <h1 className="saas-detail-title" style={{ fontSize: '1.75rem', fontWeight: '800', margin: 0 }}>{form.title || 'Untitled Task'}</h1>
+              <h1 className="saas-detail-title" style={{ fontSize: '1.15rem', fontWeight: '600', margin: 0, lineHeight: '1.4', wordBreak: 'break-word' }}>{form.title || 'Untitled Task'}</h1>
             )}
           </div>
 
@@ -1347,10 +1407,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               <button 
                 className="saas-btn-nav saas-btn-primary" 
                 onClick={submit} 
-                disabled={isEdit && !isChanged()}
                 style={{ 
-                  opacity: (isEdit && !isChanged()) ? 0.6 : 1, 
-                  cursor: (isEdit && !isChanged()) ? 'not-allowed' : 'pointer' 
+                  cursor: 'pointer' 
                 }}
               >
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -1820,14 +1878,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                           const current = form.attachments ? form.attachments.split(',') : [];
                                           const filtered = current.filter(u => u !== url).join(',');
                                           
-                                          if (isEditing) {
-                                            set('attachments', filtered);
-                                          } else {
+                                          set('attachments', filtered);
+                                          if (isEdit) {
                                             try {
                                               const updatedTask = { ...form, attachments: filtered };
                                               const { comments, taskList, ...payload } = updatedTask;
-                                              await onSave(payload);
-                                              setForm(f => ({ ...f, attachments: filtered }));
+                                              await onSave(payload, true);
                                             } catch (error) {
                                               console.error('Failed to remove attachment:', error);
                                               alert('Failed to remove attachment: ' + error.message, 'error', 'Error');
@@ -2927,15 +2983,17 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const handleSaveTask = async (taskData, silent = false) => {
     if (!silent) setIsSaving(true);
     try {
+      let savedTask = null;
       if (taskData.id) {
-        await api.put(`/tasks/${taskData.id}`, taskData);
+        savedTask = await api.put(`/tasks/${taskData.id}`, taskData);
         if (!silent) toast('Task updated successfully!', 'success');
       } else {
-        await api.post('/tasks', taskData);
+        savedTask = await api.post('/tasks', taskData);
         toast('Task created successfully!', 'success');
       }
       const data = await api.get('/tasks');
       setTasks(data || []);
+      return savedTask;
     } catch (error) {
       console.error('Save error:', error);
       alert('Failed to save task: ' + error.message, 'error', 'Error');
@@ -3075,8 +3133,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         onRefresh={fetchTasks}
         onSelectTask={(t) => setDrawerTask(t)}
         onSave={async (taskData, silent) => {
-          await handleSaveTask(taskData, silent);
-          if (!silent) closeDrawer();
+          const saved = await handleSaveTask(taskData, silent);
+          if (!silent) {
+            closeDrawer();
+          } else if (saved) {
+            setDrawerTask(saved);
+          }
         }}
         onDelete={async (id) => { await handleDeleteTask(id); closeDrawer(); }}
         onClose={closeDrawer}
@@ -4731,8 +4793,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
               onRefresh={fetchTasks}
               onSelectTask={(t) => setDrawerTask(t)}
               onSave={async (taskData, silent) => {
-                await handleSaveTask(taskData, silent);
-                if (!silent) closeDrawer();
+                const saved = await handleSaveTask(taskData, silent);
+                if (!silent) {
+                  closeDrawer();
+                } else if (saved) {
+                  setDrawerTask(saved);
+                }
               }}
               onDelete={async (id) => { await handleDeleteTask(id); closeDrawer(); }}
               onClose={closeDrawer}
