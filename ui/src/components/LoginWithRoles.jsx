@@ -781,18 +781,39 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
         </div>
         {taskLists.length === 0 ? (
           <p className="mhd-lists-empty">No lists yet</p>
-        ) : (
-          taskLists.map(list => (
-            <button key={list.id} className="mhd-list-row" onClick={() => setActiveTab && setActiveTab('tasks')}>
-              <div className="mhd-list-icon-wrap">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        ) : (() => {
+          // Group task lists by project
+          const grouped = {};
+          taskLists.forEach(list => {
+            const projName = (list.project && list.project.name) ? list.project.name : 'General';
+            if (!grouped[projName]) grouped[projName] = [];
+            grouped[projName].push(list);
+          });
+          return Object.entries(grouped).map(([projName, lists]) => (
+            <div key={projName} style={{ marginBottom: '0.5rem' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                padding: '0.6rem 0.75rem 0.35rem',
+                fontSize: '0.72rem', fontWeight: '800', color: '#64748b',
+                textTransform: 'uppercase', letterSpacing: '0.04em'
+              }}>
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                {projName}
               </div>
-              <span className="mhd-list-name">{list.name}</span>
-              <span className="mhd-list-count">{listTaskCounts[list.id] || 0}</span>
-            </button>
-          ))
-        )}
+              {lists.map(list => (
+                <button key={list.id} className="mhd-list-row" onClick={() => setActiveTab && setActiveTab('tasks')}>
+                  <div className="mhd-list-icon-wrap">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                  </div>
+                  <span className="mhd-list-name">{list.name}</span>
+                  <span className="mhd-list-count">{listTaskCounts[list.id] || 0}</span>
+                </button>
+              ))}
+            </div>
+          ));
+        })()}
       </div>
+
 
       {/* What's next CTA */}
       <button className="mhd-whats-next-btn" onClick={() => setActiveTab && setActiveTab('tasks')}>
