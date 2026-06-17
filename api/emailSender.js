@@ -118,7 +118,7 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
 
           <!-- Action Button -->
           <div style="margin-left: 48px; margin-top: 16px;">
-            <a href="${context.buttonLink || 'https://trexo-crm-fqxl.vercel.app'}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 24px; border-radius: 4px;">
+            <a href="${context.buttonLink || process.env.FRONTEND_URL || 'https://trexocrm.vercel.app'}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 24px; border-radius: 4px;">
               ${context.buttonText || 'View Item'}
             </a>
           </div>

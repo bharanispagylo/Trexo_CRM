@@ -169,15 +169,24 @@ const createNotification = async (userIds, title, message) => {
         validUserIds.push(item);
       } else {
         const nameWithSpaces = item.replace(/_/g, ' ');
-        const foundUser = await prisma.user.findFirst({
-          where: {
-            OR: [
-              { fullName: { contains: nameWithSpaces, mode: 'insensitive' } },
-              { firstName: { contains: nameWithSpaces, mode: 'insensitive' } },
-              { lastName: { contains: nameWithSpaces, mode: 'insensitive' } },
-              { email: { contains: item, mode: 'insensitive' } }
+        const nameParts = nameWithSpaces.split(' ').filter(Boolean);
+        const orConditions = [
+          { fullName: { contains: nameWithSpaces, mode: 'insensitive' } },
+          { firstName: { contains: nameWithSpaces, mode: 'insensitive' } },
+          { lastName: { contains: nameWithSpaces, mode: 'insensitive' } },
+          { email: { contains: item, mode: 'insensitive' } }
+        ];
+        // If name has multiple parts (e.g. "Mano Sebastin"), also match firstName+lastName
+        if (nameParts.length >= 2) {
+          orConditions.push({
+            AND: [
+              { firstName: { contains: nameParts[0], mode: 'insensitive' } },
+              { lastName: { contains: nameParts[nameParts.length - 1], mode: 'insensitive' } }
             ]
-          }
+          });
+        }
+        const foundUser = await prisma.user.findFirst({
+          where: { OR: orConditions }
         });
         if (foundUser) validUserIds.push(foundUser.id);
       }
@@ -214,24 +223,40 @@ const notifyEmailsByNames = async (userIds, subject, message, type) => {
       where: {
         OR: names.map(name => {
           const nameWithSpaces = name.replace(/_/g, ' ');
-          return {
-            OR: [
-              { id: name },
-              { fullName: { contains: nameWithSpaces, mode: 'insensitive' } },
-              { firstName: { contains: nameWithSpaces, mode: 'insensitive' } },
-              { lastName: { contains: nameWithSpaces, mode: 'insensitive' } },
-              { email: { contains: name, mode: 'insensitive' } }
-            ]
-          };
+          const nameParts = nameWithSpaces.split(' ').filter(Boolean);
+          const orConditions = [
+            { id: name },
+            { fullName: { contains: nameWithSpaces, mode: 'insensitive' } },
+            { firstName: { contains: nameWithSpaces, mode: 'insensitive' } },
+            { lastName: { contains: nameWithSpaces, mode: 'insensitive' } },
+            { email: { contains: name, mode: 'insensitive' } }
+          ];
+          // If name has multiple parts (e.g. "Mano Sebastin"), also match firstName+lastName
+          if (nameParts.length >= 2) {
+            orConditions.push({
+              AND: [
+                { firstName: { contains: nameParts[0], mode: 'insensitive' } },
+                { lastName: { contains: nameParts[nameParts.length - 1], mode: 'insensitive' } }
+              ]
+            });
+          }
+          return { OR: orConditions };
         })
       }
     });
 
+    const frontendUrl = process.env.FRONTEND_URL || 'https://trexocrm.vercel.app';
+
     for (const u of users) {
       if (u.email) {
+        // Determine the correct route based on notification type
+        let route = '/';
+        if (type === 'task' || type === 'comment') route = '/tasks';
+        else if (type === 'project') route = '/projects';
+
         const userContext = {
           ...message,
-          buttonLink: `https://trexo-crm-fqxl.vercel.app?email=${encodeURIComponent(u.email)}`
+          buttonLink: `${frontendUrl}${route}`
         };
         await sendNotificationEmail(u.email, subject, userContext, type);
       }
