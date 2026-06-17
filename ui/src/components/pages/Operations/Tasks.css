@@ -4175,8 +4175,8 @@
   .tasks-filter-row select {
     flex: none;
     min-width: 0;
-    width: 110px;
-    max-width: 110px;
+    width: auto;
+    max-width: 160px;
     padding: 0.35rem 0.4rem !important;
     font-size: 0.78rem !important;
   }

@@ -1121,6 +1121,15 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                   <div className="detail-info-value">{selectedProject.billableHours ? `${selectedProject.billableHours} hrs` : '-'}</div>
                 </div>
 
+                <div className="detail-info-row">
+                  <div className="detail-info-label">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    Created On
+                  </div>
+                  <div className="detail-info-sep">:</div>
+                  <div className="detail-info-value">{selectedProject.createdAt ? (() => { const d = new Date(selectedProject.createdAt); return `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`; })() : '-'}</div>
+                </div>
+
               </div>
             </div>
           )}
@@ -2581,15 +2590,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           <table className="saas-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', background: 'white' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ width: '40px', padding: '0.55rem 1.5rem', background: 'white' }}>
-                  <input 
-                    type="checkbox" 
-                    style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
-                    checked={filteredProjects.length > 0 && selectedProjectIds.length === filteredProjects.length}
-                    onChange={handleSelectAll}
-                  />
-                </th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>#</th>
+
+                <th style={{ padding: '0.55rem 1rem 0.55rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>#</th>
                 <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Project Name</th>
                 <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Status</th>
                 <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Estimated Hours</th>
@@ -2601,9 +2603,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>Syncing workspace...</td></tr>
+                <tr><td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>Syncing workspace...</td></tr>
               ) : filteredProjects.length === 0 ? (
-                <tr><td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No projects in this view.</td></tr>
+                <tr><td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No projects in this view.</td></tr>
               ) : (
                 paginatedProjects.map((proj, idx) => {
                   const client = proj.client || '-';
@@ -2620,15 +2622,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                   return (
                     <tr key={proj.id} style={{ borderBottom: '1px solid #f1f5f9', background: 'white' }}>
-                      <td style={{ padding: '0.55rem 1.5rem' }}>
-                        <input 
-                          type="checkbox" 
-                          style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
-                          checked={selectedProjectIds.includes(proj.id)}
-                          onChange={(e) => handleSelectOne(e, proj.id)}
-                        />
-                      </td>
-                      <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#1e293b', fontWeight: '600' }}>
+
+                      <td style={{ padding: '0.55rem 1rem 0.55rem 1.5rem', fontSize: '0.85rem', color: '#1e293b', fontWeight: '600' }}>
                         {startIndex + idx + 1}
                       </td>
                       <td style={{ padding: '0.55rem 1rem' }}>
@@ -2718,13 +2713,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               return (
                 <div className="mobile-project-row" key={proj.id}>
                   <div className="mpr-left">
-                    <input 
-                      type="checkbox" 
-                      style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
-                      checked={selectedProjectIds.includes(proj.id)}
-                      onChange={(e) => handleSelectOne(e, proj.id)}
-                      className="mp-checkbox"
-                    />
+
                     <span className="mp-index">#{startIndex + idx + 1}</span>
                     <button 
                       style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '700', fontSize: '0.95rem', cursor: 'pointer', padding: 0, textAlign: 'left' }}
@@ -2799,7 +2788,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     height: '32px', 
                     display: 'flex', 
                     alignItems: 'center', 
-                    justify: 'center', 
+                    justifyContent: 'center', 
                     border: '1px solid #e2e8f0', 
                     borderRadius: '6px', 
                     background: 'white', 
@@ -2818,7 +2807,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       height: '32px', 
                       display: 'flex', 
                       alignItems: 'center', 
-                      justify: 'center', 
+                      justifyContent: 'center', 
                       border: currentPage === page ? 'none' : '1px solid #e2e8f0', 
                       borderRadius: '6px', 
                       background: currentPage === page ? '#2563eb' : 'white', 
@@ -2838,7 +2827,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     height: '32px', 
                     display: 'flex', 
                     alignItems: 'center', 
-                    justify: 'center', 
+                    justifyContent: 'center', 
                     border: '1px solid #e2e8f0', 
                     borderRadius: '6px', 
                     background: 'white', 

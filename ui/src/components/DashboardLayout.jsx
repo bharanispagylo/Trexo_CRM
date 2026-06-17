@@ -327,6 +327,14 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         if ((t.title || '').toLowerCase().includes(q)) return true;
         if ((t.description || '').toLowerCase().includes(q)) return true;
         if ((t.taskNo || '').toLowerCase().includes(q)) return true;
+        // Search by display ID (T/S + digits from taskNo, e.g. "T359369")
+        const rawNo = t.taskNo || '';
+        const digits = rawNo.replace(/\D/g, '');
+        const displayId = (t.parentId ? 's' : 't') + digits;
+        if (displayId.includes(q)) return true;
+        // Also match if user types "TSK-830" → normalize to just digits "830" and check
+        const qDigits = q.replace(/\D/g, '');
+        if (qDigits && digits.includes(qDigits)) return true;
         if ((t.status || '').toLowerCase().includes(q)) return true;
         if ((t.priority || '').toLowerCase().includes(q)) return true;
         if ((t.projectName || '').toLowerCase().includes(q)) return true;

@@ -118,10 +118,10 @@ const formatMobileDueDate = (dateStr) => {
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return null;
   
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const month = months[date.getMonth()];
   const day = String(date.getDate()).padStart(2, '0');
-  const formatted = `${month} ${day}`;
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const formatted = `${day}-${month}-${year}`;
   
   const today = new Date();
   today.setHours(0,0,0,0);
@@ -933,11 +933,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     if (!dateStr) return '-';
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return '-';
-    return d.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
   };
 
   // SVGs for Fields
@@ -3472,16 +3471,36 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                   {taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                 </>
               ) : (
-                taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)
+                <>
+                  <option value="">All Projects</option>
+                  {taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                </>
               )}
             </select>
-            <input 
-              type="date" 
-              value={filterDate} 
-              onChange={e => setFilterDate(e.target.value)}
-              title="Filter by task date"
-              style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
-            />
+            {filterDate ? (
+              <input 
+                type="date" 
+                value={filterDate} 
+                onChange={e => setFilterDate(e.target.value)}
+                title="Filter by task date"
+                style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  const today = new Date();
+                  const yyyy = today.getFullYear();
+                  const mm = String(today.getMonth() + 1).padStart(2, '0');
+                  const dd = String(today.getDate()).padStart(2, '0');
+                  setFilterDate(`${yyyy}-${mm}-${dd}`);
+                }}
+                style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#94a3b8', background: '#f8fafc', outline: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                Date
+              </button>
+            )}
             {(filterProjectName || filterDate) && (
               <button 
                 onClick={() => { setFilterProjectName(''); setFilterDate(''); }}
@@ -4697,7 +4716,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                         const isAddingSubtask = addingSubtaskParentId === task.id;
                                         const relDate = formatRelativeDueDate(task.dueDate);
                                         const taskGroupName = task.taskListId ? (taskListsData.find(l => l.id === task.taskListId)?.name || '') : '';
-                                        const dueDateLabel = task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+                                        const dueDateLabel = task.dueDate ? (() => { const d = new Date(task.dueDate); return `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`; })() : null;
 
                                         const parentRow = (
                                           <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
