@@ -5216,3 +5216,52 @@
   opacity: 1;
   visibility: visible;
 }
+
+/* ── ClickUp-style Hover Tooltip ── */
+.cu-clickup-tooltip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: absolute;
+  transform: translate(-50%, -100%);
+  z-index: 999999;
+  pointer-events: none;
+  animation: cuTooltipFadeIn 0.12s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.cu-clickup-tooltip-content {
+  background: #111827; /* Dark slate matching ClickUp dark mode tooltip */
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  max-width: 280px;
+  word-break: break-word;
+  white-space: normal;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16), 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.cu-clickup-tooltip-arrow {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #111827;
+  margin-top: -1px; /* overlap slightly to prevent physical pixel gaps */
+}
+
+@keyframes cuTooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -95%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1);
+  }
+}

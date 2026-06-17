@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../../../api/client';
 import './Tasks.css';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -165,8 +166,71 @@ const getDisplayId = (f) => {
   return `${prefix}${digits}`;
 };
 
+export function TaskTitleTooltip({ text, children }) {
+  const [visible, setVisible] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef(null);
 
-// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Task Detail View (Separate Page) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+  const handleMouseEnter = () => {
+    if (!triggerRef.current || !text) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setCoords({
+      top: rect.top + window.scrollY - 8,
+      left: rect.left + window.scrollX + rect.width / 2
+    });
+    setVisible(true);
+  };
+
+  const handleMouseLeave = () => {
+    setVisible(false);
+  };
+
+  useEffect(() => {
+    if (!visible) return;
+    const handleScroll = () => {
+      setVisible(false);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, [visible]);
+
+  return (
+    <>
+      <div
+        ref={triggerRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="cu-task-title-wrapper"
+        style={{ display: 'inline-flex', minWidth: 0, flex: 1 }}
+      >
+        {children}
+      </div>
+      {visible && createPortal(
+        <div 
+          className="cu-clickup-tooltip"
+          style={{
+            position: 'absolute',
+            top: `${coords.top}px`,
+            left: `${coords.left}px`,
+            pointerEvents: 'none'
+          }}
+        >
+          <div className="cu-clickup-tooltip-content">
+            {text}
+          </div>
+          <div className="cu-clickup-tooltip-arrow" />
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
+// ── ── Task Detail View (Separate Page) ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ──
 export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialEditMode = false, tasks = [], onRefresh, onSelectTask }) {
 
   const isEdit = !!(task && task.id);
@@ -356,7 +420,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         const data = await response.json();
         if (data.secure_url) {
           const current = form.attachments ? form.attachments.split(',') : [];
-          const updatedAttachments = [...current, data.secure_url].join(',');
+          const uploaderName = currentUser
+            ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
+            : 'Admin';
+          const uploadTimestamp = new Date().toISOString();
+          const newEntry = `${data.secure_url}|${uploaderName}|${uploadTimestamp}`;
+          const updatedAttachments = [...current, newEntry].join(',');
           set('attachments', updatedAttachments);
           setUploading(false);
           if (isEdit) {
@@ -380,7 +449,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       const reader = new FileReader();
       reader.onloadend = async () => {
         const current = form.attachments ? form.attachments.split(',') : [];
-        const updatedAttachments = [...current, reader.result].join(',');
+        const uploaderName = currentUser
+          ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
+          : 'Admin';
+        const uploadTimestamp = new Date().toISOString();
+        const newEntry = `${reader.result}|${uploaderName}|${uploadTimestamp}`;
+        const updatedAttachments = [...current, newEntry].join(',');
         set('attachments', updatedAttachments);
         setUploading(false);
         if (isEdit) {
@@ -832,8 +906,13 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   );
 
 
-  const getAttachmentMetadata = (url, index) => {
-    if (!url) return null;
+  const getAttachmentMetadata = (item, index) => {
+    if (!item) return null;
+    const parts = item.split('|');
+    const url = parts[0];
+    const encodedUploader = parts[1] || '';
+    const encodedTime = parts[2] || '';
+
     const isBase64 = url.startsWith('data:');
     let fileName = 'Attachment File';
     let isPdf = false;
@@ -849,15 +928,30 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       fileName = `attachment_file.${ext}`;
     }
 
-    // Attempt to find the uploader from comments
-    let uploaderName = '';
-    let uploadedTime = '';
+    // Attempt to find the uploader from comments or encoded metadata
+    let uploaderName = encodedUploader;
+    let uploadedTime = encodedTime ? new Date(encodedTime).toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
     
-    if (comments && comments.length > 0) {
-      const matchingComment = comments.find(c => c.text && c.text.includes(url));
-      if (matchingComment) {
-        uploaderName = matchingComment.author;
-        uploadedTime = new Date(matchingComment.createdAt).toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    if (!uploaderName || !uploadedTime) {
+      if (comments && comments.length > 0) {
+        const matchingComment = comments.find(c => c.text && c.text.includes(url));
+        if (matchingComment) {
+          if (!uploaderName) uploaderName = matchingComment.author;
+          if (!uploadedTime) {
+            uploadedTime = new Date(matchingComment.createdAt).toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+          }
+        }
+      }
+    }
+
+    // Try to extract timestamp from Cloudinary version prefix if still not set
+    if (!uploadedTime && !isBase64) {
+      const versionMatch = url.match(/\/v([0-9]{10})\//);
+      if (versionMatch) {
+        const timestamp = parseInt(versionMatch[1], 10) * 1000;
+        if (!isNaN(timestamp)) {
+          uploadedTime = new Date(timestamp).toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
       }
     }
 
@@ -1789,9 +1883,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                           </td>
                         </tr>
                       ) : (
-                        form.attachments.split(',').filter(Boolean).map((url, index) => {
-                          const meta = getAttachmentMetadata(url, index);
+                        form.attachments.split(',').filter(Boolean).map((item, index) => {
+                          const meta = getAttachmentMetadata(item, index);
                           if (!meta) return null;
+                          const url = meta.url;
                           return (
                             <tr key={url} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
                               
@@ -1876,7 +1971,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                       onClick={async () => {
                                         confirm('Are you sure you want to remove this attachment?', async () => {
                                           const current = form.attachments ? form.attachments.split(',') : [];
-                                          const filtered = current.filter(u => u !== url).join(',');
+                                          const filtered = current.filter(u => u !== item).join(',');
                                           
                                           set('attachments', filtered);
                                           if (isEdit) {
@@ -3893,7 +3988,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                         const parentRow = (
                                           <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
                                             <td className="cu-td cu-td-name">
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                                 {/* Expand/Collapse Chevron */}
                                                 <button
                                                   style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', visibility: subTasks.length > 0 ? 'visible' : 'hidden' }}
@@ -3906,7 +4001,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   <svg viewBox="0 0 10 6" width="8" height="8" fill="currentColor" style={{ transform: isExpanded ? "none" : "rotate(-90deg)", transition: "transform 0.15s", color: "#64748b" }}><path d="M0 0l5 6 5-6z"/></svg>
                                                 </button>
                                                 
-                                                <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
+                                                <TaskTitleTooltip text={task.title || 'Untitled Task'}>
+                                                  <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
+                                                </TaskTitleTooltip>
                                                 
                                                 
                                                 {/* Subtask count badge */}
@@ -4003,9 +4100,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                             rows.push(
                                               <tr key={sub.id} className="cu-row subtask-row" onClick={() => openTaskDetail(sub, false)} style={{ background: '#f8fafc' }}>
                                                 <td className="cu-td cu-td-name" style={{ paddingLeft: '2.5rem' }}>
-                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                                     <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
-                                                    <span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
+                                                    <TaskTitleTooltip text={sub.title || 'Untitled Subtask'}>
+                                                      <span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
+                                                    </TaskTitleTooltip>
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
@@ -4479,7 +4578,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                         const parentRow = (
                                           <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
                                             <td className="cu-td cu-td-name">
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                                 {/* Expand/Collapse Chevron */}
                                                 <button
                                                   style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', visibility: subTasks.length > 0 ? 'visible' : 'hidden' }}
@@ -4493,7 +4592,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </button>
                                                 
                                                 <div className="cu-name-content">
-                                                  <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
+                                                  <TaskTitleTooltip text={task.title || 'Untitled Task'}>
+                                                    <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
+                                                  </TaskTitleTooltip>
                                                   {(dueDateLabel || taskGroupName) && (
                                                     <div className="cu-mobile-task-sub">
                                                       {dueDateLabel && (
@@ -4594,9 +4695,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                             rows.push(
                                               <tr key={sub.id} className="cu-row subtask-row" onClick={() => openTaskDetail(sub, false)} style={{ background: '#f8fafc' }}>
                                                 <td className="cu-td cu-td-name" style={{ paddingLeft: '2.5rem' }}>
-                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                                     <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
-                                                    <span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
+                                                    <TaskTitleTooltip text={sub.title || 'Untitled Subtask'}>
+                                                      <span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
+                                                    </TaskTitleTooltip>
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-project">

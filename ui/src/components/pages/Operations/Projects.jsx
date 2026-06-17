@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
-import { TaskDetailView } from './Tasks';
+import { TaskDetailView, TaskTitleTooltip } from './Tasks';
 import './Projects.css';
 import './Tasks.css';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -1337,8 +1337,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                     return (
                                       <tr key={task.id} className="cu-row" onClick={() => { setViewingTask(task); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
                                         <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <span className="cu-task-title" style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{task.title || 'Untitled Task'}</span>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
+                                            <TaskTitleTooltip text={task.title || 'Untitled Task'}>
+                                              <span className="cu-task-title" style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{task.title || 'Untitled Task'}</span>
+                                            </TaskTitleTooltip>
                                             {task.taskNo && <span className="cu-task-id" style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: '0.5rem', fontWeight: '500' }}>{task.taskNo}</span>}
                                           </div>
                                         </td>
