@@ -375,8 +375,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const [commentUploading, setCommentUploading] = useState(false);
   const [commentPosting, setCommentPosting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [taskSaving, setTaskSaving] = useState(false);
   const fileInputRef = useRef(null);
   const commentFileInputRef = useRef(null);
+  const commentPostingRef = useRef(false);
+  const taskSavingRef = useRef(false);
   const { getLevel } = usePermissions();
   
   const isAssigned = () => {
@@ -631,7 +634,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   };
 
   const handleAddComment = async (parentId = null, text = null) => {
-    if (commentPosting) return;
+    if (commentPostingRef.current || commentPosting) return;
     let commentText = text !== null ? text : newComment;
     if (!commentText.trim() && !commentAttachment) return;
     
@@ -639,6 +642,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       commentText = `${commentText} [ATTACHMENT:${commentAttachment.url}|${commentAttachment.name}]`.trim();
     }
 
+    commentPostingRef.current = true;
     setCommentPosting(true);
     try {
       await api.post(`/tasks/${task.id}/comments`, {
@@ -659,6 +663,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     } catch (err) {
       console.error('Comment error:', err);
     } finally {
+      commentPostingRef.current = false;
       setCommentPosting(false);
     }
   };
@@ -682,8 +687,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   };
 
   const handleSaveEditComment = async (commentId, originalText) => {
-    if (!editingCommentText.trim()) return;
     const attachmentMatch = originalText.match(/\[ATTACHMENT:[^\]]+\]/);
+    if (!editingCommentText.trim() && !attachmentMatch) return;
     let updatedText = editingCommentText.trim();
     if (attachmentMatch) {
       updatedText = `${updatedText} ${attachmentMatch[0]}`.trim();
@@ -838,7 +843,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       setForm(form);
     }
   };
-  const submit = () => {
+  const submit = async () => {
+    if (taskSavingRef.current || taskSaving) return;
     if (isEdit && !isChanged()) {
       onClose();
       return;
@@ -876,7 +882,16 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     // Sanitize data for API
     const { comments, taskList, ...payload } = form;
     
-    onSave(payload);
+    taskSavingRef.current = true;
+    setTaskSaving(true);
+    try {
+      await onSave(payload);
+    } catch (err) {
+      console.error('Task save error:', err);
+    } finally {
+      taskSavingRef.current = false;
+      setTaskSaving(false);
+    }
   };
 
   const formatDate = (dateStr) => {
@@ -1305,12 +1320,20 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           <button
             className="saas-btn-nav saas-btn-primary"
             onClick={submit}
+            disabled={taskSaving}
             style={{
-              cursor: 'pointer'
+              cursor: taskSaving ? 'not-allowed' : 'pointer',
+              opacity: taskSaving ? 0.7 : 1
             }}
           >
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            {isEdit ? 'Save' : 'Create Task'}
+            {taskSaving ? (
+              <span>{isEdit ? 'Saving...' : 'Creating...'}</span>
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                {isEdit ? 'Save' : 'Create Task'}
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -1444,10 +1467,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <span className="saas-meta-value">
                     <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
                       <option value="">Select Assignee...</option>
-                      {(form.projectName && projects.find(p => p.name === form.projectName)?.members ? projects.find(p => p.name === form.projectName).members.split(',').map(m => m.trim()).filter(Boolean) : users.map(u => u.id)).map(uId => {
-                        const uObj = users.find(u => u.id === uId) || {};
-                        const displayName = uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown';
-                        return <option key={uId} value={uId}>{displayName}</option>;
+                      {users.map(u => {
+                        const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
+                        return <option key={u.id} value={u.id}>{displayName}</option>;
                       })}
                     </select>
                   </span>
@@ -1515,13 +1537,21 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               </button>
               <button 
                 className="saas-btn-nav saas-btn-primary" 
-                onClick={submit} 
+                onClick={submit}
+                disabled={taskSaving}
                 style={{ 
-                  cursor: 'pointer' 
+                  cursor: taskSaving ? 'not-allowed' : 'pointer',
+                  opacity: taskSaving ? 0.7 : 1
                 }}
               >
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                {isEdit ? 'Save' : 'Create Task'}
+                {taskSaving ? (
+                  <span>{isEdit ? 'Saving...' : 'Creating...'}</span>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    {isEdit ? 'Save' : 'Create Task'}
+                  </>
+                )}
               </button>
             </div>
           )}
