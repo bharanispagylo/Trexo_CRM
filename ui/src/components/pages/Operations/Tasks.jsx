@@ -258,8 +258,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       estimatedHours: '',
       approvedHours: '',
       actualHours: '',
-      actualHoursStr: '0.0',
-      approvedHoursStr: '0.0',
+      actualHoursStr: '0',
+      approvedHoursStr: '0',
       taskListId: '',
       attachments: ''
     };
@@ -1628,8 +1628,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                 isBillable: false,
                                 approvedHours: 0,
                                 actualHours: 0,
-                                approvedHoursStr: '0.0',
-                                actualHoursStr: '0.0'
+                                approvedHoursStr: '0',
+                                actualHoursStr: '0'
                               }));
                               setErrors(errs => {
                                 const { billing, ...rest } = errs;

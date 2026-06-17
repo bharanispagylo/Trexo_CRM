@@ -8,6 +8,13 @@ const formatDecimal = (hours) => {
   return Number(hours).toFixed(1);
 };
 
+const getDisplayId = (taskNo, parentId) => {
+  if (!taskNo) return '-';
+  const digits = taskNo.replace(/\D/g, '');
+  const prefix = parentId ? 'S' : 'T';
+  return `${prefix}${digits}`;
+};
+
 const getWeekRange = (dateStr) => {
   const date = new Date(dateStr);
   const day = date.getDay(); // 0 is Sunday, 1 is Monday, etc.
@@ -158,7 +165,7 @@ export default function Reports({ user }) {
       }
 
       return [
-        t.taskNo || '-',
+        getDisplayId(t.taskNo, t.parentId),
         `"${(t.title || '').replace(/"/g, '""')}"`,
         `"${resolvedProj.replace(/"/g, '""')}"`,
         `"${resolvedAssignee.replace(/"/g, '""')}"`,
@@ -348,7 +355,7 @@ export default function Reports({ user }) {
             <tbody>
               {tasks.map(task => (
                 <tr key={task.id}>
-                  <td>{task.taskNo || '-'}</td>
+                  <td>{getDisplayId(task.taskNo, task.parentId)}</td>
                   <td className="task-title-cell">{task.title}</td>
                   <td>{task.projectName || (projects.find(p => p.id === task.projectId)?.name) || '-'}</td>
                   <td>

@@ -155,6 +155,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedSubtasks, setExpandedSubtasks] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, searchQuery]);
   const { can, getLevel } = usePermissions();
   const { alert, confirm, toast } = useAlert();
 
@@ -1330,94 +1337,287 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                     </td>
                                   </tr>
                                 ) : (
-                                  listTasks.map(task => {
-                                    const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
-                                    const relDate = formatRelativeDueDate(task.dueDate);
-                                    const meta = STATUS_HEADER_META[task.status] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
+                                  (() => {
+                                    const allTasks = list.tasks || [];
+                                    // Filter main tasks (no parentId or parent not in this list)
+                                    const mainTasks = allTasks.filter(t => !t.parentId || !allTasks.some(p => p.id === t.parentId));
+                                    
+                                    // Sort main tasks by due date
+                                    const sortedMainTasks = [...mainTasks].sort((a, b) => {
+                                      if (!a.dueDate) return 1;
+                                      if (!b.dueDate) return -1;
+                                      return new Date(a.dueDate) - new Date(b.dueDate);
+                                    });
 
-                                    return (
-                                      <tr key={task.id} className="cu-row" onClick={() => { setViewingTask(task); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
-                                        <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
-                                            <TaskTitleTooltip text={task.title || 'Untitled Task'}>
-                                              <span className="cu-task-title" style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{task.title || 'Untitled Task'}</span>
-                                            </TaskTitleTooltip>
-                                            {task.taskNo && <span className="cu-task-id" style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: '0.5rem', fontWeight: '500' }}>{task.taskNo}</span>}
-                                          </div>
-                                        </td>
-                                        <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                          <div className="cu-avatars" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
-                                            {assignees.length === 0 ? (
-                                              <div className="cu-avatar-empty" title="Unassigned" style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-                                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                              </div>
-                                            ) : (
-                                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                                                {assignees.map(a => {
-                                                  const uObj = users.find(u => u.id === a);
-                                                  const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
-                                                  return (
-                                                    <div key={a} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                                      <div className={`cu-avatar ${getAvatarColor(dispName)}`} title={dispName} style={{ width: '24px', height: '24px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '600' }}>
-                                                        {initials(dispName)}
+                                    return sortedMainTasks.flatMap(task => {
+                                      const subTasks = allTasks.filter(t => t.parentId === task.id);
+                                      const isExpanded = !!expandedSubtasks[task.id];
+                                      
+                                      const relDate = formatRelativeDueDate(task.dueDate);
+                                      const meta = STATUS_HEADER_META[task.status] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
+                                      const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
+
+                                      const parentRow = (
+                                        <tr key={task.id} className="cu-row" onClick={() => { setViewingTask(task); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
+                                          <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
+                                              {subTasks.length > 0 && (
+                                                <button
+                                                  style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setExpandedSubtasks(prev => ({ ...prev, [task.id]: !prev[task.id] }));
+                                                  }}
+                                                  title={isExpanded ? "Collapse Subtasks" : "Expand Subtasks"}
+                                                >
+                                                  <svg viewBox="0 0 10 6" width="8" height="8" fill="currentColor" style={{ transform: isExpanded ? "none" : "rotate(-90deg)", transition: "transform 0.15s", color: "#64748b" }}><path d="M0 0l5 6 5-6z"/></svg>
+                                                </button>
+                                              )}
+                                              {subTasks.length === 0 && <span style={{ width: '18px', display: 'inline-block' }} />}
+                                              <TaskTitleTooltip text={task.title || 'Untitled Task'}>
+                                                <span 
+                                                  className="cu-task-title" 
+                                                  style={{ 
+                                                    fontSize: '0.85rem', 
+                                                    fontWeight: '600', 
+                                                    color: '#2563eb', 
+                                                    cursor: 'pointer',
+                                                    textDecoration: 'none'
+                                                  }}
+                                                  onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+                                                  onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (onNavigateToTasks) {
+                                                      onNavigateToTasks(task);
+                                                    } else {
+                                                      setViewingTask(task);
+                                                      setShowTaskViewModal(true);
+                                                    }
+                                                  }}
+                                                >
+                                                  {task.title || 'Untitled Task'}
+                                                </span>
+                                              </TaskTitleTooltip>
+                                              {subTasks.length > 0 && (
+                                                <span 
+                                                  style={{ 
+                                                    display: 'inline-flex', 
+                                                    alignItems: 'center', 
+                                                    gap: '4px', 
+                                                    marginLeft: '8px', 
+                                                    fontSize: '0.7rem', 
+                                                    fontWeight: '700', 
+                                                    color: '#2563eb', 
+                                                    background: '#eff6ff', 
+                                                    padding: '2px 6px', 
+                                                    borderRadius: '4px',
+                                                    border: '1px solid #bfdbfe'
+                                                  }}
+                                                  title={`${subTasks.length} Subtasks`}
+                                                >
+                                                  {subTasks.length}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </td>
+                                          <td className="cu-td cu-td-assignee" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                            <div className="cu-avatars" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+                                              {assignees.length === 0 ? (
+                                                <div className="cu-avatar-empty" title="Unassigned" style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                                                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                                </div>
+                                              ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                                                  {assignees.map(a => {
+                                                    const uObj = users.find(u => u.id === a);
+                                                    const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
+                                                    return (
+                                                      <div key={a} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                        <div className={`cu-avatar ${getAvatarColor(dispName)}`} title={dispName} style={{ width: '24px', height: '24px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '600' }}>
+                                                          {initials(dispName)}
+                                                        </div>
+                                                        <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{dispName}</span>
                                                       </div>
-                                                      <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{dispName}</span>
-                                                    </div>
-                                                  );
-                                                })}
-                                              </div>
-                                            )}
-                                          </div>
-                                        </td>
-                                        <td className="cu-td cu-td-list" style={{ padding: '0.85rem 1.25rem' }}>
-                                          <span style={{
-                                            background: meta.bg,
-                                            color: meta.fg,
-                                            border: meta.border || 'none',
-                                            padding: '0.2rem 0.6rem',
-                                            borderRadius: '5px',
-                                            fontSize: '0.75rem',
-                                            fontWeight: '700',
-                                            textTransform: 'uppercase',
-                                            display: 'inline-block'
-                                          }}>
-                                            {task.status || 'To Do'}
-                                          </span>
-                                        </td>
-                                        <td className="cu-td cu-td-delivery" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                          {relDate ? (
-                                            <span className={`cu-due-badge ${relDate.isOverdue ? 'overdue' : relDate.isToday ? 'today' : ''}`} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: relDate.isOverdue ? '#fee2e2' : relDate.isToday ? '#fef3c7' : '#f1f5f9', color: relDate.isOverdue ? '#ef4444' : relDate.isToday ? '#d97706' : '#475569' }}>
-                                              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                              {relDate.text}
+                                                    );
+                                                  })}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </td>
+                                          <td className="cu-td cu-td-list" style={{ padding: '0.85rem 1.25rem' }}>
+                                            <span style={{
+                                              background: meta.bg,
+                                              color: meta.fg,
+                                              border: meta.border || 'none',
+                                              padding: '0.2rem 0.6rem',
+                                              borderRadius: '5px',
+                                              fontSize: '0.75rem',
+                                              fontWeight: '700',
+                                              textTransform: 'uppercase',
+                                              display: 'inline-block'
+                                            }}>
+                                              {task.status || 'To Do'}
                                             </span>
-                                          ) : <span className="cu-empty-cell">-</span>}
-                                        </td>
-                                        <td className="cu-td cu-td-priority" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                          <span className="cu-priority-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', color: '#475569' }}>
-                                            <PriorityFlag priority={task.priority} />
-                                            <span>{task.priority || 'Medium'}</span>
-                                          </span>
-                                        </td>
-                                        <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
-                                          <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                            <button className="cu-act-btn" onClick={() => { setViewingTask(task); setShowTaskViewModal(true); }} title="View" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: '0.25rem' }}>
-                                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                            </button>
-                                            {can('tasks', 'edit') && (
-                                              <button className="cu-act-btn" onClick={() => { setSelectedTaskListId(list.id); handleOpenEditTaskModal(task); }} title="Edit" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
-                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                          </td>
+                                          <td className="cu-td cu-td-delivery" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                            {relDate ? (
+                                              <span className={`cu-due-badge ${relDate.isOverdue ? 'overdue' : relDate.isToday ? 'today' : ''}`} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: relDate.isOverdue ? '#fee2e2' : relDate.isToday ? '#fef3c7' : '#f1f5f9', color: relDate.isOverdue ? '#ef4444' : relDate.isToday ? '#d97706' : '#475569' }}>
+                                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                {relDate.text}
+                                              </span>
+                                            ) : <span className="cu-empty-cell">-</span>}
+                                          </td>
+                                          <td className="cu-td cu-td-priority" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                            <span className="cu-priority-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', color: '#475569' }}>
+                                              <PriorityFlag priority={task.priority} />
+                                              <span>{task.priority || 'Medium'}</span>
+                                            </span>
+                                          </td>
+                                          <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
+                                            <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                              <button className="cu-act-btn" onClick={() => { setViewingTask(task); setShowTaskViewModal(true); }} title="View" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: '0.25rem' }}>
+                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                               </button>
-                                            )}
-                                            {can('tasks', 'delete') && (
-                                              <button className="cu-act-btn danger" onClick={() => handleDeleteTask(task.id)} title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }}>
-                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                              </button>
-                                            )}
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    );
-                                  })
+                                              {can('tasks', 'edit') && (
+                                                <button className="cu-act-btn" onClick={() => { setSelectedTaskListId(list.id); handleOpenEditTaskModal(task); }} title="Edit" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
+                                                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                </button>
+                                              )}
+                                              {can('tasks', 'delete') && (
+                                                <button className="cu-act-btn danger" onClick={() => handleDeleteTask(task.id)} title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }}>
+                                                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                </button>
+                                              )}
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      );
+
+                                      const rows = [parentRow];
+
+                                      if (isExpanded) {
+                                        // Sort subtasks by due date
+                                        const sortedSubtasks = [...subTasks].sort((a, b) => {
+                                          if (!a.dueDate) return 1;
+                                          if (!b.dueDate) return -1;
+                                          return new Date(a.dueDate) - new Date(b.dueDate);
+                                        });
+
+                                        sortedSubtasks.forEach(sub => {
+                                          const subRelDate = formatRelativeDueDate(sub.dueDate);
+                                          const subMeta = STATUS_HEADER_META[sub.status] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
+                                          const subAssignees = sub.assignees ? sub.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
+
+                                          rows.push(
+                                            <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { setViewingTask(sub); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
+                                              <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem', paddingLeft: '2.5rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
+                                                  <span className="cu-subtask-indicator" style={{ color: '#94a3b8', marginRight: '4px', fontSize: '1rem', fontWeight: 'bold' }}>↳</span>
+                                                  <TaskTitleTooltip text={sub.title || 'Untitled Subtask'}>
+                                                    <span 
+                                                      className="cu-task-title" 
+                                                      style={{ 
+                                                        fontSize: '0.85rem', 
+                                                        color: '#2563eb', 
+                                                        cursor: 'pointer',
+                                                        textDecoration: 'none'
+                                                      }}
+                                                      onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+                                                      onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (onNavigateToTasks) {
+                                                          onNavigateToTasks(sub);
+                                                        } else {
+                                                          setViewingTask(sub);
+                                                          setShowTaskViewModal(true);
+                                                        }
+                                                      }}
+                                                    >
+                                                      {sub.title || 'Untitled Subtask'}
+                                                    </span>
+                                                  </TaskTitleTooltip>
+                                                </div>
+                                              </td>
+                                              <td className="cu-td cu-td-assignee" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                                <div className="cu-avatars" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+                                                  {subAssignees.length === 0 ? (
+                                                    <div className="cu-avatar-empty" title="Unassigned" style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                                                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                                    </div>
+                                                  ) : (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                                                      {subAssignees.map(a => {
+                                                        const uObj = users.find(u => u.id === a);
+                                                        const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
+                                                        return (
+                                                          <div key={a} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                            <div className={`cu-avatar ${getAvatarColor(dispName)}`} title={dispName} style={{ width: '24px', height: '24px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '600' }}>
+                                                              {initials(dispName)}
+                                                            </div>
+                                                            <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{dispName}</span>
+                                                          </div>
+                                                        );
+                                                      })}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              </td>
+                                              <td className="cu-td cu-td-list" style={{ padding: '0.85rem 1.25rem' }}>
+                                                <span style={{
+                                                  background: subMeta.bg,
+                                                  color: subMeta.fg,
+                                                  border: subMeta.border || 'none',
+                                                  padding: '0.2rem 0.6rem',
+                                                  borderRadius: '5px',
+                                                  fontSize: '0.75rem',
+                                                  fontWeight: '700',
+                                                  textTransform: 'uppercase',
+                                                  display: 'inline-block'
+                                                }}>
+                                                  {sub.status || 'To Do'}
+                                                </span>
+                                              </td>
+                                              <td className="cu-td cu-td-delivery" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                                {subRelDate ? (
+                                                  <span className={`cu-due-badge ${subRelDate.isOverdue ? 'overdue' : subRelDate.isToday ? 'today' : ''}`} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: subRelDate.isOverdue ? '#fee2e2' : subRelDate.isToday ? '#fef3c7' : '#f1f5f9', color: subRelDate.isOverdue ? '#ef4444' : subRelDate.isToday ? '#d97706' : '#475569' }}>
+                                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                    {subRelDate.text}
+                                                  </span>
+                                                ) : <span className="cu-empty-cell">-</span>}
+                                              </td>
+                                              <td className="cu-td cu-td-priority" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                                <span className="cu-priority-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', color: '#475569' }}>
+                                                  <PriorityFlag priority={sub.priority} />
+                                                  <span>{sub.priority || 'Medium'}</span>
+                                                </span>
+                                              </td>
+                                              <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
+                                                <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                  <button className="cu-act-btn" onClick={() => { setViewingTask(sub); setShowTaskViewModal(true); }} title="View" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: '0.25rem' }}>
+                                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                                  </button>
+                                                  {can('tasks', 'edit') && (
+                                                    <button className="cu-act-btn" onClick={() => { setSelectedTaskListId(list.id); handleOpenEditTaskModal(sub); }} title="Edit" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
+                                                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                    </button>
+                                                  )}
+                                                  {can('tasks', 'delete') && (
+                                                    <button className="cu-act-btn danger" onClick={() => handleDeleteTask(sub.id)} title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }}>
+                                                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                    </button>
+                                                  )}
+                                                </div>
+                                              </td>
+                                            </tr>
+                                          );
+                                        });
+                                      }
+
+                                      return rows;
+                                    });
+                                  })()
                                 )}
                               </tbody>
                             </table>
@@ -2341,6 +2541,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     return true;
   });
 
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedProjects = filteredProjects.slice(startIndex, endIndex);
+
   const handleSelectAll = (e) => {
     if (e.target.checked) {
       setSelectedProjectIds(filteredProjects.map(p => p.id));
@@ -2444,7 +2648,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               ) : filteredProjects.length === 0 ? (
                 <tr><td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No projects in this view.</td></tr>
               ) : (
-                filteredProjects.map((proj, idx) => {
+                paginatedProjects.map((proj, idx) => {
                   const client = proj.client || '-';
                   const estHours = proj.estimatedHours ? `${proj.estimatedHours} hrs` : '-';
                   const actHours = proj.actualHours ? `${proj.actualHours} hrs` : '-';
@@ -2468,7 +2672,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         />
                       </td>
                       <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#1e293b', fontWeight: '600' }}>
-                        {idx + 1}
+                        {startIndex + idx + 1}
                       </td>
                       <td style={{ padding: '0.55rem 1rem' }}>
                         <button 
@@ -2546,7 +2750,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           {filteredProjects.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8', fontSize: '0.9rem' }}>No projects in this view.</div>
           ) : (
-            filteredProjects.map((proj, idx) => {
+            paginatedProjects.map((proj, idx) => {
               const displayStatus = proj.status || 'In Progress';
               
               let statusBg = '#dcfce7'; let statusColor = '#16a34a';
@@ -2564,7 +2768,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       onChange={(e) => handleSelectOne(e, proj.id)}
                       className="mp-checkbox"
                     />
-                    <span className="mp-index">#{idx + 1}</span>
+                    <span className="mp-index">#{startIndex + idx + 1}</span>
                     <button 
                       style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '700', fontSize: '0.95rem', cursor: 'pointer', padding: 0, textAlign: 'left' }}
                       onClick={() => {
@@ -2617,21 +2821,92 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           )}
         </div>
         
-        {/* Pagination placeholder matching the image */}
-        <div className="projects-table-footer-bar">
-          <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Showing 1 to {Math.min(10, projects.length || 10)} of {projects.length || 15} entries</span>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', borderRadius: '6px', background: 'white', color: '#64748b', cursor: 'pointer' }}>&lt;</button>
-            <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: '6px', background: '#2563eb', color: 'white', fontWeight: '600', cursor: 'pointer' }}>1</button>
-            <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', borderRadius: '6px', background: 'white', color: '#334155', fontWeight: '600', cursor: 'pointer' }}>2</button>
-            <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', borderRadius: '6px', background: 'white', color: '#64748b', cursor: 'pointer' }}>&gt;</button>
-            <select style={{ marginLeft: '1rem', padding: '0.35rem 0.5rem', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.85rem', color: '#334155', background: 'white', outline: 'none' }}>
-              <option>10 / page</option>
-              <option>20 / page</option>
-              <option>50 / page</option>
-            </select>
-          </div>
-        </div>
+        {/* Pagination bar */}
+        {(() => {
+          const totalPages = Math.ceil(filteredProjects.length / pageSize) || 1;
+          const pageNumbers = [];
+          for (let i = 1; i <= totalPages; i++) {
+            pageNumbers.push(i);
+          }
+          return (
+            <div className="projects-table-footer-bar">
+              <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                Showing {filteredProjects.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredProjects.length)} of {filteredProjects.length} entries
+              </span>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button 
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justify: 'center', 
+                    border: '1px solid #e2e8f0', 
+                    borderRadius: '6px', 
+                    background: 'white', 
+                    color: currentPage === 1 ? '#cbd5e1' : '#64748b', 
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer' 
+                  }}
+                >
+                  &lt;
+                </button>
+                {pageNumbers.map(page => (
+                  <button 
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    style={{ 
+                      width: '32px', 
+                      height: '32px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justify: 'center', 
+                      border: currentPage === page ? 'none' : '1px solid #e2e8f0', 
+                      borderRadius: '6px', 
+                      background: currentPage === page ? '#2563eb' : 'white', 
+                      color: currentPage === page ? 'white' : '#334155', 
+                      fontWeight: '600', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button 
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justify: 'center', 
+                    border: '1px solid #e2e8f0', 
+                    borderRadius: '6px', 
+                    background: 'white', 
+                    color: currentPage === totalPages ? '#cbd5e1' : '#64748b', 
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' 
+                  }}
+                >
+                  &gt;
+                </button>
+                <select 
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  style={{ marginLeft: '1rem', padding: '0.35rem 0.5rem', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.85rem', color: '#334155', background: 'white', outline: 'none', cursor: 'pointer' }}
+                >
+                  <option value={10}>10 / page</option>
+                  <option value={20}>20 / page</option>
+                  <option value={50}>50 / page</option>
+                </select>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

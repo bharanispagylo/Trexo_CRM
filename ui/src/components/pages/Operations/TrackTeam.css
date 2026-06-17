@@ -280,6 +280,24 @@
   color: #dc2626;
 }
 
+.member-edit-icon-btn {
+  background: transparent;
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
+}
+
+.member-edit-icon-btn:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
 /* ══════════════════════════════════════════════
    Add New Team Member Form Styles (Namespaced)
    ══════════════════════════════════════════════ */

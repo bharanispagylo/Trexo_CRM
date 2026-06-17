@@ -35,7 +35,7 @@ export default function Estimations({ user }) {
       setEstimations(estData || []);
       setProjects(projData || []);
       setClients(clientData || []);
-      setUsers(usersData ? usersData.map(u => u.fullName || `${u.firstName} ${u.lastName}`.trim()) : []);
+      setUsers(usersData || []);
       setTaskLists(listsData || []);
     } catch (err) {
       console.error('Failed to fetch estimations data:', err);
@@ -273,12 +273,22 @@ export default function Estimations({ user }) {
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Assignee</label>
                 <select className="estimations-select" value={convertForm.assignees} onChange={e => setConvertForm({...convertForm, assignees: e.target.value})}>
                   <option value="">Unassigned</option>
-                  {users.map(u => <option key={u} value={u}>{u}</option>)}
+                  {(() => {
+                    const selectedProj = projects.find(p => p.id === convertForm.projectId);
+                    const memberIds = selectedProj && selectedProj.members 
+                      ? selectedProj.members.split(',').map(m => m.trim()).filter(Boolean) 
+                      : [];
+                    const filteredUsers = users.filter(u => memberIds.includes(u.id));
+                    return filteredUsers.map(u => {
+                      const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
+                      return <option key={u.id} value={u.id}>{displayName}</option>;
+                    });
+                  })()}
                 </select>
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Project</label>
-                <select className="estimations-select" value={convertForm.projectId} onChange={e => setConvertForm({...convertForm, projectId: e.target.value, taskListId: ''})}>
+                <select className="estimations-select" value={convertForm.projectId} onChange={e => setConvertForm({...convertForm, projectId: e.target.value, taskListId: '', assignees: ''})}>
                   <option value="">-- Select Project --</option>
                   {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
