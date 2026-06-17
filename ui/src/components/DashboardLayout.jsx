@@ -320,22 +320,46 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
     }
   };
 
-  const filteredTasks = searchQuery.trim()
-    ? allTasks.filter(t =>
-      (t.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (t.description || '').toLowerCase().includes(searchQuery.toLowerCase())
-    )
+  const q = searchQuery.trim().toLowerCase();
+
+  const filteredTasks = q
+    ? allTasks.filter(t => {
+        if ((t.title || '').toLowerCase().includes(q)) return true;
+        if ((t.description || '').toLowerCase().includes(q)) return true;
+        if ((t.taskNo || '').toLowerCase().includes(q)) return true;
+        if ((t.status || '').toLowerCase().includes(q)) return true;
+        if ((t.priority || '').toLowerCase().includes(q)) return true;
+        if ((t.projectName || '').toLowerCase().includes(q)) return true;
+        // Search by assignee names
+        if (t.assignees) {
+          const ids = t.assignees.split(',').map(id => id.trim()).filter(Boolean);
+          const matchesAssignee = ids.some(id => {
+            const u = allUsers.find(user => user.id === id);
+            if (!u) return false;
+            const name = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase();
+            return name.includes(q);
+          });
+          if (matchesAssignee) return true;
+        }
+        return false;
+      })
     : [];
 
-  const filteredProjects = searchQuery.trim()
+  const filteredProjects = q
     ? allProjects.filter(p =>
-      (p.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+      (p.name || '').toLowerCase().includes(q) ||
+      (p.client || '').toLowerCase().includes(q) ||
+      (p.status || '').toLowerCase().includes(q) ||
+      (p.description || '').toLowerCase().includes(q)
     )
     : [];
 
-  const filteredUsers = searchQuery.trim()
+  const filteredUsers = q
     ? allUsers.filter(u =>
-      (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase().includes(searchQuery.toLowerCase())
+      (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q) ||
+      (u.empId || '').toLowerCase().includes(q) ||
+      (u.role || '').toLowerCase().includes(q)
     )
     : [];
 
@@ -464,7 +488,11 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             setActiveTab('tasks');
           });
         }
-        return <Reports user={user} />;
+        return <Reports user={user} onNavigateToTask={(taskData) => {
+            setSearchSelectedTask(taskData);
+            setIsTaskDetailOpen(true);
+            setActiveTab('tasks');
+          }} />;
       default: return renderOverview(
         setActiveTab,
         (taskData) => {
@@ -669,7 +697,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
                         <div className="saas-search-item-icon">#</div>
                         <div className="saas-search-item-content">
                           <div className="saas-search-item-title">{t.title}</div>
-                          <div className="saas-search-item-subtitle">{t.status} • {t.priority}</div>
+                          <div className="saas-search-item-subtitle">{t.taskNo || ''} • {t.status} • {t.priority}{t.projectName ? ` • ${t.projectName}` : ''}</div>
                         </div>
                       </div>
                     ))}

@@ -1375,29 +1375,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                               )}
                                               {subTasks.length === 0 && <span style={{ width: '18px', display: 'inline-block' }} />}
                                               <TaskTitleTooltip text={task.title || 'Untitled Task'}>
-                                                <span 
-                                                  className="cu-task-title" 
-                                                  style={{ 
-                                                    fontSize: '0.85rem', 
-                                                    fontWeight: '600', 
-                                                    color: '#2563eb', 
-                                                    cursor: 'pointer',
-                                                    textDecoration: 'none'
-                                                  }}
-                                                  onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
-                                                  onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (onNavigateToTasks) {
-                                                      onNavigateToTasks(task);
-                                                    } else {
-                                                      setViewingTask(task);
-                                                      setShowTaskViewModal(true);
-                                                    }
-                                                  }}
-                                                >
-                                                  {task.title || 'Untitled Task'}
-                                                </span>
+                                                <span className="cu-task-title" style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{task.title || 'Untitled Task'}</span>
                                               </TaskTitleTooltip>
                                               {subTasks.length > 0 && (
                                                 <span 
@@ -1515,28 +1493,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
                                                   <span className="cu-subtask-indicator" style={{ color: '#94a3b8', marginRight: '4px', fontSize: '1rem', fontWeight: 'bold' }}>↳</span>
                                                   <TaskTitleTooltip text={sub.title || 'Untitled Subtask'}>
-                                                    <span 
-                                                      className="cu-task-title" 
-                                                      style={{ 
-                                                        fontSize: '0.85rem', 
-                                                        color: '#2563eb', 
-                                                        cursor: 'pointer',
-                                                        textDecoration: 'none'
-                                                      }}
-                                                      onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
-                                                      onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
-                                                      onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (onNavigateToTasks) {
-                                                          onNavigateToTasks(sub);
-                                                        } else {
-                                                          setViewingTask(sub);
-                                                          setShowTaskViewModal(true);
-                                                        }
-                                                      }}
-                                                    >
-                                                      {sub.title || 'Untitled Subtask'}
-                                                    </span>
+                                                    <span className="cu-task-title" style={{ fontSize: '0.85rem', color: '#475569' }}>{sub.title || 'Untitled Subtask'}</span>
                                                   </TaskTitleTooltip>
                                                 </div>
                                               </td>
