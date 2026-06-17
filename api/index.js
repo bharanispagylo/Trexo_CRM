@@ -1735,7 +1735,6 @@ app.post('/api/estimations/:id/convert', async (req, res) => {
       data: {
         title: estimation.taskName,
         description: estimation.description,
-        projectName: finalProjectName,
         projectId: finalProjectId,
         clientId: estimation.clientId,
         estimatedHours: estimation.estimatedHours,
@@ -1841,9 +1840,17 @@ app.get('/api/reports/monthly', async (req, res) => {
       where: whereClause
     });
 
+    const taskIds = reportRecords.map(r => r.id);
+    const dbTasks = await prisma.task.findMany({
+      where: { id: { in: taskIds } },
+      select: { id: true, parentId: true }
+    });
+    const taskParentMap = new Map(dbTasks.map(t => [t.id, t.parentId]));
+
     const mapped = reportRecords.map(r => ({
       id: r.id,
       taskNo: r.taskNo,
+      parentId: taskParentMap.get(r.id) || null,
       title: r.title,
       projectName: r.projectName,
       projectId: r.projectId,
@@ -1897,9 +1904,17 @@ app.get('/api/reports/range', async (req, res) => {
       where: whereClause
     });
 
+    const taskIds = reportRecords.map(r => r.id);
+    const dbTasks = await prisma.task.findMany({
+      where: { id: { in: taskIds } },
+      select: { id: true, parentId: true }
+    });
+    const taskParentMap = new Map(dbTasks.map(t => [t.id, t.parentId]));
+
     const mapped = reportRecords.map(r => ({
       id: r.id,
       taskNo: r.taskNo,
+      parentId: taskParentMap.get(r.id) || null,
       title: r.title,
       projectName: r.projectName,
       projectId: r.projectId,
