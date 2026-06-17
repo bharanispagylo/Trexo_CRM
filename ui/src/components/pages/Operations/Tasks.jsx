@@ -373,6 +373,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const [uploading, setUploading] = useState(false);
   const [commentAttachment, setCommentAttachment] = useState(null);
   const [commentUploading, setCommentUploading] = useState(false);
+  const [commentPosting, setCommentPosting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef(null);
   const commentFileInputRef = useRef(null);
@@ -630,6 +631,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   };
 
   const handleAddComment = async (parentId = null, text = null) => {
+    if (commentPosting) return;
     let commentText = text !== null ? text : newComment;
     if (!commentText.trim() && !commentAttachment) return;
     
@@ -637,6 +639,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       commentText = `${commentText} [ATTACHMENT:${commentAttachment.url}|${commentAttachment.name}]`.trim();
     }
 
+    setCommentPosting(true);
     try {
       await api.post(`/tasks/${task.id}/comments`, {
         text: commentText,
@@ -655,6 +658,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       }
     } catch (err) {
       console.error('Comment error:', err);
+    } finally {
+      setCommentPosting(false);
     }
   };
 
@@ -1234,15 +1239,25 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       </div>
 
       {replyingTo === c.id && (
-        <div className="comment-reply-input-wrapper animate-fade-in">
+        <div className="comment-reply-input-wrapper animate-fade-in" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '0.5rem' }}>
           <input 
-            placeholder="Write a reply..." 
+            placeholder={commentPosting ? "Posting..." : "Write a reply..."} 
             value={replyText} 
             onChange={e => setReplyText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleAddComment(c.id, replyText); }}
             autoFocus
             className="reply-inline-input"
+            style={{ flex: 1 }}
+            disabled={commentPosting}
           />
+          <button 
+            type="button" 
+            className="reply-submit-btn"
+            onClick={() => handleAddComment(c.id, replyText)}
+            disabled={!replyText.trim() || commentPosting}
+          >
+            Reply
+          </button>
         </div>
       )}
 
@@ -1389,7 +1404,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 className={`saas-tab-header-btn ${activeTab === 'attachments' ? 'active' : ''}`}
                 onClick={() => setActiveTab('attachments')}
               >
-                Attachments
+                Attachments ({form.attachments ? form.attachments.split(',').filter(Boolean).length : 0})
               </button>
             )}
             {isEdit && !task?.parentId && (
@@ -1868,11 +1883,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                        <th style={{ width: '32%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Name</th>
-                        <th style={{ width: '22%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded By</th>
-                        <th style={{ width: '22%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded On</th>
-                        <th style={{ width: '12%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Size</th>
-                        <th style={{ width: '12%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
+                        <th style={{ width: '28%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Name</th>
+                        <th style={{ width: '18%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded By</th>
+                        <th style={{ width: '28%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded On</th>
+                        <th style={{ width: '11%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Size</th>
+                        <th style={{ width: '15%', padding: '0.85rem 0.5rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1936,7 +1951,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                               </td>
 
                               {/* Actions */}
-                              <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                              <td style={{ padding: '0.85rem 0.5rem', textAlign: 'right' }}>
                                 <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                                   
                                   {/* Download Icon Button */}
@@ -2295,7 +2310,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       handleAddComment(); 
                     } 
                   }} 
-                  placeholder={commentUploading ? "Uploading..." : "Write a comment..."}
+                  placeholder={commentUploading ? "Uploading..." : commentPosting ? "Posting..." : "Write a comment..."}
                   className="comment-main-text-input"
                   style={{
                     paddingRight: '4.5rem',
@@ -2307,7 +2322,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     paddingBottom: '8px',
                     borderRadius: '20px'
                   }}
-                  disabled={commentUploading}
+                  disabled={commentUploading || commentPosting}
                 />
                 
                 {mentionState?.isOpen && (
@@ -2365,8 +2380,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <span 
                     className="comment-emoji-icon" 
                     title="Insert Emoji"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    style={{ cursor: 'pointer', userSelect: 'none', opacity: 0.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                    onClick={() => !commentPosting && !commentUploading && setShowEmojiPicker(!showEmojiPicker)}
+                    style={{ cursor: (commentPosting || commentUploading) ? 'not-allowed' : 'pointer', userSelect: 'none', opacity: (commentPosting || commentUploading) ? 0.3 : 0.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
                   </span>
@@ -2375,8 +2390,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <span 
                     className="comment-paperclip-icon" 
                     title="Attach File to Comment"
-                    onClick={() => commentFileInputRef.current && commentFileInputRef.current.click()}
-                    style={{ cursor: 'pointer', userSelect: 'none', opacity: 0.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                    onClick={() => !commentPosting && !commentUploading && commentFileInputRef.current && commentFileInputRef.current.click()}
+                    style={{ cursor: (commentPosting || commentUploading) ? 'not-allowed' : 'pointer', userSelect: 'none', opacity: (commentPosting || commentUploading) ? 0.3 : 0.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                   </span>
@@ -2416,7 +2431,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 type="button"
                 className="comment-submit-paper-btn" 
                 onClick={() => handleAddComment()} 
-                disabled={(!newComment.trim() && !commentAttachment) || commentUploading}
+                disabled={(!newComment.trim() && !commentAttachment) || commentUploading || commentPosting}
               >
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
               </button>

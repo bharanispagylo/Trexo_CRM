@@ -5265,3 +5265,34 @@
     transform: translate(-50%, -100%) scale(1);
   }
 }
+
+/* ── Reply Submit Button ── */
+.reply-submit-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.15);
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.reply-submit-btn:hover:not(:disabled) {
+  background: #1d4ed8;
+  box-shadow: 0 2px 6px rgba(29, 78, 216, 0.25);
+}
+
+.reply-submit-btn:disabled {
+  background: #f1f5f9;
+  color: #cbd5e1;
+  box-shadow: none;
+  cursor: not-allowed;
+}
