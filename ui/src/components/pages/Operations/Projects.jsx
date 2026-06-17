@@ -154,6 +154,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
   const [statusFilter, setStatusFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
   const { can, getLevel } = usePermissions();
   const { alert, confirm, toast } = useAlert();
 
@@ -2324,9 +2325,21 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     });
   }
 
-  const filteredProjects = statusFilter === 'All' 
-    ? allowedProjects 
-    : allowedProjects.filter(p => (p.status || 'In Progress') === statusFilter);
+  const filteredProjects = allowedProjects.filter(p => {
+    if (statusFilter !== 'All') {
+      const status = p.status || 'Active';
+      const mappedStatus = status === 'Active' ? 'In Progress' : status;
+      if (mappedStatus !== statusFilter) return false;
+    }
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase();
+      const nameMatch = (p.name || '').toLowerCase().includes(q);
+      const clientMatch = (p.client || '').toLowerCase().includes(q);
+      const descMatch = (p.description || '').toLowerCase().includes(q);
+      return nameMatch || clientMatch || descMatch;
+    }
+    return true;
+  });
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
@@ -2385,7 +2398,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <div style={{ position: 'relative', width: '250px' }}>
               <svg style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input type="text" placeholder="Search..." style={{ width: '100%', padding: '0.5rem 0.5rem 0.5rem 2.2rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', outline: 'none' }} />
+              <input 
+                type="text" 
+                placeholder="Search..." 
+                style={{ width: '100%', padding: '0.5rem 0.5rem 0.5rem 2.2rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', outline: 'none' }} 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
             <button style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>

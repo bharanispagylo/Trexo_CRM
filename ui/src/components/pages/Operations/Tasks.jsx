@@ -298,7 +298,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         ...task,
         status: getStatusString(task.status),
         taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : `TSK-${Math.floor(Math.random() * 900000) + 100000}`),
-        approvedHoursStr: task.approvedHours !== undefined && task.approvedHours !== null ? Number(task.approvedHours).toFixed(1) : '0.0'
+        approvedHoursStr: task.approvedHours !== undefined && task.approvedHours !== null ? String(task.approvedHours) : '0'
       };
       setForm(loadedForm);
       setInitialForm(loadedForm);
@@ -353,6 +353,33 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const [newSubtaskDueDate, setNewSubtaskDueDate] = useState('');
   const [newSubtaskPriority, setNewSubtaskPriority] = useState('Medium');
   const [subtaskSaving, setSubtaskSaving] = useState(false);
+
+  const currentProjId = form.projectId 
+    || (form.projectName ? projects.find(p => p.name === form.projectName)?.id : null)
+    || (task && (task.projectId || (task.taskListId && taskLists.find(l => l.id === task.taskListId)?.projectId)));
+  const currentProject = currentProjId ? projects.find(p => p.id === currentProjId) : null;
+  const projectMemberIds = currentProject ? (currentProject.members || '').split(',').map(m => m.trim()).filter(Boolean) : [];
+  
+  const filteredUsers = projectMemberIds.length > 0
+    ? users.filter(u => projectMemberIds.includes(u.id))
+    : users;
+
+  const finalUsers = (() => {
+    let list = [...filteredUsers];
+    const currentAssigneeId = form.assignees;
+    if (currentAssigneeId) {
+      const ids = currentAssigneeId.split(',').map(i => i.trim()).filter(Boolean);
+      ids.forEach(id => {
+        if (!list.some(u => u.id === id)) {
+          const assignedUserObj = users.find(u => u.id === id);
+          if (assignedUserObj) {
+            list.push(assignedUserObj);
+          }
+        }
+      });
+    }
+    return list;
+  })();
 
 
   const [comments, setComments] = useState([]);
@@ -501,6 +528,13 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   }, [task, isEdit, fetchComments, fetchWorkLogs]);
 
   useEffect(() => {
+    if (task?.createdAt) {
+      const taskDate = new Date(task.createdAt).toISOString().split('T')[0];
+      setWorkLogForm(prev => ({ ...prev, logDate: taskDate }));
+    }
+  }, [task]);
+
+  useEffect(() => {
     const billedHours = workLogs.filter(log => log.isBilled).reduce((acc, log) => acc + (Number(log.hoursWorked) || 0), 0);
     const employeeTime = workLogs.filter(log => !log.isBilled).reduce((acc, log) => acc + (Number(log.hoursWorked) || 0), 0);
     
@@ -509,7 +543,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         return {
           ...prev,
           actualHours: billedHours,
-          actualHoursStr: billedHours.toFixed(1),
+          actualHoursStr: String(billedHours),
           employeeHours: employeeTime
         };
       }
@@ -738,8 +772,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         });
       }
       fetchWorkLogs();
+      const taskDate = task?.createdAt ? new Date(task.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
       setWorkLogForm({
-        logDate: new Date().toISOString().split('T')[0],
+        logDate: taskDate,
         hoursWorked: '',
         description: '',
         isBilled: false,
@@ -1422,14 +1457,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 Billing
               </button>
             )}
-            {!task?.parentId && (
-              <button 
-                className={`saas-tab-header-btn ${activeTab === 'attachments' ? 'active' : ''}`}
-                onClick={() => setActiveTab('attachments')}
-              >
-                Attachments ({form.attachments ? form.attachments.split(',').filter(Boolean).length : 0})
-              </button>
-            )}
+            <button 
+              className={`saas-tab-header-btn ${activeTab === 'attachments' ? 'active' : ''}`}
+              onClick={() => setActiveTab('attachments')}
+            >
+              Attachments ({form.attachments ? form.attachments.split(',').filter(Boolean).length : 0})
+            </button>
             {isEdit && !task?.parentId && (
               <button 
                 className={`saas-tab-header-btn ${activeTab === 'subtasks' ? 'active' : ''}`}
@@ -1467,7 +1500,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <span className="saas-meta-value">
                     <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
                       <option value="">Select Assignee...</option>
-                      {users.map(u => {
+                      {finalUsers.map(u => {
                         const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
                         return <option key={u.id} value={u.id}>{displayName}</option>;
                       })}
@@ -1625,7 +1658,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                           {isEditing ? (
                             <input 
                               type="text" 
-                              value={form.approvedHoursStr !== undefined ? form.approvedHoursStr : (form.approvedHours !== undefined && form.approvedHours !== null ? Number(form.approvedHours).toFixed(1) : '0.0')}
+                              value={form.approvedHoursStr !== undefined ? form.approvedHoursStr : (form.approvedHours !== undefined && form.approvedHours !== null ? String(form.approvedHours) : '0')}
                               onChange={e => {
                                 const val = e.target.value;
                                 if (val === '' || /^\d*\.?\d*$/.test(val)) {
@@ -1637,11 +1670,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                 }
                               }}
                               className="saas-grid-input"
-                              placeholder="e.g. 40.0"
+                              placeholder="e.g. 40"
                             />
                           ) : (
                             <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
-                              {Number(form.approvedHours || 0).toFixed(1)}
+                              {String(form.approvedHours || 0)}
                             </span>
                           )}
                         </div>
@@ -1654,7 +1687,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         </label>
                         <div>
                           <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
-                            {Number(form.actualHours || 0).toFixed(1)}
+                            {String(form.actualHours || 0)}
                           </span>
                         </div>
                       </div>
@@ -1671,7 +1704,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                             fontWeight: '500', 
                             color: '#0f172a'
                           }}>
-                            {Number(Math.max(0, (form.approvedHours || 0) - (form.actualHours || 0))).toFixed(1)}
+                            {String(Math.max(0, (form.approvedHours || 0) - (form.actualHours || 0)))}
                             {((form.approvedHours || 0) - (form.actualHours || 0)) < 0 && ' (Over Budget)'}
                           </span>
                         </div>
@@ -1703,7 +1736,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                           <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Date</label>
-                          <input type="date" className="saas-input" value={workLogForm.logDate} onChange={e => setWorkLogForm({...workLogForm, logDate: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                          <input type="date" className="saas-input" value={workLogForm.logDate} disabled={true} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#e2e8f0', color: '#64748b', cursor: 'not-allowed' }} />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                           <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Worked Hrs</label>
@@ -1717,7 +1750,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         {workLogForm.id && (
                           <button
                             className="saas-btn-secondary"
-                            onClick={() => setWorkLogForm({ logDate: new Date().toISOString().split('T')[0], hoursWorked: '', description: '', isBilled: false, id: null })}
+                            onClick={() => {
+                              const taskDate = task?.createdAt ? new Date(task.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                              setWorkLogForm({ logDate: taskDate, hoursWorked: '', description: '', isBilled: false, id: null });
+                            }}
                             disabled={workLogSaving}
                             style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}
                           >
@@ -1792,11 +1828,17 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                       <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Date</label>
-                      <input type="date" className="saas-input" value={workLogForm.logDate} onChange={e => setWorkLogForm({...workLogForm, logDate: e.target.value})} style={{ width: '100%', boxSizing: 'border-box' }} />
+                      <input 
+                        type="date" 
+                        className="saas-input" 
+                        value={workLogForm.logDate} 
+                        onChange={e => setWorkLogForm({...workLogForm, logDate: e.target.value})} 
+                        style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} 
+                      />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                       <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Hours</label>
-                      <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} style={{ width: '100%', boxSizing: 'border-box' }} />
+                      <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
                     </div>
                   </div>
                   <div style={{ marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
@@ -1804,15 +1846,18 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     <input type="text" className="saas-input" placeholder="What did you work on?" value={workLogForm.description} onChange={e => setWorkLogForm({...workLogForm, description: e.target.value})} style={{ width: '100%', boxSizing: 'border-box' }} />
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="saas-btn-primary" onClick={() => handleAddWorkLog(true)} disabled={workLogSaving}>
+                    <button className="saas-btn-primary" onClick={() => handleAddWorkLog(true)} disabled={workLogSaving} style={{ padding: '0.5rem 1rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
                       {workLogSaving ? 'Saving...' : (workLogForm.id ? 'Update Billing Log' : 'Add Billing Log')}
                     </button>
                     {workLogForm.id && (
                       <button
                         className="saas-btn-secondary"
-                        onClick={() => setWorkLogForm({ logDate: new Date().toISOString().split('T')[0], hoursWorked: '', description: '', isBilled: false, id: null })}
+                        onClick={() => {
+                          const taskDate = task?.createdAt ? new Date(task.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                          setWorkLogForm({ logDate: taskDate, hoursWorked: '', description: '', isBilled: false, id: null });
+                        }}
                         disabled={workLogSaving}
-                        style={{ padding: '0.5rem 1rem' }}
+                        style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}
                       >
                         Cancel Edit
                       </button>
@@ -2112,7 +2157,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                       >
                         <option value="">Unassigned</option>
-                        {users.map(u => {
+                        {filteredUsers.map(u => {
                           const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown';
                           return <option key={u.id} value={u.id}>{n}</option>;
                         })}
@@ -2232,6 +2277,16 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                   </span>
                                 </td>
                                 <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                                  <button
+                                    title="Edit Subtask"
+                                    style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: '0.25rem', marginRight: '0.5rem' }}
+                                    onClick={() => handleOpenSubtask(sub)}
+                                  >
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                  </button>
                                   <button 
                                     title="Delete Subtask" 
                                     style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }} 
@@ -3227,6 +3282,30 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     return null;
   };
 
+  const getFilteredUsersForProject = (projId, currentAssigneeId = null) => {
+    if (!projId) return listUsers;
+    const project = taskProjects.find(p => p.id === projId);
+    if (!project) return listUsers;
+    const memberIds = (project.members || '').split(',').map(m => m.trim()).filter(Boolean);
+    if (memberIds.length === 0) return listUsers;
+    
+    const filtered = listUsers.filter(u => memberIds.includes(u.id));
+    if (currentAssigneeId) {
+      const ids = currentAssigneeId.split(',').map(i => i.trim()).filter(Boolean);
+      let list = [...filtered];
+      ids.forEach(id => {
+        if (!list.some(u => u.id === id)) {
+          const extraUser = listUsers.find(u => u.id === id);
+          if (extraUser) {
+            list.push(extraUser);
+          }
+        }
+      });
+      return list;
+    }
+    return filtered;
+  };
+
   const filteredTasks = tasks.filter(t => {
     // 1. Project Filter
     if (filterProjectName && t.projectName !== filterProjectName) {
@@ -3293,8 +3372,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
 
       {/* Ã¢â€¢ÂÃ¢â€¢Â MAIN CONTENT Ã¢â€¢ÂÃ¢â€¢Â */}
-      <div className="tasks-main-content">
-      <div className="kanban-root" onDragEnd={handleDragEnd}>
+      <div className={`tasks-main-content ${viewMode === 'kanban' || viewMode === 'schedule' ? 'kanban-mode-active' : ''}`}>
+      <div className={`kanban-root ${viewMode === 'kanban' || viewMode === 'schedule' ? 'kanban-scroll-layout' : ''}`} onDragEnd={handleDragEnd}>
       {(getLevel('tasks', 'view') === 'All' || getLevel('tasks', 'edit') === 'All' || getLevel('tasks', 'delete') === 'All' || isTeamLeadOrAdmin) && !assigneeFilter && (
         <div className="saas-tabs" style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '2rem' }}>
           <button 
@@ -4105,7 +4184,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#64748b" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                                 <select className="cu-inline-dropdown" value={task.assignees || ''} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { await api.put(`/tasks/${task.id}`, { assignees: e.target.value }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }}>
                                                   <option value="">Unassigned</option>
-                                                  {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                  {getFilteredUsersForProject(getTaskProjectId(task), task.assignees).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                 </select>
                                               </div>
                                             </td>
@@ -4157,7 +4236,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#64748b" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                                     <select className="cu-inline-dropdown" value={sub.assignees || ''} onChange={async (e) => { e.stopPropagation(); const updated = { ...sub, assignees: e.target.value }; try { await api.put(`/tasks/${sub.id}`, { assignees: e.target.value }); setTasks(ts => ts.map(t => t.id === sub.id ? updated : t)); } catch(err) { console.error(err); } }}>
                                                       <option value="">Unassigned</option>
-                                                      {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                      {getFilteredUsersForProject(getTaskProjectId(sub) || getTaskProjectId(task), sub.assignees).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                     </select>
                                                   </div>
                                                 </td>
@@ -4212,7 +4291,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                         </button>
                                                         <select className="ntib-hidden-select" value={subtaskAssignee} onChange={e => setSubtaskAssignee(e.target.value)}>
                                                           <option value="">Assignee</option>
-                                                          {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                          {getFilteredUsersForProject(getTaskProjectId(task)).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                         </select>
                                                         {subtaskAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === subtaskAssignee) || {}).fullName || subtaskAssignee)}</span>}
                                                       </div>
@@ -4796,7 +4875,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                         </button>
                                                         <select className="ntib-hidden-select" value={subtaskAssignee} onChange={e => setSubtaskAssignee(e.target.value)}>
                                                           <option value="">Assignee</option>
-                                                          {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                          {getFilteredUsersForProject(getTaskProjectId(task)).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                         </select>
                                                         {subtaskAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === subtaskAssignee) || {}).fullName || subtaskAssignee)}</span>}
                                                       </div>
@@ -4877,7 +4956,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                       </button>
                                       <select className="ntib-hidden-select" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
                                         <option value="">Assignee</option>
-                                        {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                        {getFilteredUsersForProject(inlineAdd?.projId).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                       </select>
                                       {inlineAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === inlineAssignee) || {}).fullName || inlineAssignee)}</span>}
                                     </div>

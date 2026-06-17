@@ -5317,3 +5317,57 @@
   box-shadow: none;
   cursor: not-allowed;
 }
+
+/* ══════════════════════════════════════════════
+   Kanban and Schedule View Height / Scroll Fixes
+   ══════════════════════════════════════════════ */
+
+/* Enable fixed viewport height and internal scrolling for Kanban/Schedule */
+.tasks-main-content.kanban-mode-active {
+  overflow-y: hidden !important; /* Prevent page scrolling, scrollbar is inside board/columns */
+  height: 100%;
+}
+
+.kanban-root.kanban-scroll-layout {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0.5rem 1rem 1rem;
+}
+
+.kanban-root.kanban-scroll-layout .kanban-board {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden; /* Only scroll horizontally at the board level */
+  display: flex;
+  gap: 1rem;
+  padding-bottom: 0.75rem; /* Space for horizontal scrollbar */
+  min-height: 0; /* Enable flex-child compression/scrolling */
+  height: calc(100% - 60px); /* Fill the rest of the layout */
+}
+
+/* Ensure columns fill the board container height and scroll internally */
+.kanban-root.kanban-scroll-layout .kanban-col-clickup {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important; /* Remove min-height to fit parent */
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 270px; /* Standard column width */
+}
+
+/* Adjust schedule column layout if needed */
+.kanban-root.kanban-scroll-layout .schedule-board .kanban-col-clickup {
+  flex: 1 1 300px;
+  min-width: 290px;
+}
+
+/* Scroll cards list internally */
+.kanban-root.kanban-scroll-layout .col-clickup-cards {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px; /* avoid scrollbar overlapping cards */
+}
+
