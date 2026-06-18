@@ -389,6 +389,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const [replyText, setReplyText] = useState('');
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingCommentText, setEditingCommentText] = useState('');
+  const [editCommentSaving, setEditCommentSaving] = useState(false);
   const [workLogs, setWorkLogs] = useState([]);
   const [workLogForm, setWorkLogForm] = useState({
     logDate: new Date().toISOString().split('T')[0],
@@ -405,6 +406,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const [taskSaving, setTaskSaving] = useState(false);
   const fileInputRef = useRef(null);
   const commentFileInputRef = useRef(null);
+  const commentTextareaRef = useRef(null);
   const commentPostingRef = useRef(false);
   const taskSavingRef = useRef(false);
   const { getLevel } = usePermissions();
@@ -554,6 +556,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const handleCommentFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    uploadCommentFile(file);
+  };
+
+  const uploadCommentFile = async (file) => {
+    if (!file) return;
     setCommentUploading(true);
 
     // Try Cloudinary first if configured
@@ -571,6 +578,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         if (data.secure_url) {
           setCommentAttachment({ url: data.secure_url, name: file.name });
           setCommentUploading(false);
+          setTimeout(() => commentTextareaRef.current?.focus(), 50);
           return;
         }
       } catch (err) {
@@ -584,6 +592,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       reader.onloadend = () => {
         setCommentAttachment({ url: reader.result, name: file.name });
         setCommentUploading(false);
+        setTimeout(() => commentTextareaRef.current?.focus(), 50);
       };
       reader.onerror = () => {
         alert('Failed to read comment file.', 'error', 'Error');
@@ -594,6 +603,73 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       alert('Local comment file read failed: ' + err.message, 'error', 'Error');
       setCommentUploading(false);
     }
+  };
+
+  const handleCommentPaste = async (e) => {
+    const clipboardData = e.clipboardData;
+    if (!clipboardData || !clipboardData.items) return;
+    if (commentUploading) return;
+
+    // 1. Check for direct image blob (screenshots, snipping tool, etc.)
+    for (let i = 0; i < clipboardData.items.length; i++) {
+      const item = clipboardData.items[i];
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          const fileName = `pasted-image-${Date.now()}.${item.type.split('/')[1] || 'png'}`;
+          const renamedFile = new File([file], fileName, { type: file.type });
+          uploadCommentFile(renamedFile);
+        }
+        return;
+      }
+    }
+
+    // 2. Check for HTML content with <img> tag (browser "Copy Image")
+    const htmlData = clipboardData.getData('text/html');
+    if (htmlData) {
+      const imgMatch = htmlData.match(/<img[^>]+src=["']([^"']+)["']/i);
+      if (imgMatch && imgMatch[1]) {
+        const imgUrl = imgMatch[1];
+        // Skip data: URLs that are too short (likely broken)
+        if (imgUrl.startsWith('data:') && imgUrl.length < 50) return;
+        e.preventDefault();
+        setCommentUploading(true);
+        try {
+          const response = await fetch(imgUrl);
+          const blob = await response.blob();
+          if (blob && blob.size > 0 && blob.type.startsWith('image/')) {
+            const ext = blob.type.split('/')[1] || 'png';
+            const file = new File([blob], `pasted-image-${Date.now()}.${ext}`, { type: blob.type });
+            setCommentUploading(false);
+            uploadCommentFile(file);
+          } else {
+            // If fetch didn't return a valid image, just attach the URL directly
+            setCommentAttachment({ url: imgUrl, name: 'pasted-image.png' });
+            setCommentUploading(false);
+            setTimeout(() => commentTextareaRef.current?.focus(), 50);
+          }
+        } catch (err) {
+          console.warn('Failed to fetch pasted image URL, attaching as link:', err);
+          // If fetching fails (CORS), just attach the URL directly
+          setCommentAttachment({ url: imgUrl, name: 'pasted-image.png' });
+          setCommentUploading(false);
+          setTimeout(() => commentTextareaRef.current?.focus(), 50);
+        }
+        return;
+      }
+    }
+
+    // 3. Check for plain text URL that looks like an image
+    const textData = clipboardData.getData('text/plain');
+    if (textData && /^https?:\/\/.+\.(png|jpe?g|gif|webp|svg|bmp)(\?.*)?$/i.test(textData.trim())) {
+      e.preventDefault();
+      setCommentAttachment({ url: textData.trim(), name: 'pasted-image.png' });
+      setTimeout(() => commentTextareaRef.current?.focus(), 50);
+      return;
+    }
+
+    // 4. If none of the above, allow default text paste behavior
   };
 
   const parseCommentAttachment = (text) => {
@@ -721,12 +797,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   };
 
   const handleSaveEditComment = async (commentId, originalText) => {
+    if (editCommentSaving) return;
     const attachmentMatch = originalText.match(/\[ATTACHMENT:[^\]]+\]/);
     if (!editingCommentText.trim() && !attachmentMatch) return;
     let updatedText = editingCommentText.trim();
     if (attachmentMatch) {
       updatedText = `${updatedText} ${attachmentMatch[0]}`.trim();
     }
+    setEditCommentSaving(true);
     try {
       await api.put(`/comments/${commentId}`, { text: updatedText });
       setEditingCommentId(null);
@@ -734,6 +812,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       fetchComments();
     } catch (err) {
       console.error('Edit comment error:', err);
+    } finally {
+      setEditCommentSaving(false);
     }
   };
 
@@ -1157,21 +1237,24 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       setEditingCommentId(null);
                       setEditingCommentText('');
                     }}
+                    disabled={editCommentSaving}
                     style={{
                       padding: '0.2rem 0.5rem',
                       fontSize: '0.72rem',
                       borderRadius: '4px',
                       border: '1px solid #cbd5e1',
                       background: 'white',
-                      cursor: 'pointer',
+                      cursor: editCommentSaving ? 'not-allowed' : 'pointer',
                       fontWeight: '600',
-                      color: '#475569'
+                      color: '#475569',
+                      opacity: editCommentSaving ? 0.5 : 1
                     }}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={() => handleSaveEditComment(c.id, c.text)}
+                    disabled={editCommentSaving}
                     style={{
                       padding: '0.2rem 0.5rem',
                       fontSize: '0.72rem',
@@ -1179,11 +1262,18 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       border: 'none',
                       background: '#2563eb',
                       color: 'white',
-                      cursor: 'pointer',
-                      fontWeight: '600'
+                      cursor: editCommentSaving ? 'not-allowed' : 'pointer',
+                      fontWeight: '600',
+                      opacity: editCommentSaving ? 0.7 : 1,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.3rem'
                     }}
                   >
-                    Save
+                    {editCommentSaving && (
+                      <span style={{ width: '12px', height: '12px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.6s linear infinite' }} />
+                    )}
+                    {editCommentSaving ? 'Saving...' : 'Save'}
                   </button>
                 </div>
               </div>
@@ -2372,6 +2462,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             <div className="comment-box-flex-row">
               <div className="comment-input-field-wrapper" style={{ position: 'relative' }}>
                 <textarea 
+                  ref={commentTextareaRef}
                   value={newComment} 
                   onChange={e => {
                     const val = e.target.value;
@@ -2404,9 +2495,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     }
                     if (e.key === 'Enter' && !e.shiftKey) { 
                       e.preventDefault();
-                      handleAddComment(); 
+                      if (!commentUploading && !commentPosting) {
+                        handleAddComment(); 
+                      }
                     } 
                   }} 
+                  onPaste={handleCommentPaste}
                   placeholder={commentUploading ? "Uploading..." : commentPosting ? "Posting..." : "Write a comment..."}
                   className="comment-main-text-input"
                   style={{

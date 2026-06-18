@@ -8,6 +8,7 @@ export default function AddUser({ onBack }) {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [existingUsers, setExistingUsers] = useState([]);
   const { alert } = useAlert();
 
 
@@ -59,6 +60,46 @@ export default function AddUser({ onBack }) {
     };
     fetchRoles();
   }, []);
+
+  // Fetch existing users for duplicate validation
+  useEffect(() => {
+    const fetchExistingUsers = async () => {
+      try {
+        const data = await api.get('/users');
+        if (Array.isArray(data)) setExistingUsers(data);
+      } catch (err) {
+        console.error('Fetch users for validation error:', err);
+      }
+    };
+    fetchExistingUsers();
+  }, []);
+
+  // Real-time duplicate check on blur
+  const validateEmailDuplicate = (email) => {
+    if (!email || !email.trim()) return;
+    const emailLower = email.trim().toLowerCase();
+    const duplicate = existingUsers.find(u => (u.email || '').toLowerCase() === emailLower);
+    if (duplicate) {
+      setErrors(prev => ({ ...prev, email: 'This email address already exists' }));
+    } else {
+      setErrors(prev => { const { email: _, ...rest } = prev; return rest; });
+    }
+  };
+
+  const validatePhoneDuplicate = (phone) => {
+    if (!phone || !phone.trim()) return;
+    const phoneClean = phone.replace(/[\s-+()]/g, '');
+    if (phoneClean.length < 10) return;
+    const duplicate = existingUsers.find(u => {
+      const existingClean = (u.phoneNo || '').replace(/[\s-+()]/g, '');
+      return existingClean && existingClean === phoneClean;
+    });
+    if (duplicate) {
+      setErrors(prev => ({ ...prev, phoneNo: 'This phone number already exists' }));
+    } else {
+      setErrors(prev => { const { phoneNo: _, ...rest } = prev; return rest; });
+    }
+  };
 
   const handleImageUpload = async (file) => {
     if (!file) return null;
@@ -116,6 +157,25 @@ export default function AddUser({ onBack }) {
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
+    }
+
+    // Check for duplicate email/phone before API call
+    const emailLower = form.email.trim().toLowerCase();
+    const emailDup = existingUsers.find(u => (u.email || '').toLowerCase() === emailLower);
+    if (emailDup) {
+      setErrors({ email: 'This email address already exists' });
+      return;
+    }
+    if (form.phoneNo) {
+      const phoneClean = form.phoneNo.replace(/[\s-+()]/g, '');
+      const phoneDup = existingUsers.find(u => {
+        const existingClean = (u.phoneNo || '').replace(/[\s-+()]/g, '');
+        return existingClean && existingClean === phoneClean;
+      });
+      if (phoneDup) {
+        setErrors({ phoneNo: 'This phone number already exists' });
+        return;
+      }
     }
     
     setErrors({});
@@ -175,7 +235,11 @@ export default function AddUser({ onBack }) {
               placeholder="john@example.com" 
               value={form.email} 
               autoComplete="off" 
-              onChange={e => setForm({...form, email: e.target.value})} 
+              onChange={e => {
+                setForm({...form, email: e.target.value});
+                if (errors.email) setErrors(prev => { const { email: _, ...rest } = prev; return rest; });
+              }}
+              onBlur={e => validateEmailDuplicate(e.target.value)} 
             />
             {errors.email && <span className="error-text">{errors.email}</span>}
           </div>
@@ -198,7 +262,11 @@ export default function AddUser({ onBack }) {
               placeholder="+1 (555) 000-0000" 
               value={form.phoneNo} 
               autoComplete="off" 
-              onChange={e => setForm({...form, phoneNo: e.target.value})} 
+              onChange={e => {
+                setForm({...form, phoneNo: e.target.value});
+                if (errors.phoneNo) setErrors(prev => { const { phoneNo: _, ...rest } = prev; return rest; });
+              }}
+              onBlur={e => validatePhoneDuplicate(e.target.value)} 
             />
             {errors.phoneNo && <span className="error-text">{errors.phoneNo}</span>}
           </div>

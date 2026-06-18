@@ -226,7 +226,6 @@ export default function EditUser({ userToEdit, onBack }) {
             <select className="saas-select" value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
               <option value="Active">Active</option>
               <option value="Pending">Pending</option>
-              <option value="Inactive">Inactive</option>
             </select>
           </div>
           <div className="saas-field full-width">

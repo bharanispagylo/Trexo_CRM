@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
 /* ══════════════════════════════
    ROOT
 ══════════════════════════════ */
@@ -3652,7 +3654,8 @@
 }
 
 .cu-inline-date-field {
-  width: 100px;
+  width: 130px;
+  min-width: 130px;
   font-size: 0.72rem;
   color: #475569;
 }
