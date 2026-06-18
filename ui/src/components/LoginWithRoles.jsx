@@ -707,10 +707,7 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
       label: 'Reminders', count: 0, iconBg: '#0d9488',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 16 14"/></svg>
     },
-    {
-      label: 'Comments', count: 0, iconBg: '#16a34a',
-      icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-    },
+
   ];
 
   return (

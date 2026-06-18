@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../../api/client';
 import { TaskDetailView, TaskTitleTooltip } from './Tasks';
 import './Projects.css';
@@ -77,7 +77,7 @@ const getAvatarColor = (name) => {
   return AVATAR_COLORS_LIST[charCode % AVATAR_COLORS_LIST.length];
 };
 
-export default function Projects({ user, initialSelectedProject, onClearInitialProject, onNavigateToTasks }) {
+export default function Projects({ user, initialSelectedProject, onClearInitialProject, onNavigateToTasks, initialProjectName, onProjectSelect }) {
   const [projects, setProjects] = useState([]);
   const [expandedProj, setExpandedProj] = useState({});
   const [users, setUsers] = useState([]);
@@ -173,9 +173,27 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     if (initialSelectedProject) {
       setSelectedProject(initialSelectedProject);
       setCurrentView('detail');
+      if (onProjectSelect) onProjectSelect(initialSelectedProject.name);
       if (onClearInitialProject) onClearInitialProject();
     }
   }, [initialSelectedProject, onClearInitialProject]);
+
+  // Auto-open project from URL deep-link (e.g. /projects/ProjectName)
+  const initialProjectNameHandled = useRef(false);
+  useEffect(() => {
+    if (initialProjectName && !initialProjectNameHandled.current && projects.length > 0) {
+      initialProjectNameHandled.current = true;
+      // Match by slug (spaces replaced with hyphens) since URL uses hyphens
+      const slugify = (s) => (s || '').replace(/ /g, '-');
+      const proj = projects.find(p => slugify(p.name) === slugify(initialProjectName));
+      if (proj) {
+        setSelectedProject(proj);
+        setCurrentView('detail');
+        // Update parent with real name (for header display)
+        if (onProjectSelect) onProjectSelect(proj.name);
+      }
+    }
+  }, [initialProjectName, projects, onProjectSelect]);
 
   // ── FETCH DATA ──
   const fetchData = async (silent = false) => {
@@ -862,7 +880,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         
         {/* Breadcrumb Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '600' }}>
-          <button style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }} onClick={() => { setCurrentView('list'); setSelectedTaskListId(null); }}>
+          <button style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }} onClick={() => { setCurrentView('list'); setSelectedTaskListId(null); if (onProjectSelect) onProjectSelect(null); }}>
             Projects
           </button>
           <span style={{ color: '#94a3b8' }}>&gt;</span>
@@ -2710,6 +2728,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                           onClick={() => {
                             setSelectedProject(proj);
                             setCurrentView('detail');
+                            if (onProjectSelect) onProjectSelect(proj.name);
                           }}
                         >
                           {proj.name}
@@ -2805,6 +2824,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       onClick={() => {
                         setSelectedProject(proj);
                         setCurrentView('detail');
+                        if (onProjectSelect) onProjectSelect(proj.name);
                       }}
                       className="mp-name-link"
                     >

@@ -14,10 +14,42 @@ import EditUser from './pages/Administration/EditUser';
 import Reports from './pages/Administration/Reports';
 
 
+// Helper to parse deep-link paths like /projects/Name or /tasks/abc123
+const parseRoutePath = (pathname) => {
+  const path = pathname.startsWith('/') ? pathname.substring(1) : pathname;
+  const segments = path.split('/');
+  if (segments[0] === 'projects' && segments.length > 1) {
+    const projectName = decodeURIComponent(segments.slice(1).join('/'));
+    return { tab: 'projects', projectName, taskId: null };
+  }
+  if (segments[0] === 'tasks' && segments.length > 1) {
+    const taskId = decodeURIComponent(segments[1]);
+    return { tab: 'tasks', projectName: null, taskId };
+  }
+  return { tab: path || 'overview', projectName: null, taskId: null };
+};
+
 export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const [activeTab, setActiveTab] = useState(() => {
-    const path = window.location.pathname.substring(1);
-    return path || 'overview';
+    const parsed = parseRoutePath(window.location.pathname);
+    return parsed.tab;
+  });
+  // Deep-link state for projects and tasks
+  const [initialProjectName, setInitialProjectName] = useState(() => {
+    const parsed = parseRoutePath(window.location.pathname);
+    return parsed.projectName;
+  });
+  const [initialTaskId, setInitialTaskId] = useState(() => {
+    const parsed = parseRoutePath(window.location.pathname);
+    return parsed.taskId;
+  });
+  const [selectedProjectName, setSelectedProjectName] = useState(() => {
+    const parsed = parseRoutePath(window.location.pathname);
+    return parsed.projectName;
+  });
+  const [selectedTaskId, setSelectedTaskId] = useState(() => {
+    const parsed = parseRoutePath(window.location.pathname);
+    return parsed.taskId;
   });
   const [userToEdit, setUserToEdit] = useState(null);
   const { can, loading } = usePermissions();
@@ -191,17 +223,32 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
   useEffect(() => {
     const handlePopState = () => {
-      const path = window.location.pathname.substring(1);
-      setActiveTab(path || 'overview');
+      const parsed = parseRoutePath(window.location.pathname);
+      setActiveTab(parsed.tab);
+      setSelectedProjectName(parsed.projectName);
+      setSelectedTaskId(parsed.taskId);
+      if (parsed.projectName) setInitialProjectName(parsed.projectName);
+      if (parsed.taskId) setInitialTaskId(parsed.taskId);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   useEffect(() => {
-    const currentPath = window.location.pathname.substring(1) || 'overview';
-    if (activeTab !== currentPath) {
-      const newUrl = activeTab === 'overview' ? '/' : `/${activeTab}`;
+    // Build the correct URL based on activeTab + deep-link state
+    let newUrl;
+    if (activeTab === 'overview') {
+      newUrl = '/';
+    } else if (activeTab === 'projects' && selectedProjectName) {
+      newUrl = `/projects/${selectedProjectName.replace(/ /g, '-')}`;
+    } else if (activeTab === 'tasks' && selectedTaskId) {
+      newUrl = `/tasks/${selectedTaskId}`;
+    } else {
+      newUrl = `/${activeTab}`;
+    }
+    
+    const currentUrl = window.location.pathname;
+    if (newUrl !== currentUrl) {
       window.history.pushState(null, '', newUrl);
     }
     
@@ -229,7 +276,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         setActiveTab('overview');
       }
     }
-  }, [activeTab, loading, can, user]);
+  }, [activeTab, selectedProjectName, selectedTaskId, loading, can, user]);
 
   // Notifications State
   const [notifications, setNotifications] = useState([]);
@@ -407,6 +454,11 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             setIsTaskDetailOpen(true);
             setActiveTab('tasks');
           }}
+          initialProjectName={initialProjectName}
+          onProjectSelect={(projectName) => {
+            setSelectedProjectName(projectName);
+            if (!projectName) setInitialProjectName(null);
+          }}
         />
       );
       case 'estimations': 
@@ -450,6 +502,11 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
           initialSelectedTask={searchSelectedTask}
           onClearInitialTask={() => setSearchSelectedTask(null)}
           onDetailViewChange={(open) => setIsTaskDetailOpen(open)}
+          initialTaskId={initialTaskId}
+          onTaskSelect={(taskId) => {
+            setSelectedTaskId(taskId);
+            if (!taskId) setInitialTaskId(null);
+          }}
         />
       );
       case 'users': 
@@ -529,11 +586,13 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const getHeaderInfo = () => {
     switch (activeTab) {
       case 'salary': return { title: 'Payroll Management', back: 'HR', id: 'Salary' };
-      case 'projects': return { title: 'Projects', back: 'Operations', id: 'Projects' };
+      case 'projects': return selectedProjectName
+        ? { title: selectedProjectName, back: 'Projects', id: 'ProjectDetail' }
+        : { title: 'Projects', back: 'Operations', id: 'Projects' };
       case 'track-team': return { title: 'Track your Team', back: 'Operations', id: 'TrackTeam' };
       case 'estimations': return { title: 'Estimations', back: 'Operations', id: 'Estimations' };
       case 'clients': return { title: 'Clients', back: 'Operations', id: 'Clients' };
-      case 'tasks': return isTaskDetailOpen
+      case 'tasks': return (isTaskDetailOpen || selectedTaskId)
         ? { title: 'Task Details', back: 'Tasks', id: 'TaskDetails' }
         : { title: 'Tasks', back: 'Operations', id: 'Tasks' };
       case 'users': return { title: 'User Management', back: 'Admin', id: 'Users' };
@@ -542,8 +601,6 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'edit-user': return { title: 'Edit User Profile', back: 'Users', id: 'EditUser' };
       case 'reports': return { title: 'Reports', back: 'Reports', id: 'Reports' };
       default: return { title: 'Dashboard', back: 'Main', id: 'Overview' };
-
-
     }
   };
 
