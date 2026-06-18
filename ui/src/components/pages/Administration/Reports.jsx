@@ -115,9 +115,6 @@ export default function Reports({ user, onNavigateToTask }) {
           return nameA.localeCompare(nameB);
         });
         setClients(sortedClients);
-        if (sortedClients.length > 0) {
-          setSelectedClient(sortedClients[0].id);
-        }
       }
     } catch (err) {
       console.error('Failed to fetch reports:', err);
@@ -313,6 +310,7 @@ export default function Reports({ user, onNavigateToTask }) {
         </div>
         <div className="reports-filter-right">
           <select className="reports-select" value={selectedClient} onChange={e => setSelectedClient(e.target.value)}>
+            <option value="All Clients">All Clients</option>
             {clients.map(c => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
           </select>
           <select className="reports-select" value={selectedProject} onChange={e => setSelectedProject(e.target.value)}>

@@ -608,18 +608,55 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
       api.get('/clients').catch(() => []),
       api.get('/users').catch(() => [])
     ]).then(([lists, tasks, projects, clients, users]) => {
-      setTaskLists(lists || []);
       setAllTasks(tasks || []);
       setAllProjects(projects || []);
       setAllClients(clients || []);
       setAllUsers(users || []);
+      // Filter tasks to only those assigned to the logged-in user
+      const userName = (user?.fullName || user?.firstName || '').trim().toLowerCase();
+      const cleanName = userName.replace(/[^a-z0-9]/g, '');
+      const cleanEmail = (user?.email || '').toLowerCase().trim();
+      const cleanEmailPrefix = cleanEmail.split('@')[0].replace(/[^a-z0-9]/g, '');
+      const userId = user?.id || '';
+
+      const isMyTask = (t) => {
+        if (!t.assignees) return false;
+        const assigneesList = t.assignees.split(',').map(s => s.trim().toLowerCase());
+        return assigneesList.some(assignee => {
+          if (userId && assignee === userId.toLowerCase().trim()) return true;
+          const cleanAssignee = assignee.replace(/[^a-z0-9]/g, '');
+          if (assignee === cleanEmail) return true;
+          if (cleanAssignee === cleanEmailPrefix) return true;
+          if (cleanName && (cleanAssignee.includes(cleanName) || cleanName.includes(cleanAssignee))) return true;
+          return false;
+        });
+      };
+
+      const myTasks = (tasks || []).filter(isMyTask);
+
+      // Count only the user's tasks per task list
       const counts = {};
-      (tasks || []).forEach(t => {
+      myTasks.forEach(t => {
         if (t.taskListId) counts[t.taskListId] = (counts[t.taskListId] || 0) + 1;
       });
       setListTaskCounts(counts);
+
+      // Find projects where the user is a team member
+      const myProjectIds = new Set();
+      (projects || []).forEach(p => {
+        const memberIds = (p.members || '').split(',').map(m => m.trim().toLowerCase()).filter(Boolean);
+        if (userId && memberIds.includes(userId.toLowerCase().trim())) {
+          myProjectIds.add(p.id);
+        }
+      });
+
+      // Show task lists from user's projects OR those with user's assigned tasks
+      const myTaskListIds = new Set(myTasks.map(t => t.taskListId).filter(Boolean));
+      setTaskLists((lists || []).filter(list =>
+        myTaskListIds.has(list.id) || (list.projectId && myProjectIds.has(list.projectId))
+      ));
     });
-  }, []);
+  }, [user]);
 
   const q = searchQuery.trim().toLowerCase();
 

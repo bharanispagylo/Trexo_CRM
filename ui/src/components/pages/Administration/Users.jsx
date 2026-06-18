@@ -272,7 +272,7 @@ export default function Users({ onAddUser, onEditUser }) {
             }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: '#0f172a' }}>
-                  {deleteAfterReassign ? '⚠️ Reassign Tasks Before Deleting' : '🔄 Reassign Tasks'}
+                  {deleteAfterReassign ? '⚠️ Reassign Tasks Before Deleting User' : '🔄 Reassign Tasks'}
                 </h3>
                 <p style={{ margin: '0.4rem 0 0', fontSize: '0.82rem', color: '#64748b' }}>
                   {deleteAfterReassign

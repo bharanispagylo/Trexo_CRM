@@ -2221,7 +2221,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                     </span>
                                   </td>
                                   <td data-label="Created On" style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', color: '#64748b' }}>
-                                    {new Date(q.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    {new Date(q.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}{' '}{new Date(q.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                                   </td>
                                   <td data-label="Action" style={{ padding: '1rem 1.5rem', textAlign: 'center' }}>
                                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>

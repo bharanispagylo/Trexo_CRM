@@ -360,8 +360,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const currentProject = currentProjId ? projects.find(p => p.id === currentProjId) : null;
   const projectMemberIds = currentProject ? (currentProject.members || '').split(',').map(m => m.trim()).filter(Boolean) : [];
   
-  const filteredUsers = (projectMemberIds.length > 0
-    ? users.filter(u => projectMemberIds.includes(u.id))
+  const filteredUsers = (currentProject
+    ? (projectMemberIds.length > 0
+      ? users.filter(u => projectMemberIds.includes(u.id))
+      : []
+    )
     : users
   ).filter(u => u.status !== 'Inactive');
 
@@ -3448,7 +3451,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     const project = taskProjects.find(p => p.id === projId);
     if (!project) return activeListUsers;
     const memberIds = (project.members || '').split(',').map(m => m.trim()).filter(Boolean);
-    if (memberIds.length === 0) return activeListUsers;
+    if (memberIds.length === 0) return [];
     
     const filtered = listUsers.filter(u => memberIds.includes(u.id) && u.status !== 'Inactive');
     if (currentAssigneeId) {
