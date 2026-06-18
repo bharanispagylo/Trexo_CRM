@@ -196,6 +196,7 @@
 .users-list-table td {
   padding: 0.4rem 1.25rem;
   border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
 }
 
 .users-list-table td:nth-child(3) {
@@ -307,8 +308,7 @@
 }
 
 .actions-cell {
-  display: flex;
-  gap: 0.75rem;
+  vertical-align: middle;
 }
 
 .user-action-btn {
@@ -325,6 +325,17 @@
 
 .user-action-btn.edit:hover { color: #2563eb; transform: scale(1.1); }
 .user-action-btn.delete:hover { color: #ef4444; transform: scale(1.1); }
+.user-action-btn.reassign:hover { color: #d97706; transform: scale(1.1); }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 
 .status-cell {
   text-align: center;

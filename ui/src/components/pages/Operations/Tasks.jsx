@@ -360,9 +360,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const currentProject = currentProjId ? projects.find(p => p.id === currentProjId) : null;
   const projectMemberIds = currentProject ? (currentProject.members || '').split(',').map(m => m.trim()).filter(Boolean) : [];
   
-  const filteredUsers = projectMemberIds.length > 0
+  const filteredUsers = (projectMemberIds.length > 0
     ? users.filter(u => projectMemberIds.includes(u.id))
-    : users;
+    : users
+  ).filter(u => u.status !== 'Inactive');
 
   const finalUsers = (() => {
     let list = [...filteredUsers];
@@ -888,6 +889,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       alert("Subtask title is required", "warning", "Required");
       return;
     }
+    if (!newSubtaskAssignee?.trim()) {
+      alert("Assignee is required", "warning", "Required");
+      return;
+    }
     setSubtaskSaving(true);
     try {
       await api.post('/tasks', {
@@ -1214,6 +1219,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   value={editingCommentText}
                   onChange={e => setEditingCommentText(e.target.value)}
                   className="reply-inline-input"
+                  disabled={editCommentSaving}
                   style={{
                     width: '100%',
                     boxSizing: 'border-box',
@@ -1222,7 +1228,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     fontSize: '0.85rem',
                     borderRadius: '8px',
                     border: '1px solid #cbd5e1',
-                    resize: 'vertical'
+                    resize: 'vertical',
+                    opacity: editCommentSaving ? 0.6 : 1,
+                    pointerEvents: editCommentSaving ? 'none' : 'auto'
                   }}
                   onKeyDown={e => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -1873,22 +1881,22 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         <div className="table-responsive">
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                             <thead>
-                              <tr style={{ background: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
-                                <th style={{ padding: '0.75rem', fontWeight: 600 }}>Date</th>
-                                <th style={{ padding: '0.75rem', fontWeight: 600 }}>User</th>
-                                <th style={{ padding: '0.75rem', fontWeight: 600 }}>Worked Hrs</th>
-                                <th style={{ padding: '0.75rem', fontWeight: 600 }}>Action</th>
+                              <tr style={{ background: '#f8fafc', color: '#64748b', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Date</th>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>User</th>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Worked Hrs</th>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
                               </tr>
                             </thead>
                             <tbody>
                               {workLogs.filter(log => !log.isBilled).map(log => (
-                                <tr key={log.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                  <td style={{ padding: '0.75rem' }}>{formatDate(log.logDate)}</td>
-                                  <td style={{ padding: '0.75rem' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
-                                  <td style={{ padding: '0.75rem', fontWeight: 600, color: '#0f172a' }}>{log.hoursWorked}h</td>
-                                  <td style={{ padding: '0.75rem' }}>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                      <button title="Edit" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer' }} onClick={() => {
+                                <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
+                                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{formatDate(log.logDate)}</td>
+                                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
+                                  <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{log.hoursWorked}h</td>
+                                  <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                                    <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                      <button title="Edit" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', background: 'white', cursor: 'pointer' }} onClick={() => {
                                         setWorkLogForm({
                                           id: log.id,
                                           logDate: new Date(log.logDate).toISOString().split('T')[0],
@@ -1897,9 +1905,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                           isBilled: false
                                         });
                                       }}>
-                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                       </button>
-                                      <button title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
+                                      <button title="Delete" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', background: '#fef2f2', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
                                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                       </button>
                                     </div>
@@ -1975,24 +1983,24 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     <div className="table-responsive">
 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                       <thead>
-                        <tr style={{ background: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
-                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Date</th>
-                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>User</th>
-                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Billed Hours</th>
-                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Description</th>
-                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Action</th>
+                        <tr style={{ background: '#f8fafc', color: '#64748b', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Date</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>User</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Billed Hours</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Description</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {workLogs.filter(log => log.isBilled).map(log => (
-                          <tr key={log.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                            <td style={{ padding: '0.75rem' }}>{formatDate(log.logDate)}</td>
-                            <td style={{ padding: '0.75rem' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
-                            <td style={{ padding: '0.75rem', fontWeight: 600, color: '#0f172a' }}>{log.hoursWorked}h</td>
-                            <td style={{ padding: '0.75rem', color: '#475569' }}>{log.description || '-'}</td>
-                            <td style={{ padding: '0.75rem' }}>
-                              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button title="Edit" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer' }} onClick={() => {
+                          <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
+                            <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{formatDate(log.logDate)}</td>
+                            <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
+                            <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{log.hoursWorked}h</td>
+                            <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.description || '-'}</td>
+                            <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                <button title="Edit" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', background: 'white', cursor: 'pointer' }} onClick={() => {
                                   setWorkLogForm({
                                     id: log.id,
                                     logDate: new Date(log.logDate).toISOString().split('T')[0],
@@ -2001,9 +2009,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                     isBilled: true
                                   });
                                 }}>
-                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 </button>
-                                <button title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
+                                <button title="Delete" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', background: '#fef2f2', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
                                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                 </button>
                               </div>
@@ -2132,11 +2140,25 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                 <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                                   
                                   {/* Download Icon Button */}
-                                  <a 
-                                    href={meta.url} 
-                                    download 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
+                                  <button 
+                                    type="button"
+                                    onClick={async () => {
+                                      try {
+                                        const response = await fetch(meta.url);
+                                        const blob = await response.blob();
+                                        const blobUrl = window.URL.createObjectURL(blob);
+                                        const link = document.createElement('a');
+                                        link.href = blobUrl;
+                                        link.download = meta.fileName || 'download';
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                        window.URL.revokeObjectURL(blobUrl);
+                                      } catch (err) {
+                                        // Fallback: open in new tab if fetch fails
+                                        window.open(meta.url, '_blank');
+                                      }
+                                    }}
                                     style={{
                                       width: '28px',
                                       height: '28px',
@@ -2147,14 +2169,13 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                       justifyContent: 'center',
                                       color: '#64748b',
                                       background: 'white',
-                                      cursor: 'pointer',
-                                      textDecoration: 'none'
+                                      cursor: 'pointer'
                                     }}
                                     title="Download File"
                                     className="action-icon-btn"
                                   >
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                  </a>
+                                  </button>
 
                                   {/* Delete/Action Button */}
                                   {(isEditing || canEdit) && (
@@ -3190,7 +3211,14 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const submitInlineAdd = async () => {
     if (isSaving) return;
     const title = inlineTitle.trim();
-    if (!title) { closeInlineAdd(); return; }
+    if (!title) {
+      toast('Task name is required', 'warning');
+      return;
+    }
+    if (!inlineAssignee?.trim()) {
+      toast('Assignee is required', 'warning');
+      return;
+    }
     const { projName, projId, taskListId, statusId } = inlineAdd;
     setIsSaving(true);
     try {
@@ -3223,7 +3251,14 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const submitSubtask = async (parentTask) => {
     if (isSaving) return;
     const title = subtaskTitle.trim();
-    if (!title) { setAddingSubtaskParentId(null); return; }
+    if (!title) {
+      toast('Subtask name is required', 'warning');
+      return;
+    }
+    if (!subtaskAssignee?.trim()) {
+      toast('Assignee is required', 'warning');
+      return;
+    }
     setIsSaving(true);
     try {
       await api.post('/tasks', {
@@ -3408,13 +3443,14 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   };
 
   const getFilteredUsersForProject = (projId, currentAssigneeId = null) => {
-    if (!projId) return listUsers;
+    const activeListUsers = listUsers.filter(u => u.status !== 'Inactive');
+    if (!projId) return activeListUsers;
     const project = taskProjects.find(p => p.id === projId);
-    if (!project) return listUsers;
+    if (!project) return activeListUsers;
     const memberIds = (project.members || '').split(',').map(m => m.trim()).filter(Boolean);
-    if (memberIds.length === 0) return listUsers;
+    if (memberIds.length === 0) return activeListUsers;
     
-    const filtered = listUsers.filter(u => memberIds.includes(u.id));
+    const filtered = listUsers.filter(u => memberIds.includes(u.id) && u.status !== 'Inactive');
     if (currentAssigneeId) {
       const ids = currentAssigneeId.split(',').map(i => i.trim()).filter(Boolean);
       let list = [...filtered];

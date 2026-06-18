@@ -5444,3 +5444,28 @@
   padding-right: 4px; /* avoid scrollbar overlapping cards */
 }
 
+/* ── Subtask table in task detail drawer ── */
+.saas-subtasks-pane .table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.saas-subtasks-pane table {
+  table-layout: auto;
+  min-width: 600px;
+}
+
+.saas-subtasks-pane th,
+.saas-subtasks-pane td {
+  white-space: nowrap;
+}
+
+/* Actions cell: keep buttons in one row */
+.saas-subtasks-pane td:last-child {
+  white-space: nowrap;
+  min-width: 70px;
+}
+
+.saas-subtasks-pane .attachment-table-row:hover {
+  background: #f8fafc;
+}

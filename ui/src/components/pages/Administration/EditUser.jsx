@@ -225,6 +225,7 @@ export default function EditUser({ userToEdit, onBack }) {
             <label className="saas-label">Status</label>
             <select className="saas-select" value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
               <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
               <option value="Pending">Pending</option>
             </select>
           </div>

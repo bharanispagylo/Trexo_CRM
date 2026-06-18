@@ -2334,6 +2334,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
             const handleUpload = async () => {
               if (!uploadForm.name.trim()) { alert('Please enter a file name', 'warning', 'Required'); return; }
+              if (!uploadForm.description.trim()) { alert('Please enter a description', 'warning', 'Required'); return; }
+              if (!uploadForm.file) { alert('Please choose a file to upload', 'warning', 'Required'); return; }
               setUploading(true);
               let fileUrl = '';
               let fileSize = '';
@@ -2361,7 +2363,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 await api.post(`/projects/${selectedProject.id}/attachments`, {
                   name: uploadForm.name,
                   description: uploadForm.description,
-                  uploadedBy: user?.fullName || user?.name || 'Unknown',
+                  uploadedBy: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Unknown',
                   fileSize: fileSize || '-',
                   fileUrl
                 });
@@ -2431,6 +2433,64 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 </div>
 
                 {/* Table */}
+                {/* Upload Modal - placed above table */}
+                {showUploadModal && (
+                  <div ref={el => { if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }} className="upload-attachment-card" style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', maxWidth: '600px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>Upload Attachment</h3>
+                      <button onClick={() => setShowUploadModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#94a3b8' }}>✕</button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>File Name *</label>
+                        <input
+                          value={uploadForm.name}
+                          onChange={e => setUploadForm({ ...uploadForm, name: e.target.value })}
+                          placeholder="e.g. Project_Requirements.pdf"
+                          style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Description *</label>
+                        <textarea
+                          value={uploadForm.description}
+                          onChange={e => setUploadForm({ ...uploadForm, description: e.target.value })}
+                          placeholder="Brief description of the file..."
+                          rows={3}
+                          style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Choose File *</label>
+                        <div
+                          onClick={() => attachFileRef.current?.click()}
+                          style={{ border: '2px dashed #cbd5e1', borderRadius: '10px', padding: '1.5rem', textAlign: 'center', cursor: 'pointer', background: '#f8fafc', transition: 'border-color 0.2s' }}
+                          onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
+                          onMouseLeave={e => e.currentTarget.style.borderColor = '#cbd5e1'}
+                        >
+                          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#94a3b8" strokeWidth="1.5" style={{ margin: '0 auto 0.5rem', display: 'block' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>
+                            {uploadForm.file ? uploadForm.file.name : 'Click to browse or drag & drop'}
+                          </p>
+                          {uploadForm.file && <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>{(uploadForm.file.size / (1024 * 1024)).toFixed(2)} MB</p>}
+                        </div>
+                        <input ref={attachFileRef} type="file" style={{ display: 'none' }} onChange={e => {
+                          const f = e.target.files[0];
+                          if (f) setUploadForm(prev => ({ ...prev, file: f, name: prev.name || f.name }));
+                        }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem' }}>
+                      <button onClick={() => setShowUploadModal(false)} style={{ padding: '0.6rem 1.25rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', color: '#64748b', cursor: 'pointer', fontSize: '0.85rem' }}>Cancel</button>
+                      <button onClick={handleUpload} disabled={uploading} style={{ padding: '0.6rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: uploading ? 'wait' : 'pointer', fontSize: '0.85rem', opacity: uploading ? 0.7 : 1 }}>
+                        {uploading ? 'Uploading...' : 'Upload'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="attachments-table-container" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
                   <div style={{ overflowX: 'auto' }}>
                     <table className="attachments-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
@@ -2471,9 +2531,30 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                             <td data-label="Actions" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
                               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', alignItems: 'center' }}>
                                 {a.fileUrl && (
-                                  <a href={a.fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', cursor: 'pointer', display: 'flex' }} title="Download">
+                                  <button 
+                                    type="button"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      try {
+                                        const response = await fetch(a.fileUrl);
+                                        const blob = await response.blob();
+                                        const blobUrl = window.URL.createObjectURL(blob);
+                                        const link = document.createElement('a');
+                                        link.href = blobUrl;
+                                        link.download = a.name || 'download';
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                        window.URL.revokeObjectURL(blobUrl);
+                                      } catch (err) {
+                                        window.open(a.fileUrl, '_blank');
+                                      }
+                                    }}
+                                    style={{ color: '#3b82f6', cursor: 'pointer', display: 'flex', background: 'none', border: 'none', padding: 0 }} 
+                                    title="Download"
+                                  >
                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                  </a>
+                                  </button>
                                 )}
                                 {can('projects', 'delete') && (
                                   <button onClick={() => confirm('Delete this attachment?', () => handleDeleteAttachment(a.id), 'Delete Attachment')} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: 0 }} title="Delete">
@@ -2509,63 +2590,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                   </div>
                 )}
 
-                {/* Upload Modal */}
-                {showUploadModal && (
-                  <div className="upload-attachment-card" style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', maxWidth: '600px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
-                      <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>Upload Attachment</h3>
-                      <button onClick={() => setShowUploadModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#94a3b8' }}>✕</button>
-                    </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>File Name *</label>
-                        <input
-                          value={uploadForm.name}
-                          onChange={e => setUploadForm({ ...uploadForm, name: e.target.value })}
-                          placeholder="e.g. Project_Requirements.pdf"
-                          style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Description</label>
-                        <textarea
-                          value={uploadForm.description}
-                          onChange={e => setUploadForm({ ...uploadForm, description: e.target.value })}
-                          placeholder="Brief description of the file..."
-                          rows={3}
-                          style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Choose File</label>
-                        <div
-                          onClick={() => attachFileRef.current?.click()}
-                          style={{ border: '2px dashed #cbd5e1', borderRadius: '10px', padding: '1.5rem', textAlign: 'center', cursor: 'pointer', background: '#f8fafc', transition: 'border-color 0.2s' }}
-                          onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
-                          onMouseLeave={e => e.currentTarget.style.borderColor = '#cbd5e1'}
-                        >
-                          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#94a3b8" strokeWidth="1.5" style={{ margin: '0 auto 0.5rem', display: 'block' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>
-                            {uploadForm.file ? uploadForm.file.name : 'Click to browse or drag & drop'}
-                          </p>
-                          {uploadForm.file && <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>{(uploadForm.file.size / (1024 * 1024)).toFixed(2)} MB</p>}
-                        </div>
-                        <input ref={attachFileRef} type="file" style={{ display: 'none' }} onChange={e => {
-                          const f = e.target.files[0];
-                          if (f) setUploadForm(prev => ({ ...prev, file: f, name: prev.name || f.name }));
-                        }} />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem' }}>
-                      <button onClick={() => setShowUploadModal(false)} style={{ padding: '0.6rem 1.25rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', color: '#64748b', cursor: 'pointer', fontSize: '0.85rem' }}>Cancel</button>
-                      <button onClick={handleUpload} disabled={uploading} style={{ padding: '0.6rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: uploading ? 'wait' : 'pointer', fontSize: '0.85rem', opacity: uploading ? 0.7 : 1 }}>
-                        {uploading ? 'Uploading...' : 'Upload'}
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })()}
