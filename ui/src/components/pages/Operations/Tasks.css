@@ -1016,6 +1016,18 @@
 .dot-medium   { background: #2563eb; }
 .dot-low      { background: #94a3b8; }
 
+/* Date input wrapper for mobile overlay */
+.saas-date-input-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* On desktop, overlay is hidden — native date input works normally */
+.saas-date-display-overlay {
+  display: none;
+}
+
 /* Sidebar Elements */
 .saas-sidebar-header {
   padding: 1.25rem 1.5rem;
@@ -3926,9 +3938,15 @@
   transition: all 0.12s ease;
   box-shadow: 0 1px 2px rgba(124, 58, 237, 0.15);
 }
-.ntib-save-btn:hover {
+.ntib-save-btn:hover:not(:disabled) {
   background: #6d28d9;
   box-shadow: 0 2px 4px rgba(109, 40, 217, 0.25);
+}
+.ntib-save-btn:disabled {
+  background: #a78bfa;
+  cursor: not-allowed;
+  opacity: 0.7;
+  box-shadow: none;
 }
 
 /* ══════════════════════════════════════════════
@@ -4480,6 +4498,58 @@
   /* Hide → arrow separator on mobile */
   .saas-date-arrow {
     display: none !important;
+  }
+
+  /* ── Mobile: Show formatted date overlay, hide raw browser date text ── */
+  .saas-date-input-wrapper {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    min-width: 110px !important;
+  }
+
+  /* Make the native date input invisible but still interactive (tappable) */
+  .saas-date-input-wrapper .saas-detail-date-input {
+    opacity: 0 !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 2 !important;
+    cursor: pointer !important;
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  /* Show the formatted overlay text on mobile */
+  .saas-date-display-overlay {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    padding: 0.3rem 0.6rem !important;
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    min-height: 32px !important;
+    box-sizing: border-box !important;
+    pointer-events: none !important; /* Let clicks pass through to the native input */
+    position: relative !important;
+    z-index: 1 !important;
+    width: 100% !important;
+  }
+
+  /* Empty date state: grey placeholder text */
+  .saas-date-display-overlay.saas-date-empty {
+    color: #94a3b8 !important;
+    font-weight: 400 !important;
   }
 
   /* ── Title input ── */

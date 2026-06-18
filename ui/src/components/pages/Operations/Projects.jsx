@@ -306,8 +306,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
   // ── LIST HANDLERS ──
   const handleAdd = async () => {
-    if (!form.name?.trim() || !form.client?.trim()) {
-      alert("Please fill out all mandatory fields: Project Name and Client.", 'warning', 'Required Fields');
+    if (!form.name?.trim()) {
+      alert("Please enter the Project Name.", 'warning', 'Required Fields');
+      return;
+    }
+    if (!form.clientId || !form.client?.trim()) {
+      alert("Please select a Client.", 'warning', 'Required Fields');
       return;
     }
     setIsSaving(true);
@@ -564,8 +568,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         <div className="saas-field">
           <label className="saas-label">Status</label>
           <select className="saas-select" value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
-            <option value="Active">Active (In Progress)</option>
-            <option value="Inactive">Inactive</option>
+            <option value="Active">Active</option>
             <option value="Completed">Completed</option>
             <option value="On Hold">On Hold</option>
             <option value="Pending">Pending</option>
@@ -1937,7 +1940,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       className="saas-select queries-filter-select"
                       value={queryStatusFilter}
                       onChange={e => setQueryStatusFilter(e.target.value)}
-                      style={{ height: '38px', fontSize: '0.85rem' }}
                     >
                       <option value="All Status">All Status</option>
                       <option value="Open">Open</option>
@@ -1951,12 +1953,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       className="saas-select queries-filter-select"
                       value={querySentToFilter}
                       onChange={e => setQuerySentToFilter(e.target.value)}
-                      style={{ height: '38px', fontSize: '0.85rem' }}
                     >
                       <option value="All Sent To">All Sent To</option>
-                      {projMembers.map(m => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
+                      {projMembers.map(memberId => {
+                        const memberUser = users.find(u => u.id === memberId);
+                        const memberName = memberUser ? (memberUser.name || memberUser.fullName || memberUser.username || memberUser.email) : memberId;
+                        return <option key={memberId} value={memberId}>{memberName}</option>;
+                      })}
                     </select>
 
                     {/* Priority filter dropdown */}
@@ -1964,7 +1967,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       className="saas-select queries-filter-select"
                       value={queryPriorityFilter}
                       onChange={e => setQueryPriorityFilter(e.target.value)}
-                      style={{ height: '38px', fontSize: '0.85rem' }}
                     >
                       <option value="All Priority">All Priority</option>
                       <option value="High">High</option>
@@ -2494,8 +2496,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const filteredProjects = allowedProjects.filter(p => {
     if (statusFilter !== 'All') {
       const status = p.status || 'Active';
-      const mappedStatus = status === 'Active' ? 'In Progress' : status;
-      if (mappedStatus !== statusFilter) return false;
+      if (status !== statusFilter) return false;
     }
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
@@ -2541,7 +2542,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="All">All Statuses</option>
-            <option value="In Progress">In Progress</option>
+            <option value="Active">Active</option>
             <option value="Completed">Completed</option>
             <option value="On Hold">On Hold</option>
             <option value="Pending">Pending</option>
@@ -2613,10 +2614,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                   const actHours = proj.actualHours ? `${proj.actualHours} hrs` : '-';
                   const bilHours = proj.billableHours ? `${proj.billableHours} hrs` : '-';
                   const createdOn = proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}) : '-';
-                  const displayStatus = proj.status || 'In Progress';
+                  const displayStatus = proj.status || 'Active';
                   
                   let statusBg = '#dcfce7'; let statusColor = '#16a34a';
-                  if (displayStatus === 'On Hold') { statusBg = '#fef3c7'; statusColor = '#d97706'; }
+                  if (displayStatus === 'Inactive') { statusBg = '#fee2e2'; statusColor = '#b91c1c'; }
+                  else if (displayStatus === 'On Hold') { statusBg = '#fef3c7'; statusColor = '#d97706'; }
                   else if (displayStatus === 'Completed') { statusBg = '#e0e7ff'; statusColor = '#4f46e5'; }
                   else if (displayStatus === 'Pending') { statusBg = '#f1f5f9'; statusColor = '#475569'; }
 
@@ -2667,11 +2669,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                 status: proj.status || 'Active',
                                 description: proj.description || '',
                                 client: proj.client || '',
+                                clientId: proj.clientId || '',
                                 estimatedHours: proj.estimatedHours || 0,
                                 actualHours: proj.actualHours || 0,
                                 billableHours: proj.billableHours || 0
                               });
                               setShowForm(true);
+                              document.querySelector('.saas-page-content')?.scrollTo({ top: 0, behavior: 'smooth' });
                             }}
                           >
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -2703,10 +2707,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8', fontSize: '0.9rem' }}>No projects in this view.</div>
           ) : (
             paginatedProjects.map((proj, idx) => {
-              const displayStatus = proj.status || 'In Progress';
+              const displayStatus = proj.status || 'Active';
               
               let statusBg = '#dcfce7'; let statusColor = '#16a34a';
-              if (displayStatus === 'On Hold') { statusBg = '#fef3c7'; statusColor = '#d97706'; }
+              if (displayStatus === 'Inactive') { statusBg = '#fee2e2'; statusColor = '#b91c1c'; }
+              else if (displayStatus === 'On Hold') { statusBg = '#fef3c7'; statusColor = '#d97706'; }
               else if (displayStatus === 'Completed') { statusBg = '#e0e7ff'; statusColor = '#4f46e5'; }
               else if (displayStatus === 'Pending') { statusBg = '#f1f5f9'; statusColor = '#475569'; }
 
@@ -2741,11 +2746,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                             status: proj.status || 'Active',
                             description: proj.description || '',
                             client: proj.client || '',
+                            clientId: proj.clientId || '',
                             estimatedHours: proj.estimatedHours || 0,
                             actualHours: proj.actualHours || 0,
                             billableHours: proj.billableHours || 0
                           });
                           setShowForm(true);
+                          document.querySelector('.saas-page-content')?.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
                       >
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>

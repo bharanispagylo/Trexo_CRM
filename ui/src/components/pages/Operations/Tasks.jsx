@@ -1513,27 +1513,40 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <span className="saas-meta-value">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Due:</span>
-                      <input 
-                        type="date" 
-                        value={form.dueDate ? new Date(form.dueDate).toISOString().split('T')[0] : ''} 
-                        onChange={e => set('dueDate', e.target.value)} 
-                        style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '100px', cursor: 'pointer', fontWeight: 600 }} 
-                        title="Due Date"
-                      />
+                      <div className="saas-date-input-wrapper">
+                        <input 
+                          type="date" 
+                          className="saas-detail-date-input"
+                          value={form.dueDate ? new Date(form.dueDate).toISOString().split('T')[0] : ''} 
+                          onChange={e => set('dueDate', e.target.value)} 
+                          style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '120px', cursor: 'pointer', fontWeight: 600 }} 
+                          title="Due Date"
+                        />
+                        <span className={`saas-date-display-overlay${!form.dueDate ? ' saas-date-empty' : ''}`}>
+                          {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'dd-mm-yyyy'}
+                        </span>
+                      </div>
                       
                       <span className="saas-date-arrow" style={{ color: '#94a3b8', fontSize: '0.8rem' }}>→</span>
 
                       <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Delivery:</span>
-                      <input 
-                        type="date" 
-                        value={form.deliveredDate ? new Date(form.deliveredDate).toISOString().split('T')[0] : ''} 
-                        onChange={e => set('deliveredDate', e.target.value)} 
-                        style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '100px', cursor: 'pointer', fontWeight: 600 }} 
-                        title="Delivery Date"
-                      />
+                      <div className="saas-date-input-wrapper">
+                        <input 
+                          type="date" 
+                          className="saas-detail-date-input"
+                          value={form.deliveredDate ? new Date(form.deliveredDate).toISOString().split('T')[0] : ''} 
+                          onChange={e => set('deliveredDate', e.target.value)} 
+                          style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '120px', cursor: 'pointer', fontWeight: 600 }} 
+                          title="Delivery Date"
+                        />
+                        <span className={`saas-date-display-overlay${!form.deliveredDate ? ' saas-date-empty' : ''}`}>
+                          {form.deliveredDate ? new Date(form.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'dd-mm-yyyy'}
+                        </span>
+                      </div>
                     </div>
                   </span>
                 </div>
+
 
                 {/* Row 3: Priority */}
                 <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
@@ -3066,6 +3079,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   };
 
   const submitInlineAdd = async () => {
+    if (isSaving) return;
     const title = inlineTitle.trim();
     if (!title) { closeInlineAdd(); return; }
     const { projName, projId, taskListId, statusId } = inlineAdd;
@@ -3088,6 +3102,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       });
       const data = await api.get('/tasks');
       setTasks(data || []);
+      toast('Task created successfully!', 'success');
       closeInlineAdd();
     } catch (err) {
       console.error('Inline add failed:', err);
@@ -3097,6 +3112,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   };
 
   const submitSubtask = async (parentTask) => {
+    if (isSaving) return;
     const title = subtaskTitle.trim();
     if (!title) { setAddingSubtaskParentId(null); return; }
     setIsSaving(true);
@@ -3586,7 +3602,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             title: 'Backlog Tasks',
             tasks: backlogTasks,
             colorMeta: { bg: '#fff7ed', fg: '#c2410c', dotColor: '#ea580c' },
-            onAddTask: () => openNewTask('To Do')
+            onAddTask: () => {
+              const projName = filterProjectName || '';
+              const proj = projName ? taskProjects.find(p => p.name === projName) : null;
+              openNewTask('To Do', projName, proj?.id || null);
+            }
           },
           {
             id: 'today',
@@ -3595,9 +3615,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             colorMeta: { bg: '#eff6ff', fg: '#1d4ed8', dotColor: '#3b82f6' },
             onAddTask: () => {
               const todayStr = getLocalDateString(new Date());
-              setSelectedTask({
+              const projName = filterProjectName || '';
+              const proj = projName ? taskProjects.find(p => p.name === projName) : null;
+              setDrawerTask({
                 status: 'To Do',
-                projectName: '',
+                projectName: projName,
+                projectId: proj?.id || null,
                 priority: 'Medium',
                 title: '',
                 description: '',
@@ -3609,7 +3632,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 dueDate: new Date(todayStr).toISOString()
               });
               setTaskDetailMode(true);
-              setView('detail');
+              setDrawerOpen(true);
             }
           },
           {
@@ -3621,9 +3644,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
               const tomorrow = new Date();
               tomorrow.setDate(tomorrow.getDate() + 1);
               const tomorrowStr = getLocalDateString(tomorrow);
-              setSelectedTask({
+              const projName = filterProjectName || '';
+              const proj = projName ? taskProjects.find(p => p.name === projName) : null;
+              setDrawerTask({
                 status: 'To Do',
-                projectName: '',
+                projectName: projName,
+                projectId: proj?.id || null,
                 priority: 'Medium',
                 title: '',
                 description: '',
@@ -3634,7 +3660,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 startDate: new Date(tomorrowStr).toISOString()
               });
               setTaskDetailMode(true);
-              setView('detail');
+              setDrawerOpen(true);
             }
           }
         ];
@@ -3682,7 +3708,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
               onDelete={handleDeleteTask}
               currentUser={user}
               listUsers={listUsers}
-              onAddTaskClick={openNewTask}
+              onAddTaskClick={(statusId) => {
+                const projName = filterProjectName || '';
+                const proj = projName ? taskProjects.find(p => p.name === projName) : null;
+                openNewTask(statusId, projName, proj?.id || null);
+              }}
               showAdd={subTab !== 'my'}
             />
 
@@ -4298,7 +4328,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                         placeholder="Subtask Name or type '/' for commands"
                                                         value={subtaskTitle}
                                                         onChange={e => setSubtaskTitle(e.target.value)}
-                                                        onKeyDown={e => { if (e.key === 'Enter') submitSubtask(task); if (e.key === 'Escape') setAddingSubtaskParentId(null); }}
+                                                        onKeyDown={e => { if (e.key === 'Enter' && !isSaving) submitSubtask(task); if (e.key === 'Escape') setAddingSubtaskParentId(null); }}
                                                         autoFocus
                                                         className="ntib-input"
                                                       />
@@ -4334,7 +4364,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                       </div>
                                                       
                                                       <button type="button" className="ntib-cancel-btn" onClick={() => setAddingSubtaskParentId(null)}>Cancel</button>
-                                                      <button type="button" className="ntib-save-btn" onClick={() => submitSubtask(task)}>Save ↵</button>
+                                                      <button type="button" className="ntib-save-btn" disabled={isSaving} onClick={() => submitSubtask(task)}>{isSaving ? 'Saving...' : 'Save ↵'}</button>
                                                     </div>
                                                   </div>
                                                 </td>
@@ -4360,7 +4390,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 placeholder="Task Name or type '/' for commands"
                                                 value={inlineTitle}
                                                 onChange={e => setInlineTitle(e.target.value)}
-                                                onKeyDown={e => { if (e.key === 'Enter') submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }}
+                                                onKeyDown={e => { if (e.key === 'Enter' && !isSaving) submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }}
                                                 autoFocus
                                                 className="ntib-input"
                                               />
@@ -4391,7 +4421,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </button>
                                                 <select className="ntib-hidden-select" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
                                                   <option value="">Assignee</option>
-                                                  {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                  {getFilteredUsersForProject(inlineAdd?.projId).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                 </select>
                                                 {inlineAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === inlineAssignee) || {}).fullName || inlineAssignee)}</span>}
                                               </div>
@@ -4415,7 +4445,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               </div>
                                               
                                               <button type="button" className="ntib-cancel-btn" onClick={closeInlineAdd}>Cancel</button>
-                                              <button type="button" className="ntib-save-btn" onClick={submitInlineAdd}>Save ↵</button>
+                                              <button type="button" className="ntib-save-btn" disabled={isSaving} onClick={submitInlineAdd}>{isSaving ? 'Saving...' : 'Save ↵'}</button>
                                             </div>
                                           </div>
                                         </td>
@@ -4621,7 +4651,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                   value={subtaskTitle}
                                   onChange={e => setSubtaskTitle(e.target.value)}
                                   onKeyDown={e => {
-                                    if (e.key === 'Enter') submitSubtask(task);
+                                    if (e.key === 'Enter' && !isSaving) submitSubtask(task);
                                     if (e.key === 'Escape') setAddingSubtaskParentId(null);
                                   }}
                                   autoFocus
@@ -4636,10 +4666,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                   }}
                                 />
                                 <button 
-                                  style={{ background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '3px', padding: '2px 6px', fontSize: '0.75rem', cursor: 'pointer' }}
+                                  style={{ background: isSaving ? '#93c5fd' : '#2563eb', color: '#ffffff', border: 'none', borderRadius: '3px', padding: '2px 6px', fontSize: '0.75rem', cursor: isSaving ? 'not-allowed' : 'pointer' }}
+                                  disabled={isSaving}
                                   onClick={() => submitSubtask(task)}
                                 >
-                                  Save
+                                  {isSaving ? 'Saving...' : 'Save'}
                                 </button>
                                 <button 
                                   style={{ background: 'none', color: '#64748b', border: 'none', padding: '2px 4px', fontSize: '0.75rem', cursor: 'pointer' }}
@@ -4882,7 +4913,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                         placeholder="Subtask Name or type '/' for commands"
                                                         value={subtaskTitle}
                                                         onChange={e => setSubtaskTitle(e.target.value)}
-                                                        onKeyDown={e => { if (e.key === 'Enter') submitSubtask(task); if (e.key === 'Escape') setAddingSubtaskParentId(null); }}
+                                                        onKeyDown={e => { if (e.key === 'Enter' && !isSaving) submitSubtask(task); if (e.key === 'Escape') setAddingSubtaskParentId(null); }}
                                                         autoFocus
                                                         className="ntib-input"
                                                       />
@@ -4918,7 +4949,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                       </div>
                                                       
                                                       <button type="button" className="ntib-cancel-btn" onClick={() => setAddingSubtaskParentId(null)}>Cancel</button>
-                                                      <button type="button" className="ntib-save-btn" onClick={() => submitSubtask(task)}>Save ↵</button>
+                                                      <button type="button" className="ntib-save-btn" disabled={isSaving} onClick={() => submitSubtask(task)}>{isSaving ? 'Saving...' : 'Save ↵'}</button>
                                                     </div>
                                                   </div>
                                                 </td>
@@ -4944,7 +4975,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                       placeholder="Task Name or type '/' for commands"
                                       value={inlineTitle}
                                       onChange={e => setInlineTitle(e.target.value)}
-                                      onKeyDown={e => { if (e.key === 'Enter') submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }}
+                                      onKeyDown={e => { if (e.key === 'Enter' && !isSaving) submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }}
                                       autoFocus
                                       className="ntib-input"
                                     />
@@ -4999,7 +5030,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                     </div>
                                     
                                     <button type="button" className="ntib-cancel-btn" onClick={closeInlineAdd}>Cancel</button>
-                                    <button type="button" className="ntib-save-btn" onClick={submitInlineAdd}>Save ↵</button>
+                                    <button type="button" className="ntib-save-btn" disabled={isSaving} onClick={submitInlineAdd}>{isSaving ? 'Saving...' : 'Save ↵'}</button>
                                   </div>
                                 </div>
                               </td>
