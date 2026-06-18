@@ -176,6 +176,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       if (onProjectSelect) onProjectSelect(initialSelectedProject.name);
       if (onClearInitialProject) onClearInitialProject();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSelectedProject, onClearInitialProject]);
 
   // Auto-open project from URL deep-link (e.g. /projects/ProjectName)
