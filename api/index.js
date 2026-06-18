@@ -680,6 +680,53 @@ app.delete('/api/users/:id', async (req, res) => {
   }
 });
 
+// Get all tasks assigned to a specific user
+app.get('/api/users/:id/tasks', async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const allTasks = await prisma.task.findMany();
+    const userTasks = allTasks.filter(t => {
+      if (!t.assignees) return false;
+      return t.assignees.split(',').map(a => a.trim()).includes(userId);
+    });
+    res.json(userTasks);
+  } catch (error) {
+    console.error('GET /api/users/:id/tasks error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Bulk reassign all tasks from one user to another
+app.post('/api/users/:id/reassign-tasks', async (req, res) => {
+  try {
+    const oldUserId = req.params.id;
+    const { newUserId } = req.body;
+    if (!newUserId) return res.status(400).json({ error: 'newUserId is required' });
+
+    const allTasks = await prisma.task.findMany();
+    const userTasks = allTasks.filter(t => {
+      if (!t.assignees) return false;
+      return t.assignees.split(',').map(a => a.trim()).includes(oldUserId);
+    });
+
+    let updatedCount = 0;
+    for (const task of userTasks) {
+      const assigneeList = task.assignees.split(',').map(a => a.trim());
+      const updated = assigneeList.map(a => a === oldUserId ? newUserId : a);
+      await prisma.task.update({
+        where: { id: task.id },
+        data: { assignees: updated.join(',') }
+      });
+      updatedCount++;
+    }
+
+    res.json({ success: true, updatedCount });
+  } catch (error) {
+    console.error('POST /api/users/:id/reassign-tasks error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // 1. Employees
 app.get('/api/employees', async (req, res) => {
