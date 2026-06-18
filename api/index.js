@@ -249,10 +249,13 @@ const notifyEmailsByNames = async (userIds, subject, message, type) => {
 
     for (const u of users) {
       if (u.email) {
-        // Determine the correct route based on notification type
+        // Determine the correct route based on notification type, with deep-link to specific item
         let route = '/';
-        if (type === 'task' || type === 'comment') route = '/tasks';
-        else if (type === 'project') route = '/projects';
+        if (type === 'task' || type === 'comment') {
+          route = message.taskId ? `/tasks/${message.taskId}` : '/tasks';
+        } else if (type === 'project') {
+          route = message.projectName ? `/projects/${message.projectName.replace(/ /g, '-')}` : '/projects';
+        }
 
         const userContext = {
           ...message,

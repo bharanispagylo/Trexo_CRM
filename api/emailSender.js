@@ -108,7 +108,7 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
           ${context.commentText ? `
             <div style="margin-bottom: 24px; margin-left: 48px;">
                <div style="font-size: 12px; color: #9ca3af; margin-bottom: 8px;">
-                 ${new Date().toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'})}
+                 ${new Date().toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata'})}
                </div>
                <div style="font-size: 15px; color: #111827; line-height: 1.6; padding-right: 20px;">
                  ${context.commentText.replace(/\n/g, '<br/>')}
