@@ -156,6 +156,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedSubtasks, setExpandedSubtasks] = useState({});
+  const [inlineSubtaskParentId, setInlineSubtaskParentId] = useState(null);
+  const [inlineSubtaskTitle, setInlineSubtaskTitle] = useState('');
+  const [inlineSubtaskSaving, setInlineSubtaskSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -461,6 +464,36 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         alert('Failed to delete task', 'error', 'Error');
       }
     }, 'Delete Task');
+  };
+
+  const handleInlineSubtaskSave = async (parentTask, listId) => {
+    if (!inlineSubtaskTitle.trim() || inlineSubtaskSaving) return;
+    setInlineSubtaskSaving(true);
+    try {
+      const payload = {
+        title: inlineSubtaskTitle.trim(),
+        parentId: parentTask.id,
+        projectId: selectedProject.id,
+        projectName: selectedProject.name,
+        clientId: selectedProject.clientId,
+        taskListId: listId,
+        status: 'To Do',
+        priority: 'Medium',
+        assignees: '',
+        description: ''
+      };
+      await api.post('/tasks', payload);
+      toast('Subtask created successfully!', 'success');
+      setInlineSubtaskTitle('');
+      setInlineSubtaskParentId(null);
+      setExpandedSubtasks(prev => ({ ...prev, [parentTask.id]: true }));
+      fetchData(true);
+    } catch (error) {
+      console.error('Create inline subtask error:', error);
+      alert('Failed to create subtask', 'error', 'Error');
+    } finally {
+      setInlineSubtaskSaving(false);
+    }
   };
 
   const handleOpenCreateQueryModal = () => {
@@ -1479,6 +1512,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                   <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                                 </button>
                                               )}
+                                              {can('tasks', 'create') && (
+                                                <button className="cu-act-btn" onClick={() => { setInlineSubtaskParentId(inlineSubtaskParentId === task.id ? null : task.id); setInlineSubtaskTitle(''); }} title="Add Subtask" style={{ background: 'none', border: 'none', color: '#16a34a', cursor: 'pointer', padding: '0.25rem' }}>
+                                                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                                </button>
+                                              )}
                                             </div>
                                           </td>
                                         </tr>
@@ -1582,6 +1620,44 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                             </tr>
                                           );
                                         });
+                                      }
+
+                                      // Inline subtask creation row
+                                      if (inlineSubtaskParentId === task.id) {
+                                        rows.push(
+                                          <tr key={`inline-sub-${task.id}`} style={{ borderBottom: '1px solid #f1f5f9', background: '#f0fdf4' }}>
+                                            <td colSpan={6} style={{ padding: '0.6rem 1.25rem', paddingLeft: '2.5rem' }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                <span style={{ color: '#16a34a', fontSize: '1rem', fontWeight: 'bold', flexShrink: 0 }}>↳</span>
+                                                <input
+                                                  type="text"
+                                                  placeholder="Enter subtask title..."
+                                                  value={inlineSubtaskTitle}
+                                                  onChange={e => setInlineSubtaskTitle(e.target.value)}
+                                                  onKeyDown={e => { if (e.key === 'Enter') handleInlineSubtaskSave(task, list.id); if (e.key === 'Escape') { setInlineSubtaskParentId(null); setInlineSubtaskTitle(''); } }}
+                                                  autoFocus
+                                                  style={{ border: '1px solid #bbf7d0', borderRadius: '6px', padding: '0.4rem 0.65rem', fontSize: '0.85rem', outline: 'none', flex: 1, minWidth: '120px', background: 'white' }}
+                                                  onClick={e => e.stopPropagation()}
+                                                />
+                                                <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
+                                                  <button
+                                                    onClick={() => handleInlineSubtaskSave(task, list.id)}
+                                                    disabled={inlineSubtaskSaving || !inlineSubtaskTitle.trim()}
+                                                    style={{ background: '#16a34a', color: 'white', border: 'none', borderRadius: '6px', padding: '0.35rem 0.85rem', fontSize: '0.78rem', fontWeight: '600', cursor: inlineSubtaskSaving || !inlineSubtaskTitle.trim() ? 'not-allowed' : 'pointer', opacity: inlineSubtaskSaving || !inlineSubtaskTitle.trim() ? 0.5 : 1, whiteSpace: 'nowrap' }}
+                                                  >
+                                                    {inlineSubtaskSaving ? 'Saving...' : 'Save'}
+                                                  </button>
+                                                  <button
+                                                    onClick={() => { setInlineSubtaskParentId(null); setInlineSubtaskTitle(''); }}
+                                                    style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.35rem 0.85rem', fontSize: '0.78rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                                  >
+                                                    Cancel
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            </td>
+                                          </tr>
+                                        );
                                       }
 
                                       return rows;
