@@ -230,17 +230,22 @@ export default function AddUser({ onBack }) {
           </div>
           <div className="saas-field">
             <label className="saas-label">Email Address *</label>
-            <input 
-              className={`saas-input ${errors.email ? 'error' : ''}`} 
-              type="email" 
-              placeholder="john@example.com" 
-              value={form.email} 
-              autoComplete="off" 
+            <input
+              className={`saas-input ${errors.email ? 'error' : ''}`}
+              type="email"
+              placeholder="john@example.com"
+              value={form.email}
+              autoComplete="off"
               onChange={e => {
-                setForm({...form, email: e.target.value});
-                if (errors.email) setErrors(prev => { const { email: _, ...rest } = prev; return rest; });
+                const val = e.target.value;
+                setForm({...form, email: val});
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (emailRegex.test(val.trim())) {
+                  validateEmailDuplicate(val);
+                } else {
+                  setErrors(prev => { const { email: _, ...rest } = prev; return rest; });
+                }
               }}
-              onBlur={e => validateEmailDuplicate(e.target.value)} 
             />
             {errors.email && <span className="error-text">{errors.email}</span>}
           </div>
@@ -258,16 +263,16 @@ export default function AddUser({ onBack }) {
           </div>
           <div className="saas-field">
             <label className="saas-label">Phone Number</label>
-            <input 
-              className={`saas-input ${errors.phoneNo ? 'error' : ''}`} 
-              placeholder="+1 (555) 000-0000" 
-              value={form.phoneNo} 
-              autoComplete="off" 
+            <input
+              className={`saas-input ${errors.phoneNo ? 'error' : ''}`}
+              placeholder="+1 (555) 000-0000"
+              value={form.phoneNo}
+              autoComplete="off"
               onChange={e => {
-                setForm({...form, phoneNo: e.target.value});
-                if (errors.phoneNo) setErrors(prev => { const { phoneNo: _, ...rest } = prev; return rest; });
+                const val = e.target.value;
+                setForm({...form, phoneNo: val});
+                validatePhoneDuplicate(val);
               }}
-              onBlur={e => validatePhoneDuplicate(e.target.value)} 
             />
             {errors.phoneNo && <span className="error-text">{errors.phoneNo}</span>}
           </div>

@@ -129,6 +129,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [showQueryModal, setShowQueryModal] = useState(false);
   const [queryFormType, setQueryFormType] = useState('create'); // 'create' or 'edit'
   const [editingQuery, setEditingQuery] = useState(null);
+  const queryFormRef = useRef(null);
   const [viewingQuery, setViewingQuery] = useState(null);
   const [querySearchText, setQuerySearchText] = useState('');
   const [queryStatusFilter, setQueryStatusFilter] = useState('All Status');
@@ -625,6 +626,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       priority: query.priority || 'Medium'
     });
     setShowQueryModal(true);
+    setTimeout(() => {
+      if (queryFormRef.current) {
+        queryFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const firstInput = queryFormRef.current.querySelector('input, select, textarea');
+        if (firstInput) firstInput.focus();
+      }
+    }, 50);
   };
 
   const handleSaveQuery = async () => {
@@ -636,6 +644,22 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     }
     if (!queryFormFields.title?.trim()) {
       alert('Query title is required.', 'warning', 'Required');
+      return;
+    }
+    if (!queryFormFields.sentTo) {
+      alert('Please select an employee to send the query to.', 'warning', 'Required');
+      return;
+    }
+    if (!queryFormFields.priority) {
+      alert('Priority is required.', 'warning', 'Required');
+      return;
+    }
+    if (!queryFormFields.status) {
+      alert('Status is required.', 'warning', 'Required');
+      return;
+    }
+    if (!queryFormFields.description?.trim()) {
+      alert('Description is required.', 'warning', 'Required');
       return;
     }
     setIsSaving(true);
@@ -755,7 +779,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       .filter(Boolean);
 
     return (
-      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', maxWidth: '780px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+      <div ref={queryFormRef} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', maxWidth: '780px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
           <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>
             {queryFormType === 'create' ? 'Create New Query' : 'Edit Query'}
@@ -775,7 +799,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           </div>
 
           <div className="saas-field">
-            <label className="saas-label">Sent To</label>
+            <label className="saas-label">Sent To *</label>
             <select
               className="saas-select"
               value={queryFormFields.sentTo}
@@ -789,7 +813,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           </div>
 
           <div className="saas-field">
-            <label className="saas-label">Priority</label>
+            <label className="saas-label">Priority *</label>
             <select
               className="saas-select"
               value={queryFormFields.priority}
@@ -802,7 +826,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           </div>
 
           <div className="saas-field">
-            <label className="saas-label">Status</label>
+            <label className="saas-label">Status *</label>
             <select
               className="saas-select"
               value={queryFormFields.status}
@@ -816,7 +840,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           </div>
 
           <div className="saas-field">
-            <label className="saas-label">Solved (Yes/No)</label>
+            <label className="saas-label">Solved (Yes/No) *</label>
             <select
               className="saas-select"
               value={queryFormFields.solved ? "true" : "false"}
@@ -828,7 +852,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           </div>
 
           <div className="saas-field" style={{ gridColumn: 'span 2' }}>
-            <label className="saas-label">Description</label>
+            <label className="saas-label">Description *</label>
             <textarea
               className="saas-textarea"
               placeholder="Query details..."

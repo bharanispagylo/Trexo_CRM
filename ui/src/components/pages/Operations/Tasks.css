@@ -3438,12 +3438,12 @@
   white-space: nowrap;
 }
 
-.cu-th-name     { width: 33%; }
+.cu-th-name     { width: 31%; }
 .cu-th-assignee { width: 14%; text-align: center; }
 .cu-th-project  { width: 14%; }
 .cu-th-list     { width: 15%; }
-.cu-th-delivery { width: 10%; text-align: center; }
-.cu-th-priority { width: 10%; text-align: center; }
+.cu-th-delivery { width: 13%; text-align: center; }
+.cu-th-priority { width: 9%; text-align: center; }
 .cu-th-actions  { width: 4%; }
 
 /* ── Rows ── */
@@ -3653,17 +3653,41 @@
   background-color: #ffffff;
 }
 
+/* Legacy — kept for any other usages */
 .cu-inline-date-field {
-  width: 130px;
-  min-width: 130px;
+  width: 88px;
+  min-width: 0;
+  max-width: 88px;
   font-size: 0.72rem;
   color: #475569;
 }
-.cu-inline-date-field::-webkit-calendar-picker-indicator {
-  opacity: 0;
-  width: 0;
-  height: 0;
+
+/* ── Custom date cell: visible text + invisible overlay input ── */
+.cu-date-cell {
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+.cu-date-text {
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+/* Invisible date input covers the whole cell — catches clicks, opens picker */
+.cu-date-hidden-input {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+  border: none;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .cu-inline-status-dot {
@@ -4522,6 +4546,7 @@
     z-index: 2 !important;
     cursor: pointer !important;
     -webkit-appearance: none !important;
+    appearance: none !important;
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
@@ -4729,6 +4754,8 @@
 
   .cu-inline-date-field {
     width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
   }
 
   .cu-section-right .kanban-new-btn {

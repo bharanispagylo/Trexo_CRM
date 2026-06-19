@@ -2471,7 +2471,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           </div>
 
           <div className="comments-feed-container">
-            {commentTree.length === 0 ? (
+            {!isEdit ? (
+              <div className="no-comments-placeholder">Save the task first to start commenting.</div>
+            ) : commentTree.length === 0 ? (
               <div className="no-comments-placeholder">No comments yet. Start the conversation!</div>
             ) : (
               commentTree.map(c => renderComment(c))
@@ -2554,7 +2556,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     } 
                   }} 
                   onPaste={handleCommentPaste}
-                  placeholder={commentUploading ? "Uploading..." : commentPosting ? "Posting..." : "Write a comment..."}
+                  placeholder={!isEdit ? "Save the task first to comment..." : commentUploading ? "Uploading..." : commentPosting ? "Posting..." : "Write a comment..."}
                   className="comment-main-text-input"
                   style={{
                     paddingRight: '4.5rem',
@@ -2566,7 +2568,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     paddingBottom: '8px',
                     borderRadius: '20px'
                   }}
-                  disabled={commentUploading || commentPosting}
+                  disabled={!isEdit || commentUploading || commentPosting}
                 />
                 
                 {mentionState?.isOpen && (
@@ -2624,8 +2626,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <span 
                     className="comment-emoji-icon" 
                     title="Insert Emoji"
-                    onClick={() => !commentPosting && !commentUploading && setShowEmojiPicker(!showEmojiPicker)}
-                    style={{ cursor: (commentPosting || commentUploading) ? 'not-allowed' : 'pointer', userSelect: 'none', opacity: (commentPosting || commentUploading) ? 0.3 : 0.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                    onClick={() => isEdit && !commentPosting && !commentUploading && setShowEmojiPicker(!showEmojiPicker)}
+                    style={{ cursor: (!isEdit || commentPosting || commentUploading) ? 'not-allowed' : 'pointer', userSelect: 'none', opacity: (!isEdit || commentPosting || commentUploading) ? 0.3 : 0.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
                   </span>
@@ -2634,8 +2636,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <span 
                     className="comment-paperclip-icon" 
                     title="Attach File to Comment"
-                    onClick={() => !commentPosting && !commentUploading && commentFileInputRef.current && commentFileInputRef.current.click()}
-                    style={{ cursor: (commentPosting || commentUploading) ? 'not-allowed' : 'pointer', userSelect: 'none', opacity: (commentPosting || commentUploading) ? 0.3 : 0.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                    onClick={() => isEdit && !commentPosting && !commentUploading && commentFileInputRef.current && commentFileInputRef.current.click()}
+                    style={{ cursor: (!isEdit || commentPosting || commentUploading) ? 'not-allowed' : 'pointer', userSelect: 'none', opacity: (!isEdit || commentPosting || commentUploading) ? 0.3 : 0.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                   </span>
@@ -2675,7 +2677,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 type="button"
                 className="comment-submit-paper-btn" 
                 onClick={() => handleAddComment()} 
-                disabled={(!newComment.trim() && !commentAttachment) || commentUploading || commentPosting}
+                disabled={!isEdit || (!newComment.trim() && !commentAttachment) || commentUploading || commentPosting}
               >
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
               </button>
@@ -4427,9 +4429,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               </div>
                                             </td>
                                             <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
-                                              <div className="cu-inline-field-wrapper">
+                                              <div className="cu-inline-field-wrapper cu-date-cell">
                                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                                <span className="cu-date-text" style={{ color: relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
+                                                <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                               </div>
                                             </td>
                                             <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
@@ -4451,7 +4454,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                           subTasks.forEach(sub => {
                                             const subRelDate = formatRelativeDueDate(sub.dueDate);
                                             const subMeta = STATUS_HEADER_META[sub.status] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
-                                            
+
                                             rows.push(
                                               <tr key={sub.id} className="cu-row subtask-row" onClick={() => openTaskDetail(sub, false)} style={{ background: '#f8fafc' }}>
                                                 <td className="cu-td cu-td-name" style={{ paddingLeft: '2.5rem' }}>
@@ -4479,9 +4482,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
-                                                  <div className="cu-inline-field-wrapper">
+                                                  <div className="cu-inline-field-wrapper cu-date-cell">
                                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                    <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                                    <span className="cu-date-text" style={{ color: subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{sub.dueDate ? new Date(sub.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
+                                                    <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
@@ -5023,9 +5027,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               ) : <span className="cu-empty-cell">-</span>}
                                             </td>
                                             <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
-                                              <div className="cu-inline-field-wrapper">
+                                              <div className="cu-inline-field-wrapper cu-date-cell">
                                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                                <span className="cu-date-text" style={{ color: relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
+                                                <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                               </div>
                                             </td>
                                             <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
@@ -5064,9 +5069,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   ) : <span className="cu-empty-cell">-</span>}
                                                 </td>
                                                 <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
-                                                  <div className="cu-inline-field-wrapper">
+                                                  <div className="cu-inline-field-wrapper cu-date-cell">
                                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                    <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                                    <span className="cu-date-text" style={{ color: subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{sub.dueDate ? new Date(sub.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
+                                                    <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>

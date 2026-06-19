@@ -10,6 +10,8 @@ export default function Users({ onAddUser, onEditUser }) {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedRoleFilter, setSelectedRoleFilter] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const USERS_PER_PAGE = 10;
   const { can } = usePermissions();
   const { alert, confirm } = useAlert();
 
@@ -47,9 +49,20 @@ export default function Users({ onAddUser, onEditUser }) {
 
   useEffect(() => { fetchUsers(); }, []);
 
-  const filteredUsers = selectedRoleFilter === 'All' 
-    ? users 
+  const filteredUsers = selectedRoleFilter === 'All'
+    ? users
     : users.filter(u => (u.role || 'Employee').toLowerCase() === selectedRoleFilter.toLowerCase());
+
+  const totalPages = Math.ceil(filteredUsers.length / USERS_PER_PAGE);
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * USERS_PER_PAGE,
+    currentPage * USERS_PER_PAGE
+  );
+
+  const handleRoleFilterChange = (val) => {
+    setSelectedRoleFilter(val);
+    setCurrentPage(1);
+  };
 
   const getUserName = (u) => u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || 'Unknown';
 
@@ -141,7 +154,7 @@ export default function Users({ onAddUser, onEditUser }) {
           <select 
             className="role-filter-select" 
             value={selectedRoleFilter} 
-            onChange={(e) => setSelectedRoleFilter(e.target.value)}
+            onChange={(e) => handleRoleFilterChange(e.target.value)}
           >
             <option value="All">All Roles</option>
             {roles.map(r => <option key={r} value={r}>{r}</option>)}
@@ -172,7 +185,7 @@ export default function Users({ onAddUser, onEditUser }) {
           <tbody>
             {filteredUsers.length === 0 ? (
               <tr><td colSpan="7" className="status-cell">No users found.</td></tr>
-            ) : filteredUsers.map(u => (
+            ) : paginatedUsers.map(u => (
               <tr key={u.id} style={u.status === 'Inactive' ? { opacity: 0.6 } : {}}>
                 <td data-label="Profile" className="user-avatar-cell">
                   {u.profileImage ? (
@@ -249,6 +262,53 @@ export default function Users({ onAddUser, onEditUser }) {
           </tbody>
         </table>
 </div>
+
+        {/* ── Pagination ── */}
+        {totalPages > 1 && (
+          <div className="users-pagination">
+            <span className="users-pagination-info">
+              Showing {(currentPage - 1) * USERS_PER_PAGE + 1}–{Math.min(currentPage * USERS_PER_PAGE, filteredUsers.length)} of {filteredUsers.length} users
+            </span>
+            <div className="users-pagination-controls">
+              <button
+                className="users-page-btn"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                ‹ Prev
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                .reduce((acc, p, idx, arr) => {
+                  if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...');
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  p === '...' ? (
+                    <span key={`ellipsis-${idx}`} className="users-page-ellipsis">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      className={`users-page-btn${currentPage === p ? ' active' : ''}`}
+                      onClick={() => setCurrentPage(p)}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+
+              <button
+                className="users-page-btn"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next ›
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Reassign Tasks Modal ── */}

@@ -755,8 +755,9 @@
 .queries-reset-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.3rem;
-  padding: 0.4rem 0.85rem;
+  padding: 0.4rem 0.75rem;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   background: white;
@@ -766,6 +767,9 @@
   cursor: pointer;
   white-space: nowrap;
   height: 40px;
+  width: fit-content;
+  min-width: unset;
+  max-width: 90px;
   box-sizing: border-box;
   flex-shrink: 0;
 }
