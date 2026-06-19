@@ -380,8 +380,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         return;
       }
     } else {
-      if (user?.role?.toLowerCase() !== 'admin') {
-        alert("Only Admin users can create projects.", 'warning', 'Access Denied');
+      if (!can('projects', 'create')) {
+        alert("You do not have permission to create projects.", 'warning', 'Access Denied');
         return;
       }
     }
@@ -2838,7 +2838,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <option value="On Hold">On Hold</option>
             <option value="Pending">Pending</option>
           </select>
-          {user?.role?.toLowerCase() === 'admin' && (
+          {can('projects', 'create') && (
           <button className="project-add-btn" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={() => {
             setForm({ name: '', status: 'Active', description: '', client: '', clientId: '', estimatedHours: 0, actualHours: 0, billableHours: 0 });
             setShowForm(true);
