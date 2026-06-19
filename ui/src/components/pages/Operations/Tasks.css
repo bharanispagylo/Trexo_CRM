@@ -4928,6 +4928,41 @@
     display: none !important;
   }
 
+  /* Mobile All Tasks empty state */
+  .cu-mob-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3.5rem 1.5rem;
+    text-align: center;
+  }
+
+  .cu-mob-empty-title {
+    font-size: 0.97rem;
+    font-weight: 700;
+    color: #64748b;
+    margin: 0 0 0.3rem 0;
+  }
+
+  .cu-mob-empty-sub {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin: 0 0 1rem 0;
+  }
+
+  .cu-mob-empty-add-btn {
+    padding: 0.55rem 1.4rem;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+  }
+
   .cu-mob-proj-section {
     background: #ffffff;
     border-radius: 12px;

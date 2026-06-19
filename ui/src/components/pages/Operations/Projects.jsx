@@ -1648,10 +1648,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                             </span>
                                           </td>
                                           <td className="cu-td cu-td-delivery" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                            {relDate ? (
-                                              <span className={`cu-due-badge ${relDate.isOverdue ? 'overdue' : relDate.isToday ? 'today' : ''}`} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: relDate.isOverdue ? '#fee2e2' : relDate.isToday ? '#fef3c7' : '#f1f5f9', color: relDate.isOverdue ? '#ef4444' : relDate.isToday ? '#d97706' : '#475569' }}>
+                                            {task.dueDate ? (
+                                              <span className={`cu-due-badge ${relDate?.isOverdue ? 'overdue' : ''}`} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: relDate?.isOverdue ? '#fee2e2' : '#f1f5f9', color: relDate?.isOverdue ? '#ef4444' : '#475569' }}>
                                                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                {relDate.text}
+                                                {new Date(task.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                               </span>
                                             ) : <span className="cu-empty-cell">-</span>}
                                           </td>
@@ -1746,10 +1746,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                 </span>
                                               </td>
                                               <td className="cu-td cu-td-delivery" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                                {subRelDate ? (
-                                                  <span className={`cu-due-badge ${subRelDate.isOverdue ? 'overdue' : subRelDate.isToday ? 'today' : ''}`} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: subRelDate.isOverdue ? '#fee2e2' : subRelDate.isToday ? '#fef3c7' : '#f1f5f9', color: subRelDate.isOverdue ? '#ef4444' : subRelDate.isToday ? '#d97706' : '#475569' }}>
+                                                {sub.dueDate ? (
+                                                  <span className={`cu-due-badge ${subRelDate?.isOverdue ? 'overdue' : ''}`} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: subRelDate?.isOverdue ? '#fee2e2' : '#f1f5f9', color: subRelDate?.isOverdue ? '#ef4444' : '#475569' }}>
                                                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                    {subRelDate.text}
+                                                    {new Date(sub.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                                   </span>
                                                 ) : <span className="cu-empty-cell">-</span>}
                                               </td>
@@ -2906,7 +2906,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                   const estHours = proj.estimatedHours ? `${proj.estimatedHours} hrs` : '-';
                   const actHours = proj.actualHours ? `${proj.actualHours} hrs` : '-';
                   const bilHours = proj.billableHours ? `${proj.billableHours} hrs` : '-';
-                  const createdOn = proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}) : '-';
+                  const createdOn = proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('en-GB', {day: '2-digit', month: '2-digit', year: 'numeric'}) : '-';
                   const displayStatus = proj.status || 'Active';
                   
                   let statusBg = '#dcfce7'; let statusColor = '#16a34a';

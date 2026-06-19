@@ -262,6 +262,148 @@
   background: #fef2f2 !important;
 }
 
+/* ── Grouped task view: Project → Task Group ── */
+
+.tt-project-group {
+  margin-bottom: 1.25rem;
+}
+
+.tt-project-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.75rem;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px 8px 0 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tt-list-group {
+  border-left: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+  margin-bottom: 0.1rem;
+}
+
+.tt-list-group + .tt-list-group {
+  border-top: none;
+  border-radius: 0;
+}
+
+.tt-list-group:last-child {
+  border-radius: 0 0 8px 8px;
+}
+
+.tt-list-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 1rem;
+  background: #fafafa;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.tt-list-badge {
+  margin-left: auto;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+.tt-tasks-table-wrap {
+  background: white;
+  overflow-x: auto;
+}
+
+.tt-tasks-table {
+  margin: 0;
+}
+
+/* Status pill */
+.tt-status-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #f1f5f9;
+  color: #475569;
+}
+.tt-status-pill[data-status="In Progress"] { background: #dbeafe; color: #2563eb; }
+.tt-status-pill[data-status="Completed"],
+.tt-status-pill[data-status="Delivered"],
+.tt-status-pill[data-status="Prod Verified"] { background: #dcfce7; color: #16a34a; }
+.tt-status-pill[data-status="To Do"] { background: #f1f5f9; color: #475569; }
+.tt-status-pill[data-status="Overdue"] { background: #fee2e2; color: #dc2626; }
+
+/* Priority text */
+.tt-priority-text {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+}
+.tt-priority-text[data-priority="High"],
+.tt-priority-text[data-priority="Critical"] { color: #ef4444; }
+.tt-priority-text[data-priority="Medium"] { color: #ea580c; }
+
+/* Mobile overrides */
+@media (max-width: 768px) {
+  .tt-project-header {
+    border-radius: 8px 8px 0 0;
+    font-size: 0.72rem;
+  }
+
+  .tt-tasks-table-wrap {
+    overflow-x: visible;
+  }
+
+  .tt-tasks-table thead { display: none; }
+
+  .tt-tasks-table tbody tr {
+    display: block;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 0.5rem 0.75rem;
+    background: white;
+  }
+
+  .tt-tasks-table tbody tr:last-child { border-bottom: none; }
+
+  .tt-tasks-table td {
+    display: flex;
+    align-items: flex-start;
+    padding: 0.3rem 0;
+    font-size: 0.82rem;
+    border-bottom: none;
+  }
+
+  .tt-tasks-table td::before {
+    content: attr(data-label);
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+    min-width: 75px;
+    margin-right: 0.75rem;
+    padding-top: 2px;
+  }
+}
+
 .member-delete-icon-btn {
   background: transparent;
   border: none;

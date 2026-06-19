@@ -4043,11 +4043,30 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           });
 
           const firstListId = finalProjectGroups[0]?.lists[0]?.id;
+          const hasActiveFilter = !!(filterProjectName || filterDate || assigneeFilter);
 
           return (
             <>
             {/* ── Mobile ClickUp-style All Tasks (hidden on desktop) ── */}
             <div className="cu-mobile-alltasks-list">
+              {finalProjectGroups.length === 0 && (
+                <div className="cu-mob-empty-state">
+                  <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#cbd5e1" strokeWidth="1.5" style={{ marginBottom: '0.75rem' }}>
+                    <rect x="3" y="3" width="18" height="18" rx="3"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="14" y2="12"/>
+                  </svg>
+                  <p className="cu-mob-empty-title">
+                    {hasActiveFilter ? 'No tasks found' : 'No tasks yet'}
+                  </p>
+                  <p className="cu-mob-empty-sub">
+                    {hasActiveFilter ? 'Try adjusting your filters' : 'Create your first task to get started'}
+                  </p>
+                  {!hasActiveFilter && can('tasks', 'create') && (
+                    <button className="cu-mob-empty-add-btn" onClick={() => openNewTask('To Do')}>
+                      + Add Task
+                    </button>
+                  )}
+                </div>
+              )}
               {finalProjectGroups.map(projGroup => {
                 const allProjTasks = projGroup.lists.flatMap(l => l.tasks);
                 if (allProjTasks.length === 0) return null;
@@ -4235,8 +4254,13 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                     <line x1="8" y1="8" x2="16" y2="8"/>
                     <line x1="8" y1="12" x2="14" y2="12"/>
                   </svg>
-                  <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#64748b', marginBottom: '0.5rem' }}>No tasks yet</p>
-                  {can('tasks', 'create') && (
+                  <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#64748b', marginBottom: '0.25rem' }}>
+                    {hasActiveFilter ? 'No tasks found' : 'No tasks yet'}
+                  </p>
+                  <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: '0.5rem' }}>
+                    {hasActiveFilter ? 'Try adjusting your filters' : 'Create your first task to get started'}
+                  </p>
+                  {!hasActiveFilter && can('tasks', 'create') && (
                     <button
                       onClick={() => openNewTask('To Do')}
                       style={{ marginTop: '0.5rem', padding: '0.5rem 1.25rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
