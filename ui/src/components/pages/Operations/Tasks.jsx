@@ -353,6 +353,26 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const [newSubtaskDueDate, setNewSubtaskDueDate] = useState('');
   const [newSubtaskPriority, setNewSubtaskPriority] = useState('Medium');
   const [subtaskSaving, setSubtaskSaving] = useState(false);
+  const [subtasks, setSubtasks] = useState([]);
+  const [parentTask, setParentTask] = useState(null);
+
+  const fetchSubtasks = useCallback(() => {
+    if (isEdit && task?.id) {
+      api.get('/tasks').then(allTasks => {
+        const children = (allTasks || []).filter(t => t.parentId === task.id);
+        setSubtasks(children);
+        
+        if (task.parentId) {
+          const parent = (allTasks || []).find(t => t.id === task.parentId);
+          setParentTask(parent || null);
+        } else {
+          setParentTask(null);
+        }
+      }).catch(console.error);
+    } else {
+      setParentTask(null);
+    }
+  }, [isEdit, task?.id, task?.parentId]);
 
   const currentProjId = form.projectId 
     || (form.projectName ? projects.find(p => p.name === form.projectName)?.id : null)
@@ -519,6 +539,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   useEffect(() => {
     fetchComments();
     fetchWorkLogs();
+    fetchSubtasks();
     api.get('/users').then(data => {
       setUsers(data || []);
     }).catch(console.error);
@@ -531,7 +552,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     api.get('/projects').then(data => {
       setProjects(data || []);
     }).catch(console.error);
-  }, [task, isEdit, fetchComments, fetchWorkLogs]);
+  }, [task, isEdit, fetchComments, fetchWorkLogs, fetchSubtasks]);
 
   useEffect(() => {
     if (task?.createdAt) {
@@ -918,6 +939,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       setNewSubtaskAssignee('');
       setNewSubtaskDueDate('');
       setNewSubtaskPriority('Medium');
+      fetchSubtasks();
       if (onRefresh) {
         await onRefresh();
       }
@@ -934,6 +956,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     confirm("Are you sure you want to delete this subtask?", async () => {
       try {
         await api.delete(`/tasks/${subtaskId}`);
+        fetchSubtasks();
         if (onRefresh) {
           await onRefresh();
         }
@@ -1487,7 +1510,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 <span style={{ fontWeight: 600 }}>Subtask of:</span>
                 <button 
                   onClick={() => {
-                    const parent = tasks.find(t => t.id === task.parentId);
+                    const parent = parentTask || tasks.find(t => t.id === task.parentId);
                     if (parent && onSelectTask) onSelectTask(parent);
                   }}
                   style={{
@@ -1501,7 +1524,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     fontSize: '0.82rem'
                   }}
                 >
-                  {tasks.find(t => t.id === task.parentId)?.title || 'Parent Task'}
+                  {parentTask?.title || tasks.find(t => t.id === task.parentId)?.title || 'Parent Task'}
                 </button>
               </div>
             )}
@@ -1572,7 +1595,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 className={`saas-tab-header-btn ${activeTab === 'subtasks' ? 'active' : ''}`}
                 onClick={() => setActiveTab('subtasks')}
               >
-                Subtasks ({tasks.filter(t => t.parentId === task.id).length})
+                Subtasks ({subtasks.length})
               </button>
             )}
             {currentUser?.role?.toLowerCase() === 'admin' && !task?.parentId && (
@@ -2259,7 +2282,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             {activeTab === 'subtasks' && isEdit && (
               <div className="saas-subtasks-pane animate-fade-in" style={{ padding: '0.25rem 0' }}>
                 <h2 style={{ fontSize: '1.15rem', fontWeight: '700', margin: '0 0 1.5rem 0', color: '#0f172a' }}>
-                  Subtasks ({tasks.filter(t => t.parentId === task.id).length})
+                  Subtasks ({subtasks.length})
                 </h2>
                 
                 {/* Form to add subtask */}
@@ -2344,14 +2367,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         </tr>
                       </thead>
                       <tbody>
-                        {tasks.filter(t => t.parentId === task.id).length === 0 ? (
+                        {subtasks.length === 0 ? (
                           <tr>
                             <td colSpan="6" style={{ padding: '3rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem' }}>
                               No subtasks created for this task yet.
                             </td>
                           </tr>
                         ) : (
-                          tasks.filter(t => t.parentId === task.id).map(sub => {
+                          subtasks.map(sub => {
                             const subAssigneeObj = users.find(u => u.id === sub.assignees);
                             const subAssigneeName = subAssigneeObj ? (subAssigneeObj.fullName || `${subAssigneeObj.firstName || ''} ${subAssigneeObj.lastName || ''}`.trim() || 'Unknown') : 'Unassigned';
                             const subRelDate = formatRelativeDueDate(sub.dueDate);
