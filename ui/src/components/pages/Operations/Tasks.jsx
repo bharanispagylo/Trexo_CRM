@@ -431,6 +431,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const [commentPosting, setCommentPosting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [taskSaving, setTaskSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef(null);
   const commentFileInputRef = useRef(null);
   const commentTextareaRef = useRef(null);
@@ -1469,10 +1470,24 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           {isEdit && canDelete && (
             <button
               className="saas-btn-nav saas-btn-danger"
-              onClick={() => confirm('Are you sure you want to delete this task?', () => { onDelete(task.id); onClose(); }, 'Delete Task')}
+              disabled={isDeleting}
+              style={{ opacity: isDeleting ? 0.7 : 1, cursor: isDeleting ? 'not-allowed' : 'pointer' }}
+              onClick={() => confirm('Are you sure you want to delete this task?', async () => {
+                setIsDeleting(true);
+                try { await onDelete(task.id); onClose(); } finally { setIsDeleting(false); }
+              }, 'Delete Task')}
             >
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-              <span className="saas-btn-delete-text">Delete</span>
+              {isDeleting ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}><circle cx="12" cy="12" r="10" strokeOpacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" /></svg>
+                  <span className="saas-btn-delete-text">Deleting...</span>
+                </span>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  <span className="saas-btn-delete-text">Delete</span>
+                </>
+              )}
             </button>
           )}
 
@@ -1531,34 +1546,37 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               </div>
             )}
             {isEditing ? (
-              <textarea 
-                value={form.title} 
-                onChange={e => set('title', e.target.value.slice(0, 100))} 
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    submit();
-                  }
-                }}
-                className="saas-title-input"
-                placeholder="Task Title *"
-                maxLength={100}
-                rows={2}
-                style={{ 
-                  border: 'none',
-                  borderBottom: '1px solid #e2e8f0', 
-                  paddingBottom: '0.5rem', 
-                  fontSize: '1.15rem', 
-                  fontWeight: '600', 
-                  width: '100%', 
-                  outline: 'none',
-                  resize: 'none',
-                  fontFamily: 'inherit',
-                  lineHeight: '1.4',
-                  background: 'transparent',
-                  boxSizing: 'border-box'
-                }}
-              />
+              <>
+                <textarea
+                  value={form.title}
+                  onChange={e => { set('title', e.target.value.slice(0, 100)); if (errors.title) setErrors(prev => { const { title: _, ...rest } = prev; return rest; }); }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      submit();
+                    }
+                  }}
+                  className="saas-title-input"
+                  placeholder="Task Title *"
+                  maxLength={100}
+                  rows={2}
+                  style={{
+                    border: 'none',
+                    borderBottom: errors.title ? '2px solid #ef4444' : '1px solid #e2e8f0',
+                    paddingBottom: '0.5rem',
+                    fontSize: '1.15rem',
+                    fontWeight: '600',
+                    width: '100%',
+                    outline: 'none',
+                    resize: 'none',
+                    fontFamily: 'inherit',
+                    lineHeight: '1.4',
+                    background: 'transparent',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {errors.title && <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600, marginTop: '2px', display: 'block' }}>{errors.title}</span>}
+              </>
             ) : (
               <h1 className="saas-detail-title" style={{ fontSize: '1.15rem', fontWeight: '600', margin: 0, lineHeight: '1.4', wordBreak: 'break-word' }}>{form.title || 'Untitled Task'}</h1>
             )}
@@ -1625,15 +1643,16 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     </select>
                   </span>
                   
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconAssignee /> Assignee *</span>
+                  <span className="saas-meta-label" style={{ color: errors.assignees ? '#ef4444' : '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconAssignee /> Assignee *</span>
                   <span className="saas-meta-value">
-                    <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
+                    <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (errors.assignees) setErrors(prev => { const { assignees: _, ...rest } = prev; return rest; }); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: errors.assignees ? '1px solid #ef4444' : '1px solid transparent', borderRadius: '4px', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
                       <option value="">Select Assignee...</option>
                       {finalUsers.map(u => {
                         const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
                         return <option key={u.id} value={u.id}>{displayName}</option>;
                       })}
                     </select>
+                    {errors.assignees && <span style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600, marginTop: '2px', display: 'block' }}>{errors.assignees}</span>}
                   </span>
                 </div>
 
@@ -1653,7 +1672,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                           title="Due Date"
                         />
                         <span className={`saas-date-display-overlay${!form.dueDate ? ' saas-date-empty' : ''}`}>
-                          {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'dd-mm-yyyy'}
+                          {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'dd/mm/yyyy'}
                         </span>
                       </div>
                       
@@ -1670,7 +1689,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                           title="Delivery Date"
                         />
                         <span className={`saas-date-display-overlay${!form.deliveredDate ? ' saas-date-empty' : ''}`}>
-                          {form.deliveredDate ? new Date(form.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'dd-mm-yyyy'}
+                          {form.deliveredDate ? new Date(form.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'dd/mm/yyyy'}
                         </span>
                       </div>
                     </div>

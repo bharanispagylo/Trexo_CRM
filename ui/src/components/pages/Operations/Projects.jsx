@@ -3091,7 +3091,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           return (
             <div className="projects-table-footer-bar">
               <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                Showing {filteredProjects.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredProjects.length)} of {filteredProjects.length} entries
+                Showing {filteredProjects.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredProjects.length)} of {allowedProjects.length} entries
               </span>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <button 

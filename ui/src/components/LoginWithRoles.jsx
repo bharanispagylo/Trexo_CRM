@@ -591,8 +591,8 @@ function ForgotPasswordPage({ onBackToLogin }) {
 //  MOBILE HOME DASHBOARD (ClickUp-style)
 // ══════════════════════════════════════════════════════════
 function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, priorityCount, upcomingCount, setActiveTab }) {
-  const [taskLists, setTaskLists] = useState([]);
-  const [listTaskCounts, setListTaskCounts] = useState({});
+  const [projectTaskCounts, setProjectTaskCounts] = useState({});
+  const [myProjects, setMyProjects] = useState([]);
   const [allTasks, setAllTasks] = useState([]);
   const [allProjects, setAllProjects] = useState([]);
   const [allClients, setAllClients] = useState([]);
@@ -644,13 +644,6 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
       
       // Personal active tasks (excluding completed: 'Delivered' or 'Prod Verified')
       const activeMyTasks = myTasks.filter(t => t.status !== 'Delivered' && t.status !== 'Prod Verified');
-
-      // Count only the user's active tasks per task list
-      const counts = {};
-      activeMyTasks.forEach(t => {
-        if (t.taskListId) counts[t.taskListId] = (counts[t.taskListId] || 0) + 1;
-      });
-      setListTaskCounts(counts);
 
       // Calculate mobile dashboard stats internally based on activeMyTasks
       const today = new Date();
@@ -713,11 +706,25 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
         }
       });
 
-      // Show task lists from user's projects OR those with user's assigned tasks
-      const myTaskListIds = new Set(myTasks.map(t => t.taskListId).filter(Boolean));
-      setTaskLists((lists || []).filter(list =>
-        myTaskListIds.has(list.id) || (list.projectId && myProjectIds.has(list.projectId))
-      ));
+      // Project-level task counts (ClickUp My Lists format)
+      const projCounts = {};
+      activeMyTasks.forEach(t => {
+        let projId = t.projectId;
+        if (!projId && t.taskListId) {
+          const list = (lists || []).find(l => l.id === t.taskListId);
+          if (list) projId = list.projectId;
+        }
+        const key = projId || '__personal__';
+        projCounts[key] = (projCounts[key] || 0) + 1;
+      });
+      setProjectTaskCounts(projCounts);
+
+      // Collect projects the user is in OR has tasks assigned
+      const allProjIds = new Set([
+        ...myProjectIds,
+        ...Object.keys(projCounts).filter(k => k !== '__personal__')
+      ]);
+      setMyProjects((projects || []).filter(p => allProjIds.has(p.id)));
     });
   }, [user]);
 
@@ -867,7 +874,7 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
         ))}
       </div>
 
-      {/* My Lists section */}
+      {/* My Lists section — ClickUp format: flat project rows with assigned task count */}
       <div className="mhd-lists-section">
         <div className="mhd-lists-hdr">
           <span className="mhd-lists-title">My Lists</span>
@@ -875,39 +882,34 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </button>
         </div>
-        {taskLists.length === 0 ? (
+
+        {myProjects.length === 0 && !projectTaskCounts['__personal__'] ? (
           <p className="mhd-lists-empty">No lists yet</p>
-        ) : (() => {
-          // Group task lists by project
-          const grouped = {};
-          taskLists.forEach(list => {
-            const projName = (list.project && list.project.name) ? list.project.name : 'General';
-            if (!grouped[projName]) grouped[projName] = [];
-            grouped[projName].push(list);
-          });
-          return Object.entries(grouped).map(([projName, lists]) => (
-            <div key={projName} style={{ marginBottom: '0.5rem' }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                padding: '0.6rem 0.75rem 0.35rem',
-                fontSize: '0.72rem', fontWeight: '800', color: '#64748b',
-                textTransform: 'uppercase', letterSpacing: '0.04em'
-              }}>
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                {projName}
-              </div>
-              {lists.map(list => (
-                <button key={list.id} className="mhd-list-row" onClick={() => setActiveTab && setActiveTab('tasks')}>
-                  <div className="mhd-list-icon-wrap">
-                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                  </div>
-                  <span className="mhd-list-name">{list.name}</span>
-                  <span className="mhd-list-count">{listTaskCounts[list.id] || 0}</span>
-                </button>
-              ))}
-            </div>
-          ));
-        })()}
+        ) : (
+          <>
+            {/* Personal List — tasks not linked to any project */}
+            {projectTaskCounts['__personal__'] > 0 && (
+              <button className="mhd-list-row" onClick={() => setActiveTab && setActiveTab('tasks')}>
+                <div className="mhd-list-icon-wrap mhd-list-personal-icon">
+                  <span>{(user?.firstName || user?.fullName || 'U')[0].toUpperCase()}</span>
+                </div>
+                <span className="mhd-list-name">Personal List</span>
+                <span className="mhd-list-count">{projectTaskCounts['__personal__']}</span>
+              </button>
+            )}
+
+            {/* One row per project */}
+            {myProjects.map(proj => (
+              <button key={proj.id} className="mhd-list-row" onClick={() => setActiveTab && setActiveTab('tasks')}>
+                <div className="mhd-list-icon-wrap">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                </div>
+                <span className="mhd-list-name">{proj.name}</span>
+                <span className="mhd-list-count">{projectTaskCounts[proj.id] || 0}</span>
+              </button>
+            ))}
+          </>
+        )}
       </div>
 
 

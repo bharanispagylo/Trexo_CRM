@@ -168,7 +168,7 @@ export default function Reports({ user, onNavigateToTask }) {
         `"${resolvedAssignee.replace(/"/g, '""')}"`,
         formatDecimal(parseFloat(t.taskApprovedHours) || 0),
         formatDecimal(parseFloat(t.taskActualHours) || 0),
-        t.deliveredDate ? new Date(t.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'
+        t.deliveredDate ? new Date(t.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
       ];
     });
     
@@ -409,7 +409,7 @@ export default function Reports({ user, onNavigateToTask }) {
                   </td>
                   <td>{formatDecimal(parseFloat(task.taskApprovedHours) || 0)}</td>
                   <td>{formatDecimal(parseFloat(task.taskActualHours) || 0)}</td>
-                  <td>{task.deliveredDate ? new Date(task.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</td>
+                  <td>{task.deliveredDate ? new Date(task.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
                 </tr>
               ))}
               {tasks.length === 0 && (
