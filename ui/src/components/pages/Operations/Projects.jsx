@@ -554,11 +554,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       alert('Assignee is required', 'warning', 'Validation Error');
       return;
     }
-    if (!subtaskDueDate) {
-      alert('Due Date is required', 'warning', 'Validation Error');
-      return;
-    }
-
     setInlineSubtaskSaving(true);
     try {
       const payload = {
@@ -1012,6 +1007,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <div className="task-drawer-panel">
               <TaskDetailView
                 task={editingTask}
+                onSelectTask={(parent) => {
+                  setShowTaskFormModal(false);
+                  setViewingTask(parent);
+                  setShowTaskViewModal(true);
+                }}
                 onSave={async (taskData, silent) => {
                   try {
                     const payload = {
@@ -1056,6 +1056,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <div className="task-drawer-panel">
               <TaskDetailView
                 task={viewingTask}
+                onSelectTask={(parent) => {
+                  setViewingTask(parent);
+                }}
                 onSave={async (taskData, silent) => {
                   try {
                     const payload = {
