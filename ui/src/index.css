@@ -57,3 +57,28 @@ code {
   border-bottom-left-radius: 12px;
   border-bottom-right-radius: 12px;
 }
+
+/* Custom Dropdown Arrow styling for standard dropdown fields across the application */
+.saas-select,
+.reports-select,
+.queries-filter-select,
+.queries-filter-select-narrow,
+.attach-type-select,
+.clients-select,
+.estimations-select,
+.saas-grid-select,
+.saas-status-select,
+.clickup-inline-select,
+.role-filter-select,
+.projects-filter-select,
+.pagination-page-size-select,
+.saas-inline-select {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 1rem center !important; /* Spacing between the arrow and right border */
+  background-size: 0.9rem !important;
+  padding-right: 2.5rem !important; /* Extra padding to prevent text overlay on the arrow */
+}

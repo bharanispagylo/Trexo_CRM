@@ -748,7 +748,6 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
               onFocus={handleSearchFocus}
               placeholder="Search here..."
             />
-            <span className="saas-search-kbd">Ctrl + /</span>
 
             {showSearchResults && searchQuery.trim() && (
               <div className="saas-search-results-overlay">

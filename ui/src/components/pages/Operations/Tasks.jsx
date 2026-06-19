@@ -989,6 +989,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       newErrors.assignees = "Assignee is required";
     }
 
+    if (form.parentId && (!form.dueDate || !form.dueDate.trim())) {
+      newErrors.dueDate = "Due Date is required for subtasks";
+    }
+
     if (form.isBillable && (form.approvedHours < 0 || form.actualHours < 0)) {
       newErrors.billing = "Hours cannot be negative";
     }
@@ -2403,23 +2407,25 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                   </span>
                                 </td>
                                 <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
-                                  <button
-                                    title="Edit Subtask"
-                                    style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: '0.25rem', marginRight: '0.5rem' }}
-                                    onClick={() => handleOpenSubtask(sub)}
-                                  >
-                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                    </svg>
-                                  </button>
-                                  <button 
-                                    title="Delete Subtask" 
-                                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }} 
-                                    onClick={() => handleDeleteSubtaskDrawer(sub.id)}
-                                  >
-                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                  </button>
+                                  <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                    <button
+                                      title="Edit Subtask"
+                                      style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', background: 'white', cursor: 'pointer' }}
+                                      onClick={() => handleOpenSubtask(sub)}
+                                    >
+                                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                      </svg>
+                                    </button>
+                                    <button 
+                                      title="Delete Subtask" 
+                                      style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', background: '#fef2f2', cursor: 'pointer' }} 
+                                      onClick={() => handleDeleteSubtaskDrawer(sub.id)}
+                                    >
+                                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -3260,6 +3266,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     }
     if (!subtaskAssignee?.trim()) {
       toast('Assignee is required', 'warning');
+      return;
+    }
+    if (!subtaskDueDate) {
+      toast('Due Date is required', 'warning');
       return;
     }
     setIsSaving(true);

@@ -159,6 +159,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [inlineSubtaskParentId, setInlineSubtaskParentId] = useState(null);
   const [inlineSubtaskTitle, setInlineSubtaskTitle] = useState('');
   const [inlineSubtaskSaving, setInlineSubtaskSaving] = useState(false);
+  const [subtaskTitle, setSubtaskTitle] = useState('');
+  const [subtaskAssignee, setSubtaskAssignee] = useState('');
+  const [subtaskDueDate, setSubtaskDueDate] = useState('');
+  const [subtaskPriority, setSubtaskPriority] = useState('Medium');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -167,6 +171,38 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   }, [statusFilter, searchQuery]);
   const { can, getLevel } = usePermissions();
   const { alert, confirm, toast } = useAlert();
+
+  const canEditProject = (proj) => {
+    if (!proj) return false;
+    const level = getLevel('projects', 'edit');
+    if (level === 'All') return true;
+    if (level === 'Self') {
+      const loggedInId = user?.id || '';
+      const rawMembers = (proj.members || '').split(',').map(m => m.trim()).filter(Boolean);
+      return loggedInId && rawMembers.includes(loggedInId);
+    }
+    return false;
+  };
+
+  const canDeleteProject = (proj) => {
+    if (!proj) return false;
+    const level = getLevel('projects', 'delete');
+    if (level === 'All') return true;
+    if (level === 'Self') {
+      const loggedInId = user?.id || '';
+      const rawMembers = (proj.members || '').split(',').map(m => m.trim()).filter(Boolean);
+      return loggedInId && rawMembers.includes(loggedInId);
+    }
+    return false;
+  };
+
+  const getFilteredUsersForProject = () => {
+    const activeUsers = users.filter(u => u.status !== 'Inactive');
+    if (!selectedProject) return activeUsers;
+    const rawMembers = (selectedProject.members || '').split(',').map(m => m.trim()).filter(Boolean);
+    if (rawMembers.length === 0) return [];
+    return activeUsers.filter(u => rawMembers.includes(u.id));
+  };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -336,6 +372,18 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       alert("Please select a Client.", 'warning', 'Required Fields');
       return;
     }
+    if (form.id) {
+      const originalProj = projects.find(p => p.id === form.id) || selectedProject;
+      if (!canEditProject(originalProj)) {
+        alert("You do not have permission to edit this project.", 'warning', 'Access Denied');
+        return;
+      }
+    } else {
+      if (!can('projects', 'create')) {
+        alert("You do not have permission to create projects.", 'warning', 'Access Denied');
+        return;
+      }
+    }
     setIsSaving(true);
     try {
       if (form.id) {
@@ -362,6 +410,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleRemove = async (id) => {
+    const proj = projects.find(p => p.id === id);
+    if (!canDeleteProject(proj)) {
+      alert('You do not have permission to delete this project.', 'warning', 'Access Denied');
+      return;
+    }
     confirm('Remove this project? This action cannot be undone.', async () => {
       setIsSaving(true);
       try {
@@ -378,6 +431,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleRemoveList = async (listId) => {
+    if (!can('projects', 'delete')) {
+      alert('You do not have permission to delete task groups.', 'warning', 'Access Denied');
+      return;
+    }
     try {
       await api.delete(`/task-lists/${listId}`);
       fetchData(true);
@@ -486,36 +543,59 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleInlineSubtaskSave = async (parentTask, listId) => {
-    if (!inlineSubtaskTitle.trim() || inlineSubtaskSaving) return;
+    if (inlineSubtaskSaving) return;
+    const title = subtaskTitle.trim();
+    if (!title) {
+      alert('Subtask title is required', 'warning', 'Validation Error');
+      return;
+    }
+    if (!subtaskAssignee) {
+      alert('Assignee is required', 'warning', 'Validation Error');
+      return;
+    }
+    if (!subtaskDueDate) {
+      alert('Due Date is required', 'warning', 'Validation Error');
+      return;
+    }
+
     setInlineSubtaskSaving(true);
     try {
       const payload = {
-        title: inlineSubtaskTitle.trim(),
+        title,
         parentId: parentTask.id,
         projectId: selectedProject.id,
         projectName: selectedProject.name,
         clientId: selectedProject.clientId,
         taskListId: listId,
         status: 'To Do',
-        priority: 'Medium',
-        assignees: '',
+        priority: subtaskPriority || 'Medium',
+        assignees: subtaskAssignee || '',
+        assignedDate: new Date().toISOString(),
+        dueDate: subtaskDueDate ? new Date(subtaskDueDate).toISOString() : null,
         description: ''
       };
       await api.post('/tasks', payload);
       toast('Subtask created successfully!', 'success');
-      setInlineSubtaskTitle('');
+      setSubtaskTitle('');
+      setSubtaskAssignee('');
+      setSubtaskDueDate('');
+      setSubtaskPriority('Medium');
       setInlineSubtaskParentId(null);
       setExpandedSubtasks(prev => ({ ...prev, [parentTask.id]: true }));
       fetchData(true);
     } catch (error) {
       console.error('Create inline subtask error:', error);
-      alert('Failed to create subtask', 'error', 'Error');
+      alert('Failed to create subtask: ' + error.message, 'error', 'Error');
     } finally {
       setInlineSubtaskSaving(false);
     }
   };
 
   const handleOpenCreateQueryModal = () => {
+    if (!can('projects', 'create')) {
+      alert('You do not have permission to create queries.', 'warning', 'Access Denied');
+      return;
+    }
     setQueryFormType('create');
     setEditingQuery(null);
     setQueryFormFields({
@@ -530,6 +610,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleOpenEditQueryModal = (query) => {
+    if (!can('projects', 'edit')) {
+      alert('You do not have permission to edit queries.', 'warning', 'Access Denied');
+      return;
+    }
     setQueryFormType('edit');
     setEditingQuery(query);
     setQueryFormFields({
@@ -544,6 +628,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleSaveQuery = async () => {
+    const isEdit = queryFormType === 'edit' && editingQuery;
+    const requiredPermission = isEdit ? 'edit' : 'create';
+    if (!can('projects', requiredPermission)) {
+      alert(`You do not have permission to ${isEdit ? 'edit' : 'create'} queries.`, 'warning', 'Access Denied');
+      return;
+    }
     if (!queryFormFields.title?.trim()) {
       alert('Query title is required.', 'warning', 'Required');
       return;
@@ -576,6 +666,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleDeleteQuery = async (queryId) => {
+    if (!can('projects', 'delete')) {
+      alert('You do not have permission to delete queries.', 'warning', 'Access Denied');
+      return;
+    }
     confirm('Are you sure you want to delete this query?', async () => {
       try {
         await api.delete(`/project-queries/${queryId}`);
@@ -989,29 +1083,31 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               </div>
             </div>
           </div>
-          <div className="detail-profile-actions">
-            <button
-              className="detail-edit-btn"
-              title="Edit Project"
-              onClick={() => {
-                setForm({
-                  id: selectedProject.id,
-                  name: selectedProject.name || '',
-                  status: selectedProject.status || 'Active',
-                  description: selectedProject.description || '',
-                  client: selectedProject.client || '',
-                  clientId: selectedProject.clientId || '',
-                  estimatedHours: selectedProject.estimatedHours || 0,
-                  actualHours: selectedProject.actualHours || 0,
-                  billableHours: selectedProject.billableHours || 0
-                });
-                setShowForm(true);
-              }}
-            >
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-              <span className="detail-btn-text">Edit Project</span>
-            </button>
-          </div>
+          {canEditProject(selectedProject) && (
+            <div className="detail-profile-actions">
+              <button
+                className="detail-edit-btn"
+                title="Edit Project"
+                onClick={() => {
+                  setForm({
+                    id: selectedProject.id,
+                    name: selectedProject.name || '',
+                    status: selectedProject.status || 'Active',
+                    description: selectedProject.description || '',
+                    client: selectedProject.client || '',
+                    clientId: selectedProject.clientId || '',
+                    estimatedHours: selectedProject.estimatedHours || 0,
+                    actualHours: selectedProject.actualHours || 0,
+                    billableHours: selectedProject.billableHours || 0
+                  });
+                  setShowForm(true);
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                <span className="detail-btn-text">Edit Project</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Metrics Grid */}
@@ -1461,6 +1557,26 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                   {subTasks.length}
                                                 </span>
                                               )}
+                                              {can('tasks', 'create') && (
+                                                <button
+                                                  className="cu-hover-subtask-btn"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setExpandedSubtasks(prev => ({ ...prev, [task.id]: true }));
+                                                    setInlineSubtaskParentId(task.id);
+                                                    setSubtaskTitle('');
+                                                    setSubtaskAssignee('');
+                                                    setSubtaskDueDate('');
+                                                    setSubtaskPriority('Medium');
+                                                  }}
+                                                  title="Add Subtask"
+                                                >
+                                                  <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                                  </svg>
+                                                </button>
+                                              )}
                                             </div>
                                           </td>
                                           <td className="cu-td cu-td-assignee" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
@@ -1529,11 +1645,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                               {can('tasks', 'delete') && (
                                                 <button className="cu-act-btn danger" onClick={() => handleDeleteTask(task.id)} title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }}>
                                                   <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                                </button>
-                                              )}
-                                              {can('tasks', 'create') && (
-                                                <button className="cu-act-btn" onClick={() => { setInlineSubtaskParentId(inlineSubtaskParentId === task.id ? null : task.id); setInlineSubtaskTitle(''); }} title="Add Subtask" style={{ background: 'none', border: 'none', color: '#16a34a', cursor: 'pointer', padding: '0.25rem' }}>
-                                                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                                 </button>
                                               )}
                                             </div>
@@ -1644,34 +1755,56 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                       // Inline subtask creation row
                                       if (inlineSubtaskParentId === task.id) {
                                         rows.push(
-                                          <tr key={`inline-sub-${task.id}`} style={{ borderBottom: '1px solid #f1f5f9', background: '#f0fdf4' }}>
-                                            <td colSpan={6} style={{ padding: '0.6rem 1.25rem', paddingLeft: '2.5rem' }}>
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                                <span style={{ color: '#16a34a', fontSize: '1rem', fontWeight: 'bold', flexShrink: 0 }}>↳</span>
-                                                <input
-                                                  type="text"
-                                                  placeholder="Enter subtask title..."
-                                                  value={inlineSubtaskTitle}
-                                                  onChange={e => setInlineSubtaskTitle(e.target.value)}
-                                                  onKeyDown={e => { if (e.key === 'Enter') handleInlineSubtaskSave(task, list.id); if (e.key === 'Escape') { setInlineSubtaskParentId(null); setInlineSubtaskTitle(''); } }}
-                                                  autoFocus
-                                                  style={{ border: '1px solid #bbf7d0', borderRadius: '6px', padding: '0.4rem 0.65rem', fontSize: '0.85rem', outline: 'none', flex: 1, minWidth: '120px', background: 'white' }}
-                                                  onClick={e => e.stopPropagation()}
-                                                />
-                                                <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
-                                                  <button
-                                                    onClick={() => handleInlineSubtaskSave(task, list.id)}
-                                                    disabled={inlineSubtaskSaving || !inlineSubtaskTitle.trim()}
-                                                    style={{ background: '#16a34a', color: 'white', border: 'none', borderRadius: '6px', padding: '0.35rem 0.85rem', fontSize: '0.78rem', fontWeight: '600', cursor: inlineSubtaskSaving || !inlineSubtaskTitle.trim() ? 'not-allowed' : 'pointer', opacity: inlineSubtaskSaving || !inlineSubtaskTitle.trim() ? 0.5 : 1, whiteSpace: 'nowrap' }}
-                                                  >
-                                                    {inlineSubtaskSaving ? 'Saving...' : 'Save'}
-                                                  </button>
-                                                  <button
-                                                    onClick={() => { setInlineSubtaskParentId(null); setInlineSubtaskTitle(''); }}
-                                                    style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.35rem 0.85rem', fontSize: '0.78rem', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                                                  >
-                                                    Cancel
-                                                  </button>
+                                          <tr key={`add-sub-${task.id}`} className="cu-inline-row animate-fade-in" style={{ background: '#f8fafc' }}>
+                                            <td colSpan="6" style={{ paddingLeft: '2.5rem' }}>
+                                              <div className="new-task-inline-bar" style={{ borderLeft: '2px solid #2563eb', paddingLeft: '8px' }} onClick={e => e.stopPropagation()}>
+                                                <div className="ntib-left">
+                                                  <span className="ntib-dotted-circle"></span>
+                                                  <input
+                                                    type="text"
+                                                    placeholder="Subtask Name or type '/' for commands"
+                                                    value={subtaskTitle}
+                                                    onChange={e => setSubtaskTitle(e.target.value)}
+                                                    onKeyDown={e => { if (e.key === 'Enter' && !inlineSubtaskSaving) handleInlineSubtaskSave(task, list.id); if (e.key === 'Escape') setInlineSubtaskParentId(null); }}
+                                                    autoFocus
+                                                    className="ntib-input"
+                                                  />
+                                                </div>
+                                                <div className="ntib-right">
+                                                  <div className="ntib-dropdown-wrapper">
+                                                    <button type="button" className="ntib-btn-icon" title="Assignee">
+                                                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                                    </button>
+                                                    <select className="ntib-hidden-select" value={subtaskAssignee} onChange={e => setSubtaskAssignee(e.target.value)}>
+                                                      <option value="">Assignee</option>
+                                                      {getFilteredUsersForProject().map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                    </select>
+                                                    {subtaskAssignee && <span className="ntib-badge">{initials((users.find(u => u.id === subtaskAssignee) || {}).fullName || subtaskAssignee)}</span>}
+                                                  </div>
+                                                  
+                                                  <div className="ntib-dropdown-wrapper">
+                                                    <button type="button" className="ntib-btn-icon" title="Due Date">
+                                                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                    </button>
+                                                    <input type="date" className="ntib-hidden-date" value={subtaskDueDate} onChange={e => setSubtaskDueDate(e.target.value)} />
+                                                    {subtaskDueDate && <span className="ntib-badge">{new Date(subtaskDueDate).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>}
+                                                  </div>
+                                                  
+                                                  <div className="ntib-dropdown-wrapper">
+                                                    <button type="button" className="ntib-btn-icon" title="Priority">
+                                                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                                                    </button>
+                                                    <select className="ntib-hidden-select" value={subtaskPriority} onChange={e => setSubtaskPriority(e.target.value)}>
+                                                      <option value="Critical">Critical Priority</option>
+                                                      <option value="High">High Priority</option>
+                                                      <option value="Medium">Medium Priority</option>
+                                                      <option value="Low">Low Priority</option>
+                                                    </select>
+                                                    {subtaskPriority && <span className="ntib-badge priority-color">{subtaskPriority}</span>}
+                                                  </div>
+                                                  
+                                                  <button type="button" className="ntib-cancel-btn" onClick={() => setInlineSubtaskParentId(null)}>Cancel</button>
+                                                  <button type="button" className="ntib-save-btn" disabled={inlineSubtaskSaving} onClick={() => handleInlineSubtaskSave(task, list.id)}>{inlineSubtaskSaving ? 'Saving...' : 'Save ↵'}</button>
                                                 </div>
                                               </div>
                                             </td>
@@ -2021,7 +2154,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       placeholder="Search queries by title, description..."
                       value={querySearchText}
                       onChange={e => setQuerySearchText(e.target.value)}
-                      style={{ paddingLeft: '2.25rem', height: '38px', fontSize: '0.85rem' }}
+                      style={{ paddingLeft: '2.25rem', height: '40px', fontSize: '0.82rem' }}
                     />
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#64748b" strokeWidth="2.5" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }}>
                       <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -2045,7 +2178,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                     {/* Sent To filter dropdown */}
                     <select
-                      className="saas-select queries-filter-select"
+                      className="saas-select queries-filter-select queries-filter-select-narrow"
                       value={querySentToFilter}
                       onChange={e => setQuerySentToFilter(e.target.value)}
                     >
@@ -2087,7 +2220,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                 <div className="queries-filter-actions">
                   {/* New Query Button */}
-                  {can('tasks', 'create') && (
+                  {can('projects', 'create') && (
                     <button
                       className="saas-btn-submit queries-new-btn"
                       onClick={handleOpenCreateQueryModal}
@@ -2235,7 +2368,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                       </button>
 
                                       {/* Edit button */}
-                                      {can('tasks', 'edit') && (
+                                      {can('projects', 'edit') && (
                                         <button 
                                           style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }} 
                                           title="Edit Query"
@@ -2246,7 +2379,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                       )}
 
                                       {/* Delete button */}
-                                      {can('tasks', 'delete') && (
+                                      {can('projects', 'delete') && (
                                         <button 
                                           style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }} 
                                           title="Delete Query"
@@ -2333,6 +2466,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             const paginated = filtered.slice((attachPage - 1) * perPage, attachPage * perPage);
 
             const handleUpload = async () => {
+              if (!can('projects', 'create')) {
+                alert('You do not have permission to upload attachments.', 'warning', 'Access Denied');
+                return;
+              }
               if (!uploadForm.name.trim()) { alert('Please enter a file name', 'warning', 'Required'); return; }
               if (!uploadForm.description.trim()) { alert('Please enter a description', 'warning', 'Required'); return; }
               if (!uploadForm.file) { alert('Please choose a file to upload', 'warning', 'Required'); return; }
@@ -2379,6 +2516,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             };
 
             const handleDeleteAttachment = async (attId) => {
+              if (!can('projects', 'delete')) {
+                alert('You do not have permission to delete attachments.', 'warning', 'Access Denied');
+                return;
+              }
               try {
                 await api.delete(`/projects/${selectedProject.id}/attachments/${attId}`);
                 fetchData(true);
@@ -2657,6 +2798,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         <div></div>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <select 
+            className="projects-filter-select"
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', color: '#334155', cursor: 'pointer', outline: 'none' }}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -2667,6 +2809,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <option value="On Hold">On Hold</option>
             <option value="Pending">Pending</option>
           </select>
+          {can('projects', 'create') && (
           <button className="project-add-btn" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={() => {
             setForm({ name: '', status: 'Active', description: '', client: '', clientId: '', estimatedHours: 0, actualHours: 0, billableHours: 0 });
             setShowForm(true);
@@ -2674,6 +2817,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <span className="project-add-btn-text">+ Add Project</span>
             <span className="project-add-btn-icon" style={{ display: 'none', fontSize: '1.5rem', lineHeight: 1 }}>+</span>
           </button>
+          )}
         </div>
       </div>
 
@@ -2780,34 +2924,36 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       <td style={{ padding: '0.55rem 1.5rem', textAlign: 'center' }}>
                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                           {/* Edit Button */}
-                          <button 
-                            style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '0.25rem' }} 
-                            title="Edit Project"
-                            onClick={() => {
-                              setForm({ 
-                                id: proj.id,
-                                name: proj.name || '', 
-                                status: proj.status || 'Active',
-                                description: proj.description || '',
-                                client: proj.client || '',
-                                clientId: proj.clientId || '',
-                                estimatedHours: proj.estimatedHours || 0,
-                                actualHours: proj.actualHours || 0,
-                                billableHours: proj.billableHours || 0
-                              });
-                              setShowForm(true);
-                              setTimeout(() => {
-                                const el = document.querySelector('.saas-page-content');
-                                if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                              }, 50);
-                            }}
-                          >
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                          </button>
+                          {canEditProject(proj) && (
+                            <button 
+                              style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '0.25rem' }} 
+                              title="Edit Project"
+                              onClick={() => {
+                                setForm({ 
+                                  id: proj.id,
+                                  name: proj.name || '', 
+                                  status: proj.status || 'Active',
+                                  description: proj.description || '',
+                                  client: proj.client || '',
+                                  clientId: proj.clientId || '',
+                                  estimatedHours: proj.estimatedHours || 0,
+                                  actualHours: proj.actualHours || 0,
+                                  billableHours: proj.billableHours || 0
+                                });
+                                setShowForm(true);
+                                setTimeout(() => {
+                                  const el = document.querySelector('.saas-page-content');
+                                  if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
+                                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }, 50);
+                              }}
+                            >
+                              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                          )}
                           
                           {/* Delete Button */}
-                          {(getLevel('projects', 'delete') === 'All' || (getLevel('projects', 'delete') === 'Self' && (user?.fullName || user?.name) && (proj.members || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))) && (
+                          {canDeleteProject(proj) && (
                             <button 
                               style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }} 
                               title="Delete Project"
@@ -2862,32 +3008,34 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       {displayStatus}
                     </span>
                     <div className="mpr-actions">
-                      <button
-                        className="mp-action-btn edit"
-                        title="Edit Project"
-                        onClick={() => {
-                          setForm({
-                            id: proj.id,
-                            name: proj.name || '',
-                            status: proj.status || 'Active',
-                            description: proj.description || '',
-                            client: proj.client || '',
-                            clientId: proj.clientId || '',
-                            estimatedHours: proj.estimatedHours || 0,
-                            actualHours: proj.actualHours || 0,
-                            billableHours: proj.billableHours || 0
-                          });
-                          setShowForm(true);
-                          setTimeout(() => {
-                            const el = document.querySelector('.saas-page-content');
-                            if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }, 50);
-                        }}
-                      >
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                      </button>
-                      {(getLevel('projects', 'delete') === 'All' || (getLevel('projects', 'delete') === 'Self' && (user?.fullName || user?.name) && (proj.members || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))) && (
+                      {canEditProject(proj) && (
+                        <button
+                          className="mp-action-btn edit"
+                          title="Edit Project"
+                          onClick={() => {
+                            setForm({
+                              id: proj.id,
+                              name: proj.name || '',
+                              status: proj.status || 'Active',
+                              description: proj.description || '',
+                              client: proj.client || '',
+                              clientId: proj.clientId || '',
+                              estimatedHours: proj.estimatedHours || 0,
+                              actualHours: proj.actualHours || 0,
+                              billableHours: proj.billableHours || 0
+                            });
+                            setShowForm(true);
+                            setTimeout(() => {
+                              const el = document.querySelector('.saas-page-content');
+                              if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }, 50);
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                      )}
+                      {canDeleteProject(proj) && (
                         <button
                           className="mp-action-btn delete"
                           title="Delete Project"
@@ -2975,6 +3123,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                   &gt;
                 </button>
                 <select 
+                  className="pagination-page-size-select"
                   value={pageSize}
                   onChange={(e) => {
                     setPageSize(Number(e.target.value));

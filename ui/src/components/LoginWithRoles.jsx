@@ -600,6 +600,13 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
 
+  // MHC internal counts computed specifically for the logged-in user
+  const [mhdToday, setMhdToday] = useState(0);
+  const [mhdOverdue, setMhdOverdue] = useState(0);
+  const [mhdPriority, setMhdPriority] = useState(0);
+  const [mhdUpcoming, setMhdUpcoming] = useState(0);
+  const [mhdMyTasks, setMhdMyTasks] = useState(0);
+
   useEffect(() => {
     Promise.all([
       api.get('/task-lists').catch(() => []),
@@ -612,6 +619,7 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
       setAllProjects(projects || []);
       setAllClients(clients || []);
       setAllUsers(users || []);
+      
       // Filter tasks to only those assigned to the logged-in user
       const userName = (user?.fullName || user?.firstName || '').trim().toLowerCase();
       const cleanName = userName.replace(/[^a-z0-9]/g, '');
@@ -633,13 +641,68 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
       };
 
       const myTasks = (tasks || []).filter(isMyTask);
+      
+      // Personal active tasks (excluding completed: 'Delivered' or 'Prod Verified')
+      const activeMyTasks = myTasks.filter(t => t.status !== 'Delivered' && t.status !== 'Prod Verified');
 
-      // Count only the user's tasks per task list
+      // Count only the user's active tasks per task list
       const counts = {};
-      myTasks.forEach(t => {
+      activeMyTasks.forEach(t => {
         if (t.taskListId) counts[t.taskListId] = (counts[t.taskListId] || 0) + 1;
       });
       setListTaskCounts(counts);
+
+      // Calculate mobile dashboard stats internally based on activeMyTasks
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayTime = today.getTime();
+
+      let localToday = 0;
+      let localOverdue = 0;
+      let localUpcoming = 0;
+
+      activeMyTasks.forEach(task => {
+        // Overdue check
+        let isBacklog = false;
+        if (task.deliveredDate) {
+          const d = new Date(task.deliveredDate);
+          d.setHours(0, 0, 0, 0);
+          if (d.getTime() < todayTime) isBacklog = true;
+        } else if (task.dueDate) {
+          const d = new Date(task.dueDate);
+          d.setHours(0, 0, 0, 0);
+          if (d.getTime() < todayTime) isBacklog = true;
+        }
+
+        if (isBacklog) {
+          localOverdue++;
+          return;
+        }
+
+        // Today check
+        let isToday = false;
+        if (task.assignedDate) {
+          const a = new Date(task.assignedDate);
+          a.setHours(0, 0, 0, 0);
+          if (a.getTime() === todayTime) isToday = true;
+        } else {
+          const c = new Date(task.createdAt || Date.now());
+          c.setHours(0, 0, 0, 0);
+          if (c.getTime() === todayTime) isToday = true;
+        }
+
+        if (isToday) {
+          localToday++;
+        } else {
+          localUpcoming++;
+        }
+      });
+
+      setMhdToday(localToday);
+      setMhdOverdue(localOverdue);
+      setMhdPriority(activeMyTasks.filter(t => t.priority === 'High' || t.priority === 'Critical').length);
+      setMhdUpcoming(localUpcoming);
+      setMhdMyTasks(activeMyTasks.length);
 
       // Find projects where the user is a team member
       const myProjectIds = new Set();
@@ -721,30 +784,29 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
 
   const statCards = [
     {
-      label: 'Today', count: todayCount, iconBg: '#7c3aed',
+      label: 'Today', count: mhdToday, iconBg: '#7c3aed',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
     },
     {
-      label: 'Overdue', count: overdueCount, iconBg: '#ef4444', warn: overdueCount > 0,
+      label: 'Overdue', count: mhdOverdue, iconBg: '#ef4444', warn: mhdOverdue > 0,
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
     },
     {
-      label: 'My Priorities', count: priorityCount, iconBg: '#f97316',
+      label: 'My Priorities', count: mhdPriority, iconBg: '#f97316',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
     },
     {
-      label: 'Upcoming', count: upcomingCount, iconBg: '#f59e0b',
+      label: 'Upcoming', count: mhdUpcoming, iconBg: '#f59e0b',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     },
     {
-      label: 'My Tasks', count: myTasksCount, iconBg: '#2563eb',
+      label: 'My Tasks', count: mhdMyTasks, iconBg: '#2563eb',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
     },
     {
       label: 'Reminders', count: 0, iconBg: '#0d9488',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 16 14"/></svg>
-    },
-
+    }
   ];
 
   return (
@@ -1149,7 +1211,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
             const cleanAssignee = assignee.replace(/[^a-z0-9]/g, '');
             if (assignee === cleanEmail) return true;
             if (cleanAssignee === cleanEmailPrefix) return true;
-            if (cleanAssignee.includes(cleanName) || cleanName.includes(cleanAssignee)) return true;
+            if (cleanName && (cleanAssignee.includes(cleanName) || cleanName.includes(cleanAssignee))) return true;
             return false;
           });
         });
