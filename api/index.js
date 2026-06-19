@@ -1149,7 +1149,7 @@ app.get('/api/tasks', async (req, res) => {
 app.post('/api/tasks', async (req, res) => {
   try {
     console.log('POST /api/tasks body:', req.body);
-    let { id, comments, createdAt, ...taskData } = req.body;
+    let { id, comments, createdAt, createdBy: createdByName, ...taskData } = req.body;
     
     // Sanitize and convert dates
     ['dueDate', 'assignedDate', 'deliveredDate'].forEach(key => {
@@ -1187,7 +1187,7 @@ app.post('/api/tasks', async (req, res) => {
       createNotification(task.assignees, `New Task Assigned: ${task.title}`, `You have been assigned to a new task.`);
       const { taskListName, projectName } = await getTaskDetailsForEmail(task);
       notifyEmailsByNames(task.assignees, `New Task Assigned: ${task.title}`, {
-        author: 'Admin',
+        author: createdByName || 'Admin',
         action: 'assigned you to',
         itemTitle: task.title,
         boardName: taskListName,
@@ -1481,27 +1481,35 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
     try {
       const task = await prisma.task.findUnique({ where: { id: req.params.id } });
       if (task && task.assignees) {
-        // Exclude the author from notifications
-        const assignees = task.assignees.split(',').map(a => a.trim()).filter(a => a && a.toLowerCase() !== (authorId || '').toLowerCase());
-        createNotification(assignees, `New Comment on ${task.title}`, `${commentAuthorName} commented: "${comment.text.substring(0, 30)}..."`);
-        
-        const { taskListName, projectName } = await getTaskDetailsForEmail(task);
+        // Exclude the commenter from receiving their own notification (compare by name)
+        const authorNameLower = commentAuthorName.toLowerCase();
+        const assignees = task.assignees
+          .split(',')
+          .map(a => a.trim())
+          .filter(a => a && a.toLowerCase() !== authorNameLower);
 
-        // Email assignees about the comment
-        notifyEmailsByNames(assignees, `New Comment on ${task.title}`, {
-          author: commentAuthorName,
-          action: 'commented on',
-          itemTitle: task.title,
-          boardName: taskListName,
-          projectName: projectName,
-          commentText: comment.text,
-          buttonText: 'Reply on Trexo CRM',
-          taskId: getTaskDisplayId(task)
-        }, 'comment');
+        if (assignees.length > 0) {
+          const previewText = comment.text ? comment.text.substring(0, 60) : '(attachment)';
+          createNotification(assignees, `New Comment on ${task.title}`, `${commentAuthorName} commented: "${previewText}..."`);
+
+          const { taskListName, projectName } = await getTaskDetailsForEmail(task);
+
+          // Email assignees about the comment
+          notifyEmailsByNames(assignees, `New Comment on: ${task.title}`, {
+            author: commentAuthorName,
+            action: 'commented on',
+            itemTitle: task.title,
+            boardName: taskListName,
+            projectName: projectName,
+            commentText: comment.text || '(attachment)',
+            buttonText: 'View Task',
+            taskId: getTaskDisplayId(task)
+          }, 'comment');
+        }
       }
       
       // Notify mentioned users
-      const mentions = comment.text.match(/@([a-zA-Z0-9_]+)/g);
+      const mentions = (comment.text || '').match(/@([a-zA-Z0-9_]+)/g);
       if (mentions) {
         const mentionedNames = mentions.map(m => m.substring(1));
         createNotification(mentionedNames, `You were mentioned in ${task ? task.title : 'a task'}`, `${commentAuthorName} mentioned you: "${comment.text.substring(0, 30)}..."`);
