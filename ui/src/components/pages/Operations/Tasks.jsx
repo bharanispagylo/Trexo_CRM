@@ -1030,7 +1030,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
     // Sanitize data for API
     const { comments, taskList, ...payload } = form;
-    
+    if (!payload.id) {
+      payload.createdBy = currentUser?.fullName || `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim() || currentUser?.name || currentUser?.email || 'User';
+    }
+
     taskSavingRef.current = true;
     setTaskSaving(true);
     try {
@@ -3268,7 +3271,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         tag: '',
         taskType: inlineTaskType || 'Task',
         isBillable: false,
-        description: ''
+        description: '',
+        createdBy: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'
       });
       const data = await api.get('/tasks');
       setTasks(data || []);
@@ -3308,7 +3312,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         taskType: 'Task',
         isBillable: false,
         description: '',
-        parentId: parentTask.id
+        parentId: parentTask.id,
+        createdBy: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'
       });
       const data = await api.get('/tasks');
       setTasks(data || []);
@@ -4760,16 +4765,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                             </div>
                             
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
-                              {dueDateInfo && (
-                                <span style={{ 
-                                  fontSize: '0.8rem', 
-                                  fontWeight: '600', 
-                                  color: dueDateInfo.isOverdue ? '#ef4444' : '#2563eb',
-                                  marginRight: '4px'
-                                }}>
-                                  {dueDateInfo.text}
-                                </span>
-                              )}
                               <button
                                 className="cu-mob-hover-subtask-btn"
                                 onClick={(e) => {
@@ -4791,12 +4786,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                             </div>
                           </div>
                         );
-                        
+
                         const rows = [parentRow];
-                        
+
                         if (isExpanded) {
                           subTasks.forEach(sub => {
-                            const subDueDateInfo = formatMobileDueDate(sub.dueDate);
                             rows.push(
                               <div key={sub.id} className="cu-flat-task-row subtask-row" onClick={() => openTaskDetail(sub, false)} style={{ paddingLeft: '1.25rem', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0 }}>
@@ -4805,16 +4799,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                     {sub.title || 'Untitled Subtask'}
                                   </span>
                                 </div>
-                                {subDueDateInfo && (
-                                  <span style={{ 
-                                    fontSize: '0.75rem', 
-                                    fontWeight: '600', 
-                                    color: subDueDateInfo.isOverdue ? '#ef4444' : '#2563eb',
-                                    flexShrink: 0
-                                  }}>
-                                    {subDueDateInfo.text}
-                                  </span>
-                                )}
                               </div>
                             );
                           });

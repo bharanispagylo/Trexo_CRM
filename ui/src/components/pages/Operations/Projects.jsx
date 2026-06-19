@@ -515,6 +515,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         await api.put(`/tasks/${editingTask.id}`, payload);
         toast('Task updated successfully!', 'success');
       } else {
+        payload.createdBy = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
         await api.post('/tasks', payload);
         toast('Task created successfully!', 'success');
       }
@@ -568,7 +569,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         assignees: subtaskAssignee || '',
         assignedDate: new Date().toISOString(),
         dueDate: subtaskDueDate ? new Date(subtaskDueDate).toISOString() : null,
-        description: ''
+        description: '',
+        createdBy: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'
       };
       await api.post('/tasks', payload);
       toast('Subtask created successfully!', 'success');

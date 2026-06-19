@@ -5338,6 +5338,13 @@
   visibility: visible;
 }
 
+@media (max-width: 768px) {
+  .cu-mob-hover-subtask-btn {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
 /* ── ClickUp-style Hover Tooltip ── */
 .cu-clickup-tooltip {
   display: flex;

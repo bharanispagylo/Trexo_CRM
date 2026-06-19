@@ -18,6 +18,7 @@ export default function Estimations({ user }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ taskName: '', description: '', client: '', clientId: '', projectId: '', estimatedHours: 0 });
   const [errors, setErrors] = useState({});
+  const [viewingEstimation, setViewingEstimation] = useState(null);
   const [convertModal, setConvertModal] = useState({ isOpen: false, estimation: null });
   const [convertForm, setConvertForm] = useState({ projectId: '', assignees: '', assignedDate: '', dueDate: '', priority: 'Medium', taskListId: '', taskType: 'Feature' });
   const { alert, confirm } = useAlert();
@@ -121,6 +122,157 @@ export default function Estimations({ user }) {
 
   if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Estimations...'}</div>;
 
+  if (viewingEstimation) {
+    const est = viewingEstimation;
+    const clientObj = clients.find(c =>
+      (est.clientId && c.id === est.clientId && est.clientId !== 'null') ||
+      (est.client && c.name?.toLowerCase() === est.client.toLowerCase()) ||
+      (est.client && c.company?.toLowerCase() === est.client.toLowerCase())
+    );
+    const clientName = clientObj ? (clientObj.company || clientObj.name) : (est.client || '—');
+    const projectName = est.projectRef?.name || projects.find(p => p.id === est.projectId)?.name || '—';
+    const isConverted = est.status?.toLowerCase() === 'converted';
+
+    return (
+      <>
+      <div className="estimations-page">
+        {/* Header */}
+        <div className="estimations-header">
+          <button
+            onClick={() => setViewingEstimation(null)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', fontWeight: '700', fontSize: '0.9rem', padding: 0 }}
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            Back to Estimations
+          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            {!isConverted && can('tasks', 'create') && (
+              <button className="estimations-btn-secondary" onClick={() => { setViewingEstimation(null); handleConvertClick(est); }}>
+                Convert to Task
+              </button>
+            )}
+            {can('estimations', 'edit') && (
+              <button className="estimations-btn-primary" onClick={() => { setViewingEstimation(null); handleEdit(est); }}>
+                Edit
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Detail card */}
+        <div className="estimations-form-card" style={{ marginTop: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <h2 className="estimations-form-title" style={{ margin: 0 }}>Estimation Details</h2>
+            <span className={`estimations-status-pill ${isConverted ? 'converted' : 'pending'}`}>
+              {est.status || 'Pending'}
+            </span>
+          </div>
+
+          <div className="estimations-form-grid">
+            <div className="estimations-field">
+              <label className="estimations-label">Est. ID</label>
+              <div className="estimations-detail-value">{est.estimationNo || '—'}</div>
+            </div>
+            <div className="estimations-field">
+              <label className="estimations-label">Task Name</label>
+              <div className="estimations-detail-value">{est.taskName || '—'}</div>
+            </div>
+            <div className="estimations-field">
+              <label className="estimations-label">Client</label>
+              <div className="estimations-detail-value">{clientName}</div>
+            </div>
+            <div className="estimations-field">
+              <label className="estimations-label">Project</label>
+              <div className="estimations-detail-value">{projectName}</div>
+            </div>
+            <div className="estimations-field">
+              <label className="estimations-label">Estimated Hours</label>
+              <div className="estimations-detail-value" style={{ color: '#2563eb', fontWeight: '700' }}>{est.estimatedHours} hrs</div>
+            </div>
+            <div className="estimations-field" style={{ gridColumn: 'span 2' }}>
+              <label className="estimations-label">Description</label>
+              <div className="estimations-detail-value" style={{ whiteSpace: 'pre-wrap', minHeight: '3rem' }}>
+                {est.description || '—'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {convertModal.isOpen && (
+        <div className="task-drawer-overlay" style={{ zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', width: '600px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', boxSizing: 'border-box' }}>
+            <h3 style={{ margin: '0 0 1rem 0', color: '#1e293b', fontSize: '1.25rem' }}>Convert to Task</h3>
+            <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              Converting <strong>{convertModal.estimation.taskName}</strong>. Please provide the remaining task details.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Assignee</label>
+                <select className="estimations-select" value={convertForm.assignees} onChange={e => setConvertForm({...convertForm, assignees: e.target.value})}>
+                  <option value="">Unassigned</option>
+                  {(() => {
+                    const selectedProj = projects.find(p => p.id === convertForm.projectId);
+                    const memberIds = selectedProj?.members ? selectedProj.members.split(',').map(m => m.trim()).filter(Boolean) : [];
+                    return users.filter(u => memberIds.includes(u.id)).map(u => {
+                      const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
+                      return <option key={u.id} value={u.id}>{displayName}</option>;
+                    });
+                  })()}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Project</label>
+                <select className="estimations-select" value={convertForm.projectId} onChange={e => setConvertForm({...convertForm, projectId: e.target.value, taskListId: '', assignees: ''})}>
+                  <option value="">-- Select Project --</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Task Group</label>
+                <select className="estimations-select" value={convertForm.taskListId} onChange={e => setConvertForm({...convertForm, taskListId: e.target.value})}>
+                  <option value="">-- Select Group --</option>
+                  {taskLists.filter(tl => tl.projectId === convertForm.projectId).map(tl => <option key={tl.id} value={tl.id}>{tl.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Assigned Date</label>
+                <input type="date" className="estimations-input" value={convertForm.assignedDate} onChange={e => setConvertForm({...convertForm, assignedDate: e.target.value})} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Delivery Date</label>
+                <input type="date" className="estimations-input" value={convertForm.dueDate} onChange={e => setConvertForm({...convertForm, dueDate: e.target.value})} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Priority</label>
+                <select className="estimations-select" value={convertForm.priority} onChange={e => setConvertForm({...convertForm, priority: e.target.value})}>
+                  <option value="Critical">Critical</option>
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>Type</label>
+                <select className="estimations-select" value={convertForm.taskType} onChange={e => setConvertForm({...convertForm, taskType: e.target.value})}>
+                  <option value="Feature">Feature</option>
+                  <option value="Bug">Bug</option>
+                  <option value="Support">Support</option>
+                  <option value="Internal">Internal</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button className="estimations-btn-secondary" onClick={() => setConvertModal({ isOpen: false, estimation: null })}>Cancel</button>
+              <button className="estimations-btn-primary" onClick={submitConvert}>Convert</button>
+            </div>
+          </div>
+        </div>
+      )}
+      </>
+    );
+  }
+
   return (
     <>
     <div className="estimations-page">
@@ -213,7 +365,14 @@ export default function Estimations({ user }) {
                   {estimations.map(est => (
                     <tr key={est.id}>
                       <td data-label="Est. ID" style={{ fontWeight: '600', color: '#334155' }}>{est.estimationNo}</td>
-                      <td data-label="Task" style={{ fontWeight: '600' }}>{est.taskName}</td>
+                      <td data-label="Task" style={{ fontWeight: '600' }}>
+                        <span
+                          style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }}
+                          onClick={() => setViewingEstimation(est)}
+                        >
+                          {est.taskName}
+                        </span>
+                      </td>
                       <td data-label="Client">{(() => {
                         const targetId = est.clientId || est.client_id;
                         const clientObj = clients.find(c => 

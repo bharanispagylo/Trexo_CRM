@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../../api/client';
 import { useAlert } from '../../../context/AlertContext';
 import './Clients.css';
@@ -12,6 +12,7 @@ export default function Clients({ user }) {
   const [form, setForm] = useState({ id: '', name: '', company: '' });
   const { alert, confirm } = useAlert();
   const { can } = usePermissions();
+  const formRef = useRef(null);
 
   useEffect(() => {
     fetchClients();
@@ -98,6 +99,13 @@ export default function Clients({ user }) {
       setForm({ id: '', name: '', company: '', email: '', phone: '', address: '', status: 'Active', clientType: 'Direct', parentAgencyId: '' });
     }
     setShowForm(true);
+    setTimeout(() => {
+      if (formRef.current) {
+        formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const firstInput = formRef.current.querySelector('input, select, textarea');
+        if (firstInput) firstInput.focus();
+      }
+    }, 50);
   };
 
   if (loading || isSaving) return <div className="loading-screen">{isSaving ? 'Saving...' : 'Loading Clients...'}</div>;
@@ -115,7 +123,7 @@ export default function Clients({ user }) {
       </div>
 
       {showForm && (
-        <div className="clients-form-card">
+        <div className="clients-form-card" ref={formRef}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800' }}>{form.id ? 'Edit Client' : 'Add New Client'}</h3>
             <button className="client-action-btn" onClick={() => setShowForm(false)}>✕</button>

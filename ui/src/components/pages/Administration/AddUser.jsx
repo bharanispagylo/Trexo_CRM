@@ -152,7 +152,11 @@ export default function AddUser({ onBack }) {
     if (!form.password) newErrors.password = "Password is required";
     else if (form.password.length < 6) newErrors.password = "Min 6 characters";
 
-    if (form.phoneNo && !phoneRegex.test(form.phoneNo)) newErrors.phoneNo = "Min 10 digits";
+    if (!form.phoneNo || !form.phoneNo.trim()) newErrors.phoneNo = "Phone number is required";
+    else if (!phoneRegex.test(form.phoneNo)) newErrors.phoneNo = "Min 10 digits";
+
+    if (!form.role || !form.role.trim()) newErrors.role = "Role is required";
+
     if (form.empId && !empIdRegex.test(form.empId)) newErrors.empId = "3-10 alphanumeric chars";
 
     if (Object.keys(newErrors).length > 0) {
@@ -167,16 +171,14 @@ export default function AddUser({ onBack }) {
       setErrors({ email: 'This email address already exists' });
       return;
     }
-    if (form.phoneNo) {
-      const phoneClean = form.phoneNo.replace(/[\s-+()]/g, '');
-      const phoneDup = existingUsers.find(u => {
-        const existingClean = (u.phoneNo || '').replace(/[\s-+()]/g, '');
-        return existingClean && existingClean === phoneClean;
-      });
-      if (phoneDup) {
-        setErrors({ phoneNo: 'This phone number already exists' });
-        return;
-      }
+    const phoneClean = form.phoneNo.replace(/[\s-+()]/g, '');
+    const phoneDup = existingUsers.find(u => {
+      const existingClean = (u.phoneNo || '').replace(/[\s-+()]/g, '');
+      return existingClean && existingClean === phoneClean;
+    });
+    if (phoneDup) {
+      setErrors({ phoneNo: 'This phone number already exists' });
+      return;
     }
     
     setErrors({});
@@ -262,7 +264,7 @@ export default function AddUser({ onBack }) {
             {errors.password && <span className="error-text">{errors.password}</span>}
           </div>
           <div className="saas-field">
-            <label className="saas-label">Phone Number</label>
+            <label className="saas-label">Phone Number *</label>
             <input
               className={`saas-input ${errors.phoneNo ? 'error' : ''}`}
               placeholder="+1 (555) 000-0000"
@@ -293,10 +295,12 @@ export default function AddUser({ onBack }) {
             <input className="saas-input" placeholder="Software Engineer" value={form.designation} autoComplete="off" onChange={e => setForm({...form, designation: e.target.value})} />
           </div>
           <div className="saas-field">
-            <label className="saas-label">Role</label>
-            <select className="saas-select" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+            <label className="saas-label">Role *</label>
+            <select className={`saas-select ${errors.role ? 'error' : ''}`} value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+              <option value="">Select a Role</option>
               {roles.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
+            {errors.role && <span className="error-text">{errors.role}</span>}
           </div>
           <div className="saas-field">
             <label className="saas-label">Status</label>
