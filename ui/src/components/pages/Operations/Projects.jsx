@@ -2852,7 +2852,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <option value="On Hold">On Hold</option>
             <option value="Pending">Pending</option>
           </select>
-          {can('projects', 'create') && (
+          {user?.role?.toLowerCase() === 'admin' && (
           <button className="project-add-btn" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={() => {
             setForm({ name: '', status: 'Active', description: '', client: '', clientId: '', estimatedHours: 0, actualHours: 0, billableHours: 0 });
             setShowForm(true);
