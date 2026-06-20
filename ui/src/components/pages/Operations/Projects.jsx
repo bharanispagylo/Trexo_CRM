@@ -267,6 +267,20 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     }));
   };
 
+  const formatAttachmentDate = (dateStr) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '-';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12 || 12;
+    return `${day}/${month}/${year}, ${hours}:${minutes} ${ampm}`;
+  };
+
   const formatDateForInput = (dateStr) => {
     if (!dateStr) return '';
     try {
@@ -957,7 +971,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           <div>
             <div style={labelStyle}>Created On</div>
             <div style={valueStyle}>
-              {viewingQuery.createdAt ? new Date(viewingQuery.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+              {viewingQuery.createdAt ? formatAttachmentDate(viewingQuery.createdAt) : '-'}
             </div>
           </div>
 
@@ -2383,7 +2397,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                     </span>
                                   </td>
                                   <td data-label="Created On" style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', color: '#64748b' }}>
-                                    {new Date(q.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}{' '}{new Date(q.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                    {formatAttachmentDate(q.createdAt)}
                                   </td>
                                   <td data-label="Action" style={{ padding: '1rem 1.5rem', textAlign: 'center' }}>
                                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
@@ -2696,7 +2710,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                             </td>
                             <td data-label="File Size" style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569', fontWeight: '500' }}>{a.fileSize || '-'}</td>
                             <td data-label="Uploaded On" style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569' }}>
-                              {new Date(a.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}, {new Date(a.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                              {formatAttachmentDate(a.createdAt)}
                             </td>
                             <td data-label="Actions" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
                               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', alignItems: 'center' }}>

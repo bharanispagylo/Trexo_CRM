@@ -1101,8 +1101,22 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     }
 
     // Attempt to find the uploader from comments or encoded metadata
+    const formatAttachmentDate = (dateStr) => {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      let hours = d.getHours();
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'pm' : 'am';
+      hours = hours % 12 || 12;
+      return `${day}/${month}/${year}, ${hours}:${minutes} ${ampm}`;
+    };
+
     let uploaderName = encodedUploader;
-    let uploadedTime = encodedTime ? new Date(encodedTime).toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+    let uploadedTime = encodedTime ? formatAttachmentDate(encodedTime) : '';
     
     if (!uploaderName || !uploadedTime) {
       if (comments && comments.length > 0) {
@@ -1110,7 +1124,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         if (matchingComment) {
           if (!uploaderName) uploaderName = matchingComment.author;
           if (!uploadedTime) {
-            uploadedTime = new Date(matchingComment.createdAt).toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            uploadedTime = formatAttachmentDate(matchingComment.createdAt);
           }
         }
       }
@@ -1122,7 +1136,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       if (versionMatch) {
         const timestamp = parseInt(versionMatch[1], 10) * 1000;
         if (!isNaN(timestamp)) {
-          uploadedTime = new Date(timestamp).toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+          uploadedTime = formatAttachmentDate(new Date(timestamp).toISOString());
         }
       }
     }
@@ -1134,9 +1148,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     }
 
     const uploadedBy = uploaderName;
-    const uploadedOn = uploadedTime || (task?.createdAt 
-      ? new Date(task.createdAt).toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-      : '12 May 2026, 10:30 AM');
+    const uploadedOn = uploadedTime || (task?.createdAt
+      ? formatAttachmentDate(task.createdAt)
+      : '12/05/2026, 10:30 am');
     
     const sizeInKb = (fileName.length * 17) % 950 + 50;
     const fileSize = sizeInKb > 500 ? `${(sizeInKb / 1000).toFixed(1)} MB` : `${sizeInKb} KB`;
