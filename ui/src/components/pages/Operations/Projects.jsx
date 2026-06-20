@@ -2655,7 +2655,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         >
                           <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#94a3b8" strokeWidth="1.5" style={{ margin: '0 auto 0.5rem', display: 'block' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                           <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>
-                            {uploadForm.file ? uploadForm.file.name : 'Click to browse or drag & drop'}
+                            {uploadForm.file ? uploadForm.file.name : 'Click here to browse for a local folder'}
                           </p>
                           {uploadForm.file && <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>{(uploadForm.file.size / (1024 * 1024)).toFixed(2)} MB</p>}
                         </div>

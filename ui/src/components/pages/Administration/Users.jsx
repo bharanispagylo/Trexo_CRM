@@ -394,39 +394,52 @@ export default function Users({ onAddUser, onEditUser }) {
 
                   {/* Tasks List */}
                   <div style={{
-                    border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden', marginBottom: '1.25rem',
-                    maxHeight: '240px', overflowY: 'auto'
+                    border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '1.25rem', overflow: 'hidden'
                   }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                    <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '240px' }}>
+                    <table style={{ width: '100%', minWidth: '460px', borderCollapse: 'collapse', fontSize: '0.82rem', tableLayout: 'fixed' }}>
+                      <colgroup>
+                        <col style={{ width: '95px' }} />
+                        <col />
+                        <col style={{ width: '115px' }} />
+                        <col style={{ width: '90px' }} />
+                      </colgroup>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                          <th style={{ padding: '0.65rem 1rem', textAlign: 'left', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', fontSize: '0.68rem' }}>Task</th>
-                          <th style={{ padding: '0.65rem 1rem', textAlign: 'left', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', fontSize: '0.68rem' }}>Status</th>
-                          <th style={{ padding: '0.65rem 1rem', textAlign: 'left', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', fontSize: '0.68rem' }}>Priority</th>
+                          <th style={{ padding: '0.6rem 0.75rem', textAlign: 'left', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>Task No</th>
+                          <th style={{ padding: '0.6rem 0.75rem', textAlign: 'left', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', fontSize: '0.68rem' }}>Task</th>
+                          <th style={{ padding: '0.6rem 0.75rem', textAlign: 'left', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>Status</th>
+                          <th style={{ padding: '0.6rem 0.75rem', textAlign: 'left', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>Priority</th>
                         </tr>
                       </thead>
                       <tbody>
                         {reassignModal.tasks.map(t => (
                           <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '0.6rem 1rem', fontWeight: '500', color: '#0f172a', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title || 'Untitled'}</td>
-                            <td style={{ padding: '0.6rem 1rem' }}>
+                            <td style={{ padding: '0.55rem 0.75rem', fontWeight: '600', color: '#2563eb', whiteSpace: 'nowrap' }}>
+                              {(() => { const prefix = t.parentId ? 'S' : 'T'; const digits = (t.taskNo || '').replace(/\D/g, ''); return digits ? `${prefix}${digits}` : `${prefix}${(t.id || '').replace(/-/g, '').substring(0, 8)}`; })()}
+                            </td>
+                            <td style={{ padding: '0.55rem 0.75rem', fontWeight: '500', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title || 'Untitled'}</td>
+                            <td style={{ padding: '0.55rem 0.75rem' }}>
                               <span style={{
-                                display: 'inline-block', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '600',
+                                display: 'inline-block', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '600',
                                 background: t.status === 'Completed' ? '#dcfce7' : t.status === 'In Progress' ? '#dbeafe' : '#f1f5f9',
-                                color: t.status === 'Completed' ? '#16a34a' : t.status === 'In Progress' ? '#2563eb' : '#475569'
+                                color: t.status === 'Completed' ? '#16a34a' : t.status === 'In Progress' ? '#2563eb' : '#475569',
+                                whiteSpace: 'nowrap'
                               }}>{t.status || 'Open'}</span>
                             </td>
-                            <td style={{ padding: '0.6rem 1rem' }}>
+                            <td style={{ padding: '0.55rem 0.75rem' }}>
                               <span style={{
-                                display: 'inline-block', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '600',
+                                display: 'inline-block', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '600',
                                 background: t.priority === 'High' ? '#fef2f2' : t.priority === 'Medium' ? '#fffbeb' : '#f0fdf4',
-                                color: t.priority === 'High' ? '#ef4444' : t.priority === 'Medium' ? '#f59e0b' : '#22c55e'
+                                color: t.priority === 'High' ? '#ef4444' : t.priority === 'Medium' ? '#f59e0b' : '#22c55e',
+                                whiteSpace: 'nowrap'
                               }}>{t.priority || 'Medium'}</span>
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
 
                   {/* Reassign To Dropdown */}
