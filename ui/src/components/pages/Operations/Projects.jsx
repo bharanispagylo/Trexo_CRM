@@ -1677,9 +1677,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                           </td>
                                           <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
                                             <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                              <button className="cu-act-btn" onClick={() => { setViewingTask(task); setShowTaskViewModal(true); }} title="View" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: '0.25rem' }}>
-                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                              </button>
                                               {can('tasks', 'edit') && (
                                                 <button className="cu-act-btn" onClick={() => { setSelectedTaskListId(list.id); handleOpenEditTaskModal(task); }} title="Edit" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
                                                   <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -1775,9 +1772,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                               </td>
                                               <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
                                                 <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                                  <button className="cu-act-btn" onClick={() => { setViewingTask(sub); setShowTaskViewModal(true); }} title="View" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: '0.25rem' }}>
-                                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                                  </button>
                                                   {can('tasks', 'edit') && (
                                                     <button className="cu-act-btn" onClick={() => { setSelectedTaskListId(list.id); handleOpenEditTaskModal(sub); }} title="Edit" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
                                                       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
