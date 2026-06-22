@@ -1527,12 +1527,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                             <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                               <thead>
                                 <tr className="cu-thead-row" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                                  <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '35%' }}>NAME</th>
+                                  <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '30%', textAlign: 'left' }}>NAME</th>
                                   <th className="cu-th cu-th-assignee" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%', textAlign: 'center' }}>ASSIGNEE</th>
-                                  <th className="cu-th cu-th-list" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%' }}>STATUS</th>
+                                  <th className="cu-th cu-th-list" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%', textAlign: 'center' }}>STATUS</th>
                                   <th className="cu-th cu-th-delivery" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%', textAlign: 'center' }}>DELIVERY DATE</th>
                                   <th className="cu-th cu-th-priority" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%', textAlign: 'center' }}>PRIORITY</th>
-                                  <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', width: '5%' }}></th>
+                                  <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '10%', textAlign: 'center' }}>ACTIONS</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1626,26 +1626,17 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                             </div>
                                           </td>
                                           <td className="cu-td cu-td-assignee" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                            <div className="cu-avatars" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
                                               {assignees.length === 0 ? (
-                                                <div className="cu-avatar-empty" title="Unassigned" style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-                                                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                                </div>
+                                                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>-</span>
                                               ) : (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                                                  {assignees.map(a => {
-                                                    const uObj = users.find(u => u.id === a);
-                                                    const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
-                                                    return (
-                                                      <div key={a} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                                        <div className={`cu-avatar ${getAvatarColor(dispName)}`} title={dispName} style={{ width: '24px', height: '24px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '600' }}>
-                                                          {initials(dispName)}
-                                                        </div>
-                                                        <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{dispName}</span>
-                                                      </div>
-                                                    );
-                                                  })}
-                                                </div>
+                                                assignees.map(a => {
+                                                  const uObj = users.find(u => u.id === a);
+                                                  const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
+                                                  return (
+                                                    <span key={a} style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{dispName}</span>
+                                                  );
+                                                })
                                               )}
                                             </div>
                                           </td>
@@ -1721,26 +1712,17 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                 </div>
                                               </td>
                                               <td className="cu-td cu-td-assignee" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                                <div className="cu-avatars" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
                                                   {subAssignees.length === 0 ? (
-                                                    <div className="cu-avatar-empty" title="Unassigned" style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-                                                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                                    </div>
+                                                    <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>-</span>
                                                   ) : (
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                                                      {subAssignees.map(a => {
-                                                        const uObj = users.find(u => u.id === a);
-                                                        const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
-                                                        return (
-                                                          <div key={a} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                                            <div className={`cu-avatar ${getAvatarColor(dispName)}`} title={dispName} style={{ width: '24px', height: '24px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '600' }}>
-                                                              {initials(dispName)}
-                                                            </div>
-                                                            <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{dispName}</span>
-                                                          </div>
-                                                        );
-                                                      })}
-                                                    </div>
+                                                    subAssignees.map(a => {
+                                                      const uObj = users.find(u => u.id === a);
+                                                      const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
+                                                      return (
+                                                        <span key={a} style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{dispName}</span>
+                                                      );
+                                                    })
                                                   )}
                                                 </div>
                                               </td>
