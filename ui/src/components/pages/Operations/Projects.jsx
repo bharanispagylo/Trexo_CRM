@@ -526,6 +526,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       };
 
       if (taskFormType === 'edit' && editingTask) {
+        payload.updatedBy = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
         await api.put(`/tasks/${editingTask.id}`, payload);
         toast('Task updated successfully!', 'success');
       } else {
@@ -1039,6 +1040,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     };
                     let savedTask = null;
                     if (editingTask && editingTask.id) {
+                      payload.updatedBy = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
                       savedTask = await api.put(`/tasks/${editingTask.id}`, payload);
                       if (!silent) alert('Task updated successfully!', 'success', 'Success');
                     } else {
@@ -1082,7 +1084,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       projectId: selectedProject.id,
                       projectName: selectedProject.name,
                       clientId: selectedProject.clientId,
-                      taskListId: viewingTask.taskListId
+                      taskListId: viewingTask.taskListId,
+                      updatedBy: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'
                     };
                     const savedTask = await api.put(`/tasks/${viewingTask.id}`, payload);
                     if (!silent) alert('Task updated successfully!', 'success', 'Success');
