@@ -1206,7 +1206,7 @@ app.post('/api/tasks', async (req, res) => {
 app.put('/api/tasks/:id', async (req, res) => {
   try {
     console.log('PUT /api/tasks body:', req.body);
-    let { id, createdAt, comments, ...taskData } = req.body;
+    let { id, createdAt, comments, updatedBy: updatedByName, ...taskData } = req.body;
     
     // Fetch existing task to compare assignees
     const existingTask = await prisma.task.findUnique({
@@ -1277,7 +1277,7 @@ app.put('/api/tasks/:id', async (req, res) => {
       createNotification(addedAssigneesStr, notificationTitle, notificationMsg);
       const { taskListName, projectName } = await getTaskDetailsForEmail(task);
       notifyEmailsByNames(addedAssigneesStr, notificationTitle, {
-        author: 'A team member',
+        author: updatedByName || 'A team member',
         action: isReassignment ? 'reassigned you to' : 'assigned you to',
         itemTitle: task.title,
         boardName: taskListName,
