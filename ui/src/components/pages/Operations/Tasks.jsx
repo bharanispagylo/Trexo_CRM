@@ -3175,16 +3175,27 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     setExpandedListId(prev => prev === id ? null : id);
   };
 
+  const initialSelectedTaskId = useRef(null);
   useEffect(() => {
     if (initialSelectedTask) {
-      setDrawerTask(initialSelectedTask);
-      setDrawerOpen(true);
-      setTaskDetailMode(false);
-      if (onTaskSelect) onTaskSelect(getDisplayId(initialSelectedTask));
-      if (onClearInitialTask) onClearInitialTask();
+      initialSelectedTaskId.current = initialSelectedTask.id;
+    }
+  }, [initialSelectedTask]);
+
+  useEffect(() => {
+    if (initialSelectedTaskId.current && tasks.length > 0) {
+      const fullTask = tasks.find(t => t.id === initialSelectedTaskId.current);
+      if (fullTask) {
+        initialSelectedTaskId.current = null;
+        setDrawerTask(fullTask);
+        setDrawerOpen(true);
+        setTaskDetailMode(false);
+        if (onTaskSelect) onTaskSelect(getDisplayId(fullTask));
+        if (onClearInitialTask) onClearInitialTask();
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialSelectedTask]);
+  }, [initialSelectedTask, tasks]);
 
   // Auto-open task from URL deep-link (e.g. /tasks/taskId)
   const initialTaskIdHandled = useRef(false);
