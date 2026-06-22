@@ -23,8 +23,9 @@ jobs:
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             cd /var/projects/Trexo_CRM
 
-            # Pull latest code
-            git pull origin main
+            # Pull latest code (reset discards any server-side drift from npm install)
+            git fetch origin main
+            git reset --hard origin/main
 
             # --- API ---
             cd /var/projects/Trexo_CRM/api
