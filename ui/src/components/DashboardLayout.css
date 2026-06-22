@@ -1387,6 +1387,14 @@
     flex-shrink: 0;
   }
 
+  .mhd-list-personal-icon {
+    background: #64748b;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border-radius: 50%;
+  }
+
   .mhd-whats-next-btn {
     display: flex;
     align-items: center;
@@ -1409,6 +1417,10 @@
     transform: scale(0.97);
     box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
   }
+}
+
+.saas-page-content.tasks-page-active {
+  overflow-y: hidden;
 }
 
 

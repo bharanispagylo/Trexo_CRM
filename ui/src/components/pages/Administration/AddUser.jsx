@@ -8,11 +8,14 @@ export default function AddUser({ onBack }) {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [existingUsers, setExistingUsers] = useState([]);
   const { alert } = useAlert();
 
 
   
   const [form, setForm] = useState({ 
+    firstName: '',
+    lastName: '',
     fullName: '',
     email: '',
     password: '',
@@ -20,8 +23,25 @@ export default function AddUser({ onBack }) {
     empId: '',
     designation: '',
     profileImage: '',
-    role: 'Employee'
+    role: 'Employee',
+    status: 'Active'
   });
+
+  const handleFirstNameChange = (val) => {
+    setForm(prev => ({
+      ...prev,
+      firstName: val,
+      fullName: `${val} ${prev.lastName || ''}`.trim()
+    }));
+  };
+
+  const handleLastNameChange = (val) => {
+    setForm(prev => ({
+      ...prev,
+      lastName: val,
+      fullName: `${prev.firstName || ''} ${val}`.trim()
+    }));
+  };
 
   useEffect(() => {
     const fetchRoles = async () => {
@@ -41,6 +61,46 @@ export default function AddUser({ onBack }) {
     };
     fetchRoles();
   }, []);
+
+  // Fetch existing users for duplicate validation
+  useEffect(() => {
+    const fetchExistingUsers = async () => {
+      try {
+        const data = await api.get('/users');
+        if (Array.isArray(data)) setExistingUsers(data);
+      } catch (err) {
+        console.error('Fetch users for validation error:', err);
+      }
+    };
+    fetchExistingUsers();
+  }, []);
+
+  // Real-time duplicate check on blur
+  const validateEmailDuplicate = (email) => {
+    if (!email || !email.trim()) return;
+    const emailLower = email.trim().toLowerCase();
+    const duplicate = existingUsers.find(u => (u.email || '').toLowerCase() === emailLower);
+    if (duplicate) {
+      setErrors(prev => ({ ...prev, email: 'This email address already exists' }));
+    } else {
+      setErrors(prev => { const { email: _, ...rest } = prev; return rest; });
+    }
+  };
+
+  const validatePhoneDuplicate = (phone) => {
+    if (!phone || !phone.trim()) return;
+    const phoneClean = phone.replace(/[\s-+()]/g, '');
+    if (phoneClean.length < 10) return;
+    const duplicate = existingUsers.find(u => {
+      const existingClean = (u.phoneNo || '').replace(/[\s-+()]/g, '');
+      return existingClean && existingClean === phoneClean;
+    });
+    if (duplicate) {
+      setErrors(prev => ({ ...prev, phoneNo: 'This phone number already exists' }));
+    } else {
+      setErrors(prev => { const { phoneNo: _, ...rest } = prev; return rest; });
+    }
+  };
 
   const handleImageUpload = async (file) => {
     if (!file) return null;
@@ -78,10 +138,13 @@ export default function AddUser({ onBack }) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\+?[\d\s-]{10,}$/;
     const empIdRegex = /^[A-Z0-9-]{3,10}$/i;
-    const nameRegex = /^[a-z\s]{3,50}$/i;
+    const singleNameRegex = /^[a-z\s]{2,50}$/i;
 
-    if (!form.fullName) newErrors.fullName = "Full name is required";
-    else if (!nameRegex.test(form.fullName)) newErrors.fullName = "Letters only, min 3 chars";
+    if (!form.firstName) newErrors.firstName = "First name is required";
+    else if (!singleNameRegex.test(form.firstName)) newErrors.firstName = "Letters only, min 2 chars";
+
+    if (!form.lastName) newErrors.lastName = "Last name is required";
+    else if (!singleNameRegex.test(form.lastName)) newErrors.lastName = "Letters only, min 2 chars";
 
     if (!form.email) newErrors.email = "Email is required";
     else if (!emailRegex.test(form.email)) newErrors.email = "Invalid email format";
@@ -89,11 +152,32 @@ export default function AddUser({ onBack }) {
     if (!form.password) newErrors.password = "Password is required";
     else if (form.password.length < 6) newErrors.password = "Min 6 characters";
 
-    if (form.phoneNo && !phoneRegex.test(form.phoneNo)) newErrors.phoneNo = "Min 10 digits";
+    if (!form.phoneNo || !form.phoneNo.trim()) newErrors.phoneNo = "Phone number is required";
+    else if (!phoneRegex.test(form.phoneNo)) newErrors.phoneNo = "Min 10 digits";
+
+    if (!form.role || !form.role.trim()) newErrors.role = "Role is required";
+
     if (form.empId && !empIdRegex.test(form.empId)) newErrors.empId = "3-10 alphanumeric chars";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      return;
+    }
+
+    // Check for duplicate email/phone before API call
+    const emailLower = form.email.trim().toLowerCase();
+    const emailDup = existingUsers.find(u => (u.email || '').toLowerCase() === emailLower);
+    if (emailDup) {
+      setErrors({ email: 'This email address already exists' });
+      return;
+    }
+    const phoneClean = form.phoneNo.replace(/[\s-+()]/g, '');
+    const phoneDup = existingUsers.find(u => {
+      const existingClean = (u.phoneNo || '').replace(/[\s-+()]/g, '');
+      return existingClean && existingClean === phoneClean;
+    });
+    if (phoneDup) {
+      setErrors({ phoneNo: 'This phone number already exists' });
       return;
     }
     
@@ -124,26 +208,46 @@ export default function AddUser({ onBack }) {
 
       <div className="saas-form-container">
         <div className="form-grid">
-          <div className="saas-field full-width">
-            <label className="saas-label">Full Name *</label>
+          <div className="saas-field">
+            <label className="saas-label">First Name *</label>
             <input 
-              className={`saas-input ${errors.fullName ? 'error' : ''}`} 
-              placeholder="John Doe" 
-              value={form.fullName} 
+              className={`saas-input ${errors.firstName ? 'error' : ''}`} 
+              placeholder="John" 
+              value={form.firstName} 
               autoComplete="off" 
-              onChange={e => setForm({...form, fullName: e.target.value})} 
+              onChange={e => handleFirstNameChange(e.target.value)} 
             />
-            {errors.fullName && <span className="error-text">{errors.fullName}</span>}
+            {errors.firstName && <span className="error-text">{errors.firstName}</span>}
+          </div>
+          <div className="saas-field">
+            <label className="saas-label">Last Name *</label>
+            <input 
+              className={`saas-input ${errors.lastName ? 'error' : ''}`} 
+              placeholder="Doe" 
+              value={form.lastName} 
+              autoComplete="off" 
+              onChange={e => handleLastNameChange(e.target.value)} 
+            />
+            {errors.lastName && <span className="error-text">{errors.lastName}</span>}
           </div>
           <div className="saas-field">
             <label className="saas-label">Email Address *</label>
-            <input 
-              className={`saas-input ${errors.email ? 'error' : ''}`} 
-              type="email" 
-              placeholder="john@example.com" 
-              value={form.email} 
-              autoComplete="off" 
-              onChange={e => setForm({...form, email: e.target.value})} 
+            <input
+              className={`saas-input ${errors.email ? 'error' : ''}`}
+              type="email"
+              placeholder="john@example.com"
+              value={form.email}
+              autoComplete="off"
+              onChange={e => {
+                const val = e.target.value;
+                setForm({...form, email: val});
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (emailRegex.test(val.trim())) {
+                  validateEmailDuplicate(val);
+                } else {
+                  setErrors(prev => { const { email: _, ...rest } = prev; return rest; });
+                }
+              }}
             />
             {errors.email && <span className="error-text">{errors.email}</span>}
           </div>
@@ -160,13 +264,17 @@ export default function AddUser({ onBack }) {
             {errors.password && <span className="error-text">{errors.password}</span>}
           </div>
           <div className="saas-field">
-            <label className="saas-label">Phone Number</label>
-            <input 
-              className={`saas-input ${errors.phoneNo ? 'error' : ''}`} 
-              placeholder="+1 (555) 000-0000" 
-              value={form.phoneNo} 
-              autoComplete="off" 
-              onChange={e => setForm({...form, phoneNo: e.target.value})} 
+            <label className="saas-label">Phone Number *</label>
+            <input
+              className={`saas-input ${errors.phoneNo ? 'error' : ''}`}
+              placeholder="+1 (555) 000-0000"
+              value={form.phoneNo}
+              autoComplete="off"
+              onChange={e => {
+                const val = e.target.value;
+                setForm({...form, phoneNo: val});
+                validatePhoneDuplicate(val);
+              }}
             />
             {errors.phoneNo && <span className="error-text">{errors.phoneNo}</span>}
           </div>
@@ -187,9 +295,19 @@ export default function AddUser({ onBack }) {
             <input className="saas-input" placeholder="Software Engineer" value={form.designation} autoComplete="off" onChange={e => setForm({...form, designation: e.target.value})} />
           </div>
           <div className="saas-field">
-            <label className="saas-label">Role</label>
-            <select className="saas-select" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+            <label className="saas-label">Role *</label>
+            <select className={`saas-select ${errors.role ? 'error' : ''}`} value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+              <option value="">Select a Role</option>
               {roles.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            {errors.role && <span className="error-text">{errors.role}</span>}
+          </div>
+          <div className="saas-field">
+            <label className="saas-label">Status</label>
+            <select className="saas-select" value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Pending">Pending</option>
             </select>
           </div>
           <div className="saas-field full-width">

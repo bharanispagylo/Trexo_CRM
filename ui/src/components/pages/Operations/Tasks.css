@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
 /* ══════════════════════════════
    ROOT
 ══════════════════════════════ */
@@ -689,6 +691,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  height: 100%;
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border: 1px solid #e2e8f0;
@@ -1014,6 +1017,18 @@
 .dot-high     { background: #fbbf24; }
 .dot-medium   { background: #2563eb; }
 .dot-low      { background: #94a3b8; }
+
+/* Date input wrapper for mobile overlay */
+.saas-date-input-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* On desktop, overlay is hidden — native date input works normally */
+.saas-date-display-overlay {
+  display: none;
+}
 
 /* Sidebar Elements */
 .saas-sidebar-header {
@@ -1564,7 +1579,7 @@
 .saas-breadcrumb-active {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #94a3b8;
 }
 
 .saas-btn-nav {
@@ -1697,6 +1712,7 @@
   color: #64748b;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .saas-tab-header-btn:hover {
@@ -2361,6 +2377,12 @@
   color: #0f172a;
   outline: none;
   transition: all 0.15s ease;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.comment-main-text-input::-webkit-scrollbar {
+  display: none;
 }
 
 .comment-main-text-input:focus {
@@ -2370,8 +2392,6 @@
 }
 
 .comment-emoji-icon {
-  position: absolute;
-  right: 0.75rem;
   cursor: pointer;
   font-size: 1rem;
   user-select: none;
@@ -3418,12 +3438,12 @@
   white-space: nowrap;
 }
 
-.cu-th-name     { width: 33%; }
+.cu-th-name     { width: 31%; }
 .cu-th-assignee { width: 14%; text-align: center; }
 .cu-th-project  { width: 14%; }
 .cu-th-list     { width: 15%; }
-.cu-th-delivery { width: 10%; text-align: center; }
-.cu-th-priority { width: 10%; text-align: center; }
+.cu-th-delivery { width: 13%; text-align: center; }
+.cu-th-priority { width: 9%; text-align: center; }
 .cu-th-actions  { width: 4%; }
 
 /* ── Rows ── */
@@ -3633,16 +3653,41 @@
   background-color: #ffffff;
 }
 
+/* Legacy — kept for any other usages */
 .cu-inline-date-field {
-  width: 100px;
+  width: 88px;
+  min-width: 0;
+  max-width: 88px;
   font-size: 0.72rem;
   color: #475569;
 }
-.cu-inline-date-field::-webkit-calendar-picker-indicator {
-  opacity: 0;
-  width: 0;
-  height: 0;
+
+/* ── Custom date cell: visible text + invisible overlay input ── */
+.cu-date-cell {
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+.cu-date-text {
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+/* Invisible date input covers the whole cell — catches clicks, opens picker */
+.cu-date-hidden-input {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+  border: none;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .cu-inline-status-dot {
@@ -3920,9 +3965,15 @@
   transition: all 0.12s ease;
   box-shadow: 0 1px 2px rgba(124, 58, 237, 0.15);
 }
-.ntib-save-btn:hover {
+.ntib-save-btn:hover:not(:disabled) {
   background: #6d28d9;
   box-shadow: 0 2px 4px rgba(109, 40, 217, 0.25);
+}
+.ntib-save-btn:disabled {
+  background: #a78bfa;
+  cursor: not-allowed;
+  opacity: 0.7;
+  box-shadow: none;
 }
 
 /* ══════════════════════════════════════════════
@@ -4090,6 +4141,7 @@
   flex: 1;
   min-width: 0;
   padding: 0.5rem 1rem 1rem;
+  min-height: auto;
 }
 
 .saas-meta-row {
@@ -4168,8 +4220,8 @@
   .tasks-filter-row select {
     flex: none;
     min-width: 0;
-    width: 110px;
-    max-width: 110px;
+    width: auto;
+    max-width: 160px;
     padding: 0.35rem 0.4rem !important;
     font-size: 0.78rem !important;
   }
@@ -4306,9 +4358,8 @@
     align-items: center !important;
   }
 
-  /* Hide created-date and Cancel button from nav (back arrow = cancel on mobile) */
-  .saas-nav-created-date,
-  .saas-nav-cancel-btn {
+  /* Hide created-date from nav on mobile */
+  .saas-nav-created-date {
     display: none !important;
   }
 
@@ -4324,22 +4375,38 @@
     font-size: 0.8rem !important;
   }
 
-  /* Delete button: icon only on mobile */
-  .saas-btn-danger .saas-btn-delete-text {
-    display: none;
+  /* ── Bottom form-action buttons on mobile ── */
+  .form-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 0.75rem !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    margin: 1.5rem 0 0 0 !important;
+    padding: 1.25rem 0 0 !important;
+    border-top: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
   }
 
-  /* ── Hide duplicate bottom form-action buttons on mobile ── */
-  .form-actions {
-    display: none !important;
+  .form-actions .saas-btn-primary,
+  .form-actions .saas-btn-secondary,
+  .form-actions .saas-btn-nav {
+    width: auto !important;
+    flex: none !important;
   }
 
   /* ── Detail Tabs – scrollable on mobile ── */
   .saas-tabs-header-row {
-    overflow-x: auto;
+    overflow-x: auto !important;
     white-space: nowrap;
     gap: 1rem !important;
     padding-bottom: 0.25rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .saas-tabs-header-row::-webkit-scrollbar {
+    display: none;
   }
   .saas-tab-header-btn {
     padding: 0.5rem 0.25rem !important;
@@ -4458,6 +4525,59 @@
   /* Hide → arrow separator on mobile */
   .saas-date-arrow {
     display: none !important;
+  }
+
+  /* ── Mobile: Show formatted date overlay, hide raw browser date text ── */
+  .saas-date-input-wrapper {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    min-width: 110px !important;
+  }
+
+  /* Make the native date input invisible but still interactive (tappable) */
+  .saas-date-input-wrapper .saas-detail-date-input {
+    opacity: 0 !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 2 !important;
+    cursor: pointer !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  /* Show the formatted overlay text on mobile */
+  .saas-date-display-overlay {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    padding: 0.3rem 0.6rem !important;
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    min-height: 32px !important;
+    box-sizing: border-box !important;
+    pointer-events: none !important; /* Let clicks pass through to the native input */
+    position: relative !important;
+    z-index: 1 !important;
+    width: 100% !important;
+  }
+
+  /* Empty date state: grey placeholder text */
+  .saas-date-display-overlay.saas-date-empty {
+    color: #94a3b8 !important;
+    font-weight: 400 !important;
   }
 
   /* ── Title input ── */
@@ -4634,6 +4754,8 @@
 
   .cu-inline-date-field {
     width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
   }
 
   .cu-section-right .kanban-new-btn {
@@ -4658,8 +4780,17 @@
   /* Mobile Details & Comments layout fixes */
   .saas-task-page {
     overflow-y: auto !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
+    height: calc(100vh - 124px) !important;
+    max-height: calc(100vh - 124px) !important;
+  }
+
+  .task-drawer-panel .saas-task-page {
+    height: 100% !important;
+    max-height: 100% !important;
+  }
+
+  .task-drawer-overlay {
+    z-index: 100001 !important;
   }
 
   .saas-main-container {
@@ -4694,11 +4825,12 @@
 
   .comment-post-input-box {
     position: sticky !important;
-    bottom: 60px !important;
+    bottom: 0 !important;
     z-index: 9999 !important;
     box-shadow: 0 -4px 12px rgba(0,0,0,0.08) !important;
     background: #ffffff !important;
     border-top: 1px solid #e2e8f0 !important;
+    padding: 0.75rem !important;
   }
 
   .saas-meta-value > div {
@@ -4706,7 +4838,7 @@
     gap: 0.5rem !important;
   }
 
-  .saas-content-pane > * {
+  .saas-content-pane > *:not(.saas-tabs-header-row) {
     max-width: 100% !important;
     overflow-x: hidden !important;
   }
@@ -4745,6 +4877,22 @@
     gap: 1rem !important;
   }
 
+  /* Attachments table – scrollable on mobile */
+  .saas-attachments-pane .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .saas-attachments-pane table {
+    table-layout: auto !important;
+    min-width: 480px !important;
+  }
+  .saas-attachments-pane th,
+  .saas-attachments-pane td {
+    white-space: nowrap !important;
+    padding: 0.65rem 0.5rem !important;
+    font-size: 0.72rem !important;
+  }
+
   .saas-comment-card.is-reply {
     margin-left: 1.25rem !important;
     padding-left: 0.5rem !important;
@@ -4778,6 +4926,41 @@
   /* Hide desktop All Tasks list on mobile */
   .cu-list-root.all-tasks-list {
     display: none !important;
+  }
+
+  /* Mobile All Tasks empty state */
+  .cu-mob-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3.5rem 1.5rem;
+    text-align: center;
+  }
+
+  .cu-mob-empty-title {
+    font-size: 0.97rem;
+    font-weight: 700;
+    color: #64748b;
+    margin: 0 0 0.3rem 0;
+  }
+
+  .cu-mob-empty-sub {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin: 0 0 1rem 0;
+  }
+
+  .cu-mob-empty-add-btn {
+    padding: 0.55rem 1.4rem;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.01em;
   }
 
   .cu-mob-proj-section {
@@ -5188,4 +5371,170 @@
 .cu-flat-task-row:hover .cu-mob-hover-subtask-btn {
   opacity: 1;
   visibility: visible;
+}
+
+@media (max-width: 768px) {
+  .cu-mob-hover-subtask-btn {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* ── ClickUp-style Hover Tooltip ── */
+.cu-clickup-tooltip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: absolute;
+  transform: translate(-50%, -100%);
+  z-index: 999999;
+  pointer-events: none;
+  animation: cuTooltipFadeIn 0.12s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.cu-clickup-tooltip-content {
+  background: #111827; /* Dark slate matching ClickUp dark mode tooltip */
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  max-width: 280px;
+  word-break: break-word;
+  white-space: normal;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16), 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.cu-clickup-tooltip-arrow {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #111827;
+  margin-top: -1px; /* overlap slightly to prevent physical pixel gaps */
+}
+
+@keyframes cuTooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -95%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1);
+  }
+}
+
+/* ── Reply Submit Button ── */
+.reply-submit-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.15);
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.reply-submit-btn:hover:not(:disabled) {
+  background: #1d4ed8;
+  box-shadow: 0 2px 6px rgba(29, 78, 216, 0.25);
+}
+
+.reply-submit-btn:disabled {
+  background: #f1f5f9;
+  color: #cbd5e1;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════════
+   Kanban and Schedule View Height / Scroll Fixes
+   ══════════════════════════════════════════════ */
+
+/* Enable fixed viewport height and internal scrolling for Kanban/Schedule */
+.tasks-main-content.kanban-mode-active {
+  overflow-y: hidden !important; /* Prevent page scrolling, scrollbar is inside board/columns */
+  height: 100%;
+}
+
+.kanban-root.kanban-scroll-layout {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0.5rem 1rem 1rem;
+}
+
+.kanban-root.kanban-scroll-layout .kanban-board {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden; /* Only scroll horizontally at the board level */
+  display: flex;
+  gap: 1rem;
+  padding-bottom: 0.75rem; /* Space for horizontal scrollbar */
+  min-height: 0; /* Enable flex-child compression/scrolling */
+  height: calc(100% - 60px); /* Fill the rest of the layout */
+}
+
+/* Ensure columns fill the board container height and scroll internally */
+.kanban-root.kanban-scroll-layout .kanban-col-clickup {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important; /* Remove min-height to fit parent */
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 270px; /* Standard column width */
+}
+
+/* Adjust schedule column layout if needed */
+.kanban-root.kanban-scroll-layout .schedule-board .kanban-col-clickup {
+  flex: 1 1 300px;
+  min-width: 290px;
+}
+
+/* Scroll cards list internally */
+.kanban-root.kanban-scroll-layout .col-clickup-cards {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px; /* avoid scrollbar overlapping cards */
+}
+
+/* ── Subtask table in task detail drawer ── */
+.saas-subtasks-pane .table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.saas-subtasks-pane table {
+  table-layout: auto;
+  min-width: 600px;
+}
+
+.saas-subtasks-pane th,
+.saas-subtasks-pane td {
+  white-space: nowrap;
+}
+
+/* Actions cell: keep buttons in one row */
+.saas-subtasks-pane td:last-child {
+  white-space: nowrap;
+  min-width: 70px;
+}
+
+.saas-subtasks-pane .attachment-table-row:hover {
+  background: #f8fafc;
 }

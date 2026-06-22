@@ -3,6 +3,7 @@ import { api } from '../../../api/client';
 import './TrackTeam.css';
 import Tasks from './Tasks';
 import { useAlert } from '../../../context/AlertContext';
+import { usePermissions } from '../../../hooks/usePermissions';
 import '../Administration/AddUser.css';
 
 const isAssigneeMatch = (assigneeStr, userId) => {
@@ -14,12 +15,15 @@ export default function TrackTeam({ user }) {
   const [tasks, setTasks] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
   const [users, setUsers] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [taskLists, setTaskLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMember, setSelectedMember] = useState(null);
   const [viewingEmployeeTasks, setViewingEmployeeTasks] = useState(null);
   
   // Alert hooks
   const { alert, confirm } = useAlert();
+  const { can } = usePermissions();
 
   // Member management states
   const [addingMember, setAddingMember] = useState(false);
@@ -33,14 +37,18 @@ export default function TrackTeam({ user }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [taskData, teamData, userData] = await Promise.all([
+      const [taskData, teamData, userData, projectsData, taskListsData] = await Promise.all([
         api.get('/tasks'),
         api.get('/teams'),
-        api.get('/users')
+        api.get('/users'),
+        api.get('/projects').catch(() => []),
+        api.get('/task-lists').catch(() => [])
       ]);
       setTasks(taskData || []);
       setTeamMembers(teamData || []);
       setUsers(userData || []);
+      setProjects(projectsData || []);
+      setTaskLists(taskListsData || []);
     } catch (err) {
       console.error('Error fetching tracker details:', err);
     } finally {
@@ -80,14 +88,31 @@ export default function TrackTeam({ user }) {
       alert('Name must contain only letters and be between 2-50 characters.', 'warning', 'Validation Error');
       return;
     }
+    if (!memberForm.role || !memberForm.role.trim()) {
+      alert('Role is required.', 'warning', 'Validation Error');
+      return;
+    }
+    if (!memberForm.designation || !memberForm.designation.trim()) {
+      alert('Designation is required.', 'warning', 'Validation Error');
+      return;
+    }
 
     try {
-      await api.post('/teams', {
-        name: memberForm.name.trim(),
-        role: memberForm.role,
-        designation: memberForm.designation.trim() || null
-      });
-      alert('Team member added successfully!', 'success', 'Member Added');
+      if (memberForm.id) {
+        await api.put(`/teams/${memberForm.id}`, {
+          name: memberForm.name.trim(),
+          role: memberForm.role,
+          designation: memberForm.designation.trim() || null
+        });
+        alert('Team member updated successfully!', 'success', 'Member Updated');
+      } else {
+        await api.post('/teams', {
+          name: memberForm.name.trim(),
+          role: memberForm.role,
+          designation: memberForm.designation.trim() || null
+        });
+        alert('Team member added successfully!', 'success', 'Member Added');
+      }
       setAddingMember(false);
       setMemberForm({
         name: '',
@@ -96,8 +121,8 @@ export default function TrackTeam({ user }) {
       });
       fetchData();
     } catch (err) {
-      console.error('Error adding member:', err);
-      alert('Failed to add member: ' + err.message, 'error', 'Error');
+      console.error('Error saving member:', err);
+      alert('Failed to save member: ' + err.message, 'error', 'Error');
     }
   };
 
@@ -157,9 +182,38 @@ export default function TrackTeam({ user }) {
       })
     : null;
 
-  const selectedMemberTasks = selectedUser 
+  const selectedMemberTasks = selectedUser
     ? tasks.filter(t => isAssigneeMatch(t.assignees, selectedUser.id))
     : [];
+
+  // Group tasks by project → task group (task list)
+  const getGroupedTasks = (memberTasks) => {
+    const grouped = {};
+    memberTasks.forEach(task => {
+      let projName = task.projectName || '';
+      let projId = task.projectId || null;
+      let listName = '';
+
+      if (task.taskListId) {
+        const list = taskLists.find(l => l.id === task.taskListId);
+        if (list) {
+          listName = list.name || '';
+          if (!projId) projId = list.projectId;
+        }
+      }
+      if (!projName && projId) {
+        const proj = projects.find(p => p.id === projId);
+        projName = proj?.name || '';
+      }
+
+      const projKey = projName || 'No Project';
+      const listKey = listName || 'General';
+      if (!grouped[projKey]) grouped[projKey] = {};
+      if (!grouped[projKey][listKey]) grouped[projKey][listKey] = [];
+      grouped[projKey][listKey].push(task);
+    });
+    return grouped;
+  };
 
   if (addingMember) {
     return (
@@ -185,24 +239,71 @@ export default function TrackTeam({ user }) {
 
         <div className="add-user-page">
           <div className="page-header">
-            <h2 className="page-title" style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>Add New Team Member</h2>
-            <p className="page-subtitle" style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>Add a new member to the team.</p>
+            <h2 className="page-title" style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>{memberForm.id ? 'Edit Team Member' : 'Add New Team Member'}</h2>
+            <p className="page-subtitle" style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>{memberForm.id ? 'Edit team member details.' : 'Add a new member to the team.'}</p>
           </div>
 
           <div className="saas-form-container">
             <div className="form-grid">
-              <div className="saas-field full-width">
+              <div className="saas-field">
                 <label className="saas-label">Name *</label>
-                <input 
-                  className="saas-input" 
-                  placeholder="Enter member name" 
+                <select 
+                  className="saas-select" 
                   value={memberForm.name} 
-                  onChange={e => setMemberForm({...memberForm, name: e.target.value})} 
-                />
+                  disabled={!!memberForm.id}
+                  onChange={e => {
+                    const selectedName = e.target.value;
+                    const matchedUser = users.find(u => {
+                      const displayName = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).trim() || u.email || 'Unknown';
+                      return displayName === selectedName;
+                    });
+                    
+                    if (matchedUser) {
+                      const userRoleLower = (matchedUser.role || 'Employee').toLowerCase();
+                      const matchingRole = roles.find(r => r.toLowerCase() === userRoleLower) || 'Employee';
+                      
+                      setMemberForm({
+                        name: selectedName,
+                        role: matchingRole,
+                        designation: matchedUser.designation || ''
+                      });
+                    } else {
+                      setMemberForm({
+                        ...memberForm,
+                        name: selectedName
+                      });
+                    }
+                  }} 
+                >
+                  {memberForm.id ? (
+                    <option value={memberForm.name}>{memberForm.name}</option>
+                  ) : (
+                    <>
+                      <option value="">Select Member...</option>
+                      {users
+                        .filter(u => {
+                          const uName = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).trim().toLowerCase();
+                          return !teamMembers.some(m => (m.name || '').trim().toLowerCase() === uName);
+                        })
+                        .slice()
+                        .sort((a, b) => {
+                          const nameA = (a.fullName || `${a.firstName || ''} ${a.lastName || ''}`).trim();
+                          const nameB = (b.fullName || `${b.firstName || ''} ${b.lastName || ''}`).trim();
+                          return nameA.localeCompare(nameB);
+                        })
+                        .map(u => {
+                          const displayName = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).trim() || u.email || 'Unknown';
+                          return <option key={u.id} value={displayName}>{displayName}</option>;
+                        })}
+                    </>
+                  )}
+                </select>
               </div>
 
+              <div className="saas-field"></div>
+
               <div className="saas-field">
-                <label className="saas-label">Role</label>
+                <label className="saas-label">Role *</label>
                 <select 
                   className="saas-select" 
                   value={memberForm.role} 
@@ -213,7 +314,7 @@ export default function TrackTeam({ user }) {
               </div>
 
               <div className="saas-field">
-                <label className="saas-label">Designation</label>
+                <label className="saas-label">Designation *</label>
                 <input 
                   className="saas-input" 
                   placeholder="e.g. Software Developer" 
@@ -279,80 +380,81 @@ export default function TrackTeam({ user }) {
               </div>
             </div>
 
-            {/* ASSIGNED TASKS WORKLOAD LIST */}
+            {/* ASSIGNED TASKS — grouped by Project → Task Group */}
             <div>
-              <h4 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', fontWeight: '800', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#0f172a' }}>
+              <h4 style={{ margin: '0 0 1.25rem 0', fontSize: '1.05rem', fontWeight: '800', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#0f172a' }}>
                 <span>Assigned Tasks</span>
                 <span style={{ fontSize: '0.8rem', background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>
                   {selectedMemberTasks.length} Tasks
                 </span>
               </h4>
 
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', marginBottom: '1.5rem' }}>
-                <div className="table-responsive">
-                  <table className="team-list-table">
-                    <thead>
-                      <tr>
-                        <th>Task</th>
-                        <th>Status</th>
-                        <th>Priority</th>
-                        <th>Due Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedMemberTasks.length === 0 ? (
-                        <tr>
-                          <td colSpan="4" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>
-                            No tasks assigned to this team member.
-                          </td>
-                        </tr>
-                      ) : (
-                        selectedMemberTasks.map(task => (
-                          <tr key={task.id}>
-                            <td data-label="Task">
-                              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                                <span style={{ fontWeight: '600', color: '#0f172a', wordBreak: 'break-word' }}>{task.title}</span>
-                                <span style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '1px' }}>#{task.id.slice(-6).toUpperCase()}</span>
-                              </div>
-                            </td>
-                            <td data-label="Status">
-                              <div style={{ flex: 1, display: 'flex' }}>
-                                <span style={{
-                                  background: task.status === 'Completed' || task.status === 'Delivered' ? '#dcfce7' : task.status === 'In Progress' ? '#dbeafe' : '#f1f5f9',
-                                  color: task.status === 'Completed' || task.status === 'Delivered' ? '#16a34a' : task.status === 'In Progress' ? '#2563eb' : '#475569',
-                                  padding: '4px 8px',
-                                  borderRadius: '5px',
-                                  fontSize: '0.75rem',
-                                  fontWeight: '700',
-                                  whiteSpace: 'nowrap'
-                                }}>
-                                  {task.status || 'To Do'}
-                                </span>
-                              </div>
-                            </td>
-                            <td data-label="Priority">
-                              <div style={{ flex: 1 }}>
-                                <span style={{
-                                  color: task.priority === 'High' || task.priority === 'Critical' ? '#ef4444' : task.priority === 'Medium' ? '#ea580c' : '#64748b',
-                                  fontSize: '0.75rem',
-                                  fontWeight: '700'
-                                }}>
-                                  {task.priority || 'Medium'}
-                                </span>
-                              </div>
-                            </td>
-                            <td data-label="Due Date">
-                              <div style={{ flex: 1, color: '#64748b' }}>
-                                {task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '-'}
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+              {selectedMemberTasks.length === 0 ? (
+                <div style={{ padding: '2.5rem', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', border: '1px solid #e2e8f0', borderRadius: '12px', background: 'white' }}>
+                  No tasks assigned to this team member.
                 </div>
-              </div>
+              ) : (
+                Object.entries(getGroupedTasks(selectedMemberTasks)).map(([projName, listGroups]) => (
+                  <div key={projName} className="tt-project-group">
+                    {/* Project header */}
+                    <div className="tt-project-header">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                      {projName}
+                    </div>
+
+                    {Object.entries(listGroups).map(([listName, groupTasks]) => (
+                      <div key={listName} className="tt-list-group">
+                        {/* Task group (task list) header */}
+                        <div className="tt-list-header">
+                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                          {listName}
+                          <span className="tt-list-badge">{groupTasks.length}</span>
+                        </div>
+
+                        <div className="tt-tasks-table-wrap">
+                          <table className="team-list-table tt-tasks-table">
+                            <thead>
+                              <tr>
+                                <th>Task</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Due Date</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {groupTasks.map(task => (
+                                <tr key={task.id}>
+                                  <td data-label="Task">
+                                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                                      <span style={{ fontWeight: '600', color: '#0f172a', wordBreak: 'break-word' }}>{task.title}</span>
+                                      <span style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '1px' }}>#{task.id.slice(-6).toUpperCase()}</span>
+                                    </div>
+                                  </td>
+                                  <td data-label="Status">
+                                    <span className="tt-status-pill" data-status={task.status}>
+                                      {task.status || 'To Do'}
+                                    </span>
+                                  </td>
+                                  <td data-label="Priority">
+                                    <span className="tt-priority-text" data-priority={task.priority}>
+                                      {task.priority || 'Medium'}
+                                    </span>
+                                  </td>
+                                  <td data-label="Due Date">
+                                    <span style={{ color: '#64748b', fontSize: '0.82rem' }}>
+                                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))
+              )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem' }}>
@@ -379,7 +481,7 @@ export default function TrackTeam({ user }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <span></span>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              {user?.role?.toLowerCase() === 'admin' && (
+              {can('teams', 'create') && (
                 <button
                   className="saas-btn-submit team-btn-add"
                   style={{ background: '#2563eb', color: 'white', border: 'none', padding: '0.5rem 1rem', fontSize: '0.85rem', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -438,9 +540,27 @@ export default function TrackTeam({ user }) {
                           </td>
                           <td data-label="Actions" style={{ textAlign: 'right' }}>
                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                              {user?.role?.toLowerCase() === 'admin' && (
-                                <button 
-                                  className="member-delete-icon-btn" 
+                              {can('teams', 'edit') && (
+                                <button
+                                  className="member-edit-icon-btn"
+                                  title="Edit Member"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMemberForm({
+                                      id: m.id,
+                                      name: displayName,
+                                      role: m.role || 'Employee',
+                                      designation: m.designation || ''
+                                    });
+                                    setAddingMember(true);
+                                  }}
+                                >
+                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </button>
+                              )}
+                              {can('teams', 'delete') && (
+                                <button
+                                  className="member-delete-icon-btn"
                                   title="Remove Member"
                                   onClick={(e) => {
                                     e.stopPropagation();

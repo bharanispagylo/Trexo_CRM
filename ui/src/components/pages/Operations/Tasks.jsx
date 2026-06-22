@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../../../api/client';
 import './Tasks.css';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -117,10 +118,10 @@ const formatMobileDueDate = (dateStr) => {
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return null;
   
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const month = months[date.getMonth()];
   const day = String(date.getDate()).padStart(2, '0');
-  const formatted = `${month} ${day}`;
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const formatted = `${day}-${month}-${year}`;
   
   const today = new Date();
   today.setHours(0,0,0,0);
@@ -159,14 +160,80 @@ const timeStrToDecimal = (timeStr) => {
 
 const getDisplayId = (f) => {
   if (!f) return '';
+  const prefix = f.parentId ? 'S' : 'T';
   const no = f.taskNo || '';
   const digits = no.replace(/\D/g, '');
-  const prefix = f.parentId ? 'S' : 'T';
-  return `${prefix}${digits}`;
+  if (digits) return `${prefix}${digits}`;
+  // Fallback: use the task's UUID id (strip hyphens) so the URL is never just the prefix
+  const idSlug = (f.id || '').replace(/-/g, '').substring(0, 8);
+  return `${prefix}${idSlug}`;
 };
 
+export function TaskTitleTooltip({ text, children }) {
+  const [visible, setVisible] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef(null);
 
-// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Task Detail View (Separate Page) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+  const handleMouseEnter = () => {
+    if (!triggerRef.current || !text) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setCoords({
+      top: rect.top + window.scrollY - 8,
+      left: rect.left + window.scrollX + rect.width / 2
+    });
+    setVisible(true);
+  };
+
+  const handleMouseLeave = () => {
+    setVisible(false);
+  };
+
+  useEffect(() => {
+    if (!visible) return;
+    const handleScroll = () => {
+      setVisible(false);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, [visible]);
+
+  return (
+    <>
+      <div
+        ref={triggerRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="cu-task-title-wrapper"
+        style={{ display: 'inline-flex', minWidth: 0, flex: 1 }}
+      >
+        {children}
+      </div>
+      {visible && createPortal(
+        <div 
+          className="cu-clickup-tooltip"
+          style={{
+            position: 'absolute',
+            top: `${coords.top}px`,
+            left: `${coords.left}px`,
+            pointerEvents: 'none'
+          }}
+        >
+          <div className="cu-clickup-tooltip-content">
+            {text}
+          </div>
+          <div className="cu-clickup-tooltip-arrow" />
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
+// ── ── Task Detail View (Separate Page) ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ──
 export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialEditMode = false, tasks = [], onRefresh, onSelectTask }) {
 
   const isEdit = !!(task && task.id);
@@ -194,8 +261,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       estimatedHours: '',
       approvedHours: '',
       actualHours: '',
-      actualHoursStr: '0.0',
-      approvedHoursStr: '0.0',
+      actualHoursStr: '0',
+      approvedHoursStr: '0',
       taskListId: '',
       attachments: ''
     };
@@ -234,16 +301,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         ...task,
         status: getStatusString(task.status),
         taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : `TSK-${Math.floor(Math.random() * 900000) + 100000}`),
-        approvedHoursStr: task.approvedHours !== undefined && task.approvedHours !== null ? Number(task.approvedHours).toFixed(1) : '0.0'
+        approvedHoursStr: task.approvedHours !== undefined && task.approvedHours !== null ? String(task.approvedHours) : '0'
       };
       setForm(loadedForm);
       setInitialForm(loadedForm);
       if (task.parentId) {
         if (activeTab !== 'general' && activeTab !== 'worklog') {
-          setActiveTab('general');
-        }
-      } else {
-        if (activeTab === 'worklog') {
           setActiveTab('general');
         }
       }
@@ -259,7 +322,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     
     const keysToCompare = [
       'title', 'description', 'status', 'assignees', 'dueDate', 'deliveredDate', 'priority',
-      'tag', 'taskType', 'isBillable', 'billableAmount', 'estimatedHours', 'approvedHours', 'actualHours'
+      'tag', 'taskType', 'isBillable', 'billableAmount', 'estimatedHours', 'approvedHours', 'actualHours', 'attachments'
     ];
     
     for (const key of keysToCompare) {
@@ -293,6 +356,57 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const [newSubtaskDueDate, setNewSubtaskDueDate] = useState('');
   const [newSubtaskPriority, setNewSubtaskPriority] = useState('Medium');
   const [subtaskSaving, setSubtaskSaving] = useState(false);
+  const [subtasks, setSubtasks] = useState([]);
+  const [parentTask, setParentTask] = useState(null);
+
+  const fetchSubtasks = useCallback(() => {
+    if (isEdit && task?.id) {
+      api.get('/tasks').then(allTasks => {
+        const children = (allTasks || []).filter(t => t.parentId === task.id);
+        setSubtasks(children);
+        
+        if (task.parentId) {
+          const parent = (allTasks || []).find(t => t.id === task.parentId);
+          setParentTask(parent || null);
+        } else {
+          setParentTask(null);
+        }
+      }).catch(console.error);
+    } else {
+      setParentTask(null);
+    }
+  }, [isEdit, task?.id, task?.parentId]);
+
+  const currentProjId = form.projectId 
+    || (form.projectName ? projects.find(p => p.name === form.projectName)?.id : null)
+    || (task && (task.projectId || (task.taskListId && taskLists.find(l => l.id === task.taskListId)?.projectId)));
+  const currentProject = currentProjId ? projects.find(p => p.id === currentProjId) : null;
+  const projectMemberIds = currentProject ? (currentProject.members || '').split(',').map(m => m.trim()).filter(Boolean) : [];
+  
+  const filteredUsers = (currentProject
+    ? (projectMemberIds.length > 0
+      ? users.filter(u => projectMemberIds.includes(u.id))
+      : []
+    )
+    : users
+  ).filter(u => u.status !== 'Inactive');
+
+  const finalUsers = (() => {
+    let list = [...filteredUsers];
+    const currentAssigneeId = form.assignees;
+    if (currentAssigneeId) {
+      const ids = currentAssigneeId.split(',').map(i => i.trim()).filter(Boolean);
+      ids.forEach(id => {
+        if (!list.some(u => u.id === id)) {
+          const assignedUserObj = users.find(u => u.id === id);
+          if (assignedUserObj) {
+            list.push(assignedUserObj);
+          }
+        }
+      });
+    }
+    return list;
+  })();
 
 
   const [comments, setComments] = useState([]);
@@ -300,6 +414,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const [mentionState, setMentionState] = useState({ isOpen: false, filter: '' });
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
+  const [editCommentSaving, setEditCommentSaving] = useState(false);
   const [workLogs, setWorkLogs] = useState([]);
   const [workLogForm, setWorkLogForm] = useState({
     logDate: new Date().toISOString().split('T')[0],
@@ -311,9 +428,15 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const [uploading, setUploading] = useState(false);
   const [commentAttachment, setCommentAttachment] = useState(null);
   const [commentUploading, setCommentUploading] = useState(false);
+  const [commentPosting, setCommentPosting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [taskSaving, setTaskSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef(null);
   const commentFileInputRef = useRef(null);
+  const commentTextareaRef = useRef(null);
+  const commentPostingRef = useRef(false);
+  const taskSavingRef = useRef(false);
   const { getLevel } = usePermissions();
   
   const isAssigned = () => {
@@ -358,8 +481,23 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         const data = await response.json();
         if (data.secure_url) {
           const current = form.attachments ? form.attachments.split(',') : [];
-          set('attachments', [...current, data.secure_url].join(','));
+          const uploaderName = currentUser
+            ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
+            : 'Admin';
+          const uploadTimestamp = new Date().toISOString();
+          const newEntry = `${data.secure_url}|${uploaderName}|${uploadTimestamp}`;
+          const updatedAttachments = [...current, newEntry].join(',');
+          set('attachments', updatedAttachments);
           setUploading(false);
+          if (isEdit) {
+            try {
+              const updatedTask = { ...form, attachments: updatedAttachments };
+              const { comments, taskList, ...payload } = updatedTask;
+              await onSave(payload, true);
+            } catch (err) {
+              console.error('Failed to save uploaded file:', err);
+            }
+          }
           return;
         }
       } catch (err) {
@@ -370,10 +508,25 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     // Local base64 file reader fallback (100% robust offline & without Cloudinary credentials!)
     try {
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const current = form.attachments ? form.attachments.split(',') : [];
-        set('attachments', [...current, reader.result].join(','));
+        const uploaderName = currentUser
+          ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
+          : 'Admin';
+        const uploadTimestamp = new Date().toISOString();
+        const newEntry = `${reader.result}|${uploaderName}|${uploadTimestamp}`;
+        const updatedAttachments = [...current, newEntry].join(',');
+        set('attachments', updatedAttachments);
         setUploading(false);
+        if (isEdit) {
+          try {
+            const updatedTask = { ...form, attachments: updatedAttachments };
+            const { comments, taskList, ...payload } = updatedTask;
+            await onSave(payload, true);
+          } catch (err) {
+            console.error('Failed to save uploaded file:', err);
+          }
+        }
       };
       reader.onerror = () => {
         alert('Failed to read file locally.', 'error', 'Error');
@@ -390,6 +543,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   useEffect(() => {
     fetchComments();
     fetchWorkLogs();
+    fetchSubtasks();
     api.get('/users').then(data => {
       setUsers(data || []);
     }).catch(console.error);
@@ -402,7 +556,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     api.get('/projects').then(data => {
       setProjects(data || []);
     }).catch(console.error);
-  }, [task, isEdit, fetchComments, fetchWorkLogs]);
+  }, [task, isEdit, fetchComments, fetchWorkLogs, fetchSubtasks]);
+
+  useEffect(() => {
+    if (task?.createdAt) {
+      const taskDate = new Date(task.createdAt).toISOString().split('T')[0];
+      setWorkLogForm(prev => ({ ...prev, logDate: taskDate }));
+    }
+  }, [task]);
 
   useEffect(() => {
     const billedHours = workLogs.filter(log => log.isBilled).reduce((acc, log) => acc + (Number(log.hoursWorked) || 0), 0);
@@ -413,7 +574,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         return {
           ...prev,
           actualHours: billedHours,
-          actualHoursStr: billedHours.toFixed(1),
+          actualHoursStr: String(billedHours),
           employeeHours: employeeTime
         };
       }
@@ -423,6 +584,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
   const handleCommentFileUpload = async (e) => {
     const file = e.target.files[0];
+    if (!file) return;
+    uploadCommentFile(file);
+  };
+
+  const uploadCommentFile = async (file) => {
     if (!file) return;
     setCommentUploading(true);
 
@@ -441,6 +607,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         if (data.secure_url) {
           setCommentAttachment({ url: data.secure_url, name: file.name });
           setCommentUploading(false);
+          setTimeout(() => commentTextareaRef.current?.focus(), 50);
           return;
         }
       } catch (err) {
@@ -454,6 +621,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       reader.onloadend = () => {
         setCommentAttachment({ url: reader.result, name: file.name });
         setCommentUploading(false);
+        setTimeout(() => commentTextareaRef.current?.focus(), 50);
       };
       reader.onerror = () => {
         alert('Failed to read comment file.', 'error', 'Error');
@@ -464,6 +632,73 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       alert('Local comment file read failed: ' + err.message, 'error', 'Error');
       setCommentUploading(false);
     }
+  };
+
+  const handleCommentPaste = async (e) => {
+    const clipboardData = e.clipboardData;
+    if (!clipboardData || !clipboardData.items) return;
+    if (commentUploading) return;
+
+    // 1. Check for direct image blob (screenshots, snipping tool, etc.)
+    for (let i = 0; i < clipboardData.items.length; i++) {
+      const item = clipboardData.items[i];
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          const fileName = `pasted-image-${Date.now()}.${item.type.split('/')[1] || 'png'}`;
+          const renamedFile = new File([file], fileName, { type: file.type });
+          uploadCommentFile(renamedFile);
+        }
+        return;
+      }
+    }
+
+    // 2. Check for HTML content with <img> tag (browser "Copy Image")
+    const htmlData = clipboardData.getData('text/html');
+    if (htmlData) {
+      const imgMatch = htmlData.match(/<img[^>]+src=["']([^"']+)["']/i);
+      if (imgMatch && imgMatch[1]) {
+        const imgUrl = imgMatch[1];
+        // Skip data: URLs that are too short (likely broken)
+        if (imgUrl.startsWith('data:') && imgUrl.length < 50) return;
+        e.preventDefault();
+        setCommentUploading(true);
+        try {
+          const response = await fetch(imgUrl);
+          const blob = await response.blob();
+          if (blob && blob.size > 0 && blob.type.startsWith('image/')) {
+            const ext = blob.type.split('/')[1] || 'png';
+            const file = new File([blob], `pasted-image-${Date.now()}.${ext}`, { type: blob.type });
+            setCommentUploading(false);
+            uploadCommentFile(file);
+          } else {
+            // If fetch didn't return a valid image, just attach the URL directly
+            setCommentAttachment({ url: imgUrl, name: 'pasted-image.png' });
+            setCommentUploading(false);
+            setTimeout(() => commentTextareaRef.current?.focus(), 50);
+          }
+        } catch (err) {
+          console.warn('Failed to fetch pasted image URL, attaching as link:', err);
+          // If fetching fails (CORS), just attach the URL directly
+          setCommentAttachment({ url: imgUrl, name: 'pasted-image.png' });
+          setCommentUploading(false);
+          setTimeout(() => commentTextareaRef.current?.focus(), 50);
+        }
+        return;
+      }
+    }
+
+    // 3. Check for plain text URL that looks like an image
+    const textData = clipboardData.getData('text/plain');
+    if (textData && /^https?:\/\/.+\.(png|jpe?g|gif|webp|svg|bmp)(\?.*)?$/i.test(textData.trim())) {
+      e.preventDefault();
+      setCommentAttachment({ url: textData.trim(), name: 'pasted-image.png' });
+      setTimeout(() => commentTextareaRef.current?.focus(), 50);
+      return;
+    }
+
+    // 4. If none of the above, allow default text paste behavior
   };
 
   const parseCommentAttachment = (text) => {
@@ -538,6 +773,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   };
 
   const handleAddComment = async (parentId = null, text = null) => {
+    if (commentPostingRef.current || commentPosting) return;
     let commentText = text !== null ? text : newComment;
     if (!commentText.trim() && !commentAttachment) return;
     
@@ -545,10 +781,13 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       commentText = `${commentText} [ATTACHMENT:${commentAttachment.url}|${commentAttachment.name}]`.trim();
     }
 
+    commentPostingRef.current = true;
+    setCommentPosting(true);
     try {
       await api.post(`/tasks/${task.id}/comments`, {
         text: commentText,
         author: currentUser?.fullName || currentUser?.name || 'User',
+        authorId: currentUser?.id,
         parentId
       });
 
@@ -562,6 +801,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       }
     } catch (err) {
       console.error('Comment error:', err);
+    } finally {
+      commentPostingRef.current = false;
+      setCommentPosting(false);
     }
   };
 
@@ -575,6 +817,44 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     } catch (err) {
       console.error('React error:', err);
     }
+  };
+
+  const handleStartEditComment = (commentId, currentText) => {
+    const { cleanText } = parseCommentAttachment(currentText);
+    setEditingCommentId(commentId);
+    setEditingCommentText(cleanText);
+  };
+
+  const handleSaveEditComment = async (commentId, originalText) => {
+    if (editCommentSaving) return;
+    const attachmentMatch = originalText.match(/\[ATTACHMENT:[^\]]+\]/);
+    if (!editingCommentText.trim() && !attachmentMatch) return;
+    let updatedText = editingCommentText.trim();
+    if (attachmentMatch) {
+      updatedText = `${updatedText} ${attachmentMatch[0]}`.trim();
+    }
+    setEditCommentSaving(true);
+    try {
+      await api.put(`/comments/${commentId}`, { text: updatedText });
+      setEditingCommentId(null);
+      setEditingCommentText('');
+      fetchComments();
+    } catch (err) {
+      console.error('Edit comment error:', err);
+    } finally {
+      setEditCommentSaving(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    confirm('Are you sure you want to delete this comment?', async () => {
+      try {
+        await api.delete(`/comments/${commentId}`);
+        fetchComments();
+      } catch (err) {
+        console.error('Delete comment error:', err);
+      }
+    }, 'Delete Comment');
   };
   
   const handleAddWorkLog = async (isBilledArg = false) => {
@@ -601,8 +881,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         });
       }
       fetchWorkLogs();
+      const taskDate = task?.createdAt ? new Date(task.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
       setWorkLogForm({
-        logDate: new Date().toISOString().split('T')[0],
+        logDate: taskDate,
         hoursWorked: '',
         description: '',
         isBilled: false,
@@ -636,6 +917,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       alert("Subtask title is required", "warning", "Required");
       return;
     }
+    if (!newSubtaskAssignee?.trim()) {
+      alert("Assignee is required", "warning", "Required");
+      return;
+    }
     setSubtaskSaving(true);
     try {
       await api.post('/tasks', {
@@ -658,6 +943,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       setNewSubtaskAssignee('');
       setNewSubtaskDueDate('');
       setNewSubtaskPriority('Medium');
+      fetchSubtasks();
       if (onRefresh) {
         await onRefresh();
       }
@@ -674,6 +960,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     confirm("Are you sure you want to delete this subtask?", async () => {
       try {
         await api.delete(`/tasks/${subtaskId}`);
+        fetchSubtasks();
         if (onRefresh) {
           await onRefresh();
         }
@@ -693,6 +980,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const handleInlineSave = async (updatedForm) => {
+    if (!updatedForm.assignees || !updatedForm.assignees.trim()) {
+      alert("Assignee is required", "warning", "Validation Error");
+      setForm(form);
+      return;
+    }
     try {
       const { comments, taskList, ...payload } = updatedForm;
       await onSave(payload, true);
@@ -701,7 +993,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       setForm(form);
     }
   };
-  const submit = () => {
+  const submit = async () => {
+    if (taskSavingRef.current || taskSaving) return;
+    if (isEdit && !isChanged()) {
+      onClose();
+      return;
+    }
     const newErrors = {};
     const titleRegex = /^.{3,100}$/;
     
@@ -709,10 +1006,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       newErrors.taskNo = "Task ID is required";
     }
 
-    if (!form.title.trim()) {
+    if (!form.title || !form.title.trim()) {
       newErrors.title = "Title is required";
     } else if (!titleRegex.test(form.title)) {
       newErrors.title = "Title must be 3-100 characters";
+    }
+
+    if (!form.assignees || !form.assignees.trim()) {
+      newErrors.assignees = "Assignee is required";
     }
 
     if (form.isBillable && (form.approvedHours < 0 || form.actualHours < 0)) {
@@ -730,19 +1031,30 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
     // Sanitize data for API
     const { comments, taskList, ...payload } = form;
-    
-    onSave(payload);
+    if (!payload.id) {
+      payload.createdBy = currentUser?.fullName || `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim() || currentUser?.name || currentUser?.email || 'User';
+    }
+
+    taskSavingRef.current = true;
+    setTaskSaving(true);
+    try {
+      await onSave(payload);
+    } catch (err) {
+      console.error('Task save error:', err);
+    } finally {
+      taskSavingRef.current = false;
+      setTaskSaving(false);
+    }
   };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return '-';
-    return d.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
   };
 
   // SVGs for Fields
@@ -766,8 +1078,13 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   );
 
 
-  const getAttachmentMetadata = (url, index) => {
-    if (!url) return null;
+  const getAttachmentMetadata = (item, index) => {
+    if (!item) return null;
+    const parts = item.split('|');
+    const url = parts[0];
+    const encodedUploader = parts[1] || '';
+    const encodedTime = parts[2] || '';
+
     const isBase64 = url.startsWith('data:');
     let fileName = 'Attachment File';
     let isPdf = false;
@@ -783,10 +1100,57 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       fileName = `attachment_file.${ext}`;
     }
 
-    const uploadedBy = currentUser?.fullName || currentUser?.name || 'Rajesh Kumar';
-    const uploadedOn = task?.createdAt 
-      ? new Date(task.createdAt).toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-      : '12 May 2026, 10:30 AM';
+    // Attempt to find the uploader from comments or encoded metadata
+    const formatAttachmentDate = (dateStr) => {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      let hours = d.getHours();
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'pm' : 'am';
+      hours = hours % 12 || 12;
+      return `${day}/${month}/${year}, ${hours}:${minutes} ${ampm}`;
+    };
+
+    let uploaderName = encodedUploader;
+    let uploadedTime = encodedTime ? formatAttachmentDate(encodedTime) : '';
+    
+    if (!uploaderName || !uploadedTime) {
+      if (comments && comments.length > 0) {
+        const matchingComment = comments.find(c => c.text && c.text.includes(url));
+        if (matchingComment) {
+          if (!uploaderName) uploaderName = matchingComment.author;
+          if (!uploadedTime) {
+            uploadedTime = formatAttachmentDate(matchingComment.createdAt);
+          }
+        }
+      }
+    }
+
+    // Try to extract timestamp from Cloudinary version prefix if still not set
+    if (!uploadedTime && !isBase64) {
+      const versionMatch = url.match(/\/v([0-9]{10})\//);
+      if (versionMatch) {
+        const timestamp = parseInt(versionMatch[1], 10) * 1000;
+        if (!isNaN(timestamp)) {
+          uploadedTime = formatAttachmentDate(new Date(timestamp).toISOString());
+        }
+      }
+    }
+
+    if (!uploaderName) {
+      uploaderName = currentUser
+        ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
+        : 'Admin';
+    }
+
+    const uploadedBy = uploaderName;
+    const uploadedOn = uploadedTime || (task?.createdAt
+      ? formatAttachmentDate(task.createdAt)
+      : '12/05/2026, 10:30 am');
     
     const sizeInKb = (fileName.length * 17) % 950 + 50;
     const fileSize = sizeInKb > 500 ? `${(sizeInKb / 1000).toFixed(1)} MB` : `${sizeInKb} KB`;
@@ -820,6 +1184,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
   const renderComment = (c, isReply = false) => {
     const { cleanText, attachment } = parseCommentAttachment(c.text);
+    const isOwnComment = 
+      (c.authorId && currentUser?.id && c.authorId.toLowerCase() === currentUser.id.toLowerCase()) ||
+      (c.author && (currentUser?.fullName || currentUser?.name) && c.author.trim().toLowerCase() === (currentUser?.fullName || currentUser?.name).trim().toLowerCase());
+
     return (
       <div key={c.id} className={`saas-comment-card ${isReply ? 'is-reply' : ''}`}>
         <div className="comment-header">
@@ -827,35 +1195,161 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             {initials(c.author)}
           </div>
           <div className="comment-content-block" style={{ width: '100%' }}>
-            <div className="comment-author-row">
-              <span className="comment-author-name">
-                {c.author}
-                {isReply && <span style={{ color: '#94a3b8', fontSize: '0.7rem', fontWeight: '500', marginLeft: '0.4rem', fontStyle: 'italic' }}>replied</span>}
-              </span>
-              <span className="comment-post-time">
-                {new Date(c.createdAt).toLocaleDateString('en-GB', {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric'
-                })}, {new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
+            <div className="comment-author-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span className="comment-author-name">
+                  {c.author}
+                  {isReply && <span style={{ color: '#94a3b8', fontSize: '0.7rem', fontWeight: '500', marginLeft: '0.4rem', fontStyle: 'italic' }}>replied</span>}
+                </span>
+                <span className="comment-post-time">
+                  {new Date(c.createdAt).toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                  })}, {new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              {isOwnComment && (
+                <div className="comment-meta-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <button
+                    type="button"
+                    title="Edit Comment"
+                    onClick={() => handleStartEditComment(c.id, c.text)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: '2px',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'color 0.15s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#2563eb'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
+                  >
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                      <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    title="Delete Comment"
+                    onClick={() => handleDeleteComment(c.id)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: '2px',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'color 0.15s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
+                  >
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="comment-text-body">
-              {cleanText.split('\n').map((line, i) => {
-                const parts = line.split(/(@[a-zA-Z0-9_-]+)/g);
-                return (
-                  <div key={i}>
-                    {parts.map((part, idx) => {
-                      if (part.startsWith('@') && part.length > 1) {
-                        return <strong key={idx} style={{ fontWeight: '700' }}>{part}</strong>;
-                      }
-                      return part;
-                    })}
-                  </div>
-                );
-              })}
-              {attachment && renderCommentAttachmentPill(attachment)}
-            </div>
+            {editingCommentId === c.id ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.4rem', marginBottom: '0.4rem' }}>
+                <textarea
+                  value={editingCommentText}
+                  onChange={e => setEditingCommentText(e.target.value)}
+                  className="reply-inline-input"
+                  disabled={editCommentSaving}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    minHeight: '50px',
+                    padding: '0.4rem 0.6rem',
+                    fontSize: '0.85rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    resize: 'vertical',
+                    opacity: editCommentSaving ? 0.6 : 1,
+                    pointerEvents: editCommentSaving ? 'none' : 'auto'
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSaveEditComment(c.id, c.text);
+                    }
+                  }}
+                />
+                <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => {
+                      setEditingCommentId(null);
+                      setEditingCommentText('');
+                    }}
+                    disabled={editCommentSaving}
+                    style={{
+                      padding: '0.2rem 0.5rem',
+                      fontSize: '0.72rem',
+                      borderRadius: '4px',
+                      border: '1px solid #cbd5e1',
+                      background: 'white',
+                      cursor: editCommentSaving ? 'not-allowed' : 'pointer',
+                      fontWeight: '600',
+                      color: '#475569',
+                      opacity: editCommentSaving ? 0.5 : 1
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleSaveEditComment(c.id, c.text)}
+                    disabled={editCommentSaving}
+                    style={{
+                      padding: '0.2rem 0.5rem',
+                      fontSize: '0.72rem',
+                      borderRadius: '4px',
+                      border: 'none',
+                      background: '#2563eb',
+                      color: 'white',
+                      cursor: editCommentSaving ? 'not-allowed' : 'pointer',
+                      fontWeight: '600',
+                      opacity: editCommentSaving ? 0.7 : 1,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.3rem'
+                    }}
+                  >
+                    {editCommentSaving && (
+                      <span style={{ width: '12px', height: '12px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.6s linear infinite' }} />
+                    )}
+                    {editCommentSaving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="comment-text-body">
+                {cleanText.split('\n').map((line, i) => {
+                  const parts = line.split(/(@[a-zA-Z0-9_-]+)/g);
+                  return (
+                    <div key={i}>
+                      {parts.map((part, idx) => {
+                        if (part.startsWith('@') && part.length > 1) {
+                          return <strong key={idx} style={{ fontWeight: '700' }}>{part}</strong>;
+                        }
+                        return part;
+                      })}
+                    </div>
+                  );
+                })}
+                {attachment && renderCommentAttachmentPill(attachment)}
+              </div>
+            )}
           <div className="comment-actions-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '0.25rem', position: 'relative' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', fontWeight: '600', color: '#64748b' }}>
               <div 
@@ -939,15 +1433,25 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       </div>
 
       {replyingTo === c.id && (
-        <div className="comment-reply-input-wrapper animate-fade-in">
+        <div className="comment-reply-input-wrapper animate-fade-in" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '0.5rem' }}>
           <input 
-            placeholder="Write a reply..." 
+            placeholder={commentPosting ? "Posting..." : "Write a reply..."} 
             value={replyText} 
             onChange={e => setReplyText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleAddComment(c.id, replyText); }}
             autoFocus
             className="reply-inline-input"
+            style={{ flex: 1 }}
+            disabled={commentPosting}
           />
+          <button 
+            type="button" 
+            className="reply-submit-btn"
+            onClick={() => handleAddComment(c.id, replyText)}
+            disabled={!replyText.trim() || commentPosting}
+          >
+            Reply
+          </button>
         </div>
       )}
 
@@ -968,7 +1472,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           <button className="saas-back-btn" onClick={onClose}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
           </button>
-          <span className="saas-breadcrumb-active">Task Details - {getDisplayId(form)}</span>
+          <span className="saas-breadcrumb-active">{getDisplayId(form)}</span>
         </div>
         
         <div className="saas-nav-right" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -980,10 +1484,24 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           {isEdit && canDelete && (
             <button
               className="saas-btn-nav saas-btn-danger"
-              onClick={() => confirm('Are you sure you want to delete this task?', () => { onDelete(task.id); onClose(); }, 'Delete Task')}
+              disabled={isDeleting}
+              style={{ opacity: isDeleting ? 0.7 : 1, cursor: isDeleting ? 'not-allowed' : 'pointer' }}
+              onClick={() => confirm('Are you sure you want to delete this task?', async () => {
+                setIsDeleting(true);
+                try { await onDelete(task.id); onClose(); } finally { setIsDeleting(false); }
+              }, 'Delete Task')}
             >
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-              <span className="saas-btn-delete-text">Delete</span>
+              {isDeleting ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}><circle cx="12" cy="12" r="10" strokeOpacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" /></svg>
+                  <span className="saas-btn-delete-text">Deleting...</span>
+                </span>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  <span className="saas-btn-delete-text">Delete</span>
+                </>
+              )}
             </button>
           )}
 
@@ -995,14 +1513,20 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           <button
             className="saas-btn-nav saas-btn-primary"
             onClick={submit}
-            disabled={isEdit && !isChanged()}
+            disabled={taskSaving}
             style={{
-              opacity: (isEdit && !isChanged()) ? 0.6 : 1,
-              cursor: (isEdit && !isChanged()) ? 'not-allowed' : 'pointer'
+              cursor: taskSaving ? 'not-allowed' : 'pointer',
+              opacity: taskSaving ? 0.7 : 1
             }}
           >
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            {isEdit ? 'Save' : 'Create Task'}
+            {taskSaving ? (
+              <span>{isEdit ? 'Saving...' : 'Creating...'}</span>
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                {isEdit ? 'Save' : 'Create Task'}
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -1017,7 +1541,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 <span style={{ fontWeight: 600 }}>Subtask of:</span>
                 <button 
                   onClick={() => {
-                    const parent = tasks.find(t => t.id === task.parentId);
+                    const parent = parentTask || tasks.find(t => t.id === task.parentId);
                     if (parent && onSelectTask) onSelectTask(parent);
                   }}
                   style={{
@@ -1031,21 +1555,44 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     fontSize: '0.82rem'
                   }}
                 >
-                  {tasks.find(t => t.id === task.parentId)?.title || 'Parent Task'}
+                  {parentTask?.title || tasks.find(t => t.id === task.parentId)?.title || 'Parent Task'}
                 </button>
               </div>
             )}
             {isEditing ? (
-              <input 
-                type="text" 
-                value={form.title} 
-                onChange={e => set('title', e.target.value)} 
-                className="saas-title-input"
-                placeholder="Task Title"
-                style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem', fontSize: '1.75rem', fontWeight: '800' }}
-              />
+              <>
+                <textarea
+                  value={form.title}
+                  onChange={e => { set('title', e.target.value.slice(0, 100)); if (errors.title) setErrors(prev => { const { title: _, ...rest } = prev; return rest; }); }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      submit();
+                    }
+                  }}
+                  className="saas-title-input"
+                  placeholder="Task Title *"
+                  maxLength={100}
+                  rows={2}
+                  style={{
+                    border: 'none',
+                    borderBottom: errors.title ? '2px solid #ef4444' : '1px solid #e2e8f0',
+                    paddingBottom: '0.5rem',
+                    fontSize: '1.15rem',
+                    fontWeight: '600',
+                    width: '100%',
+                    outline: 'none',
+                    resize: 'none',
+                    fontFamily: 'inherit',
+                    lineHeight: '1.4',
+                    background: 'transparent',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {errors.title && <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600, marginTop: '2px', display: 'block' }}>{errors.title}</span>}
+              </>
             ) : (
-              <h1 className="saas-detail-title" style={{ fontSize: '1.75rem', fontWeight: '800', margin: 0 }}>{form.title || 'Untitled Task'}</h1>
+              <h1 className="saas-detail-title" style={{ fontSize: '1.15rem', fontWeight: '600', margin: 0, lineHeight: '1.4', wordBreak: 'break-word' }}>{form.title || 'Untitled Task'}</h1>
             )}
           </div>
 
@@ -1057,14 +1604,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             >
               General
             </button>
-            {task?.parentId && (
-              <button 
-                className={`saas-tab-header-btn ${activeTab === 'worklog' ? 'active' : ''}`}
-                onClick={() => setActiveTab('worklog')}
-              >
-                Work Log
-              </button>
-            )}
+            <button 
+              className={`saas-tab-header-btn ${activeTab === 'worklog' ? 'active' : ''}`}
+              onClick={() => setActiveTab('worklog')}
+            >
+              Work Log
+            </button>
             {currentUser?.role?.toLowerCase() === 'admin' && !task?.parentId && (
               <button 
                 className={`saas-tab-header-btn ${activeTab === 'billing' ? 'active' : ''}`}
@@ -1073,20 +1618,18 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 Billing
               </button>
             )}
-            {!task?.parentId && (
-              <button 
-                className={`saas-tab-header-btn ${activeTab === 'attachments' ? 'active' : ''}`}
-                onClick={() => setActiveTab('attachments')}
-              >
-                Attachments
-              </button>
-            )}
+            <button 
+              className={`saas-tab-header-btn ${activeTab === 'attachments' ? 'active' : ''}`}
+              onClick={() => setActiveTab('attachments')}
+            >
+              Attachments ({form.attachments ? form.attachments.split(',').filter(Boolean).length : 0})
+            </button>
             {isEdit && !task?.parentId && (
               <button 
                 className={`saas-tab-header-btn ${activeTab === 'subtasks' ? 'active' : ''}`}
                 onClick={() => setActiveTab('subtasks')}
               >
-                Subtasks ({tasks.filter(t => t.parentId === task.id).length})
+                Subtasks ({subtasks.length})
               </button>
             )}
             {currentUser?.role?.toLowerCase() === 'admin' && !task?.parentId && (
@@ -1114,16 +1657,16 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     </select>
                   </span>
                   
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconAssignee /> Assignee</span>
+                  <span className="saas-meta-label" style={{ color: errors.assignees ? '#ef4444' : '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconAssignee /> Assignee *</span>
                   <span className="saas-meta-value">
-                    <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
-                      <option value="">Empty</option>
-                      {(form.projectName && projects.find(p => p.name === form.projectName)?.members ? projects.find(p => p.name === form.projectName).members.split(',').map(m => m.trim()).filter(Boolean) : users.map(u => u.id)).map(uId => {
-                        const uObj = users.find(u => u.id === uId) || {};
-                        const displayName = uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown';
-                        return <option key={uId} value={uId}>{displayName}</option>;
+                    <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (errors.assignees) setErrors(prev => { const { assignees: _, ...rest } = prev; return rest; }); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: errors.assignees ? '1px solid #ef4444' : '1px solid transparent', borderRadius: '4px', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
+                      <option value="">Select Assignee...</option>
+                      {finalUsers.map(u => {
+                        const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
+                        return <option key={u.id} value={u.id}>{displayName}</option>;
                       })}
                     </select>
+                    {errors.assignees && <span style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600, marginTop: '2px', display: 'block' }}>{errors.assignees}</span>}
                   </span>
                 </div>
 
@@ -1133,27 +1676,40 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <span className="saas-meta-value">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Due:</span>
-                      <input 
-                        type="date" 
-                        value={form.dueDate ? new Date(form.dueDate).toISOString().split('T')[0] : ''} 
-                        onChange={e => set('dueDate', e.target.value)} 
-                        style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '100px', cursor: 'pointer', fontWeight: 600 }} 
-                        title="Due Date"
-                      />
+                      <div className="saas-date-input-wrapper">
+                        <input 
+                          type="date" 
+                          className="saas-detail-date-input"
+                          value={form.dueDate ? new Date(form.dueDate).toISOString().split('T')[0] : ''} 
+                          onChange={e => set('dueDate', e.target.value)} 
+                          style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '120px', cursor: 'pointer', fontWeight: 600 }} 
+                          title="Due Date"
+                        />
+                        <span className={`saas-date-display-overlay${!form.dueDate ? ' saas-date-empty' : ''}`}>
+                          {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'dd/mm/yyyy'}
+                        </span>
+                      </div>
                       
                       <span className="saas-date-arrow" style={{ color: '#94a3b8', fontSize: '0.8rem' }}>→</span>
 
                       <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Delivery:</span>
-                      <input 
-                        type="date" 
-                        value={form.deliveredDate ? new Date(form.deliveredDate).toISOString().split('T')[0] : ''} 
-                        onChange={e => set('deliveredDate', e.target.value)} 
-                        style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '100px', cursor: 'pointer', fontWeight: 600 }} 
-                        title="Delivery Date"
-                      />
+                      <div className="saas-date-input-wrapper">
+                        <input 
+                          type="date" 
+                          className="saas-detail-date-input"
+                          value={form.deliveredDate ? new Date(form.deliveredDate).toISOString().split('T')[0] : ''} 
+                          onChange={e => set('deliveredDate', e.target.value)} 
+                          style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '120px', cursor: 'pointer', fontWeight: 600 }} 
+                          title="Delivery Date"
+                        />
+                        <span className={`saas-date-display-overlay${!form.deliveredDate ? ' saas-date-empty' : ''}`}>
+                          {form.deliveredDate ? new Date(form.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'dd/mm/yyyy'}
+                        </span>
+                      </div>
                     </div>
                   </span>
                 </div>
+
 
                 {/* Row 3: Priority */}
                 <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
@@ -1189,15 +1745,21 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               </button>
               <button 
                 className="saas-btn-nav saas-btn-primary" 
-                onClick={submit} 
-                disabled={isEdit && !isChanged()}
+                onClick={submit}
+                disabled={taskSaving}
                 style={{ 
-                  opacity: (isEdit && !isChanged()) ? 0.6 : 1, 
-                  cursor: (isEdit && !isChanged()) ? 'not-allowed' : 'pointer' 
+                  cursor: taskSaving ? 'not-allowed' : 'pointer',
+                  opacity: taskSaving ? 0.7 : 1
                 }}
               >
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                {isEdit ? 'Save' : 'Create Task'}
+                {taskSaving ? (
+                  <span>{isEdit ? 'Saving...' : 'Creating...'}</span>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    {isEdit ? 'Save' : 'Create Task'}
+                  </>
+                )}
               </button>
             </div>
           )}
@@ -1241,8 +1803,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                 isBillable: false,
                                 approvedHours: 0,
                                 actualHours: 0,
-                                approvedHoursStr: '0.0',
-                                actualHoursStr: '0.0'
+                                approvedHoursStr: '0',
+                                actualHoursStr: '0'
                               }));
                               setErrors(errs => {
                                 const { billing, ...rest } = errs;
@@ -1260,33 +1822,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
                   {form.isBillable && (
                     <>
-                      {/* Billable Amount */}
-                      <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
-                        <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
-                          Billable Amount ($)
-                        </label>
-                        <div>
-                          {isEditing ? (
-                            <input 
-                              type="number" 
-                              value={form.billableAmount !== undefined && form.billableAmount !== null ? form.billableAmount : ''}
-                              onChange={e => {
-                                const val = e.target.value;
-                                setForm(f => ({
-                                  ...f,
-                                  billableAmount: val === '' ? null : parseFloat(val)
-                                }));
-                              }}
-                              className="saas-grid-input"
-                              placeholder="e.g. 500"
-                            />
-                          ) : (
-                            <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
-                              ${Number(form.billableAmount || 0).toFixed(2)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+
 
                       {/* Billable Hours */}
                       <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
@@ -1297,7 +1833,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                           {isEditing ? (
                             <input 
                               type="text" 
-                              value={form.approvedHoursStr !== undefined ? form.approvedHoursStr : (form.approvedHours !== undefined && form.approvedHours !== null ? Number(form.approvedHours).toFixed(1) : '0.0')}
+                              value={form.approvedHoursStr !== undefined ? form.approvedHoursStr : (form.approvedHours !== undefined && form.approvedHours !== null ? String(form.approvedHours) : '0')}
                               onChange={e => {
                                 const val = e.target.value;
                                 if (val === '' || /^\d*\.?\d*$/.test(val)) {
@@ -1309,11 +1845,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                 }
                               }}
                               className="saas-grid-input"
-                              placeholder="e.g. 40.0"
+                              placeholder="e.g. 40"
                             />
                           ) : (
                             <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
-                              {Number(form.approvedHours || 0).toFixed(1)}
+                              {String(form.approvedHours || 0)}
                             </span>
                           )}
                         </div>
@@ -1326,7 +1862,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         </label>
                         <div>
                           <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
-                            {Number(form.actualHours || 0).toFixed(1)}
+                            {String(form.actualHours || 0)}
                           </span>
                         </div>
                       </div>
@@ -1343,7 +1879,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                             fontWeight: '500', 
                             color: '#0f172a'
                           }}>
-                            {Number(Math.max(0, (form.approvedHours || 0) - (form.actualHours || 0))).toFixed(1)}
+                            {String(Math.max(0, (form.approvedHours || 0) - (form.actualHours || 0)))}
                             {((form.approvedHours || 0) - (form.actualHours || 0)) < 0 && ' (Over Budget)'}
                           </span>
                         </div>
@@ -1361,7 +1897,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             )}
 
 
-            {activeTab === 'worklog' && task?.parentId && (
+            {activeTab === 'worklog' && (
               <div className="saas-details-grid animate-fade-in" style={{ display: 'block' }}>
                 {!isEdit ? (
                   <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
@@ -1375,7 +1911,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                           <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Date</label>
-                          <input type="date" className="saas-input" value={workLogForm.logDate} onChange={e => setWorkLogForm({...workLogForm, logDate: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                          <input type="date" className="saas-input" value={workLogForm.logDate} disabled={true} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#e2e8f0', color: '#64748b', cursor: 'not-allowed' }} />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                           <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Worked Hrs</label>
@@ -1389,7 +1925,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         {workLogForm.id && (
                           <button
                             className="saas-btn-secondary"
-                            onClick={() => setWorkLogForm({ logDate: new Date().toISOString().split('T')[0], hoursWorked: '', description: '', isBilled: false, id: null })}
+                            onClick={() => {
+                              const taskDate = task?.createdAt ? new Date(task.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                              setWorkLogForm({ logDate: taskDate, hoursWorked: '', description: '', isBilled: false, id: null });
+                            }}
                             disabled={workLogSaving}
                             style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}
                           >
@@ -1402,27 +1941,27 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     <div>
                       <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.95rem', fontWeight: '700' }}>Recent Work Logs</h4>
                       {workLogs.filter(log => !log.isBilled).length === 0 ? (
-                        <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No work logs found for this subtask.</p>
+                        <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No work logs found for this task.</p>
                       ) : (
                         <div className="table-responsive">
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                             <thead>
-                              <tr style={{ background: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
-                                <th style={{ padding: '0.75rem', fontWeight: 600 }}>Date</th>
-                                <th style={{ padding: '0.75rem', fontWeight: 600 }}>User</th>
-                                <th style={{ padding: '0.75rem', fontWeight: 600 }}>Worked Hrs</th>
-                                <th style={{ padding: '0.75rem', fontWeight: 600 }}>Action</th>
+                              <tr style={{ background: '#f8fafc', color: '#64748b', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Date</th>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>User</th>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Worked Hrs</th>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
                               </tr>
                             </thead>
                             <tbody>
                               {workLogs.filter(log => !log.isBilled).map(log => (
-                                <tr key={log.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                  <td style={{ padding: '0.75rem' }}>{formatDate(log.logDate)}</td>
-                                  <td style={{ padding: '0.75rem' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
-                                  <td style={{ padding: '0.75rem', fontWeight: 600, color: '#0f172a' }}>{log.hoursWorked}h</td>
-                                  <td style={{ padding: '0.75rem' }}>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                      <button title="Edit" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer' }} onClick={() => {
+                                <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
+                                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{formatDate(log.logDate)}</td>
+                                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
+                                  <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{log.hoursWorked}h</td>
+                                  <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                                    <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                      <button title="Edit" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', background: 'white', cursor: 'pointer' }} onClick={() => {
                                         setWorkLogForm({
                                           id: log.id,
                                           logDate: new Date(log.logDate).toISOString().split('T')[0],
@@ -1431,9 +1970,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                           isBilled: false
                                         });
                                       }}>
-                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                       </button>
-                                      <button title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
+                                      <button title="Delete" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', background: '#fef2f2', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
                                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                       </button>
                                     </div>
@@ -1464,11 +2003,17 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                       <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Date</label>
-                      <input type="date" className="saas-input" value={workLogForm.logDate} onChange={e => setWorkLogForm({...workLogForm, logDate: e.target.value})} style={{ width: '100%', boxSizing: 'border-box' }} />
+                      <input 
+                        type="date" 
+                        className="saas-input" 
+                        value={workLogForm.logDate} 
+                        onChange={e => setWorkLogForm({...workLogForm, logDate: e.target.value})} 
+                        style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} 
+                      />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                       <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Hours</label>
-                      <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} style={{ width: '100%', boxSizing: 'border-box' }} />
+                      <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
                     </div>
                   </div>
                   <div style={{ marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
@@ -1476,15 +2021,18 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     <input type="text" className="saas-input" placeholder="What did you work on?" value={workLogForm.description} onChange={e => setWorkLogForm({...workLogForm, description: e.target.value})} style={{ width: '100%', boxSizing: 'border-box' }} />
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="saas-btn-primary" onClick={() => handleAddWorkLog(true)} disabled={workLogSaving}>
+                    <button className="saas-btn-primary" onClick={() => handleAddWorkLog(true)} disabled={workLogSaving} style={{ padding: '0.5rem 1rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
                       {workLogSaving ? 'Saving...' : (workLogForm.id ? 'Update Billing Log' : 'Add Billing Log')}
                     </button>
                     {workLogForm.id && (
                       <button
                         className="saas-btn-secondary"
-                        onClick={() => setWorkLogForm({ logDate: new Date().toISOString().split('T')[0], hoursWorked: '', description: '', isBilled: false, id: null })}
+                        onClick={() => {
+                          const taskDate = task?.createdAt ? new Date(task.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                          setWorkLogForm({ logDate: taskDate, hoursWorked: '', description: '', isBilled: false, id: null });
+                        }}
                         disabled={workLogSaving}
-                        style={{ padding: '0.5rem 1rem' }}
+                        style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}
                       >
                         Cancel Edit
                       </button>
@@ -1500,24 +2048,24 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     <div className="table-responsive">
 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                       <thead>
-                        <tr style={{ background: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
-                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Date</th>
-                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>User</th>
-                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Billed Hours</th>
-                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Description</th>
-                          <th style={{ padding: '0.75rem', fontWeight: 600 }}>Action</th>
+                        <tr style={{ background: '#f8fafc', color: '#64748b', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Date</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>User</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Billed Hours</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Description</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {workLogs.filter(log => log.isBilled).map(log => (
-                          <tr key={log.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                            <td style={{ padding: '0.75rem' }}>{formatDate(log.logDate)}</td>
-                            <td style={{ padding: '0.75rem' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
-                            <td style={{ padding: '0.75rem', fontWeight: 600, color: '#0f172a' }}>{log.hoursWorked}h</td>
-                            <td style={{ padding: '0.75rem', color: '#475569' }}>{log.description || '-'}</td>
-                            <td style={{ padding: '0.75rem' }}>
-                              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button title="Edit" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer' }} onClick={() => {
+                          <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
+                            <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{formatDate(log.logDate)}</td>
+                            <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
+                            <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{log.hoursWorked}h</td>
+                            <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.description || '-'}</td>
+                            <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                <button title="Edit" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', background: 'white', cursor: 'pointer' }} onClick={() => {
                                   setWorkLogForm({
                                     id: log.id,
                                     logDate: new Date(log.logDate).toISOString().split('T')[0],
@@ -1526,9 +2074,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                     isBilled: true
                                   });
                                 }}>
-                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 </button>
-                                <button title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
+                                <button title="Delete" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', background: '#fef2f2', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
                                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                 </button>
                               </div>
@@ -1585,11 +2133,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                        <th style={{ width: '32%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Name</th>
-                        <th style={{ width: '22%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded By</th>
-                        <th style={{ width: '22%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded On</th>
-                        <th style={{ width: '12%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Size</th>
-                        <th style={{ width: '12%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
+                        <th style={{ width: '28%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Name</th>
+                        <th style={{ width: '18%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded By</th>
+                        <th style={{ width: '28%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded On</th>
+                        <th style={{ width: '11%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Size</th>
+                        <th style={{ width: '15%', padding: '0.85rem 0.5rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1600,9 +2148,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                           </td>
                         </tr>
                       ) : (
-                        form.attachments.split(',').filter(Boolean).map((url, index) => {
-                          const meta = getAttachmentMetadata(url, index);
+                        form.attachments.split(',').filter(Boolean).map((item, index) => {
+                          const meta = getAttachmentMetadata(item, index);
                           if (!meta) return null;
+                          const url = meta.url;
                           return (
                             <tr key={url} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
                               
@@ -1652,15 +2201,29 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                               </td>
 
                               {/* Actions */}
-                              <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                              <td style={{ padding: '0.85rem 0.5rem', textAlign: 'right' }}>
                                 <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                                   
                                   {/* Download Icon Button */}
-                                  <a 
-                                    href={meta.url} 
-                                    download 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
+                                  <button 
+                                    type="button"
+                                    onClick={async () => {
+                                      try {
+                                        const response = await fetch(meta.url);
+                                        const blob = await response.blob();
+                                        const blobUrl = window.URL.createObjectURL(blob);
+                                        const link = document.createElement('a');
+                                        link.href = blobUrl;
+                                        link.download = meta.fileName || 'download';
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                        window.URL.revokeObjectURL(blobUrl);
+                                      } catch (err) {
+                                        // Fallback: open in new tab if fetch fails
+                                        window.open(meta.url, '_blank');
+                                      }
+                                    }}
                                     style={{
                                       width: '28px',
                                       height: '28px',
@@ -1671,14 +2234,13 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                       justifyContent: 'center',
                                       color: '#64748b',
                                       background: 'white',
-                                      cursor: 'pointer',
-                                      textDecoration: 'none'
+                                      cursor: 'pointer'
                                     }}
                                     title="Download File"
                                     className="action-icon-btn"
                                   >
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                  </a>
+                                  </button>
 
                                   {/* Delete/Action Button */}
                                   {(isEditing || canEdit) && (
@@ -1687,16 +2249,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                       onClick={async () => {
                                         confirm('Are you sure you want to remove this attachment?', async () => {
                                           const current = form.attachments ? form.attachments.split(',') : [];
-                                          const filtered = current.filter(u => u !== url).join(',');
+                                          const filtered = current.filter(u => u !== item).join(',');
                                           
-                                          if (isEditing) {
-                                            set('attachments', filtered);
-                                          } else {
+                                          set('attachments', filtered);
+                                          if (isEdit) {
                                             try {
                                               const updatedTask = { ...form, attachments: filtered };
                                               const { comments, taskList, ...payload } = updatedTask;
-                                              await onSave(payload);
-                                              setForm(f => ({ ...f, attachments: filtered }));
+                                              await onSave(payload, true);
                                             } catch (error) {
                                               console.error('Failed to remove attachment:', error);
                                               alert('Failed to remove attachment: ' + error.message, 'error', 'Error');
@@ -1757,7 +2317,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             {activeTab === 'subtasks' && isEdit && (
               <div className="saas-subtasks-pane animate-fade-in" style={{ padding: '0.25rem 0' }}>
                 <h2 style={{ fontSize: '1.15rem', fontWeight: '700', margin: '0 0 1.5rem 0', color: '#0f172a' }}>
-                  Subtasks ({tasks.filter(t => t.parentId === task.id).length})
+                  Subtasks ({subtasks.length})
                 </h2>
                 
                 {/* Form to add subtask */}
@@ -1785,7 +2345,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                       >
                         <option value="">Unassigned</option>
-                        {users.map(u => {
+                        {filteredUsers.map(u => {
                           const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown';
                           return <option key={u.id} value={u.id}>{n}</option>;
                         })}
@@ -1842,14 +2402,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         </tr>
                       </thead>
                       <tbody>
-                        {tasks.filter(t => t.parentId === task.id).length === 0 ? (
+                        {subtasks.length === 0 ? (
                           <tr>
                             <td colSpan="6" style={{ padding: '3rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem' }}>
                               No subtasks created for this task yet.
                             </td>
                           </tr>
                         ) : (
-                          tasks.filter(t => t.parentId === task.id).map(sub => {
+                          subtasks.map(sub => {
                             const subAssigneeObj = users.find(u => u.id === sub.assignees);
                             const subAssigneeName = subAssigneeObj ? (subAssigneeObj.fullName || `${subAssigneeObj.firstName || ''} ${subAssigneeObj.lastName || ''}`.trim() || 'Unknown') : 'Unassigned';
                             const subRelDate = formatRelativeDueDate(sub.dueDate);
@@ -1905,13 +2465,25 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                   </span>
                                 </td>
                                 <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
-                                  <button 
-                                    title="Delete Subtask" 
-                                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }} 
-                                    onClick={() => handleDeleteSubtaskDrawer(sub.id)}
-                                  >
-                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                  </button>
+                                  <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                    <button
+                                      title="Edit Subtask"
+                                      style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', background: 'white', cursor: 'pointer' }}
+                                      onClick={() => handleOpenSubtask(sub)}
+                                    >
+                                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                      </svg>
+                                    </button>
+                                    <button 
+                                      title="Delete Subtask" 
+                                      style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', background: '#fef2f2', cursor: 'pointer' }} 
+                                      onClick={() => handleDeleteSubtaskDrawer(sub.id)}
+                                    >
+                                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -1934,7 +2506,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           </div>
 
           <div className="comments-feed-container">
-            {commentTree.length === 0 ? (
+            {!isEdit ? (
+              <div className="no-comments-placeholder">Save the task first to start commenting.</div>
+            ) : commentTree.length === 0 ? (
               <div className="no-comments-placeholder">No comments yet. Start the conversation!</div>
             ) : (
               commentTree.map(c => renderComment(c))
@@ -1977,8 +2551,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             )}
             <div className="comment-box-flex-row">
               <div className="comment-input-field-wrapper" style={{ position: 'relative' }}>
-                <input 
-                  type="text" 
+                <textarea 
+                  ref={commentTextareaRef}
                   value={newComment} 
                   onChange={e => {
                     const val = e.target.value;
@@ -2009,12 +2583,27 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       }
                       return;
                     }
-                    if (e.key === 'Enter') handleAddComment(); 
+                    if (e.key === 'Enter' && !e.shiftKey) { 
+                      e.preventDefault();
+                      if (!commentUploading && !commentPosting) {
+                        handleAddComment(); 
+                      }
+                    } 
                   }} 
-                  placeholder={commentUploading ? "Uploading..." : "Write a comment... (Type @ to mention)"}
+                  onPaste={handleCommentPaste}
+                  placeholder={!isEdit ? "Save the task first to comment..." : commentUploading ? "Uploading..." : commentPosting ? "Posting..." : "Write a comment..."}
                   className="comment-main-text-input"
-                  style={{ paddingRight: '4rem' }}
-                  disabled={commentUploading}
+                  style={{
+                    paddingRight: '4.5rem',
+                    resize: 'none',
+                    height: '38px',
+                    minHeight: '38px',
+                    boxSizing: 'border-box',
+                    paddingTop: '8px',
+                    paddingBottom: '8px',
+                    borderRadius: '20px'
+                  }}
+                  disabled={!isEdit || commentUploading || commentPosting}
                 />
                 
                 {mentionState?.isOpen && (
@@ -2068,12 +2657,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     )}
                   </div>
                 )}
-                <div style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                <div style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <span 
                     className="comment-emoji-icon" 
                     title="Insert Emoji"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    style={{ cursor: 'pointer', userSelect: 'none', opacity: 0.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                    onClick={() => isEdit && !commentPosting && !commentUploading && setShowEmojiPicker(!showEmojiPicker)}
+                    style={{ cursor: (!isEdit || commentPosting || commentUploading) ? 'not-allowed' : 'pointer', userSelect: 'none', opacity: (!isEdit || commentPosting || commentUploading) ? 0.3 : 0.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
                   </span>
@@ -2082,8 +2671,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <span 
                     className="comment-paperclip-icon" 
                     title="Attach File to Comment"
-                    onClick={() => commentFileInputRef.current && commentFileInputRef.current.click()}
-                    style={{ cursor: 'pointer', userSelect: 'none', opacity: 0.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                    onClick={() => isEdit && !commentPosting && !commentUploading && commentFileInputRef.current && commentFileInputRef.current.click()}
+                    style={{ cursor: (!isEdit || commentPosting || commentUploading) ? 'not-allowed' : 'pointer', userSelect: 'none', opacity: (!isEdit || commentPosting || commentUploading) ? 0.3 : 0.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                   </span>
@@ -2123,7 +2712,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 type="button"
                 className="comment-submit-paper-btn" 
                 onClick={() => handleAddComment()} 
-                disabled={(!newComment.trim() && !commentAttachment) || commentUploading}
+                disabled={!isEdit || (!newComment.trim() && !commentAttachment) || commentUploading || commentPosting}
               >
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
               </button>
@@ -2532,7 +3121,7 @@ function ScheduleColumn({ title, count, tasks, onDragStart, onDrop, onDragOver, 
 // ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
 //  MAIN TASKS COMPONENT
 // ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
-export default function Tasks({ user, initialSelectedTask, onClearInitialTask, onDetailViewChange, initialAssigneeFilter, onClearAssigneeFilter }) {
+export default function Tasks({ user, initialSelectedTask, onClearInitialTask, onDetailViewChange, initialAssigneeFilter, onClearAssigneeFilter, initialTaskId, onTaskSelect }) {
   const isTeamLeadOrAdmin = user?.role?.toLowerCase() === 'team lead' || user?.role?.toLowerCase() === 'admin';
   const [tasks, setTasks]       = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -2591,10 +3180,25 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       setDrawerTask(initialSelectedTask);
       setDrawerOpen(true);
       setTaskDetailMode(false);
+      if (onTaskSelect) onTaskSelect(getDisplayId(initialSelectedTask));
       if (onClearInitialTask) onClearInitialTask();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSelectedTask]);
+
+  // Auto-open task from URL deep-link (e.g. /tasks/taskId)
+  const initialTaskIdHandled = useRef(false);
+  useEffect(() => {
+    if (initialTaskId && !initialTaskIdHandled.current && tasks.length > 0) {
+      initialTaskIdHandled.current = true;
+      const task = tasks.find(t => getDisplayId(t) === initialTaskId);
+      if (task) {
+        setDrawerTask(task);
+        setDrawerOpen(true);
+        setTaskDetailMode(false);
+      }
+    }
+  }, [initialTaskId, tasks]);
 
   useEffect(() => {
     if (onDetailViewChange) {
@@ -2674,8 +3278,16 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   };
 
   const submitInlineAdd = async () => {
+    if (isSaving) return;
     const title = inlineTitle.trim();
-    if (!title) { closeInlineAdd(); return; }
+    if (!title) {
+      toast('Task name is required', 'warning');
+      return;
+    }
+    if (!inlineAssignee?.trim()) {
+      toast('Assignee is required', 'warning');
+      return;
+    }
     const { projName, projId, taskListId, statusId } = inlineAdd;
     setIsSaving(true);
     try {
@@ -2692,10 +3304,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         tag: '',
         taskType: inlineTaskType || 'Task',
         isBillable: false,
-        description: ''
+        description: '',
+        createdBy: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'
       });
       const data = await api.get('/tasks');
       setTasks(data || []);
+      toast('Task created successfully!', 'success');
       closeInlineAdd();
     } catch (err) {
       console.error('Inline add failed:', err);
@@ -2705,8 +3319,16 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   };
 
   const submitSubtask = async (parentTask) => {
+    if (isSaving) return;
     const title = subtaskTitle.trim();
-    if (!title) { setAddingSubtaskParentId(null); return; }
+    if (!title) {
+      toast('Subtask name is required', 'warning');
+      return;
+    }
+    if (!subtaskAssignee?.trim()) {
+      toast('Assignee is required', 'warning');
+      return;
+    }
     setIsSaving(true);
     try {
       await api.post('/tasks', {
@@ -2723,7 +3345,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         taskType: 'Task',
         isBillable: false,
         description: '',
-        parentId: parentTask.id
+        parentId: parentTask.id,
+        createdBy: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'
       });
       const data = await api.get('/tasks');
       setTasks(data || []);
@@ -2745,6 +3368,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     setDrawerTask(task);
     setTaskDetailMode(editMode);
     setDrawerOpen(true);
+    if (onTaskSelect) onTaskSelect(getDisplayId(task));
   };
 
   const handleDrop = async (e, colId) => {
@@ -2785,15 +3409,17 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const handleSaveTask = async (taskData, silent = false) => {
     if (!silent) setIsSaving(true);
     try {
+      let savedTask = null;
       if (taskData.id) {
-        await api.put(`/tasks/${taskData.id}`, taskData);
+        savedTask = await api.put(`/tasks/${taskData.id}`, taskData);
         if (!silent) toast('Task updated successfully!', 'success');
       } else {
-        await api.post('/tasks', taskData);
+        savedTask = await api.post('/tasks', taskData);
         toast('Task created successfully!', 'success');
       }
       const data = await api.get('/tasks');
       setTasks(data || []);
+      return savedTask;
     } catch (error) {
       console.error('Save error:', error);
       alert('Failed to save task: ' + error.message, 'error', 'Error');
@@ -2836,7 +3462,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     setDrawerOpen(true);
   };
 
-  const closeDrawer = () => { setDrawerOpen(false); setDrawerTask(null); };
+  const closeDrawer = () => { setDrawerOpen(false); setDrawerTask(null); if (onTaskSelect) onTaskSelect(null); };
 
   const openInlineAdd = (proj, statusId, taskListId = null) => {
     let finalProjId = null;
@@ -2887,6 +3513,31 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     return null;
   };
 
+  const getFilteredUsersForProject = (projId, currentAssigneeId = null) => {
+    const activeListUsers = listUsers.filter(u => u.status !== 'Inactive');
+    if (!projId) return activeListUsers;
+    const project = taskProjects.find(p => p.id === projId);
+    if (!project) return activeListUsers;
+    const memberIds = (project.members || '').split(',').map(m => m.trim()).filter(Boolean);
+    if (memberIds.length === 0) return [];
+    
+    const filtered = listUsers.filter(u => memberIds.includes(u.id) && u.status !== 'Inactive');
+    if (currentAssigneeId) {
+      const ids = currentAssigneeId.split(',').map(i => i.trim()).filter(Boolean);
+      let list = [...filtered];
+      ids.forEach(id => {
+        if (!list.some(u => u.id === id)) {
+          const extraUser = listUsers.find(u => u.id === id);
+          if (extraUser) {
+            list.push(extraUser);
+          }
+        }
+      });
+      return list;
+    }
+    return filtered;
+  };
+
   const filteredTasks = tasks.filter(t => {
     // 1. Project Filter
     if (filterProjectName && t.projectName !== filterProjectName) {
@@ -2925,13 +3576,36 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
   const pageTitle = subTab === 'my' ? '' : 'All Tasks';
 
+  if (drawerOpen) {
+    return (
+      <TaskDetailView
+        task={drawerTask}
+        tasks={tasks}
+        onRefresh={fetchTasks}
+        onSelectTask={(t) => setDrawerTask(t)}
+        onSave={async (taskData, silent) => {
+          const saved = await handleSaveTask(taskData, silent);
+          if (!silent) {
+            closeDrawer();
+          } else if (saved) {
+            setDrawerTask(saved);
+          }
+        }}
+        onDelete={async (id) => { await handleDeleteTask(id); closeDrawer(); }}
+        onClose={closeDrawer}
+        currentUser={user}
+        initialEditMode={taskDetailMode}
+      />
+    );
+  }
+
   return (
     <div className="tasks-3col-layout">
 
 
       {/* Ã¢â€¢ÂÃ¢â€¢Â MAIN CONTENT Ã¢â€¢ÂÃ¢â€¢Â */}
-      <div className="tasks-main-content">
-      <div className="kanban-root" onDragEnd={handleDragEnd}>
+      <div className={`tasks-main-content ${viewMode === 'kanban' || viewMode === 'schedule' ? 'kanban-mode-active' : ''}`}>
+      <div className={`kanban-root ${viewMode === 'kanban' || viewMode === 'schedule' ? 'kanban-scroll-layout' : ''}`} onDragEnd={handleDragEnd}>
       {(getLevel('tasks', 'view') === 'All' || getLevel('tasks', 'edit') === 'All' || getLevel('tasks', 'delete') === 'All' || isTeamLeadOrAdmin) && !assigneeFilter && (
         <div className="saas-tabs" style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '2rem' }}>
           <button 
@@ -3030,16 +3704,36 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                   {taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                 </>
               ) : (
-                taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)
+                <>
+                  <option value="">All Projects</option>
+                  {taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                </>
               )}
             </select>
-            <input 
-              type="date" 
-              value={filterDate} 
-              onChange={e => setFilterDate(e.target.value)}
-              title="Filter by task date"
-              style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
-            />
+            {filterDate ? (
+              <input 
+                type="date" 
+                value={filterDate} 
+                onChange={e => setFilterDate(e.target.value)}
+                title="Filter by task date"
+                style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  const today = new Date();
+                  const yyyy = today.getFullYear();
+                  const mm = String(today.getMonth() + 1).padStart(2, '0');
+                  const dd = String(today.getDate()).padStart(2, '0');
+                  setFilterDate(`${yyyy}-${mm}-${dd}`);
+                }}
+                style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#94a3b8', background: '#f8fafc', outline: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                Date
+              </button>
+            )}
             {(filterProjectName || filterDate) && (
               <button 
                 onClick={() => { setFilterProjectName(''); setFilterDate(''); }}
@@ -3125,7 +3819,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             title: 'Backlog Tasks',
             tasks: backlogTasks,
             colorMeta: { bg: '#fff7ed', fg: '#c2410c', dotColor: '#ea580c' },
-            onAddTask: () => openNewTask('To Do')
+            onAddTask: () => {
+              const projName = filterProjectName || '';
+              const proj = projName ? taskProjects.find(p => p.name === projName) : null;
+              openNewTask('To Do', projName, proj?.id || null);
+            }
           },
           {
             id: 'today',
@@ -3134,9 +3832,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             colorMeta: { bg: '#eff6ff', fg: '#1d4ed8', dotColor: '#3b82f6' },
             onAddTask: () => {
               const todayStr = getLocalDateString(new Date());
-              setSelectedTask({
+              const projName = filterProjectName || '';
+              const proj = projName ? taskProjects.find(p => p.name === projName) : null;
+              setDrawerTask({
                 status: 'To Do',
-                projectName: '',
+                projectName: projName,
+                projectId: proj?.id || null,
                 priority: 'Medium',
                 title: '',
                 description: '',
@@ -3148,7 +3849,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 dueDate: new Date(todayStr).toISOString()
               });
               setTaskDetailMode(true);
-              setView('detail');
+              setDrawerOpen(true);
             }
           },
           {
@@ -3160,9 +3861,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
               const tomorrow = new Date();
               tomorrow.setDate(tomorrow.getDate() + 1);
               const tomorrowStr = getLocalDateString(tomorrow);
-              setSelectedTask({
+              const projName = filterProjectName || '';
+              const proj = projName ? taskProjects.find(p => p.name === projName) : null;
+              setDrawerTask({
                 status: 'To Do',
-                projectName: '',
+                projectName: projName,
+                projectId: proj?.id || null,
                 priority: 'Medium',
                 title: '',
                 description: '',
@@ -3173,7 +3877,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 startDate: new Date(tomorrowStr).toISOString()
               });
               setTaskDetailMode(true);
-              setView('detail');
+              setDrawerOpen(true);
             }
           }
         ];
@@ -3197,7 +3901,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 listUsers={listUsers}
                 onAddTaskClick={col.onAddTask}
                 colorMeta={col.colorMeta}
-                showAdd={subTab !== 'my'}
+                showAdd={false}
               />
             ))}
           </div>
@@ -3221,8 +3925,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
               onDelete={handleDeleteTask}
               currentUser={user}
               listUsers={listUsers}
-              onAddTaskClick={openNewTask}
-              showAdd={subTab !== 'my'}
+              onAddTaskClick={(statusId) => {
+                const projName = filterProjectName || '';
+                const proj = projName ? taskProjects.find(p => p.name === projName) : null;
+                openNewTask(statusId, projName, proj?.id || null);
+              }}
+              showAdd={false}
             />
 
           ))}
@@ -3261,7 +3969,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           
           taskListsData.forEach(list => {
             const listTasks = byList[list.id] || [];
-            if (listTasks.length === 0) return;
             
             const sortedTasks = [...listTasks].sort((a, b) => {
               if (!a.dueDate) return 1;
@@ -3332,8 +4039,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             });
           }
           
-          const finalProjectGroups = Object.values(projectGroupsMap)
+          let finalProjectGroups = Object.values(projectGroupsMap)
             .filter(projGroup => projGroup.lists.length > 0);
+
+          if (filterProjectName) {
+            finalProjectGroups = finalProjectGroups.filter(projGroup => projGroup.name === filterProjectName);
+          }
 
           finalProjectGroups.forEach(projGroup => {
             projGroup.lists.forEach(list => {
@@ -3346,11 +4057,30 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           });
 
           const firstListId = finalProjectGroups[0]?.lists[0]?.id;
+          const hasActiveFilter = !!(filterProjectName || filterDate || assigneeFilter);
 
           return (
             <>
             {/* ── Mobile ClickUp-style All Tasks (hidden on desktop) ── */}
             <div className="cu-mobile-alltasks-list">
+              {finalProjectGroups.length === 0 && (
+                <div className="cu-mob-empty-state">
+                  <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#cbd5e1" strokeWidth="1.5" style={{ marginBottom: '0.75rem' }}>
+                    <rect x="3" y="3" width="18" height="18" rx="3"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="14" y2="12"/>
+                  </svg>
+                  <p className="cu-mob-empty-title">
+                    {hasActiveFilter ? 'No tasks found' : 'No tasks yet'}
+                  </p>
+                  <p className="cu-mob-empty-sub">
+                    {hasActiveFilter ? 'Try adjusting your filters' : 'Create your first task to get started'}
+                  </p>
+                  {!hasActiveFilter && can('tasks', 'create') && (
+                    <button className="cu-mob-empty-add-btn" onClick={() => openNewTask('To Do')}>
+                      + Add Task
+                    </button>
+                  )}
+                </div>
+              )}
               {finalProjectGroups.map(projGroup => {
                 const allProjTasks = projGroup.lists.flatMap(l => l.tasks);
                 if (allProjTasks.length === 0) return null;
@@ -3538,8 +4268,13 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                     <line x1="8" y1="8" x2="16" y2="8"/>
                     <line x1="8" y1="12" x2="14" y2="12"/>
                   </svg>
-                  <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#64748b', marginBottom: '0.5rem' }}>No tasks yet</p>
-                  {can('tasks', 'create') && (
+                  <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#64748b', marginBottom: '0.25rem' }}>
+                    {hasActiveFilter ? 'No tasks found' : 'No tasks yet'}
+                  </p>
+                  <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: '0.5rem' }}>
+                    {hasActiveFilter ? 'Try adjusting your filters' : 'Create your first task to get started'}
+                  </p>
+                  {!hasActiveFilter && can('tasks', 'create') && (
                     <button
                       onClick={() => openNewTask('To Do')}
                       style={{ marginTop: '0.5rem', padding: '0.5rem 1.25rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
@@ -3667,7 +4402,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                         const parentRow = (
                                           <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
                                             <td className="cu-td cu-td-name">
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                                 {/* Expand/Collapse Chevron */}
                                                 <button
                                                   style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', visibility: subTasks.length > 0 ? 'visible' : 'hidden' }}
@@ -3680,7 +4415,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   <svg viewBox="0 0 10 6" width="8" height="8" fill="currentColor" style={{ transform: isExpanded ? "none" : "rotate(-90deg)", transition: "transform 0.15s", color: "#64748b" }}><path d="M0 0l5 6 5-6z"/></svg>
                                                 </button>
                                                 
-                                                <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
+                                                <TaskTitleTooltip text={task.title || 'Untitled Task'}>
+                                                  <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
+                                                </TaskTitleTooltip>
                                                 
                                                 
                                                 {/* Subtask count badge */}
@@ -3737,7 +4474,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#64748b" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                                 <select className="cu-inline-dropdown" value={task.assignees || ''} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { await api.put(`/tasks/${task.id}`, { assignees: e.target.value }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }}>
                                                   <option value="">Unassigned</option>
-                                                  {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                  {getFilteredUsersForProject(getTaskProjectId(task), task.assignees).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                 </select>
                                               </div>
                                             </td>
@@ -3749,9 +4486,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               </div>
                                             </td>
                                             <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
-                                              <div className="cu-inline-field-wrapper">
+                                              <div className="cu-inline-field-wrapper cu-date-cell">
                                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                                <span className="cu-date-text" style={{ color: relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : '—'}</span>
+                                                <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { e.stopPropagation(); try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                               </div>
                                             </td>
                                             <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
@@ -3773,13 +4511,15 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                           subTasks.forEach(sub => {
                                             const subRelDate = formatRelativeDueDate(sub.dueDate);
                                             const subMeta = STATUS_HEADER_META[sub.status] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
-                                            
+
                                             rows.push(
                                               <tr key={sub.id} className="cu-row subtask-row" onClick={() => openTaskDetail(sub, false)} style={{ background: '#f8fafc' }}>
                                                 <td className="cu-td cu-td-name" style={{ paddingLeft: '2.5rem' }}>
-                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                                     <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
-                                                    <span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
+                                                    <TaskTitleTooltip text={sub.title || 'Untitled Subtask'}>
+                                                      <span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
+                                                    </TaskTitleTooltip>
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
@@ -3787,7 +4527,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#64748b" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                                     <select className="cu-inline-dropdown" value={sub.assignees || ''} onChange={async (e) => { e.stopPropagation(); const updated = { ...sub, assignees: e.target.value }; try { await api.put(`/tasks/${sub.id}`, { assignees: e.target.value }); setTasks(ts => ts.map(t => t.id === sub.id ? updated : t)); } catch(err) { console.error(err); } }}>
                                                       <option value="">Unassigned</option>
-                                                      {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                      {getFilteredUsersForProject(getTaskProjectId(sub) || getTaskProjectId(task), sub.assignees).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                     </select>
                                                   </div>
                                                 </td>
@@ -3799,9 +4539,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
-                                                  <div className="cu-inline-field-wrapper">
+                                                  <div className="cu-inline-field-wrapper cu-date-cell">
                                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                    <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                                    <span className="cu-date-text" style={{ color: subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{sub.dueDate ? new Date(sub.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : '—'}</span>
+                                                    <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { e.stopPropagation(); try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
@@ -3830,7 +4571,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                         placeholder="Subtask Name or type '/' for commands"
                                                         value={subtaskTitle}
                                                         onChange={e => setSubtaskTitle(e.target.value)}
-                                                        onKeyDown={e => { if (e.key === 'Enter') submitSubtask(task); if (e.key === 'Escape') setAddingSubtaskParentId(null); }}
+                                                        onKeyDown={e => { if (e.key === 'Enter' && !isSaving) submitSubtask(task); if (e.key === 'Escape') setAddingSubtaskParentId(null); }}
                                                         autoFocus
                                                         className="ntib-input"
                                                       />
@@ -3842,7 +4583,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                         </button>
                                                         <select className="ntib-hidden-select" value={subtaskAssignee} onChange={e => setSubtaskAssignee(e.target.value)}>
                                                           <option value="">Assignee</option>
-                                                          {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                          {getFilteredUsersForProject(getTaskProjectId(task)).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                         </select>
                                                         {subtaskAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === subtaskAssignee) || {}).fullName || subtaskAssignee)}</span>}
                                                       </div>
@@ -3866,7 +4607,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                       </div>
                                                       
                                                       <button type="button" className="ntib-cancel-btn" onClick={() => setAddingSubtaskParentId(null)}>Cancel</button>
-                                                      <button type="button" className="ntib-save-btn" onClick={() => submitSubtask(task)}>Save ↵</button>
+                                                      <button type="button" className="ntib-save-btn" disabled={isSaving} onClick={() => submitSubtask(task)}>{isSaving ? 'Saving...' : 'Save ↵'}</button>
                                                     </div>
                                                   </div>
                                                 </td>
@@ -3892,7 +4633,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 placeholder="Task Name or type '/' for commands"
                                                 value={inlineTitle}
                                                 onChange={e => setInlineTitle(e.target.value)}
-                                                onKeyDown={e => { if (e.key === 'Enter') submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }}
+                                                onKeyDown={e => { if (e.key === 'Enter' && !isSaving) submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }}
                                                 autoFocus
                                                 className="ntib-input"
                                               />
@@ -3923,7 +4664,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </button>
                                                 <select className="ntib-hidden-select" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
                                                   <option value="">Assignee</option>
-                                                  {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                  {getFilteredUsersForProject(inlineAdd?.projId).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                 </select>
                                                 {inlineAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === inlineAssignee) || {}).fullName || inlineAssignee)}</span>}
                                               </div>
@@ -3947,7 +4688,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               </div>
                                               
                                               <button type="button" className="ntib-cancel-btn" onClick={closeInlineAdd}>Cancel</button>
-                                              <button type="button" className="ntib-save-btn" onClick={submitInlineAdd}>Save ↵</button>
+                                              <button type="button" className="ntib-save-btn" disabled={isSaving} onClick={submitInlineAdd}>{isSaving ? 'Saving...' : 'Save ↵'}</button>
                                             </div>
                                           </div>
                                         </td>
@@ -4081,16 +4822,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                             </div>
                             
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
-                              {dueDateInfo && (
-                                <span style={{ 
-                                  fontSize: '0.8rem', 
-                                  fontWeight: '600', 
-                                  color: dueDateInfo.isOverdue ? '#ef4444' : '#2563eb',
-                                  marginRight: '4px'
-                                }}>
-                                  {dueDateInfo.text}
-                                </span>
-                              )}
                               <button
                                 className="cu-mob-hover-subtask-btn"
                                 onClick={(e) => {
@@ -4112,12 +4843,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                             </div>
                           </div>
                         );
-                        
+
                         const rows = [parentRow];
-                        
+
                         if (isExpanded) {
                           subTasks.forEach(sub => {
-                            const subDueDateInfo = formatMobileDueDate(sub.dueDate);
                             rows.push(
                               <div key={sub.id} className="cu-flat-task-row subtask-row" onClick={() => openTaskDetail(sub, false)} style={{ paddingLeft: '1.25rem', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0 }}>
@@ -4126,16 +4856,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                     {sub.title || 'Untitled Subtask'}
                                   </span>
                                 </div>
-                                {subDueDateInfo && (
-                                  <span style={{ 
-                                    fontSize: '0.75rem', 
-                                    fontWeight: '600', 
-                                    color: subDueDateInfo.isOverdue ? '#ef4444' : '#2563eb',
-                                    flexShrink: 0
-                                  }}>
-                                    {subDueDateInfo.text}
-                                  </span>
-                                )}
                               </div>
                             );
                           });
@@ -4153,7 +4873,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                   value={subtaskTitle}
                                   onChange={e => setSubtaskTitle(e.target.value)}
                                   onKeyDown={e => {
-                                    if (e.key === 'Enter') submitSubtask(task);
+                                    if (e.key === 'Enter' && !isSaving) submitSubtask(task);
                                     if (e.key === 'Escape') setAddingSubtaskParentId(null);
                                   }}
                                   autoFocus
@@ -4168,10 +4888,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                   }}
                                 />
                                 <button 
-                                  style={{ background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '3px', padding: '2px 6px', fontSize: '0.75rem', cursor: 'pointer' }}
+                                  style={{ background: isSaving ? '#93c5fd' : '#2563eb', color: '#ffffff', border: 'none', borderRadius: '3px', padding: '2px 6px', fontSize: '0.75rem', cursor: isSaving ? 'not-allowed' : 'pointer' }}
+                                  disabled={isSaving}
                                   onClick={() => submitSubtask(task)}
                                 >
-                                  Save
+                                  {isSaving ? 'Saving...' : 'Save'}
                                 </button>
                                 <button 
                                   style={{ background: 'none', color: '#64748b', border: 'none', padding: '2px 4px', fontSize: '0.75rem', cursor: 'pointer' }}
@@ -4248,12 +4969,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                         const isAddingSubtask = addingSubtaskParentId === task.id;
                                         const relDate = formatRelativeDueDate(task.dueDate);
                                         const taskGroupName = task.taskListId ? (taskListsData.find(l => l.id === task.taskListId)?.name || '') : '';
-                                        const dueDateLabel = task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+                                        const dueDateLabel = task.dueDate ? (() => { const d = new Date(task.dueDate); return `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`; })() : null;
 
                                         const parentRow = (
                                           <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
                                             <td className="cu-td cu-td-name">
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                                 {/* Expand/Collapse Chevron */}
                                                 <button
                                                   style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', visibility: subTasks.length > 0 ? 'visible' : 'hidden' }}
@@ -4267,7 +4988,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </button>
                                                 
                                                 <div className="cu-name-content">
-                                                  <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
+                                                  <TaskTitleTooltip text={task.title || 'Untitled Task'}>
+                                                    <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
+                                                  </TaskTitleTooltip>
                                                   {(dueDateLabel || taskGroupName) && (
                                                     <div className="cu-mobile-task-sub">
                                                       {dueDateLabel && (
@@ -4340,9 +5063,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               ) : <span className="cu-empty-cell">-</span>}
                                             </td>
                                             <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
-                                              <div className="cu-inline-field-wrapper">
+                                              <div className="cu-inline-field-wrapper cu-date-cell">
                                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                                <span className="cu-date-text" style={{ color: relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : '—'}</span>
+                                                <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { e.stopPropagation(); try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                               </div>
                                             </td>
                                             <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
@@ -4368,9 +5092,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                             rows.push(
                                               <tr key={sub.id} className="cu-row subtask-row" onClick={() => openTaskDetail(sub, false)} style={{ background: '#f8fafc' }}>
                                                 <td className="cu-td cu-td-name" style={{ paddingLeft: '2.5rem' }}>
-                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                                     <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
-                                                    <span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
+                                                    <TaskTitleTooltip text={sub.title || 'Untitled Subtask'}>
+                                                      <span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
+                                                    </TaskTitleTooltip>
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-project">
@@ -4379,9 +5105,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   ) : <span className="cu-empty-cell">-</span>}
                                                 </td>
                                                 <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
-                                                  <div className="cu-inline-field-wrapper">
+                                                  <div className="cu-inline-field-wrapper cu-date-cell">
                                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                    <input type="date" className="cu-inline-dropdown cu-inline-date-field" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                                    <span className="cu-date-text" style={{ color: subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{sub.dueDate ? new Date(sub.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : '—'}</span>
+                                                    <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { e.stopPropagation(); try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
@@ -4410,7 +5137,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                         placeholder="Subtask Name or type '/' for commands"
                                                         value={subtaskTitle}
                                                         onChange={e => setSubtaskTitle(e.target.value)}
-                                                        onKeyDown={e => { if (e.key === 'Enter') submitSubtask(task); if (e.key === 'Escape') setAddingSubtaskParentId(null); }}
+                                                        onKeyDown={e => { if (e.key === 'Enter' && !isSaving) submitSubtask(task); if (e.key === 'Escape') setAddingSubtaskParentId(null); }}
                                                         autoFocus
                                                         className="ntib-input"
                                                       />
@@ -4422,7 +5149,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                         </button>
                                                         <select className="ntib-hidden-select" value={subtaskAssignee} onChange={e => setSubtaskAssignee(e.target.value)}>
                                                           <option value="">Assignee</option>
-                                                          {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                          {getFilteredUsersForProject(getTaskProjectId(task)).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                         </select>
                                                         {subtaskAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === subtaskAssignee) || {}).fullName || subtaskAssignee)}</span>}
                                                       </div>
@@ -4446,7 +5173,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                       </div>
                                                       
                                                       <button type="button" className="ntib-cancel-btn" onClick={() => setAddingSubtaskParentId(null)}>Cancel</button>
-                                                      <button type="button" className="ntib-save-btn" onClick={() => submitSubtask(task)}>Save ↵</button>
+                                                      <button type="button" className="ntib-save-btn" disabled={isSaving} onClick={() => submitSubtask(task)}>{isSaving ? 'Saving...' : 'Save ↵'}</button>
                                                     </div>
                                                   </div>
                                                 </td>
@@ -4472,7 +5199,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                       placeholder="Task Name or type '/' for commands"
                                       value={inlineTitle}
                                       onChange={e => setInlineTitle(e.target.value)}
-                                      onKeyDown={e => { if (e.key === 'Enter') submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }}
+                                      onKeyDown={e => { if (e.key === 'Enter' && !isSaving) submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }}
                                       autoFocus
                                       className="ntib-input"
                                     />
@@ -4503,7 +5230,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                       </button>
                                       <select className="ntib-hidden-select" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
                                         <option value="">Assignee</option>
-                                        {listUsers.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                        {getFilteredUsersForProject(inlineAdd?.projId).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                       </select>
                                       {inlineAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === inlineAssignee) || {}).fullName || inlineAssignee)}</span>}
                                     </div>
@@ -4527,7 +5254,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                     </div>
                                     
                                     <button type="button" className="ntib-cancel-btn" onClick={closeInlineAdd}>Cancel</button>
-                                    <button type="button" className="ntib-save-btn" onClick={submitInlineAdd}>Save ↵</button>
+                                    <button type="button" className="ntib-save-btn" disabled={isSaving} onClick={submitInlineAdd}>{isSaving ? 'Saving...' : 'Save ↵'}</button>
                                   </div>
                                 </div>
                               </td>
@@ -4567,8 +5294,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
               onRefresh={fetchTasks}
               onSelectTask={(t) => setDrawerTask(t)}
               onSave={async (taskData, silent) => {
-                await handleSaveTask(taskData, silent);
-                if (!silent) closeDrawer();
+                const saved = await handleSaveTask(taskData, silent);
+                if (!silent) {
+                  closeDrawer();
+                } else if (saved) {
+                  setDrawerTask(saved);
+                }
               }}
               onDelete={async (id) => { await handleDeleteTask(id); closeDrawer(); }}
               onClose={closeDrawer}

@@ -8,6 +8,13 @@ const formatDecimal = (hours) => {
   return Number(hours).toFixed(1);
 };
 
+const getDisplayId = (taskNo, parentId) => {
+  if (!taskNo) return '-';
+  const digits = taskNo.replace(/\D/g, '');
+  const prefix = parentId ? 'S' : 'T';
+  return `${prefix}${digits}`;
+};
+
 const getWeekRange = (dateStr) => {
   const date = new Date(dateStr);
   const day = date.getDay(); // 0 is Sunday, 1 is Monday, etc.
@@ -34,7 +41,7 @@ const getWeekRange = (dateStr) => {
   };
 };
 
-export default function Reports({ user }) {
+export default function Reports({ user, onNavigateToTask }) {
   const [reportType, setReportType] = useState('monthly'); // 'monthly' | 'weekly' | 'custom'
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -108,9 +115,6 @@ export default function Reports({ user }) {
           return nameA.localeCompare(nameB);
         });
         setClients(sortedClients);
-        if (sortedClients.length > 0) {
-          setSelectedClient(sortedClients[0].id);
-        }
       }
     } catch (err) {
       console.error('Failed to fetch reports:', err);
@@ -158,13 +162,13 @@ export default function Reports({ user }) {
       }
 
       return [
-        t.taskNo || '-',
+        getDisplayId(t.taskNo, t.parentId),
         `"${(t.title || '').replace(/"/g, '""')}"`,
         `"${resolvedProj.replace(/"/g, '""')}"`,
         `"${resolvedAssignee.replace(/"/g, '""')}"`,
         formatDecimal(parseFloat(t.taskApprovedHours) || 0),
         formatDecimal(parseFloat(t.taskActualHours) || 0),
-        t.deliveredDate ? new Date(t.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'
+        t.deliveredDate ? new Date(t.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
       ];
     });
     
@@ -245,7 +249,28 @@ export default function Reports({ user }) {
 
       <div className="reports-filters-bar">
         <div className="reports-filter-left">
-          <button className="reports-nav-btn">←</button>
+          <button className="reports-nav-btn" onClick={() => {
+            if (reportType === 'monthly') {
+              if (selectedMonth === 1) {
+                setSelectedMonth(12);
+                setSelectedYear(selectedYear - 1);
+              } else {
+                setSelectedMonth(selectedMonth - 1);
+              }
+            } else if (reportType === 'weekly') {
+              const d = new Date(selectedWeekDate);
+              d.setDate(d.getDate() - 7);
+              setSelectedWeekDate(d.toISOString().split('T')[0]);
+            } else {
+              const start = new Date(customStartDate);
+              const end = new Date(customEndDate);
+              const diff = end - start;
+              const newEnd = new Date(start.getTime() - 1);
+              const newStart = new Date(newEnd.getTime() - diff);
+              setCustomStartDate(newStart.toISOString().split('T')[0]);
+              setCustomEndDate(newEnd.toISOString().split('T')[0]);
+            }
+          }}>←</button>
           <div className="reports-date-selector">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
             {reportType === 'monthly' ? (
@@ -285,6 +310,7 @@ export default function Reports({ user }) {
         </div>
         <div className="reports-filter-right">
           <select className="reports-select" value={selectedClient} onChange={e => setSelectedClient(e.target.value)}>
+            <option value="All Clients">All Clients</option>
             {clients.map(c => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
           </select>
           <select className="reports-select" value={selectedProject} onChange={e => setSelectedProject(e.target.value)}>
@@ -348,8 +374,15 @@ export default function Reports({ user }) {
             <tbody>
               {tasks.map(task => (
                 <tr key={task.id}>
-                  <td>{task.taskNo || '-'}</td>
-                  <td className="task-title-cell">{task.title}</td>
+                  <td>{getDisplayId(task.taskNo, task.parentId)}</td>
+                  <td className="task-title-cell">
+                    <span
+                      style={{ color: '#2563eb', cursor: 'pointer', fontWeight: '600' }}
+                      onClick={() => onNavigateToTask && onNavigateToTask({ id: task.id, title: task.title })}
+                    >
+                      {task.title}
+                    </span>
+                  </td>
                   <td>{task.projectName || (projects.find(p => p.id === task.projectId)?.name) || '-'}</td>
                   <td>
                     {(() => {
@@ -376,12 +409,12 @@ export default function Reports({ user }) {
                   </td>
                   <td>{formatDecimal(parseFloat(task.taskApprovedHours) || 0)}</td>
                   <td>{formatDecimal(parseFloat(task.taskActualHours) || 0)}</td>
-                  <td>{task.deliveredDate ? new Date(task.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</td>
+                  <td>{task.deliveredDate ? new Date(task.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
                 </tr>
               ))}
               {tasks.length === 0 && (
                 <tr>
-                  <td colSpan="7" className="no-data-cell">No tasks delivered in this period.</td>
+                  <td colSpan="7" className="no-data-cell" style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b', fontSize: '0.95rem' }}>No tasks delivered in this period.</td>
                 </tr>
               )}
             </tbody>

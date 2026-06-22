@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../../api/client';
-import { TaskDetailView } from './Tasks';
+import { TaskDetailView, TaskTitleTooltip } from './Tasks';
 import './Projects.css';
 import './Tasks.css';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -77,7 +77,7 @@ const getAvatarColor = (name) => {
   return AVATAR_COLORS_LIST[charCode % AVATAR_COLORS_LIST.length];
 };
 
-export default function Projects({ user, initialSelectedProject, onClearInitialProject, onNavigateToTasks }) {
+export default function Projects({ user, initialSelectedProject, onClearInitialProject, onNavigateToTasks, initialProjectName, onProjectSelect }) {
   const [projects, setProjects] = useState([]);
   const [expandedProj, setExpandedProj] = useState({});
   const [users, setUsers] = useState([]);
@@ -95,6 +95,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [currentView, setCurrentView] = useState('list'); // 'list' or 'detail'
   const [selectedProject, setSelectedProject] = useState(null);
   const [newListName, setNewListName] = useState('');
+  const [listNameError, setListNameError] = useState(false);
   const [editingListId, setEditingListId] = useState(null);
   const [editingListName, setEditingListName] = useState('');
   const [detailTab, setDetailTab] = useState('General');
@@ -128,6 +129,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [showQueryModal, setShowQueryModal] = useState(false);
   const [queryFormType, setQueryFormType] = useState('create'); // 'create' or 'edit'
   const [editingQuery, setEditingQuery] = useState(null);
+  const queryFormRef = useRef(null);
   const [viewingQuery, setViewingQuery] = useState(null);
   const [querySearchText, setQuerySearchText] = useState('');
   const [queryStatusFilter, setQueryStatusFilter] = useState('All Status');
@@ -153,17 +155,83 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
   const [statusFilter, setStatusFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedSubtasks, setExpandedSubtasks] = useState({});
+  const [inlineSubtaskParentId, setInlineSubtaskParentId] = useState(null);
+  const [inlineSubtaskTitle, setInlineSubtaskTitle] = useState('');
+  const [inlineSubtaskSaving, setInlineSubtaskSaving] = useState(false);
+  const [subtaskTitle, setSubtaskTitle] = useState('');
+  const [subtaskAssignee, setSubtaskAssignee] = useState('');
+  const [subtaskDueDate, setSubtaskDueDate] = useState('');
+  const [subtaskPriority, setSubtaskPriority] = useState('Medium');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, searchQuery]);
   const { can, getLevel } = usePermissions();
   const { alert, confirm, toast } = useAlert();
+
+  const canEditProject = (proj) => {
+    if (!proj) return false;
+    const level = getLevel('projects', 'edit');
+    if (level === 'All') return true;
+    if (level === 'Self') {
+      const loggedInId = user?.id || '';
+      const rawMembers = (proj.members || '').split(',').map(m => m.trim()).filter(Boolean);
+      return loggedInId && rawMembers.includes(loggedInId);
+    }
+    return false;
+  };
+
+  const canDeleteProject = (proj) => {
+    if (!proj) return false;
+    const level = getLevel('projects', 'delete');
+    if (level === 'All') return true;
+    if (level === 'Self') {
+      const loggedInId = user?.id || '';
+      const rawMembers = (proj.members || '').split(',').map(m => m.trim()).filter(Boolean);
+      return loggedInId && rawMembers.includes(loggedInId);
+    }
+    return false;
+  };
+
+  const getFilteredUsersForProject = () => {
+    const activeUsers = users.filter(u => u.status !== 'Inactive');
+    if (!selectedProject) return activeUsers;
+    const rawMembers = (selectedProject.members || '').split(',').map(m => m.trim()).filter(Boolean);
+    if (rawMembers.length === 0) return [];
+    return activeUsers.filter(u => rawMembers.includes(u.id));
+  };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (initialSelectedProject) {
       setSelectedProject(initialSelectedProject);
       setCurrentView('detail');
+      if (onProjectSelect) onProjectSelect(initialSelectedProject.name);
       if (onClearInitialProject) onClearInitialProject();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSelectedProject, onClearInitialProject]);
+
+  // Auto-open project from URL deep-link (e.g. /projects/ProjectName)
+  const initialProjectNameHandled = useRef(false);
+  useEffect(() => {
+    if (initialProjectName && !initialProjectNameHandled.current && projects.length > 0) {
+      initialProjectNameHandled.current = true;
+      // Match by slug (spaces replaced with hyphens) since URL uses hyphens
+      const slugify = (s) => (s || '').replace(/ /g, '-');
+      const proj = projects.find(p => slugify(p.name) === slugify(initialProjectName));
+      if (proj) {
+        setSelectedProject(proj);
+        setCurrentView('detail');
+        // Update parent with real name (for header display)
+        if (onProjectSelect) onProjectSelect(proj.name);
+      }
+    }
+  }, [initialProjectName, projects, onProjectSelect]);
 
   // ── FETCH DATA ──
   const fetchData = async (silent = false) => {
@@ -197,6 +265,20 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       ...prev,
       [projId]: !prev[projId]
     }));
+  };
+
+  const formatAttachmentDate = (dateStr) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '-';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12 || 12;
+    return `${day}/${month}/${year}, ${hours}:${minutes} ${ampm}`;
   };
 
   const formatDateForInput = (dateStr) => {
@@ -270,11 +352,18 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
 
-  const handleAddList = async () => {
-    if (!newListName.trim() || !selectedProject) return;
+  const handleAddList = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!newListName.trim()) {
+      setListNameError(true);
+      alert('Task Group name is required.', 'warning', 'Required Field');
+      return;
+    }
+    setListNameError(false);
+    if (!selectedProject) return;
     try {
       await api.post('/task-lists', {
-        name: newListName,
+        name: newListName.trim(),
         projectId: selectedProject.id
       });
       setNewListName('');
@@ -290,9 +379,25 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
   // ── LIST HANDLERS ──
   const handleAdd = async () => {
-    if (!form.name?.trim() || !form.client?.trim() || !form.description?.trim()) {
-      alert("Please fill out all mandatory fields: Project Name, Client, and Description.", 'warning', 'Required Fields');
+    if (!form.name?.trim()) {
+      alert("Please enter the Project Name.", 'warning', 'Required Fields');
       return;
+    }
+    if (!form.clientId || !form.client?.trim()) {
+      alert("Please select a Client.", 'warning', 'Required Fields');
+      return;
+    }
+    if (form.id) {
+      const originalProj = projects.find(p => p.id === form.id) || selectedProject;
+      if (!canEditProject(originalProj)) {
+        alert("You do not have permission to edit this project.", 'warning', 'Access Denied');
+        return;
+      }
+    } else {
+      if (!can('projects', 'create')) {
+        alert("You do not have permission to create projects.", 'warning', 'Access Denied');
+        return;
+      }
     }
     setIsSaving(true);
     try {
@@ -320,6 +425,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleRemove = async (id) => {
+    const proj = projects.find(p => p.id === id);
+    if (!canDeleteProject(proj)) {
+      alert('You do not have permission to delete this project.', 'warning', 'Access Denied');
+      return;
+    }
     confirm('Remove this project? This action cannot be undone.', async () => {
       setIsSaving(true);
       try {
@@ -336,6 +446,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleRemoveList = async (listId) => {
+    if (!can('projects', 'delete')) {
+      alert('You do not have permission to delete task groups.', 'warning', 'Access Denied');
+      return;
+    }
     try {
       await api.delete(`/task-lists/${listId}`);
       fetchData(true);
@@ -415,6 +529,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         await api.put(`/tasks/${editingTask.id}`, payload);
         toast('Task updated successfully!', 'success');
       } else {
+        payload.createdBy = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
         await api.post('/tasks', payload);
         toast('Task created successfully!', 'success');
       }
@@ -443,7 +558,56 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     }, 'Delete Task');
   };
 
+  const handleInlineSubtaskSave = async (parentTask, listId) => {
+    if (inlineSubtaskSaving) return;
+    const title = subtaskTitle.trim();
+    if (!title) {
+      alert('Subtask title is required', 'warning', 'Validation Error');
+      return;
+    }
+    if (!subtaskAssignee) {
+      alert('Assignee is required', 'warning', 'Validation Error');
+      return;
+    }
+    setInlineSubtaskSaving(true);
+    try {
+      const payload = {
+        title,
+        parentId: parentTask.id,
+        projectId: selectedProject.id,
+        projectName: selectedProject.name,
+        clientId: selectedProject.clientId,
+        taskListId: listId,
+        status: 'To Do',
+        priority: subtaskPriority || 'Medium',
+        assignees: subtaskAssignee || '',
+        assignedDate: new Date().toISOString(),
+        dueDate: subtaskDueDate ? new Date(subtaskDueDate).toISOString() : null,
+        description: '',
+        createdBy: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'
+      };
+      await api.post('/tasks', payload);
+      toast('Subtask created successfully!', 'success');
+      setSubtaskTitle('');
+      setSubtaskAssignee('');
+      setSubtaskDueDate('');
+      setSubtaskPriority('Medium');
+      setInlineSubtaskParentId(null);
+      setExpandedSubtasks(prev => ({ ...prev, [parentTask.id]: true }));
+      fetchData(true);
+    } catch (error) {
+      console.error('Create inline subtask error:', error);
+      alert('Failed to create subtask: ' + error.message, 'error', 'Error');
+    } finally {
+      setInlineSubtaskSaving(false);
+    }
+  };
+
   const handleOpenCreateQueryModal = () => {
+    if (!can('projects', 'create')) {
+      alert('You do not have permission to create queries.', 'warning', 'Access Denied');
+      return;
+    }
     setQueryFormType('create');
     setEditingQuery(null);
     setQueryFormFields({
@@ -458,6 +622,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleOpenEditQueryModal = (query) => {
+    if (!can('projects', 'edit')) {
+      alert('You do not have permission to edit queries.', 'warning', 'Access Denied');
+      return;
+    }
     setQueryFormType('edit');
     setEditingQuery(query);
     setQueryFormFields({
@@ -469,11 +637,40 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       priority: query.priority || 'Medium'
     });
     setShowQueryModal(true);
+    setTimeout(() => {
+      if (queryFormRef.current) {
+        queryFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const firstInput = queryFormRef.current.querySelector('input, select, textarea');
+        if (firstInput) firstInput.focus();
+      }
+    }, 50);
   };
 
   const handleSaveQuery = async () => {
+    const isEdit = queryFormType === 'edit' && editingQuery;
+    const requiredPermission = isEdit ? 'edit' : 'create';
+    if (!can('projects', requiredPermission)) {
+      alert(`You do not have permission to ${isEdit ? 'edit' : 'create'} queries.`, 'warning', 'Access Denied');
+      return;
+    }
     if (!queryFormFields.title?.trim()) {
       alert('Query title is required.', 'warning', 'Required');
+      return;
+    }
+    if (!queryFormFields.sentTo) {
+      alert('Please select an employee to send the query to.', 'warning', 'Required');
+      return;
+    }
+    if (!queryFormFields.priority) {
+      alert('Priority is required.', 'warning', 'Required');
+      return;
+    }
+    if (!queryFormFields.status) {
+      alert('Status is required.', 'warning', 'Required');
+      return;
+    }
+    if (!queryFormFields.description?.trim()) {
+      alert('Description is required.', 'warning', 'Required');
       return;
     }
     setIsSaving(true);
@@ -504,6 +701,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleDeleteQuery = async (queryId) => {
+    if (!can('projects', 'delete')) {
+      alert('You do not have permission to delete queries.', 'warning', 'Access Denied');
+      return;
+    }
     confirm('Are you sure you want to delete this query?', async () => {
       try {
         await api.delete(`/project-queries/${queryId}`);
@@ -542,14 +743,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           </select>
         </div>
         <div className="saas-field proj-span-2">
-          <label className="saas-label">Description *</label>
+          <label className="saas-label">Description</label>
           <textarea className="saas-textarea" style={{ minHeight: '60px' }} placeholder="Project description..." value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
         </div>
         <div className="saas-field">
           <label className="saas-label">Status</label>
           <select className="saas-select" value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
-            <option value="Active">Active (In Progress)</option>
-            <option value="Inactive">Inactive</option>
+            <option value="Active">Active</option>
             <option value="Completed">Completed</option>
             <option value="On Hold">On Hold</option>
             <option value="Pending">Pending</option>
@@ -590,7 +790,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       .filter(Boolean);
 
     return (
-      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', maxWidth: '780px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+      <div ref={queryFormRef} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', maxWidth: '780px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
           <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>
             {queryFormType === 'create' ? 'Create New Query' : 'Edit Query'}
@@ -610,7 +810,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           </div>
 
           <div className="saas-field">
-            <label className="saas-label">Sent To</label>
+            <label className="saas-label">Sent To *</label>
             <select
               className="saas-select"
               value={queryFormFields.sentTo}
@@ -624,7 +824,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           </div>
 
           <div className="saas-field">
-            <label className="saas-label">Priority</label>
+            <label className="saas-label">Priority *</label>
             <select
               className="saas-select"
               value={queryFormFields.priority}
@@ -637,7 +837,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           </div>
 
           <div className="saas-field">
-            <label className="saas-label">Status</label>
+            <label className="saas-label">Status *</label>
             <select
               className="saas-select"
               value={queryFormFields.status}
@@ -651,7 +851,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           </div>
 
           <div className="saas-field">
-            <label className="saas-label">Solved (Yes/No)</label>
+            <label className="saas-label">Solved (Yes/No) *</label>
             <select
               className="saas-select"
               value={queryFormFields.solved ? "true" : "false"}
@@ -663,7 +863,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           </div>
 
           <div className="saas-field" style={{ gridColumn: 'span 2' }}>
-            <label className="saas-label">Description</label>
+            <label className="saas-label">Description *</label>
             <textarea
               className="saas-textarea"
               placeholder="Query details..."
@@ -771,7 +971,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           <div>
             <div style={labelStyle}>Created On</div>
             <div style={valueStyle}>
-              {viewingQuery.createdAt ? new Date(viewingQuery.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+              {viewingQuery.createdAt ? formatAttachmentDate(viewingQuery.createdAt) : '-'}
             </div>
           </div>
 
@@ -810,7 +1010,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         
         {/* Breadcrumb Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '600' }}>
-          <button style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }} onClick={() => { setCurrentView('list'); setSelectedTaskListId(null); }}>
+          <button style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }} onClick={() => { setCurrentView('list'); setSelectedTaskListId(null); if (onProjectSelect) onProjectSelect(null); }}>
             Projects
           </button>
           <span style={{ color: '#94a3b8' }}>&gt;</span>
@@ -823,6 +1023,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <div className="task-drawer-panel">
               <TaskDetailView
                 task={editingTask}
+                onSelectTask={(parent) => {
+                  setShowTaskFormModal(false);
+                  setViewingTask(parent);
+                  setShowTaskViewModal(true);
+                }}
                 onSave={async (taskData, silent) => {
                   try {
                     const payload = {
@@ -832,15 +1037,20 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       clientId: selectedProject.clientId,
                       taskListId: selectedTaskListId
                     };
+                    let savedTask = null;
                     if (editingTask && editingTask.id) {
-                      await api.put(`/tasks/${editingTask.id}`, payload);
+                      savedTask = await api.put(`/tasks/${editingTask.id}`, payload);
                       if (!silent) alert('Task updated successfully!', 'success', 'Success');
                     } else {
-                      await api.post('/tasks', payload);
+                      savedTask = await api.post('/tasks', payload);
                       if (!silent) alert('Task created successfully!', 'success', 'Success');
                     }
                     fetchData(true);
-                    if (!silent) setShowTaskFormModal(false);
+                    if (!silent) {
+                      setShowTaskFormModal(false);
+                    } else if (savedTask) {
+                      setEditingTask(savedTask);
+                    }
                   } catch (err) {
                     console.error('Error saving task:', err);
                     alert('Failed to save task: ' + err.message, 'error', 'Error');
@@ -862,6 +1072,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <div className="task-drawer-panel">
               <TaskDetailView
                 task={viewingTask}
+                onSelectTask={(parent) => {
+                  setViewingTask(parent);
+                }}
                 onSave={async (taskData, silent) => {
                   try {
                     const payload = {
@@ -871,10 +1084,15 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       clientId: selectedProject.clientId,
                       taskListId: viewingTask.taskListId
                     };
-                    await api.put(`/tasks/${viewingTask.id}`, payload);
+                    const savedTask = await api.put(`/tasks/${viewingTask.id}`, payload);
                     if (!silent) alert('Task updated successfully!', 'success', 'Success');
                     fetchData(true);
-                    if (!silent) { setShowTaskViewModal(false); setViewingTask(null); }
+                    if (!silent) {
+                      setShowTaskViewModal(false);
+                      setViewingTask(null);
+                    } else if (savedTask) {
+                      setViewingTask(savedTask);
+                    }
                   } catch (err) {
                     console.error('Error saving task:', err);
                     alert('Failed to save task: ' + err.message, 'error', 'Error');
@@ -908,51 +1126,31 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               </div>
             </div>
           </div>
-          <div className="detail-profile-actions">
-            <button
-              className="detail-edit-btn"
-              title="Edit Project"
-              onClick={() => {
-                setForm({
-                  id: selectedProject.id,
-                  name: selectedProject.name || '',
-                  status: selectedProject.status || 'Active',
-                  description: selectedProject.description || '',
-                  client: selectedProject.client || '',
-                  clientId: selectedProject.clientId || '',
-                  estimatedHours: selectedProject.estimatedHours || 0,
-                  actualHours: selectedProject.actualHours || 0,
-                  billableHours: selectedProject.billableHours || 0
-                });
-                setShowForm(true);
-              }}
-            >
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-              <span className="detail-btn-text">Edit Project</span>
-            </button>
-            <button
-              className="detail-addtask-btn"
-              title="Add Task"
-              onClick={() => {
-                if (onNavigateToTasks) {
-                  onNavigateToTasks({ projectName: selectedProject.name });
-                } else {
-                  setDetailTab('Tasks');
-                  const firstList = selectedProject.taskLists?.[0];
-                  if (firstList) {
-                    setSelectedTaskListId(firstList.id);
-                    setTaskFormType('create');
-                    setEditingTask(null);
-                    setTaskFormFields({ title: '', assignees: '', status: 'To Do', priority: 'Medium', startDate: '', dueDate: '', description: '' });
-                    setShowTaskFormModal(true);
-                  }
-                }
-              }}
-            >
-              <span className="detail-btn-text">+ Add Task</span>
-              <span className="detail-btn-icon">+</span>
-            </button>
-          </div>
+          {canEditProject(selectedProject) && (
+            <div className="detail-profile-actions">
+              <button
+                className="detail-edit-btn"
+                title="Edit Project"
+                onClick={() => {
+                  setForm({
+                    id: selectedProject.id,
+                    name: selectedProject.name || '',
+                    status: selectedProject.status || 'Active',
+                    description: selectedProject.description || '',
+                    client: selectedProject.client || '',
+                    clientId: selectedProject.clientId || '',
+                    estimatedHours: selectedProject.estimatedHours || 0,
+                    actualHours: selectedProject.actualHours || 0,
+                    billableHours: selectedProject.billableHours || 0
+                  });
+                  setShowForm(true);
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                <span className="detail-btn-text">Edit Project</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Metrics Grid */}
@@ -1117,6 +1315,15 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                   <div className="detail-info-value">{selectedProject.billableHours ? `${selectedProject.billableHours} hrs` : '-'}</div>
                 </div>
 
+                <div className="detail-info-row">
+                  <div className="detail-info-label">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    Created On
+                  </div>
+                  <div className="detail-info-sep">:</div>
+                  <div className="detail-info-value">{selectedProject.createdAt ? (() => { const d = new Date(selectedProject.createdAt); return `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`; })() : '-'}</div>
+                </div>
+
               </div>
             </div>
           )}
@@ -1126,23 +1333,50 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#0f172a' }}>Task Groups</h3>
                 {can('projects', 'create') && (
-                  <div className="add-list-inline" style={{ marginTop: 0, display: 'flex', gap: '0.5rem' }}>
-                    <input 
-                      className="saas-input" 
-                      placeholder="New Task Group..." 
-                      style={{ width: '200px', height: '36px', fontSize: '0.85rem', padding: '0 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none' }}
-                      value={newListName}
-                      onChange={e => setNewListName(e.target.value)}
-                    />
+                  <form 
+                    onSubmit={handleAddList}
+                    className="add-list-inline" 
+                    style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  >
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input 
+                        className="saas-input" 
+                        placeholder="New Task Group..." 
+                        style={{ 
+                          width: '200px', 
+                          height: '36px', 
+                          fontSize: '0.85rem', 
+                          padding: '0 1.5rem 0 0.75rem', 
+                          borderRadius: '8px', 
+                          border: listNameError ? '1.5px solid #ef4444' : '1px solid #e2e8f0', 
+                          outline: 'none',
+                          boxShadow: listNameError ? '0 0 0 2px rgba(239, 68, 68, 0.15)' : 'none',
+                          transition: 'all 0.2s'
+                        }}
+                        value={newListName}
+                        onChange={e => {
+                          setNewListName(e.target.value);
+                          if (e.target.value.trim()) setListNameError(false);
+                        }}
+                      />
+                      <span style={{ 
+                        position: 'absolute', 
+                        right: '10px', 
+                        color: '#ef4444', 
+                        fontWeight: 'bold', 
+                        fontSize: '1rem',
+                        pointerEvents: 'none'
+                      }}>*</span>
+                    </div>
                     <button
+                      type="submit"
                       className="saas-btn-submit add-taskgroup-btn"
                       style={{ padding: '0 1rem', height: '36px', fontSize: '0.8rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
-                      onClick={handleAddList}
                     >
                       <span className="add-taskgroup-btn-text">Add Task Group</span>
                       <span className="add-taskgroup-btn-icon">+</span>
                     </button>
-                  </div>
+                  </form>
                 )}
               </div>
 
@@ -1226,6 +1460,32 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                           </div>
                           
                           <div className="cu-section-right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            {can('tasks', 'create') && (
+                              <button
+                                style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                                title="Add Task to Group"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedTaskListId(list.id);
+                                  setTaskFormType('create');
+                                  setEditingTask(null);
+                                  setTaskFormFields({
+                                    title: '',
+                                    assignees: '',
+                                    status: 'To Do',
+                                    priority: 'Medium',
+                                    assignedDate: '',
+                                    dueDate: '',
+                                    deliveredDate: '',
+                                    description: '',
+                                    taskType: 'Feature'
+                                  });
+                                  setShowTaskFormModal(true);
+                                }}
+                              >
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                              </button>
+                            )}
                             {can('projects', 'edit') && editingListId !== list.id && (
                               <button
                                 style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
@@ -1280,92 +1540,318 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                     </td>
                                   </tr>
                                 ) : (
-                                  listTasks.map(task => {
-                                    const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
-                                    const relDate = formatRelativeDueDate(task.dueDate);
-                                    const meta = STATUS_HEADER_META[task.status] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
+                                  (() => {
+                                    const allTasks = list.tasks || [];
+                                    // Filter main tasks (no parentId or parent not in this list)
+                                    const mainTasks = allTasks.filter(t => !t.parentId || !allTasks.some(p => p.id === t.parentId));
+                                    
+                                    // Sort main tasks by due date
+                                    const sortedMainTasks = [...mainTasks].sort((a, b) => {
+                                      if (!a.dueDate) return 1;
+                                      if (!b.dueDate) return -1;
+                                      return new Date(a.dueDate) - new Date(b.dueDate);
+                                    });
 
-                                    return (
-                                      <tr key={task.id} className="cu-row" onClick={() => { setViewingTask(task); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
-                                        <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <span className="cu-task-title" style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{task.title || 'Untitled Task'}</span>
-                                            {task.taskNo && <span className="cu-task-id" style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: '0.5rem', fontWeight: '500' }}>{task.taskNo}</span>}
-                                          </div>
-                                        </td>
-                                        <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                          <div className="cu-avatars" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
-                                            {assignees.length === 0 ? (
-                                              <div className="cu-avatar-empty" title="Unassigned" style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-                                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                              </div>
-                                            ) : (
-                                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                                                {assignees.map(a => {
-                                                  const uObj = users.find(u => u.id === a);
-                                                  const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
-                                                  return (
-                                                    <div key={a} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                                      <div className={`cu-avatar ${getAvatarColor(dispName)}`} title={dispName} style={{ width: '24px', height: '24px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '600' }}>
-                                                        {initials(dispName)}
+                                    return sortedMainTasks.flatMap(task => {
+                                      const subTasks = allTasks.filter(t => t.parentId === task.id);
+                                      const isExpanded = !!expandedSubtasks[task.id];
+                                      
+                                      const relDate = formatRelativeDueDate(task.dueDate);
+                                      const meta = STATUS_HEADER_META[task.status] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
+                                      const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
+
+                                      const parentRow = (
+                                        <tr key={task.id} className="cu-row" onClick={() => { setViewingTask(task); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
+                                          <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
+                                              {subTasks.length > 0 && (
+                                                <button
+                                                  style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setExpandedSubtasks(prev => ({ ...prev, [task.id]: !prev[task.id] }));
+                                                  }}
+                                                  title={isExpanded ? "Collapse Subtasks" : "Expand Subtasks"}
+                                                >
+                                                  <svg viewBox="0 0 10 6" width="8" height="8" fill="currentColor" style={{ transform: isExpanded ? "none" : "rotate(-90deg)", transition: "transform 0.15s", color: "#64748b" }}><path d="M0 0l5 6 5-6z"/></svg>
+                                                </button>
+                                              )}
+                                              {subTasks.length === 0 && <span style={{ width: '18px', display: 'inline-block' }} />}
+                                              <TaskTitleTooltip text={task.title || 'Untitled Task'}>
+                                                <span className="cu-task-title" style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{task.title || 'Untitled Task'}</span>
+                                              </TaskTitleTooltip>
+                                              {subTasks.length > 0 && (
+                                                <span 
+                                                  style={{ 
+                                                    display: 'inline-flex', 
+                                                    alignItems: 'center', 
+                                                    gap: '4px', 
+                                                    marginLeft: '8px', 
+                                                    fontSize: '0.7rem', 
+                                                    fontWeight: '700', 
+                                                    color: '#2563eb', 
+                                                    background: '#eff6ff', 
+                                                    padding: '2px 6px', 
+                                                    borderRadius: '4px',
+                                                    border: '1px solid #bfdbfe'
+                                                  }}
+                                                  title={`${subTasks.length} Subtasks`}
+                                                >
+                                                  {subTasks.length}
+                                                </span>
+                                              )}
+                                              {can('tasks', 'create') && (
+                                                <button
+                                                  className="cu-hover-subtask-btn"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setExpandedSubtasks(prev => ({ ...prev, [task.id]: true }));
+                                                    setInlineSubtaskParentId(task.id);
+                                                    setSubtaskTitle('');
+                                                    setSubtaskAssignee('');
+                                                    setSubtaskDueDate('');
+                                                    setSubtaskPriority('Medium');
+                                                  }}
+                                                  title="Add Subtask"
+                                                >
+                                                  <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                                  </svg>
+                                                </button>
+                                              )}
+                                            </div>
+                                          </td>
+                                          <td className="cu-td cu-td-assignee" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                            <div className="cu-avatars" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+                                              {assignees.length === 0 ? (
+                                                <div className="cu-avatar-empty" title="Unassigned" style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                                                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                                </div>
+                                              ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                                                  {assignees.map(a => {
+                                                    const uObj = users.find(u => u.id === a);
+                                                    const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
+                                                    return (
+                                                      <div key={a} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                        <div className={`cu-avatar ${getAvatarColor(dispName)}`} title={dispName} style={{ width: '24px', height: '24px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '600' }}>
+                                                          {initials(dispName)}
+                                                        </div>
+                                                        <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{dispName}</span>
                                                       </div>
-                                                      <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{dispName}</span>
-                                                    </div>
-                                                  );
-                                                })}
-                                              </div>
-                                            )}
-                                          </div>
-                                        </td>
-                                        <td className="cu-td cu-td-list" style={{ padding: '0.85rem 1.25rem' }}>
-                                          <span style={{
-                                            background: meta.bg,
-                                            color: meta.fg,
-                                            border: meta.border || 'none',
-                                            padding: '0.2rem 0.6rem',
-                                            borderRadius: '5px',
-                                            fontSize: '0.75rem',
-                                            fontWeight: '700',
-                                            textTransform: 'uppercase',
-                                            display: 'inline-block'
-                                          }}>
-                                            {task.status || 'To Do'}
-                                          </span>
-                                        </td>
-                                        <td className="cu-td cu-td-delivery" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                          {relDate ? (
-                                            <span className={`cu-due-badge ${relDate.isOverdue ? 'overdue' : relDate.isToday ? 'today' : ''}`} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: relDate.isOverdue ? '#fee2e2' : relDate.isToday ? '#fef3c7' : '#f1f5f9', color: relDate.isOverdue ? '#ef4444' : relDate.isToday ? '#d97706' : '#475569' }}>
-                                              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                              {relDate.text}
+                                                    );
+                                                  })}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </td>
+                                          <td className="cu-td cu-td-list" style={{ padding: '0.85rem 1.25rem' }}>
+                                            <span style={{
+                                              background: meta.bg,
+                                              color: meta.fg,
+                                              border: meta.border || 'none',
+                                              padding: '0.2rem 0.6rem',
+                                              borderRadius: '5px',
+                                              fontSize: '0.75rem',
+                                              fontWeight: '700',
+                                              textTransform: 'uppercase',
+                                              display: 'inline-block'
+                                            }}>
+                                              {task.status || 'To Do'}
                                             </span>
-                                          ) : <span className="cu-empty-cell">-</span>}
-                                        </td>
-                                        <td className="cu-td cu-td-priority" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                          <span className="cu-priority-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', color: '#475569' }}>
-                                            <PriorityFlag priority={task.priority} />
-                                            <span>{task.priority || 'Medium'}</span>
-                                          </span>
-                                        </td>
-                                        <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
-                                          <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                            <button className="cu-act-btn" onClick={() => { setViewingTask(task); setShowTaskViewModal(true); }} title="View" style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: '0.25rem' }}>
-                                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                            </button>
-                                            {can('tasks', 'edit') && (
-                                              <button className="cu-act-btn" onClick={() => { setSelectedTaskListId(list.id); handleOpenEditTaskModal(task); }} title="Edit" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
-                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                              </button>
-                                            )}
-                                            {can('tasks', 'delete') && (
-                                              <button className="cu-act-btn danger" onClick={() => handleDeleteTask(task.id)} title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }}>
-                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                              </button>
-                                            )}
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    );
-                                  })
+                                          </td>
+                                          <td className="cu-td cu-td-delivery" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                            {task.dueDate ? (
+                                              <span className={`cu-due-badge ${relDate?.isOverdue ? 'overdue' : ''}`} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: relDate?.isOverdue ? '#fee2e2' : '#f1f5f9', color: relDate?.isOverdue ? '#ef4444' : '#475569' }}>
+                                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                {new Date(task.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                              </span>
+                                            ) : <span className="cu-empty-cell">-</span>}
+                                          </td>
+                                          <td className="cu-td cu-td-priority" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                            <span className="cu-priority-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', color: '#475569' }}>
+                                              <PriorityFlag priority={task.priority} />
+                                              <span>{task.priority || 'Medium'}</span>
+                                            </span>
+                                          </td>
+                                          <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
+                                            <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                              {can('tasks', 'edit') && (
+                                                <button className="cu-act-btn" onClick={() => { setSelectedTaskListId(list.id); handleOpenEditTaskModal(task); }} title="Edit" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
+                                                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                </button>
+                                              )}
+                                              {can('tasks', 'delete') && (
+                                                <button className="cu-act-btn danger" onClick={() => handleDeleteTask(task.id)} title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }}>
+                                                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                </button>
+                                              )}
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      );
+
+                                      const rows = [parentRow];
+
+                                      if (isExpanded) {
+                                        // Sort subtasks by due date
+                                        const sortedSubtasks = [...subTasks].sort((a, b) => {
+                                          if (!a.dueDate) return 1;
+                                          if (!b.dueDate) return -1;
+                                          return new Date(a.dueDate) - new Date(b.dueDate);
+                                        });
+
+                                        sortedSubtasks.forEach(sub => {
+                                          const subRelDate = formatRelativeDueDate(sub.dueDate);
+                                          const subMeta = STATUS_HEADER_META[sub.status] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
+                                          const subAssignees = sub.assignees ? sub.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
+
+                                          rows.push(
+                                            <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { setViewingTask(sub); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
+                                              <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem', paddingLeft: '2.5rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
+                                                  <span className="cu-subtask-indicator" style={{ color: '#94a3b8', marginRight: '4px', fontSize: '1rem', fontWeight: 'bold' }}>↳</span>
+                                                  <TaskTitleTooltip text={sub.title || 'Untitled Subtask'}>
+                                                    <span className="cu-task-title" style={{ fontSize: '0.85rem', color: '#475569' }}>{sub.title || 'Untitled Subtask'}</span>
+                                                  </TaskTitleTooltip>
+                                                </div>
+                                              </td>
+                                              <td className="cu-td cu-td-assignee" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                                <div className="cu-avatars" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+                                                  {subAssignees.length === 0 ? (
+                                                    <div className="cu-avatar-empty" title="Unassigned" style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                                                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                                    </div>
+                                                  ) : (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                                                      {subAssignees.map(a => {
+                                                        const uObj = users.find(u => u.id === a);
+                                                        const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
+                                                        return (
+                                                          <div key={a} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                            <div className={`cu-avatar ${getAvatarColor(dispName)}`} title={dispName} style={{ width: '24px', height: '24px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '600' }}>
+                                                              {initials(dispName)}
+                                                            </div>
+                                                            <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{dispName}</span>
+                                                          </div>
+                                                        );
+                                                      })}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              </td>
+                                              <td className="cu-td cu-td-list" style={{ padding: '0.85rem 1.25rem' }}>
+                                                <span style={{
+                                                  background: subMeta.bg,
+                                                  color: subMeta.fg,
+                                                  border: subMeta.border || 'none',
+                                                  padding: '0.2rem 0.6rem',
+                                                  borderRadius: '5px',
+                                                  fontSize: '0.75rem',
+                                                  fontWeight: '700',
+                                                  textTransform: 'uppercase',
+                                                  display: 'inline-block'
+                                                }}>
+                                                  {sub.status || 'To Do'}
+                                                </span>
+                                              </td>
+                                              <td className="cu-td cu-td-delivery" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                                {sub.dueDate ? (
+                                                  <span className={`cu-due-badge ${subRelDate?.isOverdue ? 'overdue' : ''}`} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: subRelDate?.isOverdue ? '#fee2e2' : '#f1f5f9', color: subRelDate?.isOverdue ? '#ef4444' : '#475569' }}>
+                                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                    {new Date(sub.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                                  </span>
+                                                ) : <span className="cu-empty-cell">-</span>}
+                                              </td>
+                                              <td className="cu-td cu-td-priority" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                                <span className="cu-priority-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', color: '#475569' }}>
+                                                  <PriorityFlag priority={sub.priority} />
+                                                  <span>{sub.priority || 'Medium'}</span>
+                                                </span>
+                                              </td>
+                                              <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
+                                                <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                  {can('tasks', 'edit') && (
+                                                    <button className="cu-act-btn" onClick={() => { setSelectedTaskListId(list.id); handleOpenEditTaskModal(sub); }} title="Edit" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
+                                                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                    </button>
+                                                  )}
+                                                  {can('tasks', 'delete') && (
+                                                    <button className="cu-act-btn danger" onClick={() => handleDeleteTask(sub.id)} title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }}>
+                                                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                    </button>
+                                                  )}
+                                                </div>
+                                              </td>
+                                            </tr>
+                                          );
+                                        });
+                                      }
+
+                                      // Inline subtask creation row
+                                      if (inlineSubtaskParentId === task.id) {
+                                        rows.push(
+                                          <tr key={`add-sub-${task.id}`} className="cu-inline-row animate-fade-in" style={{ background: '#f8fafc' }}>
+                                            <td colSpan="6" style={{ paddingLeft: '2.5rem' }}>
+                                              <div className="new-task-inline-bar" style={{ borderLeft: '2px solid #2563eb', paddingLeft: '8px' }} onClick={e => e.stopPropagation()}>
+                                                <div className="ntib-left">
+                                                  <span className="ntib-dotted-circle"></span>
+                                                  <input
+                                                    type="text"
+                                                    placeholder="Subtask Name or type '/' for commands"
+                                                    value={subtaskTitle}
+                                                    onChange={e => setSubtaskTitle(e.target.value)}
+                                                    onKeyDown={e => { if (e.key === 'Enter' && !inlineSubtaskSaving) handleInlineSubtaskSave(task, list.id); if (e.key === 'Escape') setInlineSubtaskParentId(null); }}
+                                                    autoFocus
+                                                    className="ntib-input"
+                                                  />
+                                                </div>
+                                                <div className="ntib-right">
+                                                  <div className="ntib-dropdown-wrapper">
+                                                    <button type="button" className="ntib-btn-icon" title="Assignee">
+                                                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                                    </button>
+                                                    <select className="ntib-hidden-select" value={subtaskAssignee} onChange={e => setSubtaskAssignee(e.target.value)}>
+                                                      <option value="">Assignee</option>
+                                                      {getFilteredUsersForProject().map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                    </select>
+                                                    {subtaskAssignee && <span className="ntib-badge">{initials((users.find(u => u.id === subtaskAssignee) || {}).fullName || subtaskAssignee)}</span>}
+                                                  </div>
+                                                  
+                                                  <div className="ntib-dropdown-wrapper">
+                                                    <button type="button" className="ntib-btn-icon" title="Due Date">
+                                                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                    </button>
+                                                    <input type="date" className="ntib-hidden-date" value={subtaskDueDate} onChange={e => setSubtaskDueDate(e.target.value)} />
+                                                    {subtaskDueDate && <span className="ntib-badge">{new Date(subtaskDueDate).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>}
+                                                  </div>
+                                                  
+                                                  <div className="ntib-dropdown-wrapper">
+                                                    <button type="button" className="ntib-btn-icon" title="Priority">
+                                                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                                                    </button>
+                                                    <select className="ntib-hidden-select" value={subtaskPriority} onChange={e => setSubtaskPriority(e.target.value)}>
+                                                      <option value="Critical">Critical Priority</option>
+                                                      <option value="High">High Priority</option>
+                                                      <option value="Medium">Medium Priority</option>
+                                                      <option value="Low">Low Priority</option>
+                                                    </select>
+                                                    {subtaskPriority && <span className="ntib-badge priority-color">{subtaskPriority}</span>}
+                                                  </div>
+                                                  
+                                                  <button type="button" className="ntib-cancel-btn" onClick={() => setInlineSubtaskParentId(null)}>Cancel</button>
+                                                  <button type="button" className="ntib-save-btn" disabled={inlineSubtaskSaving} onClick={() => handleInlineSubtaskSave(task, list.id)}>{inlineSubtaskSaving ? 'Saving...' : 'Save ↵'}</button>
+                                                </div>
+                                              </div>
+                                            </td>
+                                          </tr>
+                                        );
+                                      }
+
+                                      return rows;
+                                    });
+                                  })()
                                 )}
                               </tbody>
                             </table>
@@ -1705,7 +2191,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       placeholder="Search queries by title, description..."
                       value={querySearchText}
                       onChange={e => setQuerySearchText(e.target.value)}
-                      style={{ paddingLeft: '2.25rem', height: '38px', fontSize: '0.85rem' }}
+                      style={{ paddingLeft: '2.25rem', height: '40px', fontSize: '0.82rem' }}
                     />
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#64748b" strokeWidth="2.5" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }}>
                       <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -1719,7 +2205,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       className="saas-select queries-filter-select"
                       value={queryStatusFilter}
                       onChange={e => setQueryStatusFilter(e.target.value)}
-                      style={{ height: '38px', fontSize: '0.85rem' }}
                     >
                       <option value="All Status">All Status</option>
                       <option value="Open">Open</option>
@@ -1730,15 +2215,16 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                     {/* Sent To filter dropdown */}
                     <select
-                      className="saas-select queries-filter-select"
+                      className="saas-select queries-filter-select queries-filter-select-narrow"
                       value={querySentToFilter}
                       onChange={e => setQuerySentToFilter(e.target.value)}
-                      style={{ height: '38px', fontSize: '0.85rem' }}
                     >
                       <option value="All Sent To">All Sent To</option>
-                      {projMembers.map(m => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
+                      {projMembers.map(memberId => {
+                        const memberUser = users.find(u => u.id === memberId);
+                        const memberName = memberUser ? (memberUser.name || memberUser.fullName || memberUser.username || memberUser.email) : memberId;
+                        return <option key={memberId} value={memberId}>{memberName}</option>;
+                      })}
                     </select>
 
                     {/* Priority filter dropdown */}
@@ -1746,7 +2232,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       className="saas-select queries-filter-select"
                       value={queryPriorityFilter}
                       onChange={e => setQueryPriorityFilter(e.target.value)}
-                      style={{ height: '38px', fontSize: '0.85rem' }}
                     >
                       <option value="All Priority">All Priority</option>
                       <option value="High">High</option>
@@ -1772,7 +2257,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                 <div className="queries-filter-actions">
                   {/* New Query Button */}
-                  {can('tasks', 'create') && (
+                  {can('projects', 'create') && (
                     <button
                       className="saas-btn-submit queries-new-btn"
                       onClick={handleOpenCreateQueryModal}
@@ -1906,7 +2391,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                     </span>
                                   </td>
                                   <td data-label="Created On" style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', color: '#64748b' }}>
-                                    {new Date(q.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    {formatAttachmentDate(q.createdAt)}
                                   </td>
                                   <td data-label="Action" style={{ padding: '1rem 1.5rem', textAlign: 'center' }}>
                                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
@@ -1920,7 +2405,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                       </button>
 
                                       {/* Edit button */}
-                                      {can('tasks', 'edit') && (
+                                      {can('projects', 'edit') && (
                                         <button 
                                           style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }} 
                                           title="Edit Query"
@@ -1931,7 +2416,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                       )}
 
                                       {/* Delete button */}
-                                      {can('tasks', 'delete') && (
+                                      {can('projects', 'delete') && (
                                         <button 
                                           style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }} 
                                           title="Delete Query"
@@ -2018,7 +2503,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             const paginated = filtered.slice((attachPage - 1) * perPage, attachPage * perPage);
 
             const handleUpload = async () => {
+              if (!can('projects', 'create')) {
+                alert('You do not have permission to upload attachments.', 'warning', 'Access Denied');
+                return;
+              }
               if (!uploadForm.name.trim()) { alert('Please enter a file name', 'warning', 'Required'); return; }
+              if (!uploadForm.description.trim()) { alert('Please enter a description', 'warning', 'Required'); return; }
+              if (!uploadForm.file) { alert('Please choose a file to upload', 'warning', 'Required'); return; }
               setUploading(true);
               let fileUrl = '';
               let fileSize = '';
@@ -2046,7 +2537,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 await api.post(`/projects/${selectedProject.id}/attachments`, {
                   name: uploadForm.name,
                   description: uploadForm.description,
-                  uploadedBy: user?.fullName || user?.name || 'Unknown',
+                  uploadedBy: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Unknown',
                   fileSize: fileSize || '-',
                   fileUrl
                 });
@@ -2062,6 +2553,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             };
 
             const handleDeleteAttachment = async (attId) => {
+              if (!can('projects', 'delete')) {
+                alert('You do not have permission to delete attachments.', 'warning', 'Access Denied');
+                return;
+              }
               try {
                 await api.delete(`/projects/${selectedProject.id}/attachments/${attId}`);
                 fetchData(true);
@@ -2116,6 +2611,64 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 </div>
 
                 {/* Table */}
+                {/* Upload Modal - placed above table */}
+                {showUploadModal && (
+                  <div ref={el => { if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }} className="upload-attachment-card" style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', maxWidth: '600px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>Upload Attachment</h3>
+                      <button onClick={() => setShowUploadModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#94a3b8' }}>✕</button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>File Name *</label>
+                        <input
+                          value={uploadForm.name}
+                          onChange={e => setUploadForm({ ...uploadForm, name: e.target.value })}
+                          placeholder="e.g. Project_Requirements.pdf"
+                          style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Description *</label>
+                        <textarea
+                          value={uploadForm.description}
+                          onChange={e => setUploadForm({ ...uploadForm, description: e.target.value })}
+                          placeholder="Brief description of the file..."
+                          rows={3}
+                          style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Choose File *</label>
+                        <div
+                          onClick={() => attachFileRef.current?.click()}
+                          style={{ border: '2px dashed #cbd5e1', borderRadius: '10px', padding: '1.5rem', textAlign: 'center', cursor: 'pointer', background: '#f8fafc', transition: 'border-color 0.2s' }}
+                          onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
+                          onMouseLeave={e => e.currentTarget.style.borderColor = '#cbd5e1'}
+                        >
+                          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#94a3b8" strokeWidth="1.5" style={{ margin: '0 auto 0.5rem', display: 'block' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>
+                            {uploadForm.file ? uploadForm.file.name : 'Click here to browse for a local folder'}
+                          </p>
+                          {uploadForm.file && <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>{(uploadForm.file.size / (1024 * 1024)).toFixed(2)} MB</p>}
+                        </div>
+                        <input ref={attachFileRef} type="file" style={{ display: 'none' }} onChange={e => {
+                          const f = e.target.files[0];
+                          if (f) setUploadForm(prev => ({ ...prev, file: f, name: prev.name || f.name }));
+                        }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem' }}>
+                      <button onClick={() => setShowUploadModal(false)} style={{ padding: '0.6rem 1.25rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', color: '#64748b', cursor: 'pointer', fontSize: '0.85rem' }}>Cancel</button>
+                      <button onClick={handleUpload} disabled={uploading} style={{ padding: '0.6rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: uploading ? 'wait' : 'pointer', fontSize: '0.85rem', opacity: uploading ? 0.7 : 1 }}>
+                        {uploading ? 'Uploading...' : 'Upload'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="attachments-table-container" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
                   <div style={{ overflowX: 'auto' }}>
                     <table className="attachments-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
@@ -2151,14 +2704,35 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                             </td>
                             <td data-label="File Size" style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569', fontWeight: '500' }}>{a.fileSize || '-'}</td>
                             <td data-label="Uploaded On" style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569' }}>
-                              {new Date(a.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}, {new Date(a.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                              {formatAttachmentDate(a.createdAt)}
                             </td>
                             <td data-label="Actions" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
                               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', alignItems: 'center' }}>
                                 {a.fileUrl && (
-                                  <a href={a.fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', cursor: 'pointer', display: 'flex' }} title="Download">
+                                  <button 
+                                    type="button"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      try {
+                                        const response = await fetch(a.fileUrl);
+                                        const blob = await response.blob();
+                                        const blobUrl = window.URL.createObjectURL(blob);
+                                        const link = document.createElement('a');
+                                        link.href = blobUrl;
+                                        link.download = a.name || 'download';
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                        window.URL.revokeObjectURL(blobUrl);
+                                      } catch (err) {
+                                        window.open(a.fileUrl, '_blank');
+                                      }
+                                    }}
+                                    style={{ color: '#3b82f6', cursor: 'pointer', display: 'flex', background: 'none', border: 'none', padding: 0 }} 
+                                    title="Download"
+                                  >
                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                  </a>
+                                  </button>
                                 )}
                                 {can('projects', 'delete') && (
                                   <button onClick={() => confirm('Delete this attachment?', () => handleDeleteAttachment(a.id), 'Delete Attachment')} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: 0 }} title="Delete">
@@ -2194,63 +2768,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                   </div>
                 )}
 
-                {/* Upload Modal */}
-                {showUploadModal && (
-                  <div className="upload-attachment-card" style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', maxWidth: '600px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
-                      <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>Upload Attachment</h3>
-                      <button onClick={() => setShowUploadModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#94a3b8' }}>✕</button>
-                    </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>File Name *</label>
-                        <input
-                          value={uploadForm.name}
-                          onChange={e => setUploadForm({ ...uploadForm, name: e.target.value })}
-                          placeholder="e.g. Project_Requirements.pdf"
-                          style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Description</label>
-                        <textarea
-                          value={uploadForm.description}
-                          onChange={e => setUploadForm({ ...uploadForm, description: e.target.value })}
-                          placeholder="Brief description of the file..."
-                          rows={3}
-                          style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Choose File</label>
-                        <div
-                          onClick={() => attachFileRef.current?.click()}
-                          style={{ border: '2px dashed #cbd5e1', borderRadius: '10px', padding: '1.5rem', textAlign: 'center', cursor: 'pointer', background: '#f8fafc', transition: 'border-color 0.2s' }}
-                          onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
-                          onMouseLeave={e => e.currentTarget.style.borderColor = '#cbd5e1'}
-                        >
-                          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#94a3b8" strokeWidth="1.5" style={{ margin: '0 auto 0.5rem', display: 'block' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>
-                            {uploadForm.file ? uploadForm.file.name : 'Click to browse or drag & drop'}
-                          </p>
-                          {uploadForm.file && <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>{(uploadForm.file.size / (1024 * 1024)).toFixed(2)} MB</p>}
-                        </div>
-                        <input ref={attachFileRef} type="file" style={{ display: 'none' }} onChange={e => {
-                          const f = e.target.files[0];
-                          if (f) setUploadForm(prev => ({ ...prev, file: f, name: prev.name || f.name }));
-                        }} />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem' }}>
-                      <button onClick={() => setShowUploadModal(false)} style={{ padding: '0.6rem 1.25rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', color: '#64748b', cursor: 'pointer', fontSize: '0.85rem' }}>Cancel</button>
-                      <button onClick={handleUpload} disabled={uploading} style={{ padding: '0.6rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: uploading ? 'wait' : 'pointer', fontSize: '0.85rem', opacity: uploading ? 0.7 : 1 }}>
-                        {uploading ? 'Uploading...' : 'Upload'}
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })()}
@@ -2273,9 +2791,24 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     });
   }
 
-  const filteredProjects = statusFilter === 'All' 
-    ? allowedProjects 
-    : allowedProjects.filter(p => (p.status || 'In Progress') === statusFilter);
+  const filteredProjects = allowedProjects.filter(p => {
+    if (statusFilter !== 'All') {
+      const status = p.status || 'Active';
+      if (status !== statusFilter) return false;
+    }
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase();
+      const nameMatch = (p.name || '').toLowerCase().includes(q);
+      const clientMatch = (p.client || '').toLowerCase().includes(q);
+      const descMatch = (p.description || '').toLowerCase().includes(q);
+      return nameMatch || clientMatch || descMatch;
+    }
+    return true;
+  });
+
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedProjects = filteredProjects.slice(startIndex, endIndex);
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
@@ -2302,16 +2835,18 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         <div></div>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <select 
+            className="projects-filter-select"
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', color: '#334155', cursor: 'pointer', outline: 'none' }}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="All">All Statuses</option>
-            <option value="In Progress">In Progress</option>
+            <option value="Active">Active</option>
             <option value="Completed">Completed</option>
             <option value="On Hold">On Hold</option>
             <option value="Pending">Pending</option>
           </select>
+          {user?.role?.toLowerCase() === 'admin' && (
           <button className="project-add-btn" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={() => {
             setForm({ name: '', status: 'Active', description: '', client: '', clientId: '', estimatedHours: 0, actualHours: 0, billableHours: 0 });
             setShowForm(true);
@@ -2319,6 +2854,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <span className="project-add-btn-text">+ Add Project</span>
             <span className="project-add-btn-icon" style={{ display: 'none', fontSize: '1.5rem', lineHeight: 1 }}>+</span>
           </button>
+          )}
         </div>
       </div>
 
@@ -2334,7 +2870,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <div style={{ position: 'relative', width: '250px' }}>
               <svg style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input type="text" placeholder="Search..." style={{ width: '100%', padding: '0.5rem 0.5rem 0.5rem 2.2rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', outline: 'none' }} />
+              <input 
+                type="text" 
+                placeholder="Search..." 
+                style={{ width: '100%', padding: '0.5rem 0.5rem 0.5rem 2.2rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', outline: 'none' }} 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
             <button style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -2350,15 +2892,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           <table className="saas-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', background: 'white' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ width: '40px', padding: '0.55rem 1.5rem', background: 'white' }}>
-                  <input 
-                    type="checkbox" 
-                    style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
-                    checked={filteredProjects.length > 0 && selectedProjectIds.length === filteredProjects.length}
-                    onChange={handleSelectAll}
-                  />
-                </th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>#</th>
+
+                <th style={{ padding: '0.55rem 1rem 0.55rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>#</th>
                 <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Project Name</th>
                 <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Status</th>
                 <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Estimated Hours</th>
@@ -2370,35 +2905,29 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>Syncing workspace...</td></tr>
+                <tr><td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>Syncing workspace...</td></tr>
               ) : filteredProjects.length === 0 ? (
-                <tr><td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No projects in this view.</td></tr>
+                <tr><td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No projects in this view.</td></tr>
               ) : (
-                filteredProjects.map((proj, idx) => {
+                paginatedProjects.map((proj, idx) => {
                   const client = proj.client || '-';
                   const estHours = proj.estimatedHours ? `${proj.estimatedHours} hrs` : '-';
                   const actHours = proj.actualHours ? `${proj.actualHours} hrs` : '-';
                   const bilHours = proj.billableHours ? `${proj.billableHours} hrs` : '-';
-                  const createdOn = proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}) : '-';
-                  const displayStatus = proj.status || 'In Progress';
+                  const createdOn = proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('en-GB', {day: '2-digit', month: '2-digit', year: 'numeric'}) : '-';
+                  const displayStatus = proj.status || 'Active';
                   
                   let statusBg = '#dcfce7'; let statusColor = '#16a34a';
-                  if (displayStatus === 'On Hold') { statusBg = '#fef3c7'; statusColor = '#d97706'; }
+                  if (displayStatus === 'Inactive') { statusBg = '#fee2e2'; statusColor = '#b91c1c'; }
+                  else if (displayStatus === 'On Hold') { statusBg = '#fef3c7'; statusColor = '#d97706'; }
                   else if (displayStatus === 'Completed') { statusBg = '#e0e7ff'; statusColor = '#4f46e5'; }
                   else if (displayStatus === 'Pending') { statusBg = '#f1f5f9'; statusColor = '#475569'; }
 
                   return (
                     <tr key={proj.id} style={{ borderBottom: '1px solid #f1f5f9', background: 'white' }}>
-                      <td style={{ padding: '0.55rem 1.5rem' }}>
-                        <input 
-                          type="checkbox" 
-                          style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
-                          checked={selectedProjectIds.includes(proj.id)}
-                          onChange={(e) => handleSelectOne(e, proj.id)}
-                        />
-                      </td>
-                      <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#1e293b', fontWeight: '600' }}>
-                        {idx + 1}
+
+                      <td style={{ padding: '0.55rem 1rem 0.55rem 1.5rem', fontSize: '0.85rem', color: '#1e293b', fontWeight: '600' }}>
+                        {startIndex + idx + 1}
                       </td>
                       <td style={{ padding: '0.55rem 1rem' }}>
                         <button 
@@ -2406,6 +2935,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                           onClick={() => {
                             setSelectedProject(proj);
                             setCurrentView('detail');
+                            if (onProjectSelect) onProjectSelect(proj.name);
                           }}
                         >
                           {proj.name}
@@ -2431,28 +2961,36 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       <td style={{ padding: '0.55rem 1.5rem', textAlign: 'center' }}>
                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                           {/* Edit Button */}
-                          <button 
-                            style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '0.25rem' }} 
-                            title="Edit Project"
-                            onClick={() => {
-                              setForm({ 
-                                id: proj.id,
-                                name: proj.name || '', 
-                                status: proj.status || 'Active',
-                                description: proj.description || '',
-                                client: proj.client || '',
-                                estimatedHours: proj.estimatedHours || 0,
-                                actualHours: proj.actualHours || 0,
-                                billableHours: proj.billableHours || 0
-                              });
-                              setShowForm(true);
-                            }}
-                          >
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                          </button>
+                          {canEditProject(proj) && (
+                            <button 
+                              style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '0.25rem' }} 
+                              title="Edit Project"
+                              onClick={() => {
+                                setForm({ 
+                                  id: proj.id,
+                                  name: proj.name || '', 
+                                  status: proj.status || 'Active',
+                                  description: proj.description || '',
+                                  client: proj.client || '',
+                                  clientId: proj.clientId || '',
+                                  estimatedHours: proj.estimatedHours || 0,
+                                  actualHours: proj.actualHours || 0,
+                                  billableHours: proj.billableHours || 0
+                                });
+                                setShowForm(true);
+                                setTimeout(() => {
+                                  const el = document.querySelector('.saas-page-content');
+                                  if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
+                                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }, 50);
+                              }}
+                            >
+                              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                          )}
                           
                           {/* Delete Button */}
-                          {(getLevel('projects', 'delete') === 'All' || (getLevel('projects', 'delete') === 'Self' && (user?.fullName || user?.name) && (proj.members || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))) && (
+                          {canDeleteProject(proj) && (
                             <button 
                               style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }} 
                               title="Delete Project"
@@ -2476,30 +3014,26 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           {filteredProjects.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8', fontSize: '0.9rem' }}>No projects in this view.</div>
           ) : (
-            filteredProjects.map((proj, idx) => {
-              const displayStatus = proj.status || 'In Progress';
+            paginatedProjects.map((proj, idx) => {
+              const displayStatus = proj.status || 'Active';
               
               let statusBg = '#dcfce7'; let statusColor = '#16a34a';
-              if (displayStatus === 'On Hold') { statusBg = '#fef3c7'; statusColor = '#d97706'; }
+              if (displayStatus === 'Inactive') { statusBg = '#fee2e2'; statusColor = '#b91c1c'; }
+              else if (displayStatus === 'On Hold') { statusBg = '#fef3c7'; statusColor = '#d97706'; }
               else if (displayStatus === 'Completed') { statusBg = '#e0e7ff'; statusColor = '#4f46e5'; }
               else if (displayStatus === 'Pending') { statusBg = '#f1f5f9'; statusColor = '#475569'; }
 
               return (
                 <div className="mobile-project-row" key={proj.id}>
                   <div className="mpr-left">
-                    <input 
-                      type="checkbox" 
-                      style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#2563eb' }} 
-                      checked={selectedProjectIds.includes(proj.id)}
-                      onChange={(e) => handleSelectOne(e, proj.id)}
-                      className="mp-checkbox"
-                    />
-                    <span className="mp-index">#{idx + 1}</span>
+
+                    <span className="mp-index">#{startIndex + idx + 1}</span>
                     <button 
                       style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '700', fontSize: '0.95rem', cursor: 'pointer', padding: 0, textAlign: 'left' }}
                       onClick={() => {
                         setSelectedProject(proj);
                         setCurrentView('detail');
+                        if (onProjectSelect) onProjectSelect(proj.name);
                       }}
                       className="mp-name-link"
                     >
@@ -2511,26 +3045,34 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       {displayStatus}
                     </span>
                     <div className="mpr-actions">
-                      <button
-                        className="mp-action-btn edit"
-                        title="Edit Project"
-                        onClick={() => {
-                          setForm({
-                            id: proj.id,
-                            name: proj.name || '',
-                            status: proj.status || 'Active',
-                            description: proj.description || '',
-                            client: proj.client || '',
-                            estimatedHours: proj.estimatedHours || 0,
-                            actualHours: proj.actualHours || 0,
-                            billableHours: proj.billableHours || 0
-                          });
-                          setShowForm(true);
-                        }}
-                      >
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                      </button>
-                      {(getLevel('projects', 'delete') === 'All' || (getLevel('projects', 'delete') === 'Self' && (user?.fullName || user?.name) && (proj.members || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))) && (
+                      {canEditProject(proj) && (
+                        <button
+                          className="mp-action-btn edit"
+                          title="Edit Project"
+                          onClick={() => {
+                            setForm({
+                              id: proj.id,
+                              name: proj.name || '',
+                              status: proj.status || 'Active',
+                              description: proj.description || '',
+                              client: proj.client || '',
+                              clientId: proj.clientId || '',
+                              estimatedHours: proj.estimatedHours || 0,
+                              actualHours: proj.actualHours || 0,
+                              billableHours: proj.billableHours || 0
+                            });
+                            setShowForm(true);
+                            setTimeout(() => {
+                              const el = document.querySelector('.saas-page-content');
+                              if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }, 50);
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                      )}
+                      {canDeleteProject(proj) && (
                         <button
                           className="mp-action-btn delete"
                           title="Delete Project"
@@ -2547,21 +3089,93 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           )}
         </div>
         
-        {/* Pagination placeholder matching the image */}
-        <div className="projects-table-footer-bar">
-          <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Showing 1 to {Math.min(10, projects.length || 10)} of {projects.length || 15} entries</span>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', borderRadius: '6px', background: 'white', color: '#64748b', cursor: 'pointer' }}>&lt;</button>
-            <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: '6px', background: '#2563eb', color: 'white', fontWeight: '600', cursor: 'pointer' }}>1</button>
-            <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', borderRadius: '6px', background: 'white', color: '#334155', fontWeight: '600', cursor: 'pointer' }}>2</button>
-            <button style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', borderRadius: '6px', background: 'white', color: '#64748b', cursor: 'pointer' }}>&gt;</button>
-            <select style={{ marginLeft: '1rem', padding: '0.35rem 0.5rem', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.85rem', color: '#334155', background: 'white', outline: 'none' }}>
-              <option>10 / page</option>
-              <option>20 / page</option>
-              <option>50 / page</option>
-            </select>
-          </div>
-        </div>
+        {/* Pagination bar */}
+        {(() => {
+          const totalPages = Math.ceil(filteredProjects.length / pageSize) || 1;
+          const pageNumbers = [];
+          for (let i = 1; i <= totalPages; i++) {
+            pageNumbers.push(i);
+          }
+          return (
+            <div className="projects-table-footer-bar">
+              <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                Showing {filteredProjects.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredProjects.length)} of {allowedProjects.length} entries
+              </span>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button 
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    border: '1px solid #e2e8f0', 
+                    borderRadius: '6px', 
+                    background: 'white', 
+                    color: currentPage === 1 ? '#cbd5e1' : '#64748b', 
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer' 
+                  }}
+                >
+                  &lt;
+                </button>
+                {pageNumbers.map(page => (
+                  <button 
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    style={{ 
+                      width: '32px', 
+                      height: '32px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      border: currentPage === page ? 'none' : '1px solid #e2e8f0', 
+                      borderRadius: '6px', 
+                      background: currentPage === page ? '#2563eb' : 'white', 
+                      color: currentPage === page ? 'white' : '#334155', 
+                      fontWeight: '600', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button 
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    border: '1px solid #e2e8f0', 
+                    borderRadius: '6px', 
+                    background: 'white', 
+                    color: currentPage === totalPages ? '#cbd5e1' : '#64748b', 
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' 
+                  }}
+                >
+                  &gt;
+                </button>
+                <select 
+                  className="pagination-page-size-select"
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  style={{ marginLeft: '1rem', padding: '0.35rem 0.5rem', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.85rem', color: '#334155', background: 'white', outline: 'none', cursor: 'pointer' }}
+                >
+                  <option value={10}>10 / page</option>
+                  <option value={20}>20 / page</option>
+                  <option value={50}>50 / page</option>
+                </select>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

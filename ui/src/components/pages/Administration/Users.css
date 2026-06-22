@@ -1,3 +1,67 @@
+/* ── Pagination ── */
+.users-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 0.5rem 0.25rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.users-pagination-info {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.users-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.users-page-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.users-page-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.users-page-btn.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
+.users-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.users-page-ellipsis {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  padding: 0 0.25rem;
+  user-select: none;
+}
+
+/* ── Page ── */
 .users-page {
   padding: 2rem 2.5rem;
   background: #f8fafc;
@@ -196,6 +260,7 @@
 .users-list-table td {
   padding: 0.4rem 1.25rem;
   border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
 }
 
 .users-list-table td:nth-child(3) {
@@ -307,8 +372,7 @@
 }
 
 .actions-cell {
-  display: flex;
-  gap: 0.75rem;
+  vertical-align: middle;
 }
 
 .user-action-btn {
@@ -325,6 +389,17 @@
 
 .user-action-btn.edit:hover { color: #2563eb; transform: scale(1.1); }
 .user-action-btn.delete:hover { color: #ef4444; transform: scale(1.1); }
+.user-action-btn.reassign:hover { color: #d97706; transform: scale(1.1); }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 
 .status-cell {
   text-align: center;

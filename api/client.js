@@ -65,6 +65,7 @@ export const api = {
       if (error) throw new Error(error.message);
       return (data || []).map(c => ({
         ...c,
+        authorId: c.author,
         author: c.user?.fullName || c.user?.firstName || 'Anonymous'
       }));
     }
@@ -250,6 +251,14 @@ export const api = {
   async delete(route) {
     const { table, id } = parseRoute(route);
     if (!id) throw new Error(`DELETE requires an id: ${route}`);
+
+    if (table === 'comments') {
+      // Delete replies first to prevent foreign key errors
+      await supabase
+        .from('comments')
+        .delete()
+        .eq('parentId', id);
+    }
 
     const { error } = await supabase
       .from(table)

@@ -3,7 +3,7 @@ import "./LoginWithRoles.css";
 import DashboardLayout from "./DashboardLayout";
 import { api } from "../api/client";
 import { PermissionProvider, usePermissions } from "../hooks/usePermissions";
-import { requestForToken } from "../firebase";
+
 
 // ── Mock Users Database Removed ──────────────────────────────
 
@@ -96,60 +96,58 @@ function LoginPage({ onLogin, onRegisterClick, onForgotPasswordClick }) {
             </div>
           )}
 
-          <div className="input-group">
-            <label className="input-label">Email Address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleLogin()}
-              placeholder="you@officecrm.in"
-              className="input-field"
-            />
-          </div>
-
-          <div className="input-group input-group-mb-lg">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-              <label className="input-label" style={{ marginBottom: 0 }}>Password</label>
-              <button type="button" onClick={onForgotPasswordClick} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.8rem', cursor: 'pointer', padding: 0, fontWeight: 500 }}>Forgot password?</button>
-            </div>
-            <div style={{ position: "relative" }}>
+          <form onSubmit={e => { e.preventDefault(); handleLogin(); }} style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div className="input-group">
+              <label className="input-label">Email Address</label>
               <input
-                type={showPwd ? "text" : "password"}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleLogin()}
-                placeholder="Enter your password"
-                className="input-field input-field-pwd"
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@officecrm.in"
+                className="input-field"
               />
-              <button
-                type="button"
-                onClick={() => setShowPwd(v => !v)}
-                className="pwd-toggle-btn"
-              >
-                <PasswordToggleIcon show={showPwd} />
-              </button>
             </div>
-          </div>
 
-          <button
-            onClick={handleLogin}
-            disabled={loading}
-            className="btn-primary"
-          >
-            {loading ? (
-              <><span className="spinner"></span> Signing in...</>
-            ) : (
-              <><span></span> Sign In</>
-            )}
-          </button>
+            <div className="input-group input-group-mb-lg">
+              <label className="input-label">Password</label>
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPwd ? "text" : "password"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="input-field input-field-pwd"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(v => !v)}
+                  className="pwd-toggle-btn"
+                >
+                  <PasswordToggleIcon show={showPwd} />
+                </button>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.35rem' }}>
+                <button type="button" onClick={onForgotPasswordClick} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.8rem', cursor: 'pointer', padding: 0, fontWeight: 500 }}>Forgot password?</button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary"
+            >
+              {loading ? (
+                <><span className="spinner"></span> Signing in...</>
+              ) : (
+                <><span></span> Sign In</>
+              )}
+            </button>
+          </form>
 
           <div className="auth-switch-prompt">
             <span className="auth-switch-text">Don't have an account? </span>
             <button className="auth-switch-btn" onClick={onRegisterClick}>Register now</button>
           </div>
-
-
         </div>
       </div>
     </div>
@@ -262,60 +260,61 @@ function RegisterPage({ onRegister, onLoginClick }) {
             </div>
           )}
 
-          <div className="input-group">
-            <label className="input-label">Full Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="John Doe"
-              className="input-field"
-            />
-          </div>
-
-          <div className="input-group">
-            <label className="input-label">Email Address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@officecrm.in"
-              className="input-field"
-            />
-          </div>
-
-          <div className="input-group input-group-mb-lg">
-            <label className="input-label">Password</label>
-            <div style={{ position: "relative" }}>
+          <form onSubmit={e => { e.preventDefault(); handleRegister(); }} style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div className="input-group">
+              <label className="input-label">Full Name</label>
               <input
-                type={showPwd ? "text" : "password"}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleRegister()}
-                placeholder="Create a password"
-                className="input-field input-field-pwd"
+                type="text"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="John Doe"
+                className="input-field"
               />
-              <button
-                type="button"
-                onClick={() => setShowPwd(v => !v)}
-                className="pwd-toggle-btn"
-              >
-                <PasswordToggleIcon show={showPwd} />
-              </button>
             </div>
-          </div>
 
-          <button
-            onClick={handleRegister}
-            disabled={loading}
-            className="btn-primary"
-          >
-            {loading ? (
-              <><span className="spinner"></span> Registering...</>
-            ) : (
-              <>Sign Up</>
-            )}
-          </button>
+            <div className="input-group">
+              <label className="input-label">Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@officecrm.in"
+                className="input-field"
+              />
+            </div>
+
+            <div className="input-group input-group-mb-lg">
+              <label className="input-label">Password</label>
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPwd ? "text" : "password"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Create a password"
+                  className="input-field input-field-pwd"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(v => !v)}
+                  className="pwd-toggle-btn"
+                >
+                  <PasswordToggleIcon show={showPwd} />
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary"
+            >
+              {loading ? (
+                <><span className="spinner"></span> Registering...</>
+              ) : (
+                <>Sign Up</>
+              )}
+            </button>
+          </form>
 
           <div className="auth-switch-prompt">
             <span className="auth-switch-text">Already have an account? </span>
@@ -592,14 +591,21 @@ function ForgotPasswordPage({ onBackToLogin }) {
 //  MOBILE HOME DASHBOARD (ClickUp-style)
 // ══════════════════════════════════════════════════════════
 function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, priorityCount, upcomingCount, setActiveTab }) {
-  const [taskLists, setTaskLists] = useState([]);
-  const [listTaskCounts, setListTaskCounts] = useState({});
+  const [projectTaskCounts, setProjectTaskCounts] = useState({});
+  const [myProjects, setMyProjects] = useState([]);
   const [allTasks, setAllTasks] = useState([]);
   const [allProjects, setAllProjects] = useState([]);
   const [allClients, setAllClients] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // MHC internal counts computed specifically for the logged-in user
+  const [mhdToday, setMhdToday] = useState(0);
+  const [mhdOverdue, setMhdOverdue] = useState(0);
+  const [mhdPriority, setMhdPriority] = useState(0);
+  const [mhdUpcoming, setMhdUpcoming] = useState(0);
+  const [mhdMyTasks, setMhdMyTasks] = useState(0);
 
   useEffect(() => {
     Promise.all([
@@ -609,18 +615,118 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
       api.get('/clients').catch(() => []),
       api.get('/users').catch(() => [])
     ]).then(([lists, tasks, projects, clients, users]) => {
-      setTaskLists(lists || []);
       setAllTasks(tasks || []);
       setAllProjects(projects || []);
       setAllClients(clients || []);
       setAllUsers(users || []);
-      const counts = {};
-      (tasks || []).forEach(t => {
-        if (t.taskListId) counts[t.taskListId] = (counts[t.taskListId] || 0) + 1;
+      
+      // Filter tasks to only those assigned to the logged-in user
+      const userName = (user?.fullName || user?.firstName || '').trim().toLowerCase();
+      const cleanName = userName.replace(/[^a-z0-9]/g, '');
+      const cleanEmail = (user?.email || '').toLowerCase().trim();
+      const cleanEmailPrefix = cleanEmail.split('@')[0].replace(/[^a-z0-9]/g, '');
+      const userId = user?.id || '';
+
+      const isMyTask = (t) => {
+        if (!t.assignees) return false;
+        const assigneesList = t.assignees.split(',').map(s => s.trim().toLowerCase());
+        return assigneesList.some(assignee => {
+          if (userId && assignee === userId.toLowerCase().trim()) return true;
+          const cleanAssignee = assignee.replace(/[^a-z0-9]/g, '');
+          if (assignee === cleanEmail) return true;
+          if (cleanAssignee === cleanEmailPrefix) return true;
+          if (cleanName && (cleanAssignee.includes(cleanName) || cleanName.includes(cleanAssignee))) return true;
+          return false;
+        });
+      };
+
+      const myTasks = (tasks || []).filter(isMyTask);
+      
+      // Personal active tasks (excluding completed: 'Delivered' or 'Prod Verified')
+      const activeMyTasks = myTasks.filter(t => t.status !== 'Delivered' && t.status !== 'Prod Verified');
+
+      // Calculate mobile dashboard stats internally based on activeMyTasks
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayTime = today.getTime();
+
+      let localToday = 0;
+      let localOverdue = 0;
+      let localUpcoming = 0;
+
+      activeMyTasks.forEach(task => {
+        // Overdue check
+        let isBacklog = false;
+        if (task.deliveredDate) {
+          const d = new Date(task.deliveredDate);
+          d.setHours(0, 0, 0, 0);
+          if (d.getTime() < todayTime) isBacklog = true;
+        } else if (task.dueDate) {
+          const d = new Date(task.dueDate);
+          d.setHours(0, 0, 0, 0);
+          if (d.getTime() < todayTime) isBacklog = true;
+        }
+
+        if (isBacklog) {
+          localOverdue++;
+          return;
+        }
+
+        // Today check
+        let isToday = false;
+        if (task.assignedDate) {
+          const a = new Date(task.assignedDate);
+          a.setHours(0, 0, 0, 0);
+          if (a.getTime() === todayTime) isToday = true;
+        } else {
+          const c = new Date(task.createdAt || Date.now());
+          c.setHours(0, 0, 0, 0);
+          if (c.getTime() === todayTime) isToday = true;
+        }
+
+        if (isToday) {
+          localToday++;
+        } else {
+          localUpcoming++;
+        }
       });
-      setListTaskCounts(counts);
+
+      setMhdToday(localToday);
+      setMhdOverdue(localOverdue);
+      setMhdPriority(activeMyTasks.filter(t => t.priority === 'High' || t.priority === 'Critical').length);
+      setMhdUpcoming(localUpcoming);
+      setMhdMyTasks(activeMyTasks.length);
+
+      // Find projects where the user is a team member
+      const myProjectIds = new Set();
+      (projects || []).forEach(p => {
+        const memberIds = (p.members || '').split(',').map(m => m.trim().toLowerCase()).filter(Boolean);
+        if (userId && memberIds.includes(userId.toLowerCase().trim())) {
+          myProjectIds.add(p.id);
+        }
+      });
+
+      // Project-level task counts (ClickUp My Lists format)
+      const projCounts = {};
+      activeMyTasks.forEach(t => {
+        let projId = t.projectId;
+        if (!projId && t.taskListId) {
+          const list = (lists || []).find(l => l.id === t.taskListId);
+          if (list) projId = list.projectId;
+        }
+        const key = projId || '__personal__';
+        projCounts[key] = (projCounts[key] || 0) + 1;
+      });
+      setProjectTaskCounts(projCounts);
+
+      // Collect projects the user is in OR has tasks assigned
+      const allProjIds = new Set([
+        ...myProjectIds,
+        ...Object.keys(projCounts).filter(k => k !== '__personal__')
+      ]);
+      setMyProjects((projects || []).filter(p => allProjIds.has(p.id)));
     });
-  }, []);
+  }, [user]);
 
   const q = searchQuery.trim().toLowerCase();
 
@@ -685,33 +791,29 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
 
   const statCards = [
     {
-      label: 'Today', count: todayCount, iconBg: '#7c3aed',
+      label: 'Today', count: mhdToday, iconBg: '#7c3aed',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
     },
     {
-      label: 'Overdue', count: overdueCount, iconBg: '#ef4444', warn: overdueCount > 0,
+      label: 'Overdue', count: mhdOverdue, iconBg: '#ef4444', warn: mhdOverdue > 0,
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
     },
     {
-      label: 'My Priorities', count: priorityCount, iconBg: '#f97316',
+      label: 'My Priorities', count: mhdPriority, iconBg: '#f97316',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
     },
     {
-      label: 'Upcoming', count: upcomingCount, iconBg: '#f59e0b',
+      label: 'Upcoming', count: mhdUpcoming, iconBg: '#f59e0b',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     },
     {
-      label: 'My Tasks', count: myTasksCount, iconBg: '#2563eb',
+      label: 'My Tasks', count: mhdMyTasks, iconBg: '#2563eb',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
     },
     {
       label: 'Reminders', count: 0, iconBg: '#0d9488',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 16 14"/></svg>
-    },
-    {
-      label: 'Comments', count: 0, iconBg: '#16a34a',
-      icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-    },
+    }
   ];
 
   return (
@@ -772,7 +874,7 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
         ))}
       </div>
 
-      {/* My Lists section */}
+      {/* My Lists section — ClickUp format: flat project rows with assigned task count */}
       <div className="mhd-lists-section">
         <div className="mhd-lists-hdr">
           <span className="mhd-lists-title">My Lists</span>
@@ -780,20 +882,36 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </button>
         </div>
-        {taskLists.length === 0 ? (
+
+        {myProjects.length === 0 && !projectTaskCounts['__personal__'] ? (
           <p className="mhd-lists-empty">No lists yet</p>
         ) : (
-          taskLists.map(list => (
-            <button key={list.id} className="mhd-list-row" onClick={() => setActiveTab && setActiveTab('tasks')}>
-              <div className="mhd-list-icon-wrap">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-              </div>
-              <span className="mhd-list-name">{list.name}</span>
-              <span className="mhd-list-count">{listTaskCounts[list.id] || 0}</span>
-            </button>
-          ))
+          <>
+            {/* Personal List — tasks not linked to any project */}
+            {projectTaskCounts['__personal__'] > 0 && (
+              <button className="mhd-list-row" onClick={() => setActiveTab && setActiveTab('tasks')}>
+                <div className="mhd-list-icon-wrap mhd-list-personal-icon">
+                  <span>{(user?.firstName || user?.fullName || 'U')[0].toUpperCase()}</span>
+                </div>
+                <span className="mhd-list-name">Personal List</span>
+                <span className="mhd-list-count">{projectTaskCounts['__personal__']}</span>
+              </button>
+            )}
+
+            {/* One row per project */}
+            {myProjects.map(proj => (
+              <button key={proj.id} className="mhd-list-row" onClick={() => setActiveTab && setActiveTab('tasks')}>
+                <div className="mhd-list-icon-wrap">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                </div>
+                <span className="mhd-list-name">{proj.name}</span>
+                <span className="mhd-list-count">{projectTaskCounts[proj.id] || 0}</span>
+              </button>
+            ))}
+          </>
         )}
       </div>
+
 
       {/* What's next CTA */}
       <button className="mhd-whats-next-btn" onClick={() => setActiveTab && setActiveTab('tasks')}>
@@ -912,7 +1030,7 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
           tasksList.slice(0, 5).map((t, i) => (
             <div key={i} className="list-item" style={{ cursor: 'pointer', padding: '0.75rem', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '4px' }} onClick={() => handleTaskClick ? handleTaskClick(t) : (setActiveTab && setActiveTab('tasks'))}>
               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{t.title}</span>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: type === 'backlog' ? '#ef4444' : '#1e293b' }}>{t.title}</span>
                 <span className={`status-badge status-${t.status.toLowerCase().replace(' ', '-')}`} style={{ fontSize: '0.7rem' }}>{t.status}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
@@ -1095,7 +1213,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
             const cleanAssignee = assignee.replace(/[^a-z0-9]/g, '');
             if (assignee === cleanEmail) return true;
             if (cleanAssignee === cleanEmailPrefix) return true;
-            if (cleanAssignee.includes(cleanName) || cleanName.includes(cleanAssignee)) return true;
+            if (cleanName && (cleanAssignee.includes(cleanName) || cleanName.includes(cleanAssignee))) return true;
             return false;
           });
         });
@@ -1178,7 +1296,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
           tasksList.slice(0, 5).map((t, i) => (
             <div key={i} className="list-item" style={{ cursor: 'pointer', padding: '0.75rem', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '4px' }} onClick={() => handleTaskClick ? handleTaskClick(t) : (setActiveTab && setActiveTab('tasks'))}>
               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{t.title}</span>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: type === 'backlog' ? '#ef4444' : '#1e293b' }}>{t.title}</span>
                 <span className={`status-badge status-${t.status.toLowerCase().replace(' ', '-')}`} style={{ fontSize: '0.7rem' }}>{t.status}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
@@ -1373,11 +1491,7 @@ export default function LoginWithRoles() {
   const [isForgotPwd, setIsForgotPwd] = useState(false);
   const [loginToast, setLoginToast] = useState(null);
 
-  useEffect(() => {
-    if (user && user.id) {
-      requestForToken(user.id, api).catch(err => console.error("Error registering FCM token:", err));
-    }
-  }, [user]);
+
 
   const handleLogin = (u) => {
     setUser(u);

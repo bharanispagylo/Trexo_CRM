@@ -123,6 +123,22 @@ prisma.$connect()
       }
     }
 
+    // Ensure users table has firstName, lastName, and fullName columns
+    const usersColumnFixes = [
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS "firstName" TEXT;',
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS "lastName" TEXT;',
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS "fullName" TEXT;',
+    ];
+    for (const sql of usersColumnFixes) {
+      try {
+        await prisma.$executeRawUnsafe(sql);
+        const colName = sql.match(/ADD COLUMN IF NOT EXISTS "?(\w+)"?/i)?.[1];
+        console.log(`[Self-Healing] Users column ${colName} verified/added successfully.`);
+      } catch (e) {
+        console.warn(`[Self-Healing] Warning for: ${sql.substring(0, 60)}...`, e.message);
+      }
+    }
+
     try {
       await prisma.task.deleteMany({ where: { clientId: '' } });
       await prisma.project.deleteMany({ where: { clientId: '' } });
@@ -135,7 +151,7 @@ prisma.$connect()
   })
   .catch(console.error);
 
-const { sendPushNotification } = require('./firebaseSender');
+
 
 // Helper to create notifications for multiple users
 const createNotification = async (userIds, title, message) => {
@@ -153,14 +169,24 @@ const createNotification = async (userIds, title, message) => {
         validUserIds.push(item);
       } else {
         const nameWithSpaces = item.replace(/_/g, ' ');
-        const foundUser = await prisma.user.findFirst({
-          where: {
-            OR: [
-              { fullName: { contains: nameWithSpaces, mode: 'insensitive' } },
-              { firstName: { contains: nameWithSpaces, mode: 'insensitive' } },
-              { lastName: { contains: nameWithSpaces, mode: 'insensitive' } }
+        const nameParts = nameWithSpaces.split(' ').filter(Boolean);
+        const orConditions = [
+          { fullName: { contains: nameWithSpaces, mode: 'insensitive' } },
+          { firstName: { contains: nameWithSpaces, mode: 'insensitive' } },
+          { lastName: { contains: nameWithSpaces, mode: 'insensitive' } },
+          { email: { contains: item, mode: 'insensitive' } }
+        ];
+        // If name has multiple parts (e.g. "Mano Sebastin"), also match firstName+lastName
+        if (nameParts.length >= 2) {
+          orConditions.push({
+            AND: [
+              { firstName: { contains: nameParts[0], mode: 'insensitive' } },
+              { lastName: { contains: nameParts[nameParts.length - 1], mode: 'insensitive' } }
             ]
-          }
+          });
+        }
+        const foundUser = await prisma.user.findFirst({
+          where: { OR: orConditions }
         });
         if (foundUser) validUserIds.push(foundUser.id);
       }
@@ -174,8 +200,7 @@ const createNotification = async (userIds, title, message) => {
         data: { userId: uid, title, message }
       });
     }
-    // Fire off FCM push notification asynchronously
-    sendPushNotification(uniqueUserIds, title, message, prisma).catch(err => console.error('FCM Error:', err));
+
   } catch (err) {
     console.error('[Notification Error]', err.message);
   }
@@ -192,29 +217,49 @@ const notifyAdmins = async (title, message) => {
 const notifyEmailsByNames = async (userIds, subject, message, type) => {
   if (!userIds) return;
   const names = (typeof userIds === 'string' ? userIds.split(',') : userIds).map(u => u.trim()).filter(Boolean);
+  if (names.length === 0) return;
   try {
     const users = await prisma.user.findMany({
       where: {
         OR: names.map(name => {
           const nameWithSpaces = name.replace(/_/g, ' ');
-          return {
-            OR: [
-              { id: name },
-              { fullName: { contains: nameWithSpaces, mode: 'insensitive' } },
-              { firstName: { contains: nameWithSpaces, mode: 'insensitive' } },
-              { lastName: { contains: nameWithSpaces, mode: 'insensitive' } },
-              { email: { contains: name, mode: 'insensitive' } }
-            ]
-          };
+          const nameParts = nameWithSpaces.split(' ').filter(Boolean);
+          const orConditions = [
+            { id: name },
+            { fullName: { contains: nameWithSpaces, mode: 'insensitive' } },
+            { firstName: { contains: nameWithSpaces, mode: 'insensitive' } },
+            { lastName: { contains: nameWithSpaces, mode: 'insensitive' } },
+            { email: { contains: name, mode: 'insensitive' } }
+          ];
+          // If name has multiple parts (e.g. "Mano Sebastin"), also match firstName+lastName
+          if (nameParts.length >= 2) {
+            orConditions.push({
+              AND: [
+                { firstName: { contains: nameParts[0], mode: 'insensitive' } },
+                { lastName: { contains: nameParts[nameParts.length - 1], mode: 'insensitive' } }
+              ]
+            });
+          }
+          return { OR: orConditions };
         })
       }
     });
 
+    const frontendUrl = process.env.FRONTEND_URL || 'https://trexocrm.vercel.app';
+
     for (const u of users) {
       if (u.email) {
+        // Determine the correct route based on notification type, with deep-link to specific item
+        let route = '/';
+        if (type === 'task' || type === 'comment') {
+          route = message.taskId ? `/tasks/${message.taskId}` : '/tasks';
+        } else if (type === 'project') {
+          route = message.projectName ? `/projects/${message.projectName.replace(/ /g, '-')}` : '/projects';
+        }
+
         const userContext = {
           ...message,
-          buttonLink: `https://trexo-crm-fqxl.vercel.app?email=${encodeURIComponent(u.email)}`
+          buttonLink: `${frontendUrl}${route}`
         };
         await sendNotificationEmail(u.email, subject, userContext, type);
       }
@@ -222,6 +267,15 @@ const notifyEmailsByNames = async (userIds, subject, message, type) => {
   } catch (err) {
     console.error('[Email Notification Error]', err.message);
   }
+};
+
+const getTaskDisplayId = (task) => {
+  if (!task) return '';
+  const no = task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '');
+  const digits = no.replace(/\D/g, '');
+  if (!digits) return no;
+  const prefix = task.parentId ? 'S' : 'T';
+  return `${prefix}${digits}`;
 };
 
 const getTaskDetailsForEmail = async (task) => {
@@ -572,20 +626,7 @@ app.post('/api/forgot-password/reset-password', async (req, res) => {
     res.status(500).json({ error: 'Failed to reset password', details: error.message });
   }
 });
-app.post('/api/users/update-fcm-token', async (req, res) => {
-  try {
-    const { userId, fcmToken } = req.body;
-    if (!userId || !fcmToken) return res.status(400).json({ error: 'Missing userId or fcmToken' });
-    await prisma.user.update({
-      where: { id: userId },
-      data: { fcmToken }
-    });
-    res.json({ success: true });
-  } catch (error) {
-    console.error('POST /api/users/update-fcm-token error:', error);
-    res.status(500).json({ error: 'Failed to update FCM token', details: error.message });
-  }
-});
+
 
 
 app.put('/api/users/:id', async (req, res) => {
@@ -635,6 +676,53 @@ app.delete('/api/users/:id', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('DELETE /api/users/:id error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all tasks assigned to a specific user
+app.get('/api/users/:id/tasks', async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const allTasks = await prisma.task.findMany();
+    const userTasks = allTasks.filter(t => {
+      if (!t.assignees) return false;
+      return t.assignees.split(',').map(a => a.trim()).includes(userId);
+    });
+    res.json(userTasks);
+  } catch (error) {
+    console.error('GET /api/users/:id/tasks error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Bulk reassign all tasks from one user to another
+app.post('/api/users/:id/reassign-tasks', async (req, res) => {
+  try {
+    const oldUserId = req.params.id;
+    const { newUserId } = req.body;
+    if (!newUserId) return res.status(400).json({ error: 'newUserId is required' });
+
+    const allTasks = await prisma.task.findMany();
+    const userTasks = allTasks.filter(t => {
+      if (!t.assignees) return false;
+      return t.assignees.split(',').map(a => a.trim()).includes(oldUserId);
+    });
+
+    let updatedCount = 0;
+    for (const task of userTasks) {
+      const assigneeList = task.assignees.split(',').map(a => a.trim());
+      const updated = assigneeList.map(a => a === oldUserId ? newUserId : a);
+      await prisma.task.update({
+        where: { id: task.id },
+        data: { assignees: updated.join(',') }
+      });
+      updatedCount++;
+    }
+
+    res.json({ success: true, updatedCount });
+  } catch (error) {
+    console.error('POST /api/users/:id/reassign-tasks error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1061,7 +1149,7 @@ app.get('/api/tasks', async (req, res) => {
 app.post('/api/tasks', async (req, res) => {
   try {
     console.log('POST /api/tasks body:', req.body);
-    let { id, comments, createdAt, ...taskData } = req.body;
+    let { id, comments, createdAt, createdBy: createdByName, ...taskData } = req.body;
     
     // Sanitize and convert dates
     ['dueDate', 'assignedDate', 'deliveredDate'].forEach(key => {
@@ -1099,12 +1187,13 @@ app.post('/api/tasks', async (req, res) => {
       createNotification(task.assignees, `New Task Assigned: ${task.title}`, `You have been assigned to a new task.`);
       const { taskListName, projectName } = await getTaskDetailsForEmail(task);
       notifyEmailsByNames(task.assignees, `New Task Assigned: ${task.title}`, {
-        author: 'Admin',
+        author: createdByName || 'Admin',
         action: 'assigned you to',
         itemTitle: task.title,
         boardName: taskListName,
         projectName: projectName,
-        buttonText: 'View Item'
+        buttonText: 'View Item',
+        taskId: getTaskDisplayId(task)
       }, 'task');
     }
     res.json(task);
@@ -1119,6 +1208,14 @@ app.put('/api/tasks/:id', async (req, res) => {
     console.log('PUT /api/tasks body:', req.body);
     let { id, createdAt, comments, ...taskData } = req.body;
     
+    // Fetch existing task to compare assignees
+    const existingTask = await prisma.task.findUnique({
+      where: { id: req.params.id }
+    });
+    if (!existingTask) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
     // Sanitize and convert dates
     ['dueDate', 'assignedDate', 'deliveredDate'].forEach(key => {
       if (taskData[key]) {
@@ -1157,17 +1254,36 @@ app.put('/api/tasks/:id', async (req, res) => {
       data: taskData
     });
     
-    // Notify assignees about task update
-    if (task.assignees) {
-      createNotification(task.assignees, `Task Assigned: ${task.title}`, `Task has been updated by a team member.`);
+    // Determine newly added assignees to avoid spamming existing assignees
+    const getAssigneesList = (assigneesStr) => {
+      if (!assigneesStr) return [];
+      return assigneesStr.split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
+    };
+
+    let addedAssigneesStr = '';
+    if (taskData.assignees !== undefined) {
+      const oldAssigneesNormalized = getAssigneesList(existingTask.assignees);
+      const newAssigneesRaw = (taskData.assignees || '').split(',').map(a => a.trim()).filter(Boolean);
+      const addedAssigneesRaw = newAssigneesRaw.filter(a => !oldAssigneesNormalized.includes(a.toLowerCase()));
+      addedAssigneesStr = addedAssigneesRaw.join(', ');
+    }
+
+    // Notify newly assigned users about task assignment
+    if (addedAssigneesStr) {
+      const isReassignment = existingTask.assignees && existingTask.assignees.trim().length > 0;
+      const notificationTitle = isReassignment ? `Task Reassigned: ${task.title}` : `Task Assigned: ${task.title}`;
+      const notificationMsg = isReassignment ? `You have been reassigned to this task.` : `You have been assigned to this task.`;
+
+      createNotification(addedAssigneesStr, notificationTitle, notificationMsg);
       const { taskListName, projectName } = await getTaskDetailsForEmail(task);
-      notifyEmailsByNames(task.assignees, `Task Assigned: ${task.title}`, {
+      notifyEmailsByNames(addedAssigneesStr, notificationTitle, {
         author: 'A team member',
-        action: 'assigned you to',
+        action: isReassignment ? 'reassigned you to' : 'assigned you to',
         itemTitle: task.title,
         boardName: taskListName,
         projectName: projectName,
-        buttonText: 'View Item'
+        buttonText: 'View Item',
+        taskId: getTaskDisplayId(task)
       }, 'task');
     }
 
@@ -1317,20 +1433,33 @@ app.delete('/api/worklogs/:logId', async (req, res) => {
 app.post('/api/tasks/:id/comments', async (req, res) => {
   try {
     const authorName = req.body.author || 'Anonymous';
-    
-    // Find the author's user ID since Prisma requires it
-    const userRecord = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { fullName: authorName },
-          { firstName: authorName },
-          { lastName: authorName },
-          { email: authorName }
-        ]
-      }
-    });
+    let authorId = req.body.authorId;
 
-    let authorId = userRecord?.id;
+    if (authorId) {
+      // Verify authorId exists in the database
+      const userExists = await prisma.user.findUnique({
+        where: { id: authorId }
+      });
+      if (!userExists) {
+        authorId = null;
+      }
+    }
+
+    if (!authorId) {
+      // Find the author's user ID since Prisma requires it
+      const userRecord = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { fullName: authorName },
+            { firstName: authorName },
+            { lastName: authorName },
+            { email: authorName }
+          ]
+        }
+      });
+      authorId = userRecord?.id;
+    }
+
     if (!authorId) {
        const fallbackUser = await prisma.user.findFirst();
        authorId = fallbackUser?.id;
@@ -1352,26 +1481,35 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
     try {
       const task = await prisma.task.findUnique({ where: { id: req.params.id } });
       if (task && task.assignees) {
-        // Exclude the author from notifications
-        const assignees = task.assignees.split(',').map(a => a.trim()).filter(a => a && a.toLowerCase() !== (authorId || '').toLowerCase());
-        createNotification(assignees, `New Comment on ${task.title}`, `${commentAuthorName} commented: "${comment.text.substring(0, 30)}..."`);
-        
-        const { taskListName, projectName } = await getTaskDetailsForEmail(task);
+        // Exclude the commenter from receiving their own notification (compare by name)
+        const authorNameLower = commentAuthorName.toLowerCase();
+        const assignees = task.assignees
+          .split(',')
+          .map(a => a.trim())
+          .filter(a => a && a.toLowerCase() !== authorNameLower);
 
-        // Email assignees about the comment
-        notifyEmailsByNames(assignees, `New Comment on ${task.title}`, {
-          author: commentAuthorName,
-          action: 'commented on',
-          itemTitle: task.title,
-          boardName: taskListName,
-          projectName: projectName,
-          commentText: comment.text,
-          buttonText: 'Reply on Trexo CRM'
-        }, 'comment');
+        if (assignees.length > 0) {
+          const previewText = comment.text ? comment.text.substring(0, 60) : '(attachment)';
+          createNotification(assignees, `New Comment on ${task.title}`, `${commentAuthorName} commented: "${previewText}..."`);
+
+          const { taskListName, projectName } = await getTaskDetailsForEmail(task);
+
+          // Email assignees about the comment
+          notifyEmailsByNames(assignees, `New Comment on: ${task.title}`, {
+            author: commentAuthorName,
+            action: 'commented on',
+            itemTitle: task.title,
+            boardName: taskListName,
+            projectName: projectName,
+            commentText: comment.text || '(attachment)',
+            buttonText: 'View Task',
+            taskId: getTaskDisplayId(task)
+          }, 'comment');
+        }
       }
       
       // Notify mentioned users
-      const mentions = comment.text.match(/@([a-zA-Z0-9_]+)/g);
+      const mentions = (comment.text || '').match(/@([a-zA-Z0-9_]+)/g);
       if (mentions) {
         const mentionedNames = mentions.map(m => m.substring(1));
         createNotification(mentionedNames, `You were mentioned in ${task ? task.title : 'a task'}`, `${commentAuthorName} mentioned you: "${comment.text.substring(0, 30)}..."`);
@@ -1391,7 +1529,8 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
           boardName: taskListName,
           projectName: projectName,
           commentText: comment.text,
-          buttonText: 'Reply on Trexo CRM'
+          buttonText: 'Reply on Trexo CRM',
+          taskId: getTaskDisplayId(task)
         }, 'comment');
       }
     } catch (e) {
@@ -1433,6 +1572,39 @@ app.put('/api/tasks/:id/comments/:commentId/react', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+app.put('/api/comments/:id', async (req, res) => {
+  try {
+    const comment = await prisma.comment.update({
+      where: { id: req.params.id },
+      data: {
+        text: req.body.text
+      },
+      include: { user: true }
+    });
+    res.json({
+      ...comment,
+      author: comment.user?.fullName || comment.user?.firstName || 'Anonymous'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/comments/:id', async (req, res) => {
+  try {
+    await prisma.comment.deleteMany({
+      where: { parentId: req.params.id }
+    });
+    await prisma.comment.delete({
+      where: { id: req.params.id }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // 9. Project Queries
 app.post('/api/project-queries', async (req, res) => {
@@ -1646,7 +1818,6 @@ app.post('/api/estimations/:id/convert', async (req, res) => {
       data: {
         title: estimation.taskName,
         description: estimation.description,
-        projectName: finalProjectName,
         projectId: finalProjectId,
         clientId: estimation.clientId,
         estimatedHours: estimation.estimatedHours,
@@ -1752,9 +1923,17 @@ app.get('/api/reports/monthly', async (req, res) => {
       where: whereClause
     });
 
+    const taskIds = reportRecords.map(r => r.id);
+    const dbTasks = await prisma.task.findMany({
+      where: { id: { in: taskIds } },
+      select: { id: true, parentId: true }
+    });
+    const taskParentMap = new Map(dbTasks.map(t => [t.id, t.parentId]));
+
     const mapped = reportRecords.map(r => ({
       id: r.id,
       taskNo: r.taskNo,
+      parentId: taskParentMap.get(r.id) || null,
       title: r.title,
       projectName: r.projectName,
       projectId: r.projectId,
@@ -1808,9 +1987,17 @@ app.get('/api/reports/range', async (req, res) => {
       where: whereClause
     });
 
+    const taskIds = reportRecords.map(r => r.id);
+    const dbTasks = await prisma.task.findMany({
+      where: { id: { in: taskIds } },
+      select: { id: true, parentId: true }
+    });
+    const taskParentMap = new Map(dbTasks.map(t => [t.id, t.parentId]));
+
     const mapped = reportRecords.map(r => ({
       id: r.id,
       taskNo: r.taskNo,
+      parentId: taskParentMap.get(r.id) || null,
       title: r.title,
       projectName: r.projectName,
       projectId: r.projectId,

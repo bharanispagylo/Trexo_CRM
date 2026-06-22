@@ -68,6 +68,11 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
           <h1 style="margin:0; padding-left:40px; font-size:20px; font-weight:700; color:#1a1d1f; display:flex;">
              Trexo CRM
           </h1>
+          ${context.taskId ? `
+            <div style="margin:0; padding-left:40px; font-size:13px; font-weight:600; color:#6b7280; display:flex; margin-top:2px;">
+              (${context.taskId})
+            </div>
+          ` : ''}
         </div>
         
         <!-- Main Content -->
@@ -103,7 +108,7 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
           ${context.commentText ? `
             <div style="margin-bottom: 24px; margin-left: 48px;">
                <div style="font-size: 12px; color: #9ca3af; margin-bottom: 8px;">
-                 ${new Date().toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'})}
+                 ${new Date().toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata'})}
                </div>
                <div style="font-size: 15px; color: #111827; line-height: 1.6; padding-right: 20px;">
                  ${context.commentText.replace(/\n/g, '<br/>')}
@@ -113,7 +118,7 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
 
           <!-- Action Button -->
           <div style="margin-left: 48px; margin-top: 16px;">
-            <a href="${context.buttonLink || 'https://trexo-crm-fqxl.vercel.app'}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 24px; border-radius: 4px;">
+            <a href="${context.buttonLink || process.env.FRONTEND_URL || 'https://trexocrm.vercel.app'}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 24px; border-radius: 4px;">
               ${context.buttonText || 'View Item'}
             </a>
           </div>
@@ -127,7 +132,7 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
 
   // Redirect recipient in development mode
   let recipients = Array.isArray(to) ? to : [to];
-  if (process.env.NODE_ENV === 'DEV' || process.env.NODE_ENV === 'development') {
+  if ((process.env.NODE_ENV === 'DEV' || process.env.NODE_ENV === 'development') && process.env.SEND_REAL_EMAILS !== 'true') {
     const devEmails = getDevEmails();
     if (devEmails.length > 0) {
       recipients = devEmails;
@@ -196,7 +201,7 @@ async function sendOtpEmail(to, otp) {
   `;
 
   let recipients = [to];
-  if (process.env.NODE_ENV === 'DEV' || process.env.NODE_ENV === 'development') {
+  if ((process.env.NODE_ENV === 'DEV' || process.env.NODE_ENV === 'development') && process.env.SEND_REAL_EMAILS !== 'true') {
     const devEmails = getDevEmails();
     if (devEmails.length > 0) {
       recipients = devEmails;
