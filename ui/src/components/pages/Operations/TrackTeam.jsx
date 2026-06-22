@@ -11,7 +11,7 @@ const isAssigneeMatch = (assigneeStr, userId) => {
   return assigneeStr.includes(userId);
 };
 
-export default function TrackTeam({ user }) {
+export default function TrackTeam({ user, onMemberClick }) {
   const [tasks, setTasks] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
   const [users, setUsers] = useState([]);
@@ -522,8 +522,18 @@ export default function TrackTeam({ user }) {
                   <tbody>
                     {teamMembers.map(m => {
                       const displayName = m.name || 'Unknown';
+                      const matchedUser = users.find(u => {
+                        const uName = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).trim().toLowerCase();
+                        return uName === (m.name || '').trim().toLowerCase();
+                      });
                       return (
-                        <tr key={m.id} onClick={() => setSelectedMember(m)} style={{ cursor: 'pointer' }}>
+                        <tr key={m.id} onClick={() => {
+                          if (onMemberClick && matchedUser) {
+                            onMemberClick(matchedUser);
+                          } else {
+                            setSelectedMember(m);
+                          }
+                        }} style={{ cursor: 'pointer' }}>
                           <td data-label="Member">
                             <div className="td-member-info">
                               <div className="member-avatar-sm">

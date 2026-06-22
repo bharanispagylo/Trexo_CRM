@@ -333,6 +333,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [searchSelectedTask, setSearchSelectedTask] = useState(null);
   const [searchSelectedProject, setSearchSelectedProject] = useState(null);
+  const [teamMemberAssigneeFilter, setTeamMemberAssigneeFilter] = useState(null);
   const searchContainerRef = useRef(null);
 
   useEffect(() => {
@@ -487,7 +488,10 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             setActiveTab('tasks');
           });
         }
-        return <TrackTeam user={user} />;
+        return <TrackTeam user={user} onMemberClick={(member) => {
+            setTeamMemberAssigneeFilter(member.id);
+            setActiveTab('tasks');
+          }} />;
       case 'tasks': 
         if (!can('tasks', 'view') && user?.role?.toLowerCase() !== 'admin') {
           return renderOverview(setActiveTab, (taskData) => {
@@ -507,6 +511,8 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             setSelectedTaskId(taskId);
             if (!taskId) setInitialTaskId(null);
           }}
+          initialAssigneeFilter={teamMemberAssigneeFilter}
+          onClearAssigneeFilter={() => setTeamMemberAssigneeFilter(null)}
         />
       );
       case 'users': 
