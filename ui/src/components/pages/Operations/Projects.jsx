@@ -1004,6 +1004,42 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     }).length;
     const teamCount = projMembers.length;
     const queriesCount = (selectedProject.queries || []).length;
+
+    // Delivery Status calculation
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const activeTasks = allProjectTasks.filter(t => {
+      const s = (t.status || '').toLowerCase();
+      return s !== 'completed' && s !== 'prod verified' && s !== 'delivered';
+    });
+    const overdueTasks = activeTasks.filter(t => t.dueDate && new Date(t.dueDate) < now);
+    const atRiskTasks = activeTasks.filter(t => {
+      if (!t.dueDate) return false;
+      const due = new Date(t.dueDate);
+      const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays <= 7;
+    });
+    const deliveryLabel = totalTasksCount === 0
+      ? 'No Tasks'
+      : completedTasksCount === totalTasksCount
+        ? 'Completed'
+        : overdueTasks.length > 0
+          ? 'Overdue'
+          : atRiskTasks.length > 0
+            ? 'At Risk'
+            : 'On Track';
+    const deliveryColor = deliveryLabel === 'Completed' ? '#16a34a'
+      : deliveryLabel === 'Overdue' ? '#ef4444'
+      : deliveryLabel === 'At Risk' ? '#f59e0b'
+      : deliveryLabel === 'No Tasks' ? '#94a3b8'
+      : '#0ea5e9';
+    const deliverySubText = deliveryLabel === 'Overdue'
+      ? `${overdueTasks.length} task${overdueTasks.length > 1 ? 's' : ''} overdue`
+      : deliveryLabel === 'At Risk'
+        ? `${atRiskTasks.length} due within 7 days`
+        : deliveryLabel === 'Completed'
+          ? `${completedTasksCount} tasks done`
+          : `${activeTasks.length} active task${activeTasks.length !== 1 ? 's' : ''}`;
     const projectID = selectedProject.projectNo || `PRJ-2026-${selectedProject.id.substring(0,4).toUpperCase()}`;
 
     return (
@@ -1205,8 +1241,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>Delivery Status</span>
-                <span style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0ea5e9' }}>-</span>
-                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>-</span>
+                <span style={{ fontSize: '1.1rem', fontWeight: '800', color: deliveryColor }}>{deliveryLabel}</span>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{deliverySubText}</span>
               </div>
             </div>
           </div>
