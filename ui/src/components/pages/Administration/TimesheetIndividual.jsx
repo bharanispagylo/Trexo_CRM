@@ -131,6 +131,7 @@ export default function TimesheetIndividual({ initialUserId, onClearInitialUser 
         setSelectedUserId(list[0].id);
       }
     }).catch(console.error);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
