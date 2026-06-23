@@ -6,6 +6,38 @@
   color: #334155;
 }
 
+.reports-sub-nav {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0;
+}
+
+.reports-sub-nav-btn {
+  padding: 0.5rem 1.25rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.reports-sub-nav-btn:hover {
+  color: #2563eb;
+}
+
+.reports-sub-nav-btn.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+  font-weight: 600;
+}
+
 .reports-header-section {
   display: flex;
   justify-content: space-between;

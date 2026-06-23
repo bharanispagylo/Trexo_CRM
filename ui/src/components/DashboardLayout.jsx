@@ -12,6 +12,9 @@ import Roles from './pages/Administration/Roles';
 import AddUser from './pages/Administration/AddUser';
 import EditUser from './pages/Administration/EditUser';
 import Reports from './pages/Administration/Reports';
+import ReportsStatusBased from './pages/Administration/ReportsStatusBased';
+import TimesheetOverall from './pages/Administration/TimesheetOverall';
+import TimesheetIndividual from './pages/Administration/TimesheetIndividual';
 
 
 // Helper to parse deep-link paths like /projects/Name or /tasks/abc123
@@ -196,6 +199,46 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       drawerBg: '#ec4899'
     },
     {
+      id: 'timesheet-overall',
+      label: 'Timesheet - Summary',
+      module: 'reports',
+      bottomNavIcon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+          <path d="M3 9h18"></path>
+          <path d="M9 21V9"></path>
+        </svg>
+      ),
+      drawerIcon: (
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+          <path d="M3 9h18"></path>
+          <path d="M9 21V9"></path>
+        </svg>
+      ),
+      drawerBg: '#3b82f6'
+    },
+    {
+      id: 'timesheet-individual',
+      label: 'Timesheet - Individual',
+      module: 'reports',
+      bottomNavIcon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <circle cx="12" cy="7" r="4"></circle>
+          <path d="M20 21a8 8 0 1 0-16 0"></path>
+          <line x1="12" y1="11" x2="12" y2="21"></line>
+        </svg>
+      ),
+      drawerIcon: (
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <circle cx="12" cy="7" r="4"></circle>
+          <path d="M20 21a8 8 0 1 0-16 0"></path>
+          <line x1="12" y1="11" x2="12" y2="21"></line>
+        </svg>
+      ),
+      drawerBg: '#8b5cf6'
+    },
+    {
       id: 'roles',
       label: 'Roles',
       module: 'roles',
@@ -334,6 +377,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const [searchSelectedTask, setSearchSelectedTask] = useState(null);
   const [searchSelectedProject, setSearchSelectedProject] = useState(null);
   const [teamMemberAssigneeFilter, setTeamMemberAssigneeFilter] = useState(null);
+  const [timesheetUserId, setTimesheetUserId] = useState(null);
   const searchContainerRef = useRef(null);
 
   useEffect(() => {
@@ -551,7 +595,16 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
           });
         }
         return <EditUser userToEdit={userToEdit} onBack={() => setActiveTab('users')} />;
-      case 'reports': 
+      case 'timesheet-overall':
+        return <TimesheetOverall onUserClick={(userId) => { setTimesheetUserId(userId); setActiveTab('timesheet-individual'); }} />;
+      case 'timesheet-individual':
+        return <TimesheetIndividual initialUserId={timesheetUserId} onClearInitialUser={() => setTimesheetUserId(null)} />;
+      case 'reports-status-based':
+        if (!can('reports', 'view') && user?.role?.toLowerCase() !== 'admin') {
+          return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
+        }
+        return <ReportsStatusBased user={user} onNavigateToTask={(taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); }} />;
+      case 'reports':
         if (!can('reports', 'view') && user?.role?.toLowerCase() !== 'admin') {
           return renderOverview(setActiveTab, (taskData) => {
             setSearchSelectedTask(taskData);
@@ -606,6 +659,9 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'add-user': return { title: 'Create New User', back: 'Users', id: 'NewUser' };
       case 'edit-user': return { title: 'Edit User Profile', back: 'Users', id: 'EditUser' };
       case 'reports': return { title: 'Reports', back: 'Reports', id: 'Reports' };
+      case 'reports-status-based': return { title: 'Tasks - Work Log', back: 'Reports', id: 'ReportsStatusBased' };
+      case 'timesheet-overall': return { title: 'Timesheet - Summary', back: 'Reports', id: 'TimesheetOverall' };
+      case 'timesheet-individual': return { title: 'Timesheet - Individual', back: 'Reports', id: 'TimesheetIndividual' };
       default: return { title: 'Dashboard', back: 'Main', id: 'Overview' };
     }
   };
@@ -655,6 +711,22 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             {can('teams', 'view') && <NavItem id="track-team" label="My Team" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>} />}
             {can('estimations', 'view') && <NavItem id="estimations" label="Estimations" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>} />}
             {can('reports', 'view') && <NavItem id="reports" label="Reports" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>} />}
+            {can('reports', 'view') && ['reports','reports-status-based','timesheet-overall','timesheet-individual'].includes(activeTab) && (
+              <div style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <button className={`nav-item ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => { setActiveTab('reports'); setSidebarOpen(false); }} style={{ fontSize: '0.8rem', paddingLeft: '1rem' }}>
+                  <span className="nav-label">Tasks - Delivery</span>
+                </button>
+                <button className={`nav-item ${activeTab === 'reports-status-based' ? 'active' : ''}`} onClick={() => { setActiveTab('reports-status-based'); setSidebarOpen(false); }} style={{ fontSize: '0.8rem', paddingLeft: '1rem' }}>
+                  <span className="nav-label">Tasks - Work Log</span>
+                </button>
+                <button className={`nav-item ${activeTab === 'timesheet-overall' ? 'active' : ''}`} onClick={() => { setActiveTab('timesheet-overall'); setSidebarOpen(false); }} style={{ fontSize: '0.8rem', paddingLeft: '1rem' }}>
+                  <span className="nav-label">Timesheet - Summary</span>
+                </button>
+                <button className={`nav-item ${activeTab === 'timesheet-individual' ? 'active' : ''}`} onClick={() => { setActiveTab('timesheet-individual'); setSidebarOpen(false); }} style={{ fontSize: '0.8rem', paddingLeft: '1rem' }}>
+                  <span className="nav-label">Timesheet - Individual</span>
+                </button>
+              </div>
+            )}
             {can('clients', 'view') && <NavItem id="clients" label="Clients" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>} />}
           </div>
 

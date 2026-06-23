@@ -1074,10 +1074,12 @@
     color: #475569;
     font-size: 0.75rem;
     font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
     width: 100%;
+    word-break: break-word;
+    line-height: 1.3;
   }
 }
 

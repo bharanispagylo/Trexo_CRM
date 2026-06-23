@@ -10,6 +10,19 @@ const ACTIONS = [
   { id: 'delete', label: 'Delete' },
 ];
 
+const REPORT_ACTIONS = [
+  { id: 'tasks-report',           label: 'Tasks - Delivery' },
+  { id: 'reports-status-based',   label: 'Tasks - Work Log' },
+  { id: 'timesheet-overall',      label: 'Timesheet - Summary' },
+  { id: 'timesheet-individual',   label: 'Timesheet - Individual' },
+];
+
+const getActionsForModule = (modId) => {
+  if (modId === 'reports') return REPORT_ACTIONS;
+  if (modId === 'dashboard') return ACTIONS.filter(a => a.id === 'view');
+  return ACTIONS;
+};
+
 const MODULES = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'tasks', label: 'Tasks' },
@@ -36,7 +49,7 @@ export default function Roles() {
   // Initial default permissions
   const createDefaultPerms = () => MODULES.reduce((acc, m) => ({
     ...acc,
-    [m.id]: ACTIONS.reduce((aacc, a) => ({ ...aacc, [a.id]: 'None' }), {})
+    [m.id]: getActionsForModule(m.id).reduce((aacc, a) => ({ ...aacc, [a.id]: 'None' }), {})
   }), {});
 
   const [permissions, setPermissions] = useState({
@@ -124,7 +137,7 @@ export default function Roles() {
       ...prev,
       [selectedRole]: MODULES.reduce((acc, m) => ({
         ...acc,
-        [m.id]: ACTIONS.reduce((aacc, a) => ({ ...aacc, [a.id]: 'All' }), {})
+        [m.id]: getActionsForModule(m.id).reduce((aacc, a) => ({ ...aacc, [a.id]: 'All' }), {})
       }), {})
     }));
   };
@@ -134,7 +147,7 @@ export default function Roles() {
       ...prev,
       [selectedRole]: MODULES.reduce((acc, m) => ({
         ...acc,
-        [m.id]: ACTIONS.reduce((aacc, a) => ({ ...aacc, [a.id]: 'None' }), {})
+        [m.id]: getActionsForModule(m.id).reduce((aacc, a) => ({ ...aacc, [a.id]: 'None' }), {})
       }), {})
     }));
   };
@@ -298,7 +311,7 @@ export default function Roles() {
                           </div>
                         </td>
                       </tr>
-                      {isExpanded && ACTIONS.map(act => (
+                      {isExpanded && getActionsForModule(mod.id).map(act => (
                         <tr key={act.id} className="action-row">
                           <td className="action-label">{act.label}</td>
                           <td className="check-cell">
@@ -344,7 +357,7 @@ export default function Roles() {
                   </div>
                   {isExpanded && (
                     <div className="mob-action-rows">
-                      {ACTIONS.map(act => {
+                      {getActionsForModule(mod.id).map(act => {
                         const val = permissions[selectedRole]?.[mod.id]?.[act.id];
                         return (
                           <div key={act.id} className="mob-action-row">
