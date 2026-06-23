@@ -147,7 +147,7 @@ export default function Reports({ user, onNavigateToTask }) {
   };
 
   const handleExport = () => {
-    const headers = ['Task # No', 'Title', 'Project', 'Assignee', 'Billable Hours', 'Already Billed', 'Delivered Date'];
+    const headers = ['Task # No', 'Title', 'Project', 'Assignee', 'Time Spent', 'Billable Hours', 'Already Billed', 'Delivered Date'];
     const rows = tasks.map(t => {
       const resolvedProj = t.projectName || (projects.find(p => p.id === t.projectId)?.name) || '-';
       
@@ -166,6 +166,7 @@ export default function Reports({ user, onNavigateToTask }) {
         `"${(t.title || '').replace(/"/g, '""')}"`,
         `"${resolvedProj.replace(/"/g, '""')}"`,
         `"${resolvedAssignee.replace(/"/g, '""')}"`,
+        formatDecimal(parseFloat(t.timeSpent) || 0),
         formatDecimal(parseFloat(t.taskApprovedHours) || 0),
         formatDecimal(parseFloat(t.taskActualHours) || 0),
         t.deliveredDate ? new Date(t.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
@@ -217,7 +218,7 @@ export default function Reports({ user, onNavigateToTask }) {
     <div className="reports-container">
       <div className="reports-header-section">
         <div className="reports-title-area"></div>
-        
+
         <div className="reports-actions">
           <div className="report-type-toggle">
             <button 
@@ -366,7 +367,8 @@ export default function Reports({ user, onNavigateToTask }) {
                 <th>Title</th>
                 <th>Project</th>
                 <th>Assignee</th>
-                <th>Billable Hours</th>
+                <th>TimeSpent hrs</th>
+                <th>Billable hrs</th>
                 <th>Already Billed</th>
                 <th>Delivered Date</th>
               </tr>
@@ -386,27 +388,20 @@ export default function Reports({ user, onNavigateToTask }) {
                   <td>{task.projectName || (projects.find(p => p.id === task.projectId)?.name) || '-'}</td>
                   <td>
                     {(() => {
-                      if (!task.assignees) return <div className="assignee-cell"><div className="assignee-avatar">?</div>Unassigned</div>;
+                      if (!task.assignees) return <span>Unassigned</span>;
                       const ids = task.assignees.split(',').map(id => id.trim()).filter(Boolean);
                       return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           {ids.map(id => {
                             const uObj = assignees.find(u => u.id === id);
                             const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : id;
-                            const firstChar = dispName.charAt(0).toUpperCase();
-                            return (
-                              <div key={id} className="assignee-cell">
-                                <div className="assignee-avatar">
-                                  {firstChar}
-                                </div>
-                                {dispName}
-                              </div>
-                            );
+                            return <span key={id}>{dispName}</span>;
                           })}
                         </div>
                       );
                     })()}
                   </td>
+                  <td>{formatDecimal(parseFloat(task.timeSpent) || 0)}</td>
                   <td>{formatDecimal(parseFloat(task.taskApprovedHours) || 0)}</td>
                   <td>{formatDecimal(parseFloat(task.taskActualHours) || 0)}</td>
                   <td>{task.deliveredDate ? new Date(task.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
@@ -414,14 +409,14 @@ export default function Reports({ user, onNavigateToTask }) {
               ))}
               {tasks.length === 0 && (
                 <tr>
-                  <td colSpan="7" className="no-data-cell" style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b', fontSize: '0.95rem' }}>No tasks delivered in this period.</td>
+                  <td colSpan="8" className="no-data-cell" style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b', fontSize: '0.95rem' }}>No tasks delivered in this period.</td>
                 </tr>
               )}
             </tbody>
             {tasks.length > 0 && (
               <tfoot>
                 <tr>
-                  <td colSpan="4" className="footer-total-label">Total</td>
+                  <td colSpan="5" className="footer-total-label">Total</td>
                   <td className="footer-total-hours">{formatDecimal(totalApprovedHours)} hrs</td>
                   <td className="footer-total-hours">{formatDecimal(totalActualHours)} hrs</td>
                   <td className="footer-total-tasks">{totalTasks} tasks</td>
@@ -430,8 +425,6 @@ export default function Reports({ user, onNavigateToTask }) {
             )}
           </table>
       </div>
-
-
     </div>
   );
 }

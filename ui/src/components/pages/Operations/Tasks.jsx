@@ -558,12 +558,6 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     }).catch(console.error);
   }, [task, isEdit, fetchComments, fetchWorkLogs, fetchSubtasks]);
 
-  useEffect(() => {
-    if (task?.createdAt) {
-      const taskDate = new Date(task.createdAt).toISOString().split('T')[0];
-      setWorkLogForm(prev => ({ ...prev, logDate: taskDate }));
-    }
-  }, [task]);
 
   useEffect(() => {
     const billedHours = workLogs.filter(log => log.isBilled).reduce((acc, log) => acc + (Number(log.hoursWorked) || 0), 0);
@@ -858,15 +852,16 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   };
   
   const handleAddWorkLog = async (isBilledArg = false) => {
-    if (!workLogForm.hoursWorked || !workLogForm.logDate) {
-      alert("Please fill in Date and Hours.", "warning", "Required");
+    if (!workLogForm.hoursWorked) {
+      alert("Please fill in Hours.", "warning", "Required");
       return;
     }
+    const todayDate = new Date().toISOString().split('T')[0];
     setWorkLogSaving(true);
     try {
       if (workLogForm.id) {
         await api.put(`/worklogs/${workLogForm.id}`, {
-          logDate: workLogForm.logDate,
+          logDate: workLogForm.logDate || todayDate,
           hoursWorked: workLogForm.hoursWorked,
           description: workLogForm.description,
           isBilled: isBilledArg
@@ -874,16 +869,15 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       } else {
         await api.post(`/tasks/${task.id}/worklogs`, {
           userId: currentUser?.id,
-          logDate: workLogForm.logDate,
+          logDate: todayDate,
           hoursWorked: workLogForm.hoursWorked,
           description: workLogForm.description,
           isBilled: isBilledArg
         });
       }
       fetchWorkLogs();
-      const taskDate = task?.createdAt ? new Date(task.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
       setWorkLogForm({
-        logDate: taskDate,
+        logDate: todayDate,
         hoursWorked: '',
         description: '',
         isBilled: false,
@@ -1824,6 +1818,37 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     <>
 
 
+                      {/* Estimated Hours */}
+                      <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
+                        <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
+                          Estimated Hours
+                        </label>
+                        <div>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={form.estimatedHoursStr !== undefined ? form.estimatedHoursStr : (form.estimatedHours !== undefined && form.estimatedHours !== null ? String(form.estimatedHours) : '0')}
+                              onChange={e => {
+                                const val = e.target.value;
+                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                  setForm(f => ({
+                                    ...f,
+                                    estimatedHoursStr: val,
+                                    estimatedHours: val === '' || val === '.' ? 0 : parseFloat(val) || 0
+                                  }));
+                                }
+                              }}
+                              className="saas-grid-input"
+                              placeholder="e.g. 20"
+                            />
+                          ) : (
+                            <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
+                              {String(form.estimatedHours || 0)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
                       {/* Billable Hours */}
                       <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
                         <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
@@ -1906,19 +1931,16 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   </div>
                 ) : (
                   <>
-                    <div style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', maxWidth: '420px', boxSizing: 'border-box' }}>
+                    <div className="worklog-section-row" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div className="worklog-add-card" style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', maxWidth: '420px', flex: '1', boxSizing: 'border-box' }}>
                       <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.95rem', fontWeight: '700' }}>Add Work Log</h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <div style={{ marginBottom: '0.75rem' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                          <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Date</label>
-                          <input type="date" className="saas-input" value={workLogForm.logDate} disabled={true} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#e2e8f0', color: '#64748b', cursor: 'not-allowed' }} />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                          <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Worked Hrs</label>
+                          <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Timespent</label>
                           <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div className="worklog-btn-row" style={{ display: 'flex', gap: '0.5rem' }}>
                         <button className="saas-btn-primary" onClick={() => handleAddWorkLog(false)} disabled={workLogSaving} style={{ padding: '0.5rem 1rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
                           {workLogSaving ? 'Saving...' : (workLogForm.id ? 'Update Work Log' : 'Add Work Log')}
                         </button>
@@ -1937,10 +1959,17 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         )}
                       </div>
                     </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0.75rem 1rem', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', width: 'fit-content', minWidth: '140px', maxWidth: '180px' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#0369a1', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total hrs spent</span>
+                        <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', marginTop: '0.25rem' }}>
+                          {workLogs.filter(log => !log.isBilled && Number(log.hoursWorked) > 0).reduce((sum, log) => sum + Number(log.hoursWorked), 0)}h
+                        </span>
+                      </div>
+                    </div>
 
                     <div>
                       <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.95rem', fontWeight: '700' }}>Recent Work Logs</h4>
-                      {workLogs.filter(log => !log.isBilled).length === 0 ? (
+                      {workLogs.filter(log => !log.isBilled && Number(log.hoursWorked) > 0).length === 0 ? (
                         <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No work logs found for this task.</p>
                       ) : (
                         <div className="table-responsive">
@@ -1949,12 +1978,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                               <tr style={{ background: '#f8fafc', color: '#64748b', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
                                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Date</th>
                                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>User</th>
-                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Worked Hrs</th>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Timespent</th>
                                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {workLogs.filter(log => !log.isBilled).map(log => (
+                              {workLogs.filter(log => !log.isBilled && Number(log.hoursWorked) > 0).map(log => (
                                 <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
                                   <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{formatDate(log.logDate)}</td>
                                   <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>

@@ -5538,3 +5538,24 @@
 .saas-subtasks-pane .attachment-table-row:hover {
   background: #f8fafc;
 }
+
+@media (max-width: 600px) {
+  .worklog-section-row {
+    flex-direction: column;
+  }
+  .worklog-add-card {
+    max-width: 260px !important;
+    width: 260px !important;
+    flex: none !important;
+    padding: 0.75rem !important;
+  }
+  .worklog-add-card input[type="number"] {
+    max-width: 200px !important;
+    width: 100% !important;
+  }
+  .worklog-add-card .worklog-btn-row button {
+    width: auto !important;
+    padding: 0.45rem 1rem !important;
+    font-size: 0.82rem !important;
+  }
+}
