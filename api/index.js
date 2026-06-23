@@ -1406,6 +1406,32 @@ app.put('/api/worklogs/:logId', async (req, res) => {
   }
 });
 
+app.get('/api/worklogs', async (req, res) => {
+  try {
+    const { startDate, endDate, userId } = req.query;
+    const where = {};
+    if (startDate || endDate) {
+      where.logDate = {};
+      if (startDate) where.logDate.gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.logDate.lte = end;
+      }
+    }
+    if (userId) where.userId = userId;
+    const logs = await prisma.workLog.findMany({
+      where,
+      include: { user: true, task: { select: { id: true, title: true, status: true, estimatedHours: true, approvedHours: true, actualHours: true } } },
+      orderBy: { logDate: 'desc' }
+    });
+    res.json(logs);
+  } catch (error) {
+    console.error('GET /api/worklogs error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.delete('/api/worklogs/:logId', async (req, res) => {
   try {
     const log = await prisma.workLog.findUnique({ where: { id: req.params.logId } });
@@ -1920,15 +1946,18 @@ app.get('/api/reports/monthly', async (req, res) => {
     }
 
     const reportRecords = await prisma.report.findMany({
-      where: whereClause
+      where: whereClause,
+      orderBy: { deliveredDate: 'desc' }
     });
 
     const taskIds = reportRecords.map(r => r.id);
-    const dbTasks = await prisma.task.findMany({
-      where: { id: { in: taskIds } },
-      select: { id: true, parentId: true }
-    });
+    const [dbTasks, workLogs] = await Promise.all([
+      prisma.task.findMany({ where: { id: { in: taskIds } }, select: { id: true, parentId: true } }),
+      prisma.workLog.findMany({ where: { taskId: { in: taskIds } } })
+    ]);
     const taskParentMap = new Map(dbTasks.map(t => [t.id, t.parentId]));
+    const timeSpentMap = {};
+    workLogs.forEach(l => { timeSpentMap[l.taskId] = (timeSpentMap[l.taskId] || 0) + (l.hoursWorked || 0); });
 
     const mapped = reportRecords.map(r => ({
       id: r.id,
@@ -1942,6 +1971,7 @@ app.get('/api/reports/monthly', async (req, res) => {
       clientRef: r.companyName ? { company: r.companyName } : null,
       taskApprovedHours: r.billableHours,
       taskActualHours: r.alreadyBilled,
+      timeSpent: timeSpentMap[r.id] || 0,
       workLogPeriodString: `${month || (targetMonth + 1)}/${year || targetYear}`
     }));
 
@@ -1984,15 +2014,18 @@ app.get('/api/reports/range', async (req, res) => {
     }
 
     const reportRecords = await prisma.report.findMany({
-      where: whereClause
+      where: whereClause,
+      orderBy: { deliveredDate: 'desc' }
     });
 
     const taskIds = reportRecords.map(r => r.id);
-    const dbTasks = await prisma.task.findMany({
-      where: { id: { in: taskIds } },
-      select: { id: true, parentId: true }
-    });
+    const [dbTasks, workLogs] = await Promise.all([
+      prisma.task.findMany({ where: { id: { in: taskIds } }, select: { id: true, parentId: true } }),
+      prisma.workLog.findMany({ where: { taskId: { in: taskIds } } })
+    ]);
     const taskParentMap = new Map(dbTasks.map(t => [t.id, t.parentId]));
+    const timeSpentMap = {};
+    workLogs.forEach(l => { timeSpentMap[l.taskId] = (timeSpentMap[l.taskId] || 0) + (l.hoursWorked || 0); });
 
     const mapped = reportRecords.map(r => ({
       id: r.id,
@@ -2005,7 +2038,8 @@ app.get('/api/reports/range', async (req, res) => {
       deliveredDate: r.deliveredDate,
       clientRef: r.companyName ? { company: r.companyName } : null,
       taskApprovedHours: r.billableHours,
-      taskActualHours: r.alreadyBilled
+      taskActualHours: r.alreadyBilled,
+      timeSpent: timeSpentMap[r.id] || 0
     }));
 
     res.json(mapped);
@@ -2016,7 +2050,82 @@ app.get('/api/reports/range', async (req, res) => {
 });
 
 
-// 12. Role Permissions
+// 12. Reports - Status Based
+app.get('/api/reports/status-based', async (req, res) => {
+  try {
+    const { period = 'monthly', date, startDate: qStart, endDate: qEnd, project, assignee, client, status } = req.query;
+
+    let startDate, endDate;
+
+    if (period === 'custom') {
+      if (!qStart || !qEnd) return res.status(400).json({ error: 'startDate and endDate required for custom period' });
+      startDate = new Date(qStart);
+      endDate   = new Date(qEnd);
+    } else {
+      const targetDate = date ? new Date(date) : new Date();
+      if (period === 'weekly') {
+        const day = targetDate.getDay();
+        const diffToMonday = day === 0 ? -6 : 1 - day;
+        startDate = new Date(targetDate);
+        startDate.setDate(targetDate.getDate() + diffToMonday);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
+      } else {
+        startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+        endDate   = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999);
+      }
+    }
+
+    const andConditions = [
+      {
+        OR: [
+          { dueDate: { gte: startDate, lte: endDate } },
+          { AND: [{ dueDate: null }, { createdAt: { gte: startDate, lte: endDate } }] }
+        ]
+      }
+    ];
+
+    if (status  && status  !== 'All')           andConditions.push({ status });
+    if (assignee && assignee !== 'All Assignees') andConditions.push({ assignees: { contains: assignee } });
+    if (project  && project  !== 'All Projects')  andConditions.push({ projectRef: { name: project } });
+    if (client   && client   !== 'All Clients')   andConditions.push({ clientId: client });
+
+    const tasks = await prisma.task.findMany({
+      where: { AND: andConditions },
+      include: { projectRef: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const taskIds = tasks.map(t => t.id);
+    const workLogs = await prisma.workLog.findMany({ where: { taskId: { in: taskIds } } });
+    const timeSpentMap = {};
+    workLogs.forEach(l => { timeSpentMap[l.taskId] = (timeSpentMap[l.taskId] || 0) + (l.hoursWorked || 0); });
+
+    const result = tasks.map(({ projectRef, ...t }) => ({
+      id: t.id,
+      taskNo: t.taskNo,
+      parentId: t.parentId,
+      title: t.title,
+      projectName: projectRef?.name || '',
+      assignees: t.assignees,
+      status: t.status,
+      timeSpent: timeSpentMap[t.id] || 0,
+      billableHours: t.approvedHours || 0,
+      estimatedHours: t.estimatedHours || 0,
+      dueDate: t.dueDate,
+      priority: t.priority,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error('GET /api/reports/status-based error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 13. Role Permissions
 app.get('/api/roles/permissions', async (req, res) => {
   try {
     const perms = await prisma.rolePermission.findMany();
