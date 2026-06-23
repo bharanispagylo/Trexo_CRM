@@ -2050,13 +2050,13 @@ app.get('/api/reports/range', async (req, res) => {
 });
 
 
-// 12. Reports - Status Based
+// 12. Reports - Tasks Work Log (status-based, filtered by logDate)
 app.get('/api/reports/status-based', async (req, res) => {
   try {
     const { period = 'monthly', date, startDate: qStart, endDate: qEnd, project, assignee, client, status } = req.query;
 
+    // ── Build date range from period ──────────────────────────────────────────
     let startDate, endDate;
-
     if (period === 'custom') {
       if (!qStart || !qEnd) return res.status(400).json({ error: 'startDate and endDate required for custom period' });
       startDate = new Date(qStart);
@@ -2073,50 +2073,55 @@ app.get('/api/reports/status-based', async (req, res) => {
         endDate.setDate(startDate.getDate() + 6);
         endDate.setHours(23, 59, 59, 999);
       } else {
+        // monthly (and daily falls here too with same start/end day)
         startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
         endDate   = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999);
       }
     }
 
-    const andConditions = [
-      {
-        OR: [
-          { dueDate: { gte: startDate, lte: endDate } },
-          { AND: [{ dueDate: null }, { createdAt: { gte: startDate, lte: endDate } }] }
-        ]
-      }
-    ];
+    // ── Step 1: fetch work logs in the date range ─────────────────────────────
+    const workLogWhere = { logDate: { gte: startDate, lte: endDate } };
+    if (assignee && assignee !== 'All Assignees') workLogWhere.userId = assignee;
 
-    if (status  && status  !== 'All')           andConditions.push({ status });
-    if (assignee && assignee !== 'All Assignees') andConditions.push({ assignees: { contains: assignee } });
-    if (project  && project  !== 'All Projects')  andConditions.push({ projectRef: { name: project } });
-    if (client   && client   !== 'All Clients')   andConditions.push({ clientId: client });
+    const workLogs = await prisma.workLog.findMany({ where: workLogWhere });
+
+    if (workLogs.length === 0) return res.json([]);
+
+    // ── Step 2: aggregate timeSpent per task ──────────────────────────────────
+    const timeSpentMap = {};
+    workLogs.forEach(l => {
+      timeSpentMap[l.taskId] = (timeSpentMap[l.taskId] || 0) + (l.hoursWorked || 0);
+    });
+    const taskIds = Object.keys(timeSpentMap);
+
+    // ── Step 3: fetch task details with optional filters ──────────────────────
+    const taskWhere = { id: { in: taskIds } };
+    if (status  && status  !== 'All')          taskWhere.status   = status;
+    if (project && project !== 'All Projects') taskWhere.projectRef = { name: project };
+    if (client  && client  !== 'All Clients')  taskWhere.clientId = client;
 
     const tasks = await prisma.task.findMany({
-      where: { AND: andConditions },
+      where: taskWhere,
       include: { projectRef: { select: { name: true } } },
-      orderBy: { createdAt: 'desc' }
     });
 
-    const taskIds = tasks.map(t => t.id);
-    const workLogs = await prisma.workLog.findMany({ where: { taskId: { in: taskIds } } });
-    const timeSpentMap = {};
-    workLogs.forEach(l => { timeSpentMap[l.taskId] = (timeSpentMap[l.taskId] || 0) + (l.hoursWorked || 0); });
-
-    const result = tasks.map(({ projectRef, ...t }) => ({
-      id: t.id,
-      taskNo: t.taskNo,
-      parentId: t.parentId,
-      title: t.title,
-      projectName: projectRef?.name || '',
-      assignees: t.assignees,
-      status: t.status,
-      timeSpent: timeSpentMap[t.id] || 0,
-      billableHours: t.approvedHours || 0,
-      estimatedHours: t.estimatedHours || 0,
-      dueDate: t.dueDate,
-      priority: t.priority,
-    }));
+    // ── Step 4: build result sorted by timeSpent desc ─────────────────────────
+    const result = tasks
+      .map(({ projectRef, ...t }) => ({
+        id:             t.id,
+        taskNo:         t.taskNo,
+        parentId:       t.parentId,
+        title:          t.title,
+        projectName:    projectRef?.name || '',
+        assignees:      t.assignees,
+        status:         t.status,
+        timeSpent:      timeSpentMap[t.id] || 0,
+        billableHours:  t.approvedHours   || 0,
+        estimatedHours: t.estimatedHours  || 0,
+        dueDate:        t.dueDate,
+        priority:       t.priority,
+      }))
+      .sort((a, b) => b.timeSpent - a.timeSpent);
 
     res.json(result);
   } catch (error) {
