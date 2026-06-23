@@ -186,16 +186,12 @@ export default function TimesheetIndividual({ initialUserId, onClearInitialUser 
 
   return (
     <div style={{ padding: '1.5rem' }}>
-      {/* Header row: title left, export right */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <h2 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0f172a', margin: 0 }}>
+      {/* Header row: title left, export pinned top-right */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '0.75rem' }}>
+        <h2 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0f172a', margin: 0, flex: 1, minWidth: 0 }}>
           Timesheet - Individual{selectedUserName ? ` — ${selectedUserName}` : ''}
         </h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <span style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Hours</span>
-            <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', lineHeight: 1.2 }}>{totalHrs.toFixed(1)}h</span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexShrink: 0 }}>
           <button
             onClick={handleExport}
             disabled={rows.length === 0}

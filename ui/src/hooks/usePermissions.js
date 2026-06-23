@@ -52,11 +52,23 @@ export function PermissionProvider({ children, userRole }) {
   const can = (module, action) => {
     if (!permissions) return false;
     if (userRole?.toLowerCase() === 'admin') return true; // Admin has override
-    
+
     const modPerms = permissions[module];
     if (!modPerms) return false;
-    
+
     const level = modPerms[action];
+    return level === 'All' || level === 'Self';
+  };
+
+  // Checks report sub-page permissions — respects actual DB values, no Admin bypass.
+  // Falls back to full access for Admin only when no permissions have been saved yet.
+  const canReport = (pageId) => {
+    if (!permissions) return false;
+    const reportPerms = permissions?.reports;
+    if (!reportPerms || reportPerms[pageId] === undefined) {
+      return userRole?.toLowerCase() === 'admin';
+    }
+    const level = reportPerms[pageId];
     return level === 'All' || level === 'Self';
   };
 
@@ -66,7 +78,7 @@ export function PermissionProvider({ children, userRole }) {
   };
 
   return (
-    <PermissionContext.Provider value={{ permissions, loading, can, getLevel }}>
+    <PermissionContext.Provider value={{ permissions, loading, can, canReport, getLevel }}>
       {children}
     </PermissionContext.Provider>
   );

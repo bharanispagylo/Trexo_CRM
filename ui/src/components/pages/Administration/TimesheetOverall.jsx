@@ -143,9 +143,9 @@ export default function TimesheetOverall({ onUserClick }) {
 
   return (
     <div style={{ padding: '1.5rem' }}>
-      {/* Top bar: filters left, export right */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+      {/* Top bar: filters + total hours left, export pinned top-right */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flex: 1 }}>
           <div style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
             {['daily', 'weekly', 'monthly'].map(f => (
               <button key={f} onClick={() => setFilter(f)} style={{ padding: '0.45rem 1rem', background: filter === f ? '#2563eb' : 'white', color: filter === f ? 'white' : '#475569', border: 'none', fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer', textTransform: 'capitalize' }}>
@@ -154,28 +154,25 @@ export default function TimesheetOverall({ onUserClick }) {
             ))}
           </div>
           <DatePicker filter={filter} selectedDate={selectedDate} onChange={setSelectedDate} />
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Hours</span>
             <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', lineHeight: 1.2 }}>
               {rows.reduce((sum, r) => sum + r.hours, 0).toFixed(1)}h
             </span>
           </div>
-          <button
-            onClick={handleExport}
-            disabled={rows.length === 0}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 1.1rem', background: 'white', color: rows.length === 0 ? '#94a3b8' : '#2563eb', border: `1.5px solid ${rows.length === 0 ? '#e2e8f0' : '#2563eb'}`, borderRadius: '8px', fontWeight: '600', fontSize: '0.85rem', cursor: rows.length === 0 ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
-          >
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Export
-          </button>
         </div>
+        <button
+          onClick={handleExport}
+          disabled={rows.length === 0}
+          style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 1.1rem', background: 'white', color: rows.length === 0 ? '#94a3b8' : '#2563eb', border: `1.5px solid ${rows.length === 0 ? '#e2e8f0' : '#2563eb'}`, borderRadius: '8px', fontWeight: '600', fontSize: '0.85rem', cursor: rows.length === 0 ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
+        >
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Export
+        </button>
       </div>
 
       {loading ? (

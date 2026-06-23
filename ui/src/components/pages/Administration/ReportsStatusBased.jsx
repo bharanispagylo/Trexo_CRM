@@ -382,10 +382,9 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
           {tasks.length > 0 && (
             <tfoot>
               <tr>
-                <td colSpan="4" className="footer-total-label">Total</td>
+                <td colSpan="5" className="footer-total-label">Total</td>
                 <td className="footer-total-hours">{formatDecimal(totalTimeSpent)} hrs</td>
                 <td className="footer-total-hours">{formatDecimal(totalBillable)} hrs</td>
-                <td></td>
                 <td className="footer-total-hours">{formatDecimal(totalEstimated)} hrs</td>
               </tr>
             </tfoot>
