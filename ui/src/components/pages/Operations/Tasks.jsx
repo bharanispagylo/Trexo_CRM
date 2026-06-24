@@ -1602,14 +1602,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               className={`saas-tab-header-btn ${activeTab === 'worklog' ? 'active' : ''}`}
               onClick={() => setActiveTab('worklog')}
             >
-              Work Log
+              Work Log ({workLogs.filter(log => !log.isBilled && Number(log.hoursWorked) > 0).length})
             </button>
             {currentUser?.role?.toLowerCase() === 'admin' && !task?.parentId && (
               <button 
                 className={`saas-tab-header-btn ${activeTab === 'billing' ? 'active' : ''}`}
                 onClick={() => setActiveTab('billing')}
               >
-                Billing
+                Billing ({form.isBillable ? 'Y' : 'N'})
               </button>
             )}
             <button 
