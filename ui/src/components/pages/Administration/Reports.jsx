@@ -360,6 +360,8 @@ export default function Reports({ user, onNavigateToTask }) {
 
 
       <div className="reports-table-container">
+        {/* Desktop View */}
+        <div className="desktop-table-view">
           <table className="reports-table">
             <thead>
               <tr>
@@ -424,6 +426,99 @@ export default function Reports({ user, onNavigateToTask }) {
               </tfoot>
             )}
           </table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="mobile-cards-view">
+          {tasks.map(task => {
+            const displayId = getDisplayId(task.taskNo, task.parentId);
+            const projName = task.projectName || (projects.find(p => p.id === task.projectId)?.name) || '-';
+            const deliveredStr = task.deliveredDate ? new Date(task.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
+            
+            let assigneeNode;
+            if (!task.assignees) {
+              assigneeNode = 'Unassigned';
+            } else {
+              const ids = task.assignees.split(',').map(id => id.trim()).filter(Boolean);
+              assigneeNode = ids.map(id => {
+                const uObj = assignees.find(u => u.id === id);
+                return uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim()) : id;
+              }).join(', ');
+            }
+
+            return (
+              <div key={task.id} className="reports-mobile-card">
+                <div className="reports-mobile-card-header">
+                  <span 
+                    className="reports-mobile-card-id"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => onNavigateToTask && onNavigateToTask({ id: task.id, title: task.title })}
+                  >
+                    #{displayId}
+                  </span>
+                  <span className="reports-mobile-card-project">{projName}</span>
+                </div>
+                
+                <h4 className="reports-mobile-card-title">{task.title}</h4>
+                
+                <div className="reports-mobile-card-body">
+                  <div className="reports-mobile-card-row">
+                    <span className="reports-mobile-card-label">Assignee:</span>
+                    <span className="reports-mobile-card-value">{assigneeNode}</span>
+                  </div>
+                  <div className="reports-mobile-card-row">
+                    <span className="reports-mobile-card-label">Delivered:</span>
+                    <span className="reports-mobile-card-value">{deliveredStr}</span>
+                  </div>
+                  
+                  <div className="reports-mobile-card-grid">
+                    <div className="reports-mobile-card-grid-item">
+                      <span className="reports-mobile-card-grid-label">TimeSpent</span>
+                      <span className="reports-mobile-card-grid-value" style={{ color: '#2563eb' }}>
+                        {formatDecimal(parseFloat(task.timeSpent) || 0)}h
+                      </span>
+                    </div>
+                    <div className="reports-mobile-card-grid-item">
+                      <span className="reports-mobile-card-grid-label">Billable</span>
+                      <span className="reports-mobile-card-grid-value">
+                        {formatDecimal(parseFloat(task.taskApprovedHours) || 0)}h
+                      </span>
+                    </div>
+                    <div className="reports-mobile-card-grid-item">
+                      <span className="reports-mobile-card-grid-label">Billed</span>
+                      <span className="reports-mobile-card-grid-value">
+                        {formatDecimal(parseFloat(task.taskActualHours) || 0)}h
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {tasks.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#64748b', fontSize: '0.9rem', background: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              No tasks delivered in this period.
+            </div>
+          )}
+
+          {tasks.length > 0 && (
+            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ fontWeight: '700', color: '#475569' }}>Total Billable:</span>
+                <span style={{ fontWeight: '800', color: '#0f172a' }}>{formatDecimal(totalApprovedHours)} hrs</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ fontWeight: '700', color: '#475569' }}>Total Billed:</span>
+                <span style={{ fontWeight: '800', color: '#0f172a' }}>{formatDecimal(totalActualHours)} hrs</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.5rem' }}>
+                <span style={{ fontWeight: '700', color: '#475569' }}>Total Delivered:</span>
+                <span style={{ fontWeight: '800', color: '#2563eb' }}>{totalTasks} tasks</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

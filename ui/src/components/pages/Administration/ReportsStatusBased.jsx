@@ -318,78 +318,175 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
 
       {/* ── Table ── */}
       <div className="reports-table-container">
-        <table className="reports-table">
-          <thead>
-            <tr>
-              <th>Task # No</th>
-              <th>Title</th>
-              <th>Status</th>
-              <th>Project</th>
-              <th>Assignee</th>
-              <th>TimeSpent hrs</th>
-              <th>Billable hrs</th>
-              <th>Estimated hrs</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.map(task => {
-              const st = STATUS_STYLE[task.status] || { bg: '#f1f5f9', color: '#475569' };
-              return (
-                <tr key={task.id}>
-                  <td>{getDisplayId(task.taskNo, task.parentId)}</td>
-                  <td className="task-title-cell">
-                    <span
-                      style={{ color: '#2563eb', cursor: 'pointer', fontWeight: '600' }}
-                      onClick={() => onNavigateToTask && onNavigateToTask({ id: task.id, title: task.title })}
-                    >
-                      {task.title}
-                    </span>
+        {/* Desktop View */}
+        <div className="desktop-table-view">
+          <table className="reports-table">
+            <thead>
+              <tr>
+                <th>Task # No</th>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Project</th>
+                <th>Assignee</th>
+                <th>TimeSpent hrs</th>
+                <th>Billable hrs</th>
+                <th>Estimated hrs</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tasks.map(task => {
+                const st = STATUS_STYLE[task.status] || { bg: '#f1f5f9', color: '#475569' };
+                return (
+                  <tr key={task.id}>
+                    <td>{getDisplayId(task.taskNo, task.parentId)}</td>
+                    <td className="task-title-cell">
+                      <span
+                        style={{ color: '#2563eb', cursor: 'pointer', fontWeight: '600' }}
+                        onClick={() => onNavigateToTask && onNavigateToTask({ id: task.id, title: task.title })}
+                      >
+                        {task.title}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ display: 'inline-block', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600', background: st.bg, color: st.color, whiteSpace: 'nowrap' }}>
+                        {task.status || '-'}
+                      </span>
+                    </td>
+                    <td>{task.projectName || '-'}</td>
+                    <td>
+                      {(() => {
+                        if (!task.assignees) return <span>Unassigned</span>;
+                        const ids = task.assignees.split(',').map(id => id.trim()).filter(Boolean);
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {ids.map(id => {
+                              const u = assignees.find(u => u.id === id);
+                              return <span key={id}>{u ? (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()) : id}</span>;
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    <td>{formatDecimal(task.timeSpent)}</td>
+                    <td>{formatDecimal(task.billableHours)}</td>
+                    <td>{formatDecimal(task.estimatedHours)}</td>
+                  </tr>
+                );
+              })}
+              {tasks.length === 0 && (
+                <tr>
+                  <td colSpan="8" className="no-data-cell" style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b', fontSize: '0.95rem' }}>
+                    No tasks found for this period.
                   </td>
-                  <td>
-                    <span style={{ display: 'inline-block', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600', background: st.bg, color: st.color, whiteSpace: 'nowrap' }}>
+                </tr>
+              )}
+            </tbody>
+            {tasks.length > 0 && (
+              <tfoot>
+                <tr>
+                  <td colSpan="5" className="footer-total-label">Total</td>
+                  <td className="footer-total-hours">{formatDecimal(totalTimeSpent)} hrs</td>
+                  <td className="footer-total-hours">{formatDecimal(totalBillable)} hrs</td>
+                  <td className="footer-total-hours">{formatDecimal(totalEstimated)} hrs</td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="mobile-cards-view">
+          {tasks.map(task => {
+            const displayId = getDisplayId(task.taskNo, task.parentId);
+            const st = STATUS_STYLE[task.status] || { bg: '#f1f5f9', color: '#475569' };
+            const projName = task.projectName || '-';
+            
+            let assigneeNode;
+            if (!task.assignees) {
+              assigneeNode = 'Unassigned';
+            } else {
+              const ids = task.assignees.split(',').map(id => id.trim()).filter(Boolean);
+              assigneeNode = ids.map(id => {
+                const u = assignees.find(u => u.id === id);
+                return u ? (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()) : id;
+              }).join(', ');
+            }
+
+            return (
+              <div key={task.id} className="reports-mobile-card">
+                <div className="reports-mobile-card-header">
+                  <span 
+                    className="reports-mobile-card-id"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => onNavigateToTask && onNavigateToTask({ id: task.id, title: task.title })}
+                  >
+                    #{displayId}
+                  </span>
+                  <span className="reports-mobile-card-project">{projName}</span>
+                </div>
+                
+                <h4 className="reports-mobile-card-title">{task.title}</h4>
+                
+                <div className="reports-mobile-card-body">
+                  <div className="reports-mobile-card-row">
+                    <span className="reports-mobile-card-label">Assignee:</span>
+                    <span className="reports-mobile-card-value">{assigneeNode}</span>
+                  </div>
+                  <div className="reports-mobile-card-row">
+                    <span className="reports-mobile-card-label">Status:</span>
+                    <span style={{ display: 'inline-block', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: '600', background: st.bg, color: st.color, whiteSpace: 'nowrap' }}>
                       {task.status || '-'}
                     </span>
-                  </td>
-                  <td>{task.projectName || '-'}</td>
-                  <td>
-                    {(() => {
-                      if (!task.assignees) return <span>Unassigned</span>;
-                      const ids = task.assignees.split(',').map(id => id.trim()).filter(Boolean);
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          {ids.map(id => {
-                            const u = assignees.find(u => u.id === id);
-                            return <span key={id}>{u ? (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim()) : id}</span>;
-                          })}
-                        </div>
-                      );
-                    })()}
-                  </td>
-                  <td>{formatDecimal(task.timeSpent)}</td>
-                  <td>{formatDecimal(task.billableHours)}</td>
-                  <td>{formatDecimal(task.estimatedHours)}</td>
-                </tr>
-              );
-            })}
-            {tasks.length === 0 && (
-              <tr>
-                <td colSpan="8" className="no-data-cell" style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b', fontSize: '0.95rem' }}>
-                  No tasks found for this period.
-                </td>
-              </tr>
-            )}
-          </tbody>
-          {tasks.length > 0 && (
-            <tfoot>
-              <tr>
-                <td colSpan="5" className="footer-total-label">Total</td>
-                <td className="footer-total-hours">{formatDecimal(totalTimeSpent)} hrs</td>
-                <td className="footer-total-hours">{formatDecimal(totalBillable)} hrs</td>
-                <td className="footer-total-hours">{formatDecimal(totalEstimated)} hrs</td>
-              </tr>
-            </tfoot>
+                  </div>
+                  
+                  <div className="reports-mobile-card-grid">
+                    <div className="reports-mobile-card-grid-item">
+                      <span className="reports-mobile-card-grid-label">TimeSpent</span>
+                      <span className="reports-mobile-card-grid-value" style={{ color: '#2563eb' }}>
+                        {formatDecimal(task.timeSpent)}h
+                      </span>
+                    </div>
+                    <div className="reports-mobile-card-grid-item">
+                      <span className="reports-mobile-card-grid-label">Billable</span>
+                      <span className="reports-mobile-card-grid-value">
+                        {formatDecimal(task.billableHours)}h
+                      </span>
+                    </div>
+                    <div className="reports-mobile-card-grid-item">
+                      <span className="reports-mobile-card-grid-label">Estimated</span>
+                      <span className="reports-mobile-card-grid-value">
+                        {formatDecimal(task.estimatedHours)}h
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {tasks.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#64748b', fontSize: '0.9rem', background: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              No tasks found for this period.
+            </div>
           )}
-        </table>
+
+          {tasks.length > 0 && (
+            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ fontWeight: '700', color: '#475569' }}>Total Time Spent:</span>
+                <span style={{ fontWeight: '800', color: '#2563eb' }}>{formatDecimal(totalTimeSpent)} hrs</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ fontWeight: '700', color: '#475569' }}>Total Billable:</span>
+                <span style={{ fontWeight: '800', color: '#0f172a' }}>{formatDecimal(totalBillable)} hrs</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ fontWeight: '700', color: '#475569' }}>Total Estimated:</span>
+                <span style={{ fontWeight: '800', color: '#0f172a' }}>{formatDecimal(totalEstimated)} hrs</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

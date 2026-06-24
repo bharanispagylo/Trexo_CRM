@@ -2352,7 +2352,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 {/* Form to add subtask */}
                 <div style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', boxSizing: 'border-box' }}>
                   <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.9rem', fontWeight: '700' }}>Add New Subtask</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.7fr 1.4fr 0.9fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                       <label style={{ fontWeight: 600, color: '#475569', fontSize: '0.75rem' }}>Subtask Title</label>
                       <input 
@@ -2371,7 +2371,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         className="saas-input" 
                         value={newSubtaskAssignee} 
                         onChange={e => setNewSubtaskAssignee(e.target.value)}
-                        style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                        style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0 2.0rem 0 0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1', appearance: 'none', WebkitAppearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.2rem center', backgroundSize: '10px' }}
                       >
                         <option value="">Unassigned</option>
                         {filteredUsers.map(u => {
@@ -2386,7 +2386,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         className="saas-input" 
                         value={newSubtaskPriority} 
                         onChange={e => setNewSubtaskPriority(e.target.value)}
-                        style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                        style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0 2.0rem 0 0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1', appearance: 'none', WebkitAppearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.2rem center', backgroundSize: '10px' }}
                       >
                         {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
