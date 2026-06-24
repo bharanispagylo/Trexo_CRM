@@ -151,23 +151,19 @@ export default function TimesheetIndividual({ initialUserId, onClearInitialUser 
     fetchLogs();
   }, [filter, selectedDate, selectedUserId]);
 
-  const taskMap = {};
-  logs.forEach(log => {
-    if (!taskMap[log.taskId]) {
-      const t = log.task || {};
-      taskMap[log.taskId] = {
-        title: t.title || log.taskId,
-        timeSpent: 0,
-        billableHours: t.actualHours ?? '-',
-        totalHours: t.approvedHours ?? '-',
-        estimatedHours: t.estimatedHours ?? '-',
-        status: t.status || '-'
-      };
-    }
-    taskMap[log.taskId].timeSpent += Number(log.hoursWorked) || 0;
+  const rows = logs.filter(log => !log.isBilled).map(log => {
+    const t = log.task || {};
+    return {
+      title: t.title || log.taskId,
+      timeSpent: Number(log.hoursWorked) || 0,
+      billableHours: t.actualHours ?? '-',
+      totalHours: t.approvedHours ?? '-',
+      estimatedHours: t.estimatedHours ?? '-',
+      status: t.status || '-'
+    };
   });
-  const rows = Object.values(taskMap);
   const totalHrs = rows.reduce((sum, r) => sum + r.timeSpent, 0);
+  const distinctTasksCount = new Set(logs.filter(log => !log.isBilled).map(log => log.taskId)).size;
 
   const selectedUser = users.find(u => u.id === selectedUserId);
   const selectedUserName = selectedUser
@@ -179,7 +175,7 @@ export default function TimesheetIndividual({ initialUserId, onClearInitialUser 
     const name = selectedUserName || 'user';
     downloadCSV(
       `timesheet-${name}-${label}.csv`,
-      ['Task Name', 'Time Spent (h)', 'Billable Hrs', 'Total Hrs', 'Estimated Hrs', 'Status'],
+      ['Task Name', 'Time Spent (Hours)', 'Billable Hrs', 'Total Hrs', 'Estimated Hrs', 'Status'],
       rows.map(r => [r.title, r.timeSpent.toFixed(1), r.billableHours, r.totalHours, r.estimatedHours, r.status])
     );
   };
@@ -219,9 +215,25 @@ export default function TimesheetIndividual({ initialUserId, onClearInitialUser 
           })}
         </select>
 
-        <div style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+        <div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '8px', padding: '4px', gap: '4px' }}>
           {['daily', 'weekly', 'monthly'].map(f => (
-            <button key={f} onClick={() => setFilter(f)} style={{ padding: '0.45rem 1rem', background: filter === f ? '#2563eb' : 'white', color: filter === f ? 'white' : '#475569', border: 'none', fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer', textTransform: 'capitalize' }}>
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              style={{
+                padding: '0.45rem 1.25rem',
+                background: filter === f ? 'white' : 'transparent',
+                color: filter === f ? '#0f172a' : '#475569',
+                border: 'none',
+                fontWeight: '600',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                borderRadius: '6px',
+                boxShadow: filter === f ? '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)' : 'none',
+                textTransform: 'capitalize',
+                transition: 'all 0.2s'
+              }}
+            >
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
@@ -237,7 +249,7 @@ export default function TimesheetIndividual({ initialUserId, onClearInitialUser 
         </div>
         <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '0.75rem 1.5rem' }}>
           <span style={{ fontSize: '0.7rem', color: '#15803d', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Tasks</span>
-          <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>{rows.length}</span>
+          <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>{distinctTasksCount}</span>
         </div>
       </div>
 
@@ -251,7 +263,7 @@ export default function TimesheetIndividual({ initialUserId, onClearInitialUser 
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                 <th style={{ padding: '0.85rem 1.25rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Task Name</th>
-                <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>TimeSpent hrs</th>
+                <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Time Spent (Hours)</th>
                 <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Billable Hrs</th>
                 <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Total Hrs</th>
                 <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Estimated Hrs</th>

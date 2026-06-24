@@ -123,7 +123,7 @@ export default function TimesheetOverall({ onUserClick }) {
   }, [filter, selectedDate]);
 
   const grouped = {};
-  logs.forEach(log => {
+  logs.filter(log => !log.isBilled).forEach(log => {
     const key = log.userId || 'unknown';
     const name = log.user?.fullName || `${log.user?.firstName || ''} ${log.user?.lastName || ''}`.trim() || 'Unknown';
     if (!grouped[key]) grouped[key] = { userId: key, name, taskIds: new Set(), hours: 0 };
@@ -136,7 +136,7 @@ export default function TimesheetOverall({ onUserClick }) {
     const label = formatDisplayDate(filter, selectedDate).replace(/\//g, '-').replace(/ /g, '');
     downloadCSV(
       `timesheet-overall-${label}.csv`,
-      ['Assignee', 'Tasks #', 'Time Spent (h)'],
+      ['Assignee', 'Tasks #', 'Time Spent (Hours)'],
       rows.map(r => [r.name, r.taskIds.size, r.hours.toFixed(1)])
     );
   };
@@ -146,17 +146,33 @@ export default function TimesheetOverall({ onUserClick }) {
       {/* Top bar: filters + total hours left, export pinned top-right */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flex: 1 }}>
-          <div style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+          <div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '8px', padding: '4px', gap: '4px' }}>
             {['daily', 'weekly', 'monthly'].map(f => (
-              <button key={f} onClick={() => setFilter(f)} style={{ padding: '0.45rem 1rem', background: filter === f ? '#2563eb' : 'white', color: filter === f ? 'white' : '#475569', border: 'none', fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer', textTransform: 'capitalize' }}>
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                style={{
+                  padding: '0.45rem 1.25rem',
+                  background: filter === f ? 'white' : 'transparent',
+                  color: filter === f ? '#0f172a' : '#475569',
+                  border: 'none',
+                  fontWeight: '600',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  borderRadius: '6px',
+                  boxShadow: filter === f ? '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)' : 'none',
+                  textTransform: 'capitalize',
+                  transition: 'all 0.2s'
+                }}
+              >
                 {f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
             ))}
           </div>
           <DatePicker filter={filter} selectedDate={selectedDate} onChange={setSelectedDate} />
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-            <span style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Hours</span>
-            <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', lineHeight: 1.2 }}>
+          <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '0.75rem 1.5rem' }}>
+            <span style={{ fontSize: '0.7rem', color: '#0369a1', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Total Hours</span>
+            <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', lineHeight: 1.2 }}>
               {rows.reduce((sum, r) => sum + r.hours, 0).toFixed(1)}h
             </span>
           </div>
@@ -186,7 +202,7 @@ export default function TimesheetOverall({ onUserClick }) {
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                 <th style={{ padding: '0.85rem 1.25rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Assignee</th>
                 <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Tasks #</th>
-                <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>TimeSpent hrs</th>
+                <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Time Spent (Hours)</th>
               </tr>
             </thead>
             <tbody>
