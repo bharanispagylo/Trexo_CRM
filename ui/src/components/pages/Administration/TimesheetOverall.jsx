@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../../api/client';
+import './Reports.css';
 
 const TODAY = new Date().toISOString().split('T')[0];
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -196,31 +197,72 @@ export default function TimesheetOverall({ onUserClick }) {
       ) : rows.length === 0 ? (
         <div style={{ textAlign: 'center', color: '#64748b', padding: '3rem', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>No timesheet data for this period.</div>
       ) : (
-        <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '0.85rem 1.25rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Assignee</th>
-                <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Tasks #</th>
-                <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>TIMESPENT HRS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => (
-                <tr
-                  key={i}
-                  onClick={() => onUserClick && row.userId !== 'unknown' && onUserClick(row.userId)}
-                  style={{ borderBottom: '1px solid #f1f5f9', cursor: onUserClick && row.userId !== 'unknown' ? 'pointer' : 'default', transition: 'background 0.12s' }}
-                  onMouseEnter={e => { if (onUserClick && row.userId !== 'unknown') e.currentTarget.style.background = '#f8fafc'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = ''; }}
-                >
-                  <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.87rem', fontWeight: '600', color: onUserClick && row.userId !== 'unknown' ? '#2563eb' : '#0f172a' }}>{row.name}</td>
-                  <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.taskIds.size}</td>
-                  <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', fontWeight: '700', color: '#2563eb' }}>{row.hours.toFixed(1)}</td>
+        <div className="reports-table-container" style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+          {/* Desktop View */}
+          <div className="desktop-table-view">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  <th style={{ padding: '0.85rem 1.25rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Assignee</th>
+                  <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Tasks #</th>
+                  <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>TIMESPENT HRS</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => (
+                  <tr
+                    key={i}
+                    onClick={() => onUserClick && row.userId !== 'unknown' && onUserClick(row.userId)}
+                    style={{ borderBottom: '1px solid #f1f5f9', cursor: onUserClick && row.userId !== 'unknown' ? 'pointer' : 'default', transition: 'background 0.12s' }}
+                    onMouseEnter={e => { if (onUserClick && row.userId !== 'unknown') e.currentTarget.style.background = '#f8fafc'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = ''; }}
+                  >
+                    <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.87rem', fontWeight: '600', color: onUserClick && row.userId !== 'unknown' ? '#2563eb' : '#0f172a' }}>{row.name}</td>
+                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.taskIds.size}</td>
+                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', fontWeight: '700', color: '#2563eb' }}>{row.hours.toFixed(1)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile View */}
+          <div className="mobile-cards-view" style={{ padding: '1rem', background: '#fafbfc' }}>
+            {rows.map((row, i) => (
+              <div 
+                key={i} 
+                className="reports-mobile-card"
+                onClick={() => onUserClick && row.userId !== 'unknown' && onUserClick(row.userId)}
+                style={{ cursor: onUserClick && row.userId !== 'unknown' ? 'pointer' : 'default' }}
+              >
+                <div className="reports-mobile-card-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+                  <span 
+                    className="reports-mobile-card-title" 
+                    style={{ color: onUserClick && row.userId !== 'unknown' ? '#2563eb' : '#0f172a', fontSize: '1rem', fontWeight: '700' }}
+                  >
+                    {row.name}
+                  </span>
+                </div>
+                
+                <div className="reports-mobile-card-body">
+                  <div className="reports-mobile-card-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                    <div className="reports-mobile-card-grid-item">
+                      <span className="reports-mobile-card-grid-label">Tasks Count</span>
+                      <span className="reports-mobile-card-grid-value">
+                        {row.taskIds.size}
+                      </span>
+                    </div>
+                    <div className="reports-mobile-card-grid-item">
+                      <span className="reports-mobile-card-grid-label">Time Spent</span>
+                      <span className="reports-mobile-card-grid-value" style={{ color: '#2563eb' }}>
+                        {row.hours.toFixed(1)}h
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

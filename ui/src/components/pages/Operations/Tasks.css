@@ -5539,6 +5539,137 @@
   background: #f8fafc;
 }
 
+.subtask-form-grid-1 {
+  display: grid;
+  grid-template-columns: 1.7fr 1.4fr 0.9fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.subtask-form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .subtask-form-grid-1 {
+    grid-template-columns: 1fr 1fr;
+  }
+  .subtask-form-grid-1 > div:first-child {
+    grid-column: span 2;
+  }
+  .subtask-form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .subtask-form-btn-wrap {
+    display: flex !important;
+    justify-content: flex-start;
+  }
+
+  /* Mobile card formatting for tables */
+  .worklog-table-responsive table,
+  .billed-table-responsive table,
+  .attachment-table-responsive table,
+  .worklog-table-responsive thead,
+  .billed-table-responsive thead,
+  .attachment-table-responsive thead,
+  .worklog-table-responsive tbody,
+  .billed-table-responsive tbody,
+  .attachment-table-responsive tbody,
+  .worklog-table-responsive th,
+  .billed-table-responsive th,
+  .attachment-table-responsive th,
+  .worklog-table-responsive td,
+  .billed-table-responsive td,
+  .attachment-table-responsive td,
+  .worklog-table-responsive tr,
+  .billed-table-responsive tr,
+  .attachment-table-responsive tr {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .worklog-table-responsive thead,
+  .billed-table-responsive thead,
+  .attachment-table-responsive thead {
+    display: none !important;
+  }
+
+  .worklog-table-responsive tr,
+  .billed-table-responsive tr,
+  .attachment-table-responsive tr {
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 0.75rem !important;
+    margin-bottom: 0.75rem !important;
+    background: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+  }
+
+  .worklog-table-responsive td,
+  .billed-table-responsive td,
+  .attachment-table-responsive td {
+    border: none !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    position: relative !important;
+    padding: 0.5rem 0.5rem 0.5rem 40% !important;
+    text-align: left !important;
+    white-space: normal !important;
+    min-height: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    word-break: break-word !important;
+  }
+
+  .worklog-table-responsive td:last-child,
+  .billed-table-responsive td:last-child,
+  .attachment-table-responsive td:last-child {
+    border-bottom: none !important;
+  }
+
+  .worklog-table-responsive td:before,
+  .billed-table-responsive td:before,
+  .attachment-table-responsive td:before {
+    position: absolute !important;
+    left: 10px !important;
+    width: 35% !important;
+    padding-right: 10px !important;
+    white-space: nowrap !important;
+    font-weight: 700 !important;
+    color: #64748b !important;
+    font-size: 0.72rem !important;
+    text-transform: uppercase !important;
+  }
+
+  /* Specific headers for Worklog */
+  .worklog-table-responsive td:nth-of-type(1):before { content: "Date" !important; }
+  .worklog-table-responsive td:nth-of-type(2):before { content: "User" !important; }
+  .worklog-table-responsive td:nth-of-type(3):before { content: "Timespent" !important; }
+  .worklog-table-responsive td:nth-of-type(4):before { content: "Actions" !important; }
+
+  /* Specific headers for Billed Logs */
+  .billed-table-responsive td:nth-of-type(1):before { content: "Date" !important; }
+  .billed-table-responsive td:nth-of-type(2):before { content: "User" !important; }
+  .billed-table-responsive td:nth-of-type(3):before { content: "Billed Hours" !important; }
+  .billed-table-responsive td:nth-of-type(4):before { content: "Description" !important; }
+  .billed-table-responsive td:nth-of-type(5):before { content: "Actions" !important; }
+
+  /* Specific headers for Attachments */
+  .attachment-table-responsive td:nth-of-type(1):before { content: "File Name" !important; }
+  .attachment-table-responsive td:nth-of-type(2):before { content: "Uploaded By" !important; }
+  .attachment-table-responsive td:nth-of-type(3):before { content: "Uploaded On" !important; }
+  .attachment-table-responsive td:nth-of-type(4):before { content: "File Size" !important; }
+  .attachment-table-responsive td:nth-of-type(5):before { content: "Actions" !important; }
+
+  .worklog-table-responsive table,
+  .billed-table-responsive table,
+  .attachment-table-responsive table {
+    min-width: 0 !important;
+  }
+}
+
 @media (max-width: 600px) {
   .worklog-section-row {
     flex-direction: column;

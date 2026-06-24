@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../../api/client';
+import './Reports.css';
 
 const TODAY = new Date().toISOString().split('T')[0];
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -258,39 +259,94 @@ export default function TimesheetIndividual({ initialUserId, onClearInitialUser 
       ) : rows.length === 0 ? (
         <div style={{ textAlign: 'center', color: '#64748b', padding: '3rem', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>No timesheet data for this period.</div>
       ) : (
-        <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '0.85rem 1.25rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Task Name</th>
-                <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>TIMESPENT HRS</th>
-                <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Billable Hrs</th>
-                <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Total Hrs</th>
-                <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Estimated Hrs</th>
-                <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => {
-                const statusKey = (row.status || '').toLowerCase();
-                const statusStyle = STATUS_COLORS[statusKey] || { bg: '#f1f5f9', color: '#475569' };
-                return (
-                  <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.87rem', fontWeight: '600', color: '#0f172a' }}>{row.title}</td>
-                    <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.87rem', fontWeight: '700', color: '#2563eb' }}>{row.timeSpent.toFixed(1)}</td>
-                    <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.billableHours}</td>
-                    <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.totalHours}</td>
-                    <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.estimatedHours}</td>
-                    <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
-                      <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.2rem 0.6rem', borderRadius: '5px', background: statusStyle.bg, color: statusStyle.color, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                        {row.status}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="reports-table-container" style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+          {/* Desktop View */}
+          <div className="desktop-table-view">
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  <th style={{ padding: '0.85rem 1.25rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Task Name</th>
+                  <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>TIMESPENT HRS</th>
+                  <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Billable Hrs</th>
+                  <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Total Hrs</th>
+                  <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Estimated Hrs</th>
+                  <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => {
+                  const statusKey = (row.status || '').toLowerCase();
+                  const statusStyle = STATUS_COLORS[statusKey] || { bg: '#f1f5f9', color: '#475569' };
+                  return (
+                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.87rem', fontWeight: '600', color: '#0f172a' }}>{row.title}</td>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.87rem', fontWeight: '700', color: '#2563eb' }}>{row.timeSpent.toFixed(1)}</td>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.billableHours}</td>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.totalHours}</td>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.estimatedHours}</td>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.2rem 0.6rem', borderRadius: '5px', background: statusStyle.bg, color: statusStyle.color, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                          {row.status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile View */}
+          <div className="mobile-cards-view" style={{ padding: '1rem', background: '#fafbfc' }}>
+            {rows.map((row, i) => {
+              const statusKey = (row.status || '').toLowerCase();
+              const statusStyle = STATUS_COLORS[statusKey] || { bg: '#f1f5f9', color: '#475569' };
+              return (
+                <div key={i} className="reports-mobile-card">
+                  <div className="reports-mobile-card-header">
+                    <span 
+                      className="reports-mobile-card-title" 
+                      style={{ fontSize: '0.92rem', fontWeight: '700', color: '#0f172a' }}
+                    >
+                      {row.title}
+                    </span>
+                    <span style={{ fontSize: '0.68rem', fontWeight: '700', padding: '0.2rem 0.5rem', borderRadius: '5px', background: statusStyle.bg, color: statusStyle.color, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                      {row.status}
+                    </span>
+                  </div>
+                  
+                  <div className="reports-mobile-card-body">
+                    <div className="reports-mobile-card-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.35rem', padding: '0.5rem 0.25rem' }}>
+                      <div className="reports-mobile-card-grid-item">
+                        <span className="reports-mobile-card-grid-label" style={{ fontSize: '0.55rem' }}>TimeSpent</span>
+                        <span className="reports-mobile-card-grid-value" style={{ color: '#2563eb', fontSize: '0.8rem' }}>
+                          {row.timeSpent.toFixed(1)}h
+                        </span>
+                      </div>
+                      <div className="reports-mobile-card-grid-item">
+                        <span className="reports-mobile-card-grid-label" style={{ fontSize: '0.55rem' }}>Billable</span>
+                        <span className="reports-mobile-card-grid-value" style={{ fontSize: '0.8rem' }}>
+                          {row.billableHours}h
+                        </span>
+                      </div>
+                      <div className="reports-mobile-card-grid-item">
+                        <span className="reports-mobile-card-grid-label" style={{ fontSize: '0.55rem' }}>Total</span>
+                        <span className="reports-mobile-card-grid-value" style={{ fontSize: '0.8rem' }}>
+                          {row.totalHours}h
+                        </span>
+                      </div>
+                      <div className="reports-mobile-card-grid-item">
+                        <span className="reports-mobile-card-grid-label" style={{ fontSize: '0.55rem' }}>Estimated</span>
+                        <span className="reports-mobile-card-grid-value" style={{ fontSize: '0.8rem' }}>
+                          {row.estimatedHours}h
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

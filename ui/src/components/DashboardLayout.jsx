@@ -21,6 +21,12 @@ import TimesheetIndividual from './pages/Administration/TimesheetIndividual';
 const parseRoutePath = (pathname) => {
   const path = pathname.startsWith('/') ? pathname.substring(1) : pathname;
   const segments = path.split('/');
+  if (path === 'tasks-delivery') {
+    return { tab: 'reports', projectName: null, taskId: null };
+  }
+  if (path === 'tasks-worklog') {
+    return { tab: 'reports-status-based', projectName: null, taskId: null };
+  }
   if (segments[0] === 'projects' && segments.length > 1) {
     const projectName = decodeURIComponent(segments.slice(1).join('/'));
     return { tab: 'projects', projectName, taskId: null };
@@ -250,6 +256,10 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       newUrl = `/projects/${selectedProjectName.replace(/ /g, '-')}`;
     } else if (activeTab === 'tasks' && selectedTaskId) {
       newUrl = `/tasks/${selectedTaskId}`;
+    } else if (activeTab === 'reports') {
+      newUrl = '/tasks-delivery';
+    } else if (activeTab === 'reports-status-based') {
+      newUrl = '/tasks-worklog';
     } else {
       newUrl = `/${activeTab}`;
     }
