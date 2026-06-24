@@ -1420,6 +1420,7 @@ app.get('/api/worklogs', async (req, res) => {
       }
     }
     if (userId) where.userId = userId;
+    where.isBilled = false;
     const logs = await prisma.workLog.findMany({
       where,
       include: { user: true, task: { select: { id: true, title: true, status: true, estimatedHours: true, approvedHours: true, actualHours: true } } },
