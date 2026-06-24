@@ -136,7 +136,7 @@ export default function TimesheetOverall({ onUserClick }) {
     const label = formatDisplayDate(filter, selectedDate).replace(/\//g, '-').replace(/ /g, '');
     downloadCSV(
       `timesheet-overall-${label}.csv`,
-      ['Assignee', 'Tasks #', 'Time Spent (Hours)'],
+      ['Assignee', 'Tasks #', 'TIMESPENT HRS'],
       rows.map(r => [r.name, r.taskIds.size, r.hours.toFixed(1)])
     );
   };
@@ -202,7 +202,7 @@ export default function TimesheetOverall({ onUserClick }) {
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                 <th style={{ padding: '0.85rem 1.25rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Assignee</th>
                 <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Tasks #</th>
-                <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Time Spent (Hours)</th>
+                <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>TIMESPENT HRS</th>
               </tr>
             </thead>
             <tbody>

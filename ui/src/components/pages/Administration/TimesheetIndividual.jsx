@@ -175,7 +175,7 @@ export default function TimesheetIndividual({ initialUserId, onClearInitialUser 
     const name = selectedUserName || 'user';
     downloadCSV(
       `timesheet-${name}-${label}.csv`,
-      ['Task Name', 'Time Spent (Hours)', 'Billable Hrs', 'Total Hrs', 'Estimated Hrs', 'Status'],
+      ['Task Name', 'TIMESPENT HRS', 'Billable Hrs', 'Total Hrs', 'Estimated Hrs', 'Status'],
       rows.map(r => [r.title, r.timeSpent.toFixed(1), r.billableHours, r.totalHours, r.estimatedHours, r.status])
     );
   };
@@ -263,7 +263,7 @@ export default function TimesheetIndividual({ initialUserId, onClearInitialUser 
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                 <th style={{ padding: '0.85rem 1.25rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Task Name</th>
-                <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Time Spent (Hours)</th>
+                <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>TIMESPENT HRS</th>
                 <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Billable Hrs</th>
                 <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Total Hrs</th>
                 <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Estimated Hrs</th>

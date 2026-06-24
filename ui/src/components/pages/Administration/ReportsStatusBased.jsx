@@ -221,7 +221,7 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
             }
           }}>←</button>
 
-          <div className="reports-date-selector">
+          <div className={`reports-date-selector reports-date-selector-${reportType}`}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
             {reportType === 'monthly' ? (
               <>
@@ -241,10 +241,10 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
                 </span>
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
-                <span style={{ color: '#64748b' }}>to</span>
-                <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+              <div className="reports-custom-date-range" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} className="reports-custom-date-input" style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                <span style={{ color: '#64748b', flexShrink: 0 }}>to</span>
+                <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} className="reports-custom-date-input" style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
               </div>
             )}
           </div>

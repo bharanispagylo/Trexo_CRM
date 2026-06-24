@@ -495,10 +495,18 @@
   .reports-date-selector {
     flex: 1;
     min-width: 0;
-    max-width: 280px;
+    max-width: none;
     box-sizing: border-box;
     padding: 0.4rem 0.6rem;
     overflow: hidden;
+  }
+
+  .reports-date-selector svg {
+    display: none;
+  }
+
+  .reports-date-selector-monthly {
+    max-width: 140px !important;
   }
 
   .reports-date-selector select {
@@ -514,7 +522,7 @@
 
   .reports-custom-date-input {
     flex: 1;
-    min-width: 80px;
+    min-width: 0;
     width: 0;
     font-size: 0.78rem !important;
     padding: 0.2rem 0.15rem !important;

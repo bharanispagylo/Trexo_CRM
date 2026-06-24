@@ -619,7 +619,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'roles': return { title: 'Role Permissions', back: 'Admin', id: 'Roles' };
       case 'add-user': return { title: 'Create New User', back: 'Users', id: 'NewUser' };
       case 'edit-user': return { title: 'Edit User Profile', back: 'Users', id: 'EditUser' };
-      case 'reports': return { title: 'Reports', back: 'Reports', id: 'Reports' };
+      case 'reports': return { title: 'Tasks - Delivery', back: 'Reports', id: 'Reports' };
       case 'reports-status-based': return { title: 'Tasks - Work Log', back: 'Reports', id: 'ReportsStatusBased' };
       case 'timesheet-overall': return { title: 'Timesheet - Summary', back: 'Reports', id: 'TimesheetOverall' };
       case 'timesheet-individual': return { title: 'Timesheet - Individual', back: 'Reports', id: 'TimesheetIndividual' };
