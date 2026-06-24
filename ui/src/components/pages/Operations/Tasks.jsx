@@ -2408,7 +2408,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         className="saas-btn-primary" 
                         onClick={handleAddSubtaskDrawer} 
                         disabled={subtaskSaving}
-                        style={{ width: '100%', height: '36px', padding: '0 1rem', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                        style={{ width: 'auto', minWidth: '150px', height: '36px', padding: '0 1.5rem', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                       >
                         {subtaskSaving ? 'Adding...' : 'Add Subtask'}
                       </button>
