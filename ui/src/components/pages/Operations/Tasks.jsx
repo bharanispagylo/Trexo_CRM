@@ -1041,14 +1041,23 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     }
   };
 
-  const formatDate = (dateStr) => {
+  const formatDate = (dateStr, timeStr = null) => {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return '-';
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
-    return `${day}-${month}-${year}`;
+    
+    const timeSource = timeStr ? new Date(timeStr) : d;
+    let hours = timeSource.getHours();
+    const minutes = String(timeSource.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const formattedHours = String(hours).padStart(2, '0');
+    
+    return `${day}-${month}-${year}, ${formattedHours}:${minutes} ${ampm}`;
   };
 
   // SVGs for Fields
@@ -1972,8 +1981,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       {workLogs.filter(log => !log.isBilled && Number(log.hoursWorked) > 0).length === 0 ? (
                         <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No work logs found for this task.</p>
                       ) : (
-                        <div className="table-responsive">
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                        <div className="table-responsive worklog-table-responsive" style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', minWidth: '550px' }}>
                             <thead>
                               <tr style={{ background: '#f8fafc', color: '#64748b', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
                                 <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Date</th>
@@ -1985,7 +1994,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                             <tbody>
                               {workLogs.filter(log => !log.isBilled && Number(log.hoursWorked) > 0).map(log => (
                                 <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
-                                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{formatDate(log.logDate)}</td>
+                                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{formatDate(log.logDate, log.createdAt)}</td>
                                   <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
                                   <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{log.hoursWorked}h</td>
                                   <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
@@ -2049,8 +2058,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Description</label>
                     <input type="text" className="saas-input" placeholder="What did you work on?" value={workLogForm.description} onChange={e => setWorkLogForm({...workLogForm, description: e.target.value})} style={{ width: '100%', boxSizing: 'border-box' }} />
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="saas-btn-primary" onClick={() => handleAddWorkLog(true)} disabled={workLogSaving} style={{ padding: '0.5rem 1rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                  <section style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="saas-btn-primary" onClick={() => handleAddWorkLog(true)} disabled={workLogSaving} style={{ width: 'auto', minWidth: '150px', padding: '0.5rem 1rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
                       {workLogSaving ? 'Saving...' : (workLogForm.id ? 'Update Billing Log' : 'Add Billing Log')}
                     </button>
                     {workLogForm.id && (
@@ -2066,7 +2075,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         Cancel Edit
                       </button>
                     )}
-                  </div>
+                  </section>
                 </div>
 
                 <div>
@@ -2074,8 +2083,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   {workLogs.filter(log => log.isBilled).length === 0 ? (
                     <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No billing logs found for this task.</p>
                   ) : (
-                    <div className="table-responsive">
-<table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <div className="table-responsive billed-table-responsive" style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', minWidth: '600px' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', color: '#64748b', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
                           <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Date</th>
@@ -2088,7 +2097,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       <tbody>
                         {workLogs.filter(log => log.isBilled).map(log => (
                           <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
-                            <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{formatDate(log.logDate)}</td>
+                            <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{formatDate(log.logDate, log.createdAt)}</td>
                             <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
                             <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{log.hoursWorked}h</td>
                             <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.description || '-'}</td>
@@ -2158,7 +2167,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
                 {/* Table Block */}
                 <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', maxWidth: '100%', margin: '0 auto' }}>
-                  <div className="table-responsive">
+                  <div className="table-responsive attachment-table-responsive">
 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
@@ -2352,7 +2361,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 {/* Form to add subtask */}
                 <div style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', boxSizing: 'border-box' }}>
                   <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.9rem', fontWeight: '700' }}>Add New Subtask</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.7fr 1.4fr 0.9fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                  <div className="subtask-form-grid-1">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                       <label style={{ fontWeight: 600, color: '#475569', fontSize: '0.75rem' }}>Subtask Title</label>
                       <input 
@@ -2392,7 +2401,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       </select>
                     </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div className="subtask-form-grid-2">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                       <label style={{ fontWeight: 600, color: '#475569', fontSize: '0.75rem' }}>Due Date</label>
                       <input 
@@ -2403,7 +2412,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} 
                       />
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <div className="subtask-form-btn-wrap" style={{ display: 'flex', alignItems: 'flex-end' }}>
                       <button 
                         className="saas-btn-primary" 
                         onClick={handleAddSubtaskDrawer} 
