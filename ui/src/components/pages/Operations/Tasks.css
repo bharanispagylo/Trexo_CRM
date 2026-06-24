@@ -5571,21 +5571,27 @@
   .worklog-table-responsive table,
   .billed-table-responsive table,
   .attachment-table-responsive table,
+  .subtask-table-responsive table,
   .worklog-table-responsive thead,
   .billed-table-responsive thead,
   .attachment-table-responsive thead,
+  .subtask-table-responsive thead,
   .worklog-table-responsive tbody,
   .billed-table-responsive tbody,
   .attachment-table-responsive tbody,
+  .subtask-table-responsive tbody,
   .worklog-table-responsive th,
   .billed-table-responsive th,
   .attachment-table-responsive th,
+  .subtask-table-responsive th,
   .worklog-table-responsive td,
   .billed-table-responsive td,
   .attachment-table-responsive td,
+  .subtask-table-responsive td,
   .worklog-table-responsive tr,
   .billed-table-responsive tr,
-  .attachment-table-responsive tr {
+  .attachment-table-responsive tr,
+  .subtask-table-responsive tr {
     display: block !important;
     width: 100% !important;
     box-sizing: border-box !important;
@@ -5593,13 +5599,15 @@
 
   .worklog-table-responsive thead,
   .billed-table-responsive thead,
-  .attachment-table-responsive thead {
+  .attachment-table-responsive thead,
+  .subtask-table-responsive thead {
     display: none !important;
   }
 
   .worklog-table-responsive tr,
   .billed-table-responsive tr,
-  .attachment-table-responsive tr {
+  .attachment-table-responsive tr,
+  .subtask-table-responsive tr {
     border: 1px solid #e2e8f0 !important;
     border-radius: 12px !important;
     padding: 0.75rem !important;
@@ -5610,7 +5618,8 @@
 
   .worklog-table-responsive td,
   .billed-table-responsive td,
-  .attachment-table-responsive td {
+  .attachment-table-responsive td,
+  .subtask-table-responsive td {
     border: none !important;
     border-bottom: 1px solid #f1f5f9 !important;
     position: relative !important;
@@ -5625,13 +5634,15 @@
 
   .worklog-table-responsive td:last-child,
   .billed-table-responsive td:last-child,
-  .attachment-table-responsive td:last-child {
+  .attachment-table-responsive td:last-child,
+  .subtask-table-responsive td:last-child {
     border-bottom: none !important;
   }
 
   .worklog-table-responsive td:before,
   .billed-table-responsive td:before,
-  .attachment-table-responsive td:before {
+  .attachment-table-responsive td:before,
+  .subtask-table-responsive td:before {
     position: absolute !important;
     left: 10px !important;
     width: 35% !important;
@@ -5663,9 +5674,18 @@
   .attachment-table-responsive td:nth-of-type(4):before { content: "File Size" !important; }
   .attachment-table-responsive td:nth-of-type(5):before { content: "Actions" !important; }
 
+  /* Specific headers for Subtasks */
+  .subtask-table-responsive td:nth-of-type(1):before { content: "Subtask Title" !important; }
+  .subtask-table-responsive td:nth-of-type(2):before { content: "Assignee" !important; }
+  .subtask-table-responsive td:nth-of-type(3):before { content: "Status" !important; }
+  .subtask-table-responsive td:nth-of-type(4):before { content: "Due Date" !important; }
+  .subtask-table-responsive td:nth-of-type(5):before { content: "Priority" !important; }
+  .subtask-table-responsive td:nth-of-type(6):before { content: "Actions" !important; }
+
   .worklog-table-responsive table,
   .billed-table-responsive table,
-  .attachment-table-responsive table {
+  .attachment-table-responsive table,
+  .subtask-table-responsive table {
     min-width: 0 !important;
   }
 }

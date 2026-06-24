@@ -2427,7 +2427,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
                 {/* Subtask List Table */}
                 <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
-                  <div className="table-responsive">
+                  <div className="table-responsive subtask-table-responsive">
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
