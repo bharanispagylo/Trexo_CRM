@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../../api/client';
-import { TaskDetailView, TaskTitleTooltip } from './Tasks';
+import { TaskDetailView, TaskTitleTooltip, getDisplayId } from './Tasks';
 import './Projects.css';
 import './Tasks.css';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -1616,7 +1616,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                 </button>
                                               )}
                                               {subTasks.length === 0 && <span style={{ width: '18px', display: 'inline-block' }} />}
-                                              <TaskTitleTooltip text={task.title || 'Untitled Task'}>
+                                              <TaskTitleTooltip text={`${getDisplayId(task)} ${task.title || 'Untitled Task'}`}>
+                                                <span className="cu-task-id-prefix">{getDisplayId(task)}</span>
                                                 <span className="cu-task-title" style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{task.title || 'Untitled Task'}</span>
                                               </TaskTitleTooltip>
                                               {subTasks.length > 0 && (
@@ -1668,7 +1669,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                               ) : (
                                                 assignees.map(a => {
                                                   const uObj = users.find(u => u.id === a);
-                                                  const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
+                                                  const dispName = uObj ? (uObj.firstName || uObj.fullName?.split(' ')[0] || 'Unknown') : 'Unknown';
                                                   return (
                                                     <span key={a} style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{dispName}</span>
                                                   );
@@ -1742,7 +1743,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                               <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem', paddingLeft: '2.5rem' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
                                                   <span className="cu-subtask-indicator" style={{ color: '#94a3b8', marginRight: '4px', fontSize: '1rem', fontWeight: 'bold' }}>↳</span>
-                                                  <TaskTitleTooltip text={sub.title || 'Untitled Subtask'}>
+                                                  <TaskTitleTooltip text={`${getDisplayId(sub)} ${sub.title || 'Untitled Subtask'}`}>
+                                                    <span className="cu-task-id-prefix">{getDisplayId(sub)}</span>
                                                     <span className="cu-task-title" style={{ fontSize: '0.85rem', color: '#475569' }}>{sub.title || 'Untitled Subtask'}</span>
                                                   </TaskTitleTooltip>
                                                 </div>
@@ -1754,7 +1756,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                   ) : (
                                                     subAssignees.map(a => {
                                                       const uObj = users.find(u => u.id === a);
-                                                      const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
+                                                      const dispName = uObj ? (uObj.firstName || uObj.fullName?.split(' ')[0] || 'Unknown') : 'Unknown';
                                                       return (
                                                         <span key={a} style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{dispName}</span>
                                                       );

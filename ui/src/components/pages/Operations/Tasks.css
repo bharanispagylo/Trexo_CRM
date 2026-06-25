@@ -3438,13 +3438,21 @@
   white-space: nowrap;
 }
 
-.cu-th-name     { width: 31%; }
-.cu-th-assignee { width: 14%; text-align: center; }
-.cu-th-project  { width: 14%; }
-.cu-th-list     { width: 15%; }
-.cu-th-delivery { width: 13%; text-align: center; }
+/* Default table header styles fallback */
 .cu-th-priority { width: 9%; text-align: center; }
-.cu-th-actions  { width: 4%; }
+
+/* All Tasks List View Column Widths */
+.all-tasks-list .cu-th-name     { width: 50%; }
+.all-tasks-list .cu-th-assignee { width: 12%; text-align: center; }
+.all-tasks-list .cu-th-list     { width: 8%; }
+.all-tasks-list .cu-th-delivery { width: 8%; text-align: center; }
+.all-tasks-list .cu-th-actions  { width: 5%; }
+
+/* My Tasks List View Column Widths */
+.my-tasks-list .cu-th-name     { width: 45%; }
+.my-tasks-list .cu-th-project  { width: 10%; }
+.my-tasks-list .cu-th-delivery { width: 10%; text-align: center; }
+.my-tasks-list .cu-th-actions  { width: 10%; }
 
 /* ── Rows ── */
 .cu-row {
@@ -3494,6 +3502,15 @@
   background: #f1f5f9;
   border-radius: 4px;
   padding: 0.05rem 0.35rem;
+  flex-shrink: 0;
+}
+
+.cu-task-id-prefix {
+  color: rgb(148, 163, 184);
+  margin-right: 6px;
+  font-size: 0.75rem;
+  font-weight: normal;
+  user-select: none;
   flex-shrink: 0;
 }
 
@@ -3547,8 +3564,13 @@
   white-space: nowrap;
 }
 
-/* ── Delivery date badge ── */
-.cu-td-delivery { text-align: center; }
+.cu-td-list {
+  text-overflow: clip;
+}
+.cu-td-delivery { 
+  text-align: center; 
+  text-overflow: clip;
+}
 .cu-due-badge {
   display: inline-flex;
   align-items: center;

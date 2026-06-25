@@ -132,6 +132,16 @@ const formatMobileDueDate = (dateStr) => {
   return { text: formatted, isOverdue };
 };
 
+const formatDDMonDate = (dateStr) => {
+  if (!dateStr) return '—';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '—';
+  const day = String(date.getDate()).padStart(2, '0');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[date.getMonth()];
+  return `${day}/${month}`;
+};
+
 const initials = (name) => name ? name.split(' ').map(w => w[0]).join('').toUpperCase() : '?';
 
 const AVATAR_COLORS_LIST = ['av-blue', 'av-pink', 'av-green', 'av-amber', 'av-purple'];
@@ -158,7 +168,7 @@ const timeStrToDecimal = (timeStr) => {
   return hours + (minutes / 60);
 };
 
-const getDisplayId = (f) => {
+export const getDisplayId = (f) => {
   if (!f) return '';
   const prefix = f.parentId ? 'S' : 'T';
   const no = f.taskNo || '';
@@ -4189,9 +4199,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                           <svg viewBox="0 0 10 6" width="7" height="7"><path d="M0 0l5 6 5-6z"/></svg>
                                         </button>
                                       )}
-                                     <span className="cu-mob-task-title" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                     <span className="cu-mob-task-title" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}><span className="cu-task-id-prefix">{getDisplayId(task)}</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                        {task.title || 'Untitled Task'}
-                                     </span>
+                                     </span></span>
                                      {subTasks.length > 0 && (
                                        <span 
                                          style={{ 
@@ -4246,9 +4256,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                      <div key={sub.id} className="cu-mob-task-row subtask-row" onClick={() => openTaskDetail(sub, false)} style={{ paddingLeft: '1.25rem', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0 }}>
                                          <span style={{ color: '#cbd5e1', fontSize: '0.8rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
-                                         <span className="cu-mob-task-title" style={{ color: '#475569', fontSize: '0.85rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                         <span className="cu-mob-task-title" style={{ color: '#475569', fontSize: '0.85rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}><span className="cu-task-id-prefix">{getDisplayId(sub)}</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                            {sub.title || 'Untitled Subtask'}
-                                         </span>
+                                         </span></span>
                                        </div>
                                      </div>
                                    );
@@ -4465,7 +4475,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   <svg viewBox="0 0 10 6" width="8" height="8" fill="currentColor" style={{ transform: isExpanded ? "none" : "rotate(-90deg)", transition: "transform 0.15s", color: "#64748b" }}><path d="M0 0l5 6 5-6z"/></svg>
                                                 </button>
                                                 
-                                                <TaskTitleTooltip text={task.title || 'Untitled Task'}>
+                                                <TaskTitleTooltip text={`${getDisplayId(task)} ${task.title || 'Untitled Task'}`}>
+                                                  <span className="cu-task-id-prefix">{getDisplayId(task)}</span>
                                                   <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
                                                 </TaskTitleTooltip>
                                                 
@@ -4521,10 +4532,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                             </td>
                                             <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
                                               <div className="cu-inline-field-wrapper">
-                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#64748b" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                                 <select className="cu-inline-dropdown" value={task.assignees || ''} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${task.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }}>
                                                   <option value="">Unassigned</option>
-                                                  {getFilteredUsersForProject(getTaskProjectId(task), task.assignees).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                  {getFilteredUsersForProject(getTaskProjectId(task), task.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                 </select>
                                               </div>
                                             </td>
@@ -4538,7 +4548,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                             <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
                                               <div className="cu-inline-field-wrapper cu-date-cell">
                                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                <span className="cu-date-text" style={{ color: relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : '—'}</span>
+                                                <span className="cu-date-text" style={{ color: relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(task.dueDate)}</span>
                                                 <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { e.stopPropagation(); try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                               </div>
                                             </td>
@@ -4567,17 +4577,16 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 <td className="cu-td cu-td-name" style={{ paddingLeft: '2.5rem' }}>
                                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                                     <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
-                                                    <TaskTitleTooltip text={sub.title || 'Untitled Subtask'}>
-                                                      <span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
+                                                    <TaskTitleTooltip text={`${getDisplayId(sub)} ${sub.title || 'Untitled Subtask'}`}>
+                                                      <span className="cu-task-id-prefix">{getDisplayId(sub)}</span><span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
                                                     </TaskTitleTooltip>
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
                                                   <div className="cu-inline-field-wrapper">
-                                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#64748b" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                                     <select className="cu-inline-dropdown" value={sub.assignees || ''} onChange={async (e) => { e.stopPropagation(); const updated = { ...sub, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${sub.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === sub.id ? updated : t)); } catch(err) { console.error(err); } }}>
                                                       <option value="">Unassigned</option>
-                                                      {getFilteredUsersForProject(getTaskProjectId(sub) || getTaskProjectId(task), sub.assignees).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                      {getFilteredUsersForProject(getTaskProjectId(sub) || getTaskProjectId(task), sub.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                     </select>
                                                   </div>
                                                 </td>
@@ -4591,7 +4600,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
                                                   <div className="cu-inline-field-wrapper cu-date-cell">
                                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                    <span className="cu-date-text" style={{ color: subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{sub.dueDate ? new Date(sub.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : '—'}</span>
+                                                    <span className="cu-date-text" style={{ color: subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(sub.dueDate)}</span>
                                                     <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { e.stopPropagation(); try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                                   </div>
                                                 </td>
@@ -4844,9 +4853,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                           <svg viewBox="0 0 10 6" width="7" height="7"><path d="M0 0l5 6 5-6z"/></svg>
                                         </button>
                                       )}
-                              <span className="cu-flat-task-title" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <span className="cu-flat-task-title" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}><span className="cu-task-id-prefix">{getDisplayId(task)}</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {task.title || 'Untitled Task'}
-                              </span>
+                              </span></span>
                               {subTasks.length > 0 && (
                                 <span 
                                   style={{ 
@@ -4902,9 +4911,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                               <div key={sub.id} className="cu-flat-task-row subtask-row" onClick={() => openTaskDetail(sub, false)} style={{ paddingLeft: '1.25rem', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0 }}>
                                   <span style={{ color: '#cbd5e1', fontSize: '0.8rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
-                                  <span className="cu-flat-task-title" style={{ color: '#475569', fontSize: '0.82rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span className="cu-flat-task-title" style={{ color: '#475569', fontSize: '0.82rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}><span className="cu-task-id-prefix">{getDisplayId(sub)}</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {sub.title || 'Untitled Subtask'}
-                                  </span>
+                                  </span></span>
                                 </div>
                               </div>
                             );
@@ -5038,8 +5047,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </button>
                                                 
                                                 <div className="cu-name-content">
-                                                  <TaskTitleTooltip text={task.title || 'Untitled Task'}>
-                                                    <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
+                                                  <TaskTitleTooltip text={`${getDisplayId(task)} ${task.title || 'Untitled Task'}`}>
+                                                    <span className="cu-task-id-prefix">{getDisplayId(task)}</span><span className="cu-task-title">{task.title || 'Untitled Task'}</span>
                                                   </TaskTitleTooltip>
                                                   {(dueDateLabel || taskGroupName) && (
                                                     <div className="cu-mobile-task-sub">
@@ -5115,7 +5124,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                             <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
                                               <div className="cu-inline-field-wrapper cu-date-cell">
                                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                <span className="cu-date-text" style={{ color: relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : '—'}</span>
+                                                <span className="cu-date-text" style={{ color: relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(task.dueDate)}</span>
                                                 <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { e.stopPropagation(); try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                               </div>
                                             </td>
@@ -5144,8 +5153,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 <td className="cu-td cu-td-name" style={{ paddingLeft: '2.5rem' }}>
                                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                                     <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
-                                                    <TaskTitleTooltip text={sub.title || 'Untitled Subtask'}>
-                                                      <span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
+                                                    <TaskTitleTooltip text={`${getDisplayId(sub)} ${sub.title || 'Untitled Subtask'}`}>
+                                                      <span className="cu-task-id-prefix">{getDisplayId(sub)}</span><span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
                                                     </TaskTitleTooltip>
                                                   </div>
                                                 </td>
@@ -5157,7 +5166,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
                                                   <div className="cu-inline-field-wrapper cu-date-cell">
                                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                    <span className="cu-date-text" style={{ color: subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{sub.dueDate ? new Date(sub.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : '—'}</span>
+                                                    <span className="cu-date-text" style={{ color: subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(sub.dueDate)}</span>
                                                     <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { e.stopPropagation(); try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
                                                   </div>
                                                 </td>
