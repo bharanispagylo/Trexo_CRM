@@ -472,8 +472,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     }
   }, [isEdit, task?.id]);
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
+  const uploadFile = async (file, onUploadSuccess) => {
     if (!file) return;
     setUploading(true);
 
@@ -495,7 +494,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
             : 'Admin';
           const uploadTimestamp = new Date().toISOString();
-          const newEntry = `${data.secure_url}|${uploaderName}|${uploadTimestamp}`;
+          const newEntry = `${data.secure_url}|${uploaderName}|${uploadTimestamp}|${file.name}`;
           const updatedAttachments = [...current, newEntry].join(',');
           set('attachments', updatedAttachments);
           setUploading(false);
@@ -508,6 +507,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               console.error('Failed to save uploaded file:', err);
             }
           }
+          if (onUploadSuccess) onUploadSuccess(data.secure_url, file.name);
           return;
         }
       } catch (err) {
@@ -524,7 +524,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
           : 'Admin';
         const uploadTimestamp = new Date().toISOString();
-        const newEntry = `${reader.result}|${uploaderName}|${uploadTimestamp}`;
+        const newEntry = `${reader.result}|${uploaderName}|${uploadTimestamp}|${file.name}`;
         const updatedAttachments = [...current, newEntry].join(',');
         set('attachments', updatedAttachments);
         setUploading(false);
@@ -537,6 +537,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             console.error('Failed to save uploaded file:', err);
           }
         }
+        if (onUploadSuccess) onUploadSuccess(reader.result, file.name);
       };
       reader.onerror = () => {
         alert('Failed to read file locally.', 'error', 'Error');
@@ -549,6 +550,229 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     }
   };
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      await uploadFile(file);
+    }
+  };
+
+  const insertAttachmentAtCursor = (url, fileName) => {
+    const textarea = document.querySelector('.saas-grid-textarea');
+    const attachmentText = `[ATTACHMENT:${url}|${fileName}]`;
+    if (!textarea) {
+      set('description', `${form.description || ''} ${attachmentText}`.trim());
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = form.description || '';
+    const before = text.substring(0, start);
+    const after = text.substring(end);
+    const newText = before + (before.endsWith(' ') || before === '' ? '' : ' ') + attachmentText + (after.startsWith(' ') || after === '' ? '' : ' ') + after;
+    set('description', newText);
+    
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + (before.endsWith(' ') || before === '' ? 0 : 1) + attachmentText.length + (after.startsWith(' ') || after === '' ? 0 : 1);
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 50);
+  };
+
+  const handleDescriptionPaste = async (e) => {
+    const clipboardData = e.clipboardData;
+    if (!clipboardData || !clipboardData.items) return;
+    if (uploading) return;
+
+    for (let i = 0; i < clipboardData.items.length; i++) {
+      const item = clipboardData.items[i];
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          const fileName = `pasted-image-${Date.now()}.${item.type.split('/')[1] || 'png'}`;
+          const renamedFile = new File([file], fileName, { type: file.type });
+          await uploadFile(renamedFile, (url, name) => insertAttachmentAtCursor(url, name));
+        }
+        return;
+      }
+    }
+
+    const htmlData = clipboardData.getData('text/html');
+    if (htmlData) {
+      const imgMatch = htmlData.match(/<img[^>]+src=["']([^"']+)["']/i);
+      if (imgMatch && imgMatch[1]) {
+        const imgUrl = imgMatch[1];
+        if (imgUrl.startsWith('data:') && imgUrl.length < 50) return;
+        e.preventDefault();
+        setUploading(true);
+        try {
+          const response = await fetch(imgUrl);
+          const blob = await response.blob();
+          if (blob && blob.size > 0 && blob.type.startsWith('image/')) {
+            const ext = blob.type.split('/')[1] || 'png';
+            const file = new File([blob], `pasted-image-${Date.now()}.${ext}`, { type: blob.type });
+            setUploading(false);
+            await uploadFile(file, (url, name) => insertAttachmentAtCursor(url, name));
+          } else {
+            const fileName = `pasted-image-${Date.now()}.png`;
+            const current = form.attachments ? form.attachments.split(',') : [];
+            const uploaderName = currentUser
+              ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
+              : 'Admin';
+            const uploadTimestamp = new Date().toISOString();
+            const newEntry = `${imgUrl}|${uploaderName}|${uploadTimestamp}|${fileName}`;
+            const updatedAttachments = [...current, newEntry].join(',');
+            set('attachments', updatedAttachments);
+            setUploading(false);
+            if (isEdit) {
+              const updatedTask = { ...form, attachments: updatedAttachments };
+              const { comments, taskList, ...payload } = updatedTask;
+              await onSave(payload, true);
+            }
+            insertAttachmentAtCursor(imgUrl, fileName);
+          }
+        } catch (err) {
+          console.warn('Failed to fetch pasted image URL, attaching as link:', err);
+          const fileName = `pasted-image-${Date.now()}.png`;
+          const current = form.attachments ? form.attachments.split(',') : [];
+          const uploaderName = currentUser
+            ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
+            : 'Admin';
+          const uploadTimestamp = new Date().toISOString();
+          const newEntry = `${imgUrl}|${uploaderName}|${uploadTimestamp}|${fileName}`;
+          const updatedAttachments = [...current, newEntry].join(',');
+          set('attachments', updatedAttachments);
+          setUploading(false);
+          if (isEdit) {
+            const updatedTask = { ...form, attachments: updatedAttachments };
+            const { comments, taskList, ...payload } = updatedTask;
+            await onSave(payload, true);
+          }
+          insertAttachmentAtCursor(imgUrl, fileName);
+        }
+        return;
+      }
+    }
+
+    const textData = clipboardData.getData('text/plain');
+    if (textData && /^https?:\/\/.+\.(png|jpe?g|gif|webp|svg|bmp)(\?.*)?$/i.test(textData.trim())) {
+      e.preventDefault();
+      const imgUrl = textData.trim();
+      const fileName = `pasted-image-${Date.now()}.png`;
+      const current = form.attachments ? form.attachments.split(',') : [];
+      const uploaderName = currentUser
+        ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
+        : 'Admin';
+      const uploadTimestamp = new Date().toISOString();
+      const newEntry = `${imgUrl}|${uploaderName}|${uploadTimestamp}|${fileName}`;
+      const updatedAttachments = [...current, newEntry].join(',');
+      set('attachments', updatedAttachments);
+      if (isEdit) {
+        const updatedTask = { ...form, attachments: updatedAttachments };
+        const { comments, taskList, ...payload } = updatedTask;
+        await onSave(payload, true);
+      }
+      insertAttachmentAtCursor(imgUrl, fileName);
+      return;
+    }
+  };
+
+  const renderDescriptionWithPreviews = (text) => {
+    if (!text) return 'Add description, or write with AI...';
+    
+    const regex = /\[ATTACHMENT:([^|]+)\|([^\]]+)\]/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    regex.lastIndex = 0;
+    while ((match = regex.exec(text)) !== null) {
+      const matchIndex = match.index;
+      const url = match[1];
+      const fileName = match[2];
+
+      if (matchIndex > lastIndex) {
+        parts.push(text.substring(lastIndex, matchIndex));
+      }
+
+      const isPdf = fileName.toLowerCase().endsWith('.pdf') || url.startsWith('data:application/pdf');
+      const isImage = (() => {
+        const imageExtensions = ['png', 'jpeg', 'jpg', 'gif', 'webp', 'svg', 'bmp'];
+        const ext = fileName.split('.').pop()?.toLowerCase();
+        if (imageExtensions.includes(ext)) return true;
+        if (url.startsWith('data:image/')) return true;
+        return false;
+      })();
+
+      parts.push({
+        url,
+        fileName,
+        isPdf,
+        isImage
+      });
+
+      lastIndex = regex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {parts.map((part, idx) => {
+          if (typeof part === 'string') {
+            return <span key={idx} style={{ whiteSpace: 'pre-wrap' }}>{part}</span>;
+          }
+          
+          if (part.isImage) {
+            return (
+              <div key={idx} style={{ margin: '0.5rem 0', maxWidth: '100%' }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                  {part.fileName} (Inline Preview)
+                </div>
+                <img 
+                  src={part.url} 
+                  alt={part.fileName} 
+                  style={{ maxWidth: '100%', maxHeight: '400px', borderRadius: '8px', border: '1px solid #e2e8f0', objectFit: 'contain', cursor: 'pointer', display: 'block' }}
+                  onClick={(e) => { e.stopPropagation(); window.open(part.url, '_blank'); }}
+                />
+              </div>
+            );
+          } else {
+            return (
+              <div key={idx} style={{ margin: '0.25rem 0' }} onClick={(e) => e.stopPropagation()}>
+                <a 
+                  href={part.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.4rem 0.8rem',
+                    background: '#f1f5f9',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    color: '#2563eb',
+                    textDecoration: 'none',
+                    fontSize: '0.8rem',
+                    fontWeight: 500
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  {part.fileName}
+                </a>
+              </div>
+            );
+          }
+        })}
+      </div>
+    );
+  };
 
   useEffect(() => {
     fetchComments();
@@ -1097,12 +1321,16 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     const url = parts[0];
     const encodedUploader = parts[1] || '';
     const encodedTime = parts[2] || '';
+    const encodedFileName = parts[3] || '';
 
     const isBase64 = url.startsWith('data:');
     let fileName = 'Attachment File';
     let isPdf = false;
     
-    if (!isBase64) {
+    if (encodedFileName) {
+      fileName = encodedFileName;
+      isPdf = fileName.toLowerCase().endsWith('.pdf');
+    } else if (!isBase64) {
       fileName = url.split('/').pop() || 'file';
       isPdf = fileName.toLowerCase().endsWith('.pdf');
     } else {
@@ -1112,6 +1340,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       const ext = mimeType.split('/')[1] || 'bin';
       fileName = `attachment_file.${ext}`;
     }
+
+    const isImage = (() => {
+      const imageExtensions = ['png', 'jpeg', 'jpg', 'gif', 'webp', 'svg', 'bmp'];
+      const ext = fileName.split('.').pop()?.toLowerCase();
+      if (imageExtensions.includes(ext)) return true;
+      if (url.startsWith('data:image/')) return true;
+      return false;
+    })();
 
     // Attempt to find the uploader from comments or encoded metadata
     const formatAttachmentDate = (dateStr) => {
@@ -1172,6 +1408,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       url,
       fileName,
       isPdf,
+      isImage,
       uploadedBy,
       uploadedOn,
       fileSize
@@ -1741,13 +1978,45 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
                 <div style={{ padding: '0.5rem 0' }}>
                   {isEditing ? (
-                    <textarea value={form.description} onChange={e => set('description', e.target.value)} className="saas-grid-textarea" style={{ minHeight: '120px', width: '100%', maxWidth: '100%', border: 'none', background: '#f8fafc', outline: 'none', fontSize: '0.95rem', padding: '1rem', borderRadius: '8px', boxSizing: 'border-box' }} placeholder="Add description, or write with AI..." />
+                    <textarea value={form.description} onChange={e => set('description', e.target.value)} onPaste={handleDescriptionPaste} className="saas-grid-textarea" style={{ minHeight: '120px', width: '100%', maxWidth: '100%', border: 'none', background: '#f8fafc', outline: 'none', fontSize: '0.95rem', padding: '1rem', borderRadius: '8px', boxSizing: 'border-box' }} placeholder="Add description, or write with AI..." />
                   ) : (
-                    <div style={{ color: form.description ? '#334155' : '#94a3b8', whiteSpace: 'pre-wrap', fontSize: '0.95rem', minHeight: '60px', cursor: 'text', padding: '0.5rem', wordBreak: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }} onClick={() => setIsEditing(true)}>
-                      {form.description || 'Add description, or write with AI...'}
+                    <div style={{ color: form.description ? '#334155' : '#94a3b8', whiteSpace: 'normal', fontSize: '0.95rem', minHeight: '60px', cursor: 'text', padding: '0.5rem', wordBreak: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }} onClick={() => setIsEditing(true)}>
+                      {renderDescriptionWithPreviews(form.description)}
                     </div>
                   )}
                 </div>
+
+                {/* Image Previews right below Description */}
+                {form.attachments && form.attachments.split(',').filter(Boolean).some(item => {
+                  const meta = getAttachmentMetadata(item);
+                  return meta && meta.isImage;
+                }) && (
+                  <div style={{ marginTop: '1rem', borderTop: '1px dashed #e2e8f0', paddingTop: '1rem' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>
+                      Image Previews ({form.attachments.split(',').filter(Boolean).filter(item => getAttachmentMetadata(item)?.isImage).length})
+                    </span>
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      {form.attachments.split(',').filter(Boolean).map((item, idx) => {
+                        const meta = getAttachmentMetadata(item, idx);
+                        if (!meta || !meta.isImage) return null;
+                        return (
+                          <div key={meta.url} style={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', background: '#f8fafc', padding: '4px' }} onClick={(e) => e.stopPropagation()}>
+                            <img 
+                              src={meta.url} 
+                              alt={meta.fileName} 
+                              style={{ width: '120px', height: '90px', objectFit: 'cover', borderRadius: '6px', cursor: 'pointer', display: 'block' }}
+                              onClick={() => window.open(meta.url, '_blank')}
+                              title={meta.fileName}
+                            />
+                            <div style={{ fontSize: '0.7rem', color: '#475569', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '4px 2px 2px', textAlign: 'center' }}>
+                              {meta.fileName}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
               </div>
           
@@ -2205,32 +2474,68 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                               
                               {/* File Name with beautiful Icon */}
                               <td style={{ padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', overflow: 'hidden' }}>
-                                <div style={{
-                                  flexShrink: 0,
-                                  width: '28px',
-                                  height: '28px',
-                                  borderRadius: '6px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontSize: '0.62rem',
-                                  fontWeight: '800',
-                                  background: meta.isPdf ? '#fef2f2' : '#f0fdf4',
-                                  color: meta.isPdf ? '#ef4444' : '#22c55e',
-                                  border: `1px solid ${meta.isPdf ? '#fee2e2' : '#dcfce7'}`
-                                }}>
-                                  {meta.isPdf ? 'PDF' : 'IMG'}
+                                {(() => {
+                                  let typeLabel = 'FILE';
+                                  let bg = '#f8fafc';
+                                  let fg = '#64748b';
+                                  let border = '#e2e8f0';
+                                  
+                                  if (meta.isPdf) {
+                                    typeLabel = 'PDF';
+                                    bg = '#fef2f2';
+                                    fg = '#ef4444';
+                                    border = '#fee2e2';
+                                  } else if (meta.isImage) {
+                                    typeLabel = 'IMG';
+                                    bg = '#eff6ff';
+                                    fg = '#3b82f6';
+                                    border = '#dbeafe';
+                                  } else {
+                                    const ext = meta.fileName.split('.').pop()?.toUpperCase() || 'FILE';
+                                    typeLabel = ext.length <= 4 ? ext : 'FILE';
+                                  }
+                                  
+                                  return (
+                                    <div style={{
+                                      flexShrink: 0,
+                                      width: '28px',
+                                      height: '28px',
+                                      borderRadius: '6px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontSize: '0.62rem',
+                                      fontWeight: '800',
+                                      background: bg,
+                                      color: fg,
+                                      border: `1px solid ${border}`
+                                    }}>
+                                      {typeLabel}
+                                    </div>
+                                  );
+                                })()}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflow: 'hidden', width: '100%' }}>
+                                  <a 
+                                    href={meta.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    style={{ fontSize: '0.75rem', fontWeight: '500', color: '#2563eb', textDecoration: 'none', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}
+                                    className="file-name-link"
+                                    title={meta.fileName}
+                                  >
+                                    {meta.fileName}
+                                  </a>
+                                  {meta.isImage && (
+                                    <div style={{ marginTop: '0.25rem' }}>
+                                      <img 
+                                        src={meta.url} 
+                                        alt={meta.fileName} 
+                                        style={{ maxWidth: '120px', maxHeight: '80px', borderRadius: '4px', border: '1px solid #e2e8f0', objectFit: 'contain', cursor: 'pointer', display: 'block' }}
+                                        onClick={() => window.open(meta.url, '_blank')}
+                                      />
+                                    </div>
+                                  )}
                                 </div>
-                                <a 
-                                  href={meta.url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  style={{ fontSize: '0.75rem', fontWeight: '500', color: '#2563eb', textDecoration: 'none', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
-                                  className="file-name-link"
-                                  title={meta.fileName}
-                                >
-                                  {meta.fileName}
-                                </a>
                               </td>
 
                               {/* Uploaded By */}
