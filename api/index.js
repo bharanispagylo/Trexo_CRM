@@ -33,6 +33,7 @@ const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 const { sendNotificationEmail, sendOtpEmail } = require('./emailSender');
+const { hashPassword, verifyPassword } = require('./cryptoUtils');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -461,6 +462,10 @@ app.post('/api/users', async (req, res) => {
     if (sanitizedRest.empId === '' || sanitizedRest.empId === undefined) sanitizedRest.empId = null;
     if (sanitizedRest.email === '' || sanitizedRest.email === undefined) sanitizedRest.email = null;
 
+    if (sanitizedRest.password) {
+      sanitizedRest.password = await hashPassword(sanitizedRest.password);
+    }
+
     const user = await prisma.user.create({
       data: {
         firstName: finalFirstName,
@@ -491,7 +496,8 @@ app.post('/api/login', async (req, res) => {
       where: { email }
     });
 
-    if (!user || user.password !== password) {
+    const isMatch = user ? await verifyPassword(password, user.password) : false;
+    if (!user || !isMatch) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
@@ -611,9 +617,10 @@ app.post('/api/forgot-password/reset-password', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    const hashedPassword = await hashPassword(newPassword);
     await prisma.user.update({
       where: { email: normalizedEmail },
-      data: { password: newPassword }
+      data: { password: hashedPassword }
     });
 
     // Clear from OTP store
@@ -645,6 +652,12 @@ app.put('/api/users/:id', async (req, res) => {
     // Sanitize unique fields: convert empty strings to null to avoid unique constraint violations
     if (updateData.empId === '') updateData.empId = null;
     if (updateData.email === '') updateData.email = null;
+
+    if (updateData.password && updateData.password.trim() !== '') {
+      updateData.password = await hashPassword(updateData.password);
+    } else {
+      delete updateData.password;
+    }
 
     const user = await prisma.user.update({
       where: { id: req.params.id },
