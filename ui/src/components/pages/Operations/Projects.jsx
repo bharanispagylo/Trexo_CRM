@@ -173,6 +173,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const { can, getLevel } = usePermissions();
   const { alert, confirm, toast } = useAlert();
 
+  const getClientDisplayName = (proj) => {
+    if (!proj) return '';
+    const clientObj = clients.find(c => c.id === proj.clientId);
+    return clientObj ? (clientObj.company || clientObj.name) : (proj.client || '');
+  };
+
   const canEditProject = (proj) => {
     if (!proj) return false;
     const level = getLevel('projects', 'edit');
@@ -736,11 +742,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             value={form.clientId || ''}
             onChange={e => {
               const clientObj = clients.find(c => c.id === e.target.value);
-              setForm({...form, clientId: clientObj?.id || null, client: clientObj?.name || ''});
+              setForm({...form, clientId: clientObj?.id || null, client: clientObj?.company || clientObj?.name || ''});
             }}
           >
             <option value="">Select a Client</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {clients.map(c => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
           </select>
         </div>
         <div className="saas-field proj-span-2">
@@ -1158,7 +1164,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 <span style={{ background: '#dcfce7', color: '#16a34a', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '700' }}>{selectedProject.status || 'In Progress'}</span>
               </div>
               <div style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                Client: <span style={{ color: '#2563eb', fontWeight: '600' }}>{selectedProject.client || '-'}</span>
+                Client: <span style={{ color: '#2563eb', fontWeight: '600' }}>{getClientDisplayName(selectedProject) || '-'}</span>
               </div>
               <div style={{ color: '#64748b', fontSize: '0.85rem' }}>
                 Project ID: <span style={{ fontWeight: '500' }}>{projectID}</span>
@@ -1176,7 +1182,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     name: selectedProject.name || '',
                     status: selectedProject.status || 'Active',
                     description: selectedProject.description || '',
-                    client: selectedProject.client || '',
+                    client: getClientDisplayName(selectedProject) || '',
                     clientId: selectedProject.clientId || '',
                     estimatedHours: selectedProject.estimatedHours || 0,
                     actualHours: selectedProject.actualHours || 0,
@@ -1310,7 +1316,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     Client
                   </div>
                   <div className="detail-info-sep">:</div>
-                  <div className="detail-info-value">{selectedProject.client || '-'}</div>
+                  <div className="detail-info-value">{getClientDisplayName(selectedProject) || '-'}</div>
                 </div>
 
                 <div className="detail-info-row">
@@ -2822,7 +2828,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
       const nameMatch = (p.name || '').toLowerCase().includes(q);
-      const clientMatch = (p.client || '').toLowerCase().includes(q);
+      const clientMatch = (getClientDisplayName(p) || '').toLowerCase().includes(q);
       const descMatch = (p.description || '').toLowerCase().includes(q);
       return nameMatch || clientMatch || descMatch;
     }
@@ -2994,7 +3000,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                   name: proj.name || '', 
                                   status: proj.status || 'Active',
                                   description: proj.description || '',
-                                  client: proj.client || '',
+                                  client: getClientDisplayName(proj) || '',
                                   clientId: proj.clientId || '',
                                   estimatedHours: proj.estimatedHours || 0,
                                   actualHours: proj.actualHours || 0,
@@ -3078,7 +3084,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                               name: proj.name || '',
                               status: proj.status || 'Active',
                               description: proj.description || '',
-                              client: proj.client || '',
+                              client: getClientDisplayName(proj) || '',
                               clientId: proj.clientId || '',
                               estimatedHours: proj.estimatedHours || 0,
                               actualHours: proj.actualHours || 0,
