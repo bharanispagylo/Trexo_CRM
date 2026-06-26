@@ -5,6 +5,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import Projects from './pages/Operations/Projects';
 import TrackTeam from './pages/Operations/TrackTeam';
 import Tasks from './pages/Operations/Tasks';
+import TaskGroups from './pages/Operations/TaskGroups';
 import Estimations from './pages/Operations/Estimations';
 import Clients from './pages/Operations/Clients';
 import Users from './pages/Administration/Users';
@@ -68,6 +69,14 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const profileDropdownRef = useRef(null);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [mobileReportsOpen, setMobileReportsOpen] = useState(false);
+  const [projectsKey, setProjectsKey] = useState(0);
+  const [tasksKey, setTasksKey] = useState(0);
+  const [trackTeamKey, setTrackTeamKey] = useState(0);
+  const [estimationsKey, setEstimationsKey] = useState(0);
+  const [clientsKey, setClientsKey] = useState(0);
+  const [usersKey, setUsersKey] = useState(0);
+  const [rolesKey, setRolesKey] = useState(0);
+  const [taskGroupsKey, setTaskGroupsKey] = useState(0);
 
   const modulesConfig = [
     {
@@ -87,6 +96,22 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         </svg>
       ),
       drawerBg: '#7c3aed'
+    },
+    {
+      id: 'task-groups',
+      label: 'Task Groups',
+      module: 'tasks',
+      bottomNavIcon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+        </svg>
+      ),
+      drawerIcon: (
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+        </svg>
+      ),
+      drawerBg: '#6366f1'
     },
     {
       id: 'projects',
@@ -468,6 +493,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         }
         return (
         <Projects
+          key={projectsKey}
           user={user}
           initialSelectedProject={searchSelectedProject}
           onClearInitialProject={() => setSearchSelectedProject(null)}
@@ -491,7 +517,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             setActiveTab('tasks');
           });
         }
-        return <Estimations user={user} />;
+        return <Estimations key={estimationsKey} user={user} />;
       case 'clients': 
         if (!can('clients', 'view') && user?.role?.toLowerCase() !== 'admin') {
           return renderOverview(setActiveTab, (taskData) => {
@@ -500,7 +526,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             setActiveTab('tasks');
           });
         }
-        return <Clients user={user} />;
+        return <Clients key={clientsKey} user={user} />;
       case 'track-team':
         if (!can('teams', 'view') && user?.role?.toLowerCase() !== 'admin') {
           return renderOverview(setActiveTab, (taskData) => {
@@ -509,7 +535,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             setActiveTab('tasks');
           });
         }
-        return <TrackTeam user={user} onMemberClick={(member) => {
+        return <TrackTeam key={trackTeamKey} user={user} onMemberClick={(member) => {
             setTeamMemberAssigneeFilter(member.id);
             setActiveTab('tasks');
           }} />;
@@ -523,6 +549,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         }
         return (
         <Tasks
+          key={tasksKey}
           user={user}
           initialSelectedTask={searchSelectedTask}
           onClearInitialTask={() => setSearchSelectedTask(null)}
@@ -536,6 +563,15 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
           onClearAssigneeFilter={() => setTeamMemberAssigneeFilter(null)}
         />
       );
+      case 'task-groups':
+        if (!can('tasks', 'view') && user?.role?.toLowerCase() !== 'admin') {
+          return renderOverview(setActiveTab, (taskData) => {
+            setSearchSelectedTask(taskData);
+            setIsTaskDetailOpen(true);
+            setActiveTab('tasks');
+          });
+        }
+        return <TaskGroups key={taskGroupsKey} user={user} onBack={() => setActiveTab('tasks')} />;
       case 'users': 
         if (!can('users', 'view') && user?.role?.toLowerCase() !== 'admin') {
           return renderOverview(setActiveTab, (taskData) => {
@@ -544,7 +580,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             setActiveTab('tasks');
           });
         }
-        return <Users user={user} onAddUser={() => setActiveTab('add-user')} onEditUser={(u) => { setUserToEdit(u); setActiveTab('edit-user'); }} />;
+        return <Users key={usersKey} user={user} onAddUser={() => setActiveTab('add-user')} onEditUser={(u) => { setUserToEdit(u); setActiveTab('edit-user'); }} />;
       case 'roles': 
         if (!can('roles', 'view') && user?.role?.toLowerCase() !== 'admin') {
           return renderOverview(setActiveTab, (taskData) => {
@@ -553,7 +589,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             setActiveTab('tasks');
           });
         }
-        return <Roles user={user} />;
+        return <Roles key={rolesKey} user={user} />;
       case 'add-user': 
         if (!can('users', 'create') && user?.role?.toLowerCase() !== 'admin') {
           return renderOverview(setActiveTab, (taskData) => {
@@ -604,6 +640,32 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
     <button 
       className={`nav-item ${activeTab === id ? 'active' : ''}`} 
       onClick={() => {
+        if (id === 'projects') {
+          setProjectsKey(prev => prev + 1);
+          setSearchSelectedProject(null);
+          setInitialProjectName(null);
+          setSelectedProjectName(null);
+        } else if (id === 'tasks') {
+          setTasksKey(prev => prev + 1);
+          setSearchSelectedTask(null);
+          setInitialTaskId(null);
+          setSelectedTaskId(null);
+          setIsTaskDetailOpen(false);
+        } else if (id === 'task-groups') {
+          setTaskGroupsKey(prev => prev + 1);
+        } else if (id === 'track-team') {
+          setTrackTeamKey(prev => prev + 1);
+          setTeamMemberAssigneeFilter(null);
+        } else if (id === 'estimations') {
+          setEstimationsKey(prev => prev + 1);
+        } else if (id === 'clients') {
+          setClientsKey(prev => prev + 1);
+        } else if (id === 'users') {
+          setUsersKey(prev => prev + 1);
+          setUserToEdit(null);
+        } else if (id === 'roles') {
+          setRolesKey(prev => prev + 1);
+        }
         setActiveTab(id);
         setSidebarOpen(false);
       }}
@@ -625,6 +687,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'tasks': return (isTaskDetailOpen || selectedTaskId)
         ? { title: 'Task Details', back: 'Tasks', id: 'TaskDetails' }
         : { title: 'Tasks', back: 'Operations', id: 'Tasks' };
+      case 'task-groups': return { title: 'Task Groups', back: 'Tasks', id: 'TaskGroups' };
       case 'users': return { title: 'User Management', back: 'Admin', id: 'Users' };
       case 'roles': return { title: 'Role Permissions', back: 'Admin', id: 'Roles' };
       case 'add-user': return { title: 'Create New User', back: 'Users', id: 'NewUser' };
@@ -678,6 +741,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
           <div className="saas-nav-group">
             {can('tasks', 'view') && <NavItem id="tasks" label="Tasks" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>} />}
+            {can('tasks', 'view') && <NavItem id="task-groups" label="Task Groups" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>} />}
             {can('projects', 'view') && <NavItem id="projects" label="Projects" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>} />}
             {can('teams', 'view') && <NavItem id="track-team" label="My Team" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>} />}
             {can('estimations', 'view') && <NavItem id="estimations" label="Estimations" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>} />}
@@ -828,9 +892,6 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
           <div className="saas-header-left-breadcrumbs-group">
             <button className="saas-hamburger-btn" onClick={() => setSidebarOpen(true)}>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-            </button>
-            <button className="saas-back-nav-btn" onClick={() => window.history.back()} title="Go back">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
             </button>
             <div className="saas-breadcrumbs">
               <span className="saas-breadcrumb-item active">{header.title}</span>

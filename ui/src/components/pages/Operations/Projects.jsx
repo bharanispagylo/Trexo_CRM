@@ -1431,33 +1431,39 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 </div>
               ) : (
                 <div className="cu-list-root" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', border: 'none', background: 'transparent', boxShadow: 'none' }}>
-                  {(selectedProject.taskLists || []).map((list, idx) => {
-                    const isCollapsed = expandedListId === '__first__'
-                      ? idx !== 0
-                      : expandedListId !== list.id;
-
-                    const listTasks = (list.tasks || []).sort((a, b) => {
-                      if (!a.dueDate) return 1;
-                      if (!b.dueDate) return -1;
-                      return new Date(a.dueDate) - new Date(b.dueDate);
+                  {(() => {
+                    const sortedLists = [...(selectedProject.taskLists || [])].sort((a, b) => {
+                      const nameA = a.name || '';
+                      const nameB = b.name || '';
+                      return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
                     });
-                    const hasTasks = listTasks.length > 0;
+                    return sortedLists.map((list, idx) => {
+                      const isCollapsed = expandedListId === '__first__'
+                        ? idx !== 0
+                        : expandedListId !== list.id;
 
-                    return (
-                      <div key={list.id} className="cu-status-section">
-                        {/* Section Header */}
-                        <div className="cu-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div className="cu-section-left" style={{ display: 'flex', alignItems: 'center', cursor: hasTasks ? 'pointer' : 'default', flex: 1 }} onClick={() => {
-                            if (hasTasks && editingListId !== list.id) {
-                              const isFirst = selectedProject.taskLists.indexOf(list) === 0;
-                              if (expandedListId === '__first__') {
-                                setExpandedListId(isFirst ? null : list.id);
-                              } else {
-                                toggleListAccordion(list.id);
+                      const listTasks = (list.tasks || []).sort((a, b) => {
+                        if (!a.dueDate) return 1;
+                        if (!b.dueDate) return -1;
+                        return new Date(a.dueDate) - new Date(b.dueDate);
+                      });
+                      const hasTasks = listTasks.length > 0;
+
+                      return (
+                        <div key={list.id} className="cu-status-section">
+                          {/* Section Header */}
+                          <div className="cu-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div className="cu-section-left" style={{ display: 'flex', alignItems: 'center', cursor: hasTasks ? 'pointer' : 'default', flex: 1 }} onClick={() => {
+                              if (hasTasks && editingListId !== list.id) {
+                                const isFirst = idx === 0;
+                                if (expandedListId === '__first__') {
+                                  setExpandedListId(isFirst ? null : list.id);
+                                } else {
+                                  toggleListAccordion(list.id);
+                                }
                               }
-                            }
-                          }}>
-                            {hasTasks ? (
+                            }}>
+                              {hasTasks ? (
                               <span className="cu-section-chevron" style={{ display: 'flex', alignItems: 'center', marginRight: '8px' }}>
                                 <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
                               </span>
@@ -1881,14 +1887,15 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                       return rows;
                                     });
                                   })()
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  })()}
                 </div>
               )}
             </div>

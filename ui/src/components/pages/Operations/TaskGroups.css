@@ -1,0 +1,530 @@
+/* TaskGroups.css - Premium Styling for Task Group Management */
+
+.tg-page-container {
+  padding: 2rem 3rem;
+  background: #f8fafc;
+  min-height: 100vh;
+  animation: tgFadeIn 0.3s ease-out;
+}
+
+@keyframes tgFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tg-loading-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80vh;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+/* Header styling */
+.tg-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+  width: 100%;
+}
+
+.tg-title-area {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tg-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.tg-back-btn:hover {
+  color: #0066FF;
+}
+
+.tg-title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+/* Actions bar (search & add) */
+.tg-actions-area {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tg-search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tg-search-icon {
+  position: absolute;
+  left: 0.85rem;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.tg-search-input {
+  padding: 0.6rem 1rem 0.6rem 2.25rem;
+  font-size: 0.88rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: white;
+  width: 260px;
+  color: #334155;
+  transition: all 0.2s;
+}
+
+.tg-search-input:focus {
+  outline: none;
+  border-color: #0066FF;
+  box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+  width: 300px;
+}
+
+.tg-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1.25rem;
+  background: #0066FF;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(0, 102, 255, 0.15);
+}
+
+.tg-btn-primary:hover {
+  background: #0052cc;
+  transform: translateY(-1px);
+}
+
+.tg-btn-primary:active {
+  transform: translateY(0);
+}
+
+.tg-btn-secondary {
+  padding: 0.6rem 1.25rem;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tg-btn-secondary:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+/* Tabs */
+.tg-tabs-nav {
+  display: flex;
+  gap: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.25rem;
+}
+
+.tg-tab-btn {
+  background: none;
+  border: none;
+  padding: 0.5rem 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.tg-tab-btn:hover {
+  color: #0f172a;
+}
+
+.tg-tab-btn.active {
+  color: #0066FF;
+}
+
+.tg-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #0066FF;
+  border-radius: 3px;
+  animation: tabSlide 0.2s ease-out;
+}
+
+@keyframes tabSlide {
+  from { transform: scaleX(0.5); opacity: 0; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+
+/* Table Card */
+.tg-list-wrapper {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 10px 15px -3px rgba(0, 0, 0, 0.03);
+}
+
+.tg-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tg-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.tg-table th {
+  padding: 1rem 1.25rem;
+  background: #f8fafc;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tg-table td {
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+.tg-row {
+  transition: background-color 0.2s;
+}
+
+.tg-row:hover {
+  background-color: #f8fafc;
+}
+
+/* Stars */
+.tg-star-btn {
+  background: none;
+  border: none;
+  color: #cbd5e1;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.tg-star-btn:hover {
+  transform: scale(1.15);
+  color: #eab308;
+}
+
+.tg-star-btn.favorite {
+  color: #eab308;
+}
+
+.tg-group-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Plus button */
+.tg-plus-btn {
+  background: #f1f5f9;
+  color: #475569;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.tg-plus-btn:hover {
+  background: #0066FF;
+  color: white;
+  transform: scale(1.1);
+}
+
+.tg-plus-btn:active {
+  transform: scale(0.95);
+}
+
+/* Badges */
+.tg-project-badge {
+  background: #eff6ff;
+  color: #1e40af;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid #dbeafe;
+}
+
+.tg-project-none {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.tg-task-count {
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+}
+
+/* Action buttons */
+.tg-action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.tg-action-icon-btn {
+  background: none;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.tg-action-icon-btn.edit {
+  color: #64748b;
+}
+
+.tg-action-icon-btn.edit:hover {
+  background: #f1f5f9;
+  color: #0066FF;
+}
+
+.tg-action-icon-btn.delete {
+  color: #64748b;
+}
+
+.tg-action-icon-btn.delete:hover {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+/* Empty State */
+.tg-empty-state {
+  padding: 4rem 2rem;
+  text-align: center;
+  color: #64748b;
+}
+
+.tg-empty-state svg {
+  margin-bottom: 1rem;
+  color: #94a3b8;
+}
+
+.tg-empty-state h3 {
+  margin: 0 0 0.5rem 0;
+  color: #0f172a;
+}
+
+.tg-empty-state p {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+/* Modals styling */
+.tg-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: tgFadeIn 0.2s ease-out;
+}
+
+.tg-modal {
+  background: white;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  animation: tgModalSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes tgModalSlide {
+  from { transform: translateY(12px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.tg-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.tg-modal-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.tg-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.tg-modal-close:hover {
+  color: #0f172a;
+}
+
+.tg-modal-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.tg-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.tg-form-field label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tg-form-field input,
+.tg-form-field select {
+  padding: 0.65rem 0.85rem;
+  font-size: 0.9rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #1e293b;
+  transition: all 0.2s;
+}
+
+.tg-form-field input:focus,
+.tg-form-field select:focus {
+  outline: none;
+  border-color: #0066FF;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.08);
+}
+
+.tg-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* Card layout overrides for Task Groups page */
+.tg-page-container .cu-status-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  margin-bottom: 0.75rem;
+}
+
+.tg-page-container .cu-status-section:last-child {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tg-page-container .cu-section-header {
+  background: #fafbfc;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 0.75rem 1.25rem;
+}
+
+.tg-section-header-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 1.5rem 0 0.75rem 0;
+  letter-spacing: -0.01em;
+}
+
+.tg-empty-section-message {
+  padding: 1.5rem;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  color: #64748b;
+  font-size: 0.85rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.tg-accordion-star-btn:hover {
+  transform: scale(1.15);
+}
+
