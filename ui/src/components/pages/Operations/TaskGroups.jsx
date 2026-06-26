@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../../../api/client';
 import { useAlert } from '../../../context/AlertContext';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -100,11 +100,7 @@ export default function TaskGroups({ user, onBack }) {
   const { alert, confirm, toast } = useAlert();
   const { can } = usePermissions();
 
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  const fetchInitialData = async () => {
+  const fetchInitialData = useCallback(async () => {
     setLoading(true);
     try {
       const [listsData, projectsData, usersData] = await Promise.all([
@@ -127,7 +123,11 @@ export default function TaskGroups({ user, onBack }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchInitialData();
+  }, [fetchInitialData]);
 
   const fetchTaskListsOnly = async () => {
     try {
@@ -204,6 +204,7 @@ export default function TaskGroups({ user, onBack }) {
   };
 
   // Delete Task Group
+  // eslint-disable-next-line no-unused-vars
   const handleDeleteGroup = (list) => {
     const listTasks = list.tasks || [];
     if (listTasks.length > 0) {
