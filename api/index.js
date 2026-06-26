@@ -77,6 +77,20 @@ prisma.$connect()
       }
     }
 
+    // All columns that may be missing from the task_lists table due to schema drift
+    const taskListColumnFixes = [
+      'ALTER TABLE task_lists ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN DEFAULT false;',
+    ];
+
+    for (const sql of taskListColumnFixes) {
+      try {
+        await prisma.$executeRawUnsafe(sql);
+        console.log('[Self-Healing] TaskList column is_favorite verified/added successfully.');
+      } catch (e) {
+        console.warn(`[Self-Healing] Warning for: ${sql.substring(0, 60)}...`, e.message);
+      }
+    }
+
     // All columns that may be missing from the attendance table due to schema drift
     try {
       const tableExists = await prisma.$queryRaw`
