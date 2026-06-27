@@ -132,7 +132,7 @@ const formatMobileDueDate = (dateStr) => {
   return { text: formatted, isOverdue };
 };
 
-const formatDDMonDate = (dateStr) => {
+export const formatDDMonDate = (dateStr) => {
   if (!dateStr) return '—';
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return '—';
@@ -368,6 +368,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const [subtaskSaving, setSubtaskSaving] = useState(false);
   const [subtasks, setSubtasks] = useState([]);
   const [parentTask, setParentTask] = useState(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState(null);
+  const [previewImageName, setPreviewImageName] = useState('');
 
   const fetchSubtasks = useCallback(() => {
     if (isEdit && task?.id) {
@@ -737,7 +739,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   src={part.url} 
                   alt={part.fileName} 
                   style={{ maxWidth: '100%', maxHeight: '400px', borderRadius: '8px', border: '1px solid #e2e8f0', objectFit: 'contain', cursor: 'pointer', display: 'block' }}
-                  onClick={(e) => { e.stopPropagation(); window.open(part.url, '_blank'); }}
+                  onClick={(e) => { e.stopPropagation(); setPreviewImageUrl(part.url); setPreviewImageName(part.fileName); }}
                 />
               </div>
             );
@@ -2005,7 +2007,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                               src={meta.url} 
                               alt={meta.fileName} 
                               style={{ width: '120px', height: '90px', objectFit: 'cover', borderRadius: '6px', cursor: 'pointer', display: 'block' }}
-                              onClick={() => window.open(meta.url, '_blank')}
+                              onClick={() => { setPreviewImageUrl(meta.url); setPreviewImageName(meta.fileName); }}
                               title={meta.fileName}
                             />
                             <div style={{ fontSize: '0.7rem', color: '#475569', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '4px 2px 2px', textAlign: 'center' }}>
@@ -3081,6 +3083,80 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         onSave={promptState.onSubmit}
         onCancel={() => setPromptState({ isOpen: false, title: '', onSubmit: null })}
       />
+
+      {previewImageUrl && (
+        <div 
+          className="animate-fade-in"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999
+          }}
+          onClick={() => {
+            setPreviewImageUrl(null);
+            setPreviewImageName('');
+          }}
+        >
+          <div 
+            style={{
+              position: 'relative',
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '1rem'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem', gap: '2rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '300px' }}>
+                {previewImageName || 'Image Preview'}
+              </h3>
+              <button 
+                onClick={() => {
+                  setPreviewImageUrl(null);
+                  setPreviewImageName('');
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.25rem',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  lineHeight: 1
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <img 
+              src={previewImageUrl} 
+              alt={previewImageName || 'Preview'} 
+              style={{
+                maxWidth: '100%',
+                maxHeight: '70vh',
+                objectFit: 'contain',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0'
+              }} 
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

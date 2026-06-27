@@ -107,12 +107,13 @@ model ProjectAttachment {
 }
 
 model TaskList {
-  id        String   @id @default(uuid())
-  name      String
-  projectId String?
-  project   Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  tasks     Task[]
-  createdAt DateTime @default(now()) @map("created_at")
+  id         String   @id @default(uuid())
+  name       String
+  projectId  String?
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks      Task[]
+  isFavorite Boolean?  @default(false) @map("is_favorite")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   @@map("task_lists")
 }

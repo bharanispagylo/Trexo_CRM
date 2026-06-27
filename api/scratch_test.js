@@ -1,47 +1,55 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-async function test() {
-  try {
-    const name = 'Mano_Sebastin';
-    const nameWithSpaces = name.replace(/_/g, ' ');
-    const nameParts = nameWithSpaces.split(' ').filter(Boolean);
-    
-    console.log('Name:', name);
-    console.log('With spaces:', nameWithSpaces);
-    console.log('Parts:', nameParts);
+async function verify() {
+  console.log('Testing Prisma connection and query for TaskList...');
+  
+  // 1. Fetch task lists to check if schema query executes successfully
+  const lists = await prisma.taskList.findMany({
+    include: { project: true, tasks: true }
+  });
+  console.log(`Successfully fetched ${lists.length} task lists.`);
+  console.log('Sample task lists:', JSON.stringify(lists.slice(0, 2), null, 2));
 
-    const orConditions = [
-      { id: name },
-      { fullName: { contains: nameWithSpaces, mode: 'insensitive' } },
-      { firstName: { contains: nameWithSpaces, mode: 'insensitive' } },
-      { lastName: { contains: nameWithSpaces, mode: 'insensitive' } },
-      { email: { contains: name, mode: 'insensitive' } }
-    ];
+  // 2. Fetch projects to ensure project relations work
+  const projects = await prisma.project.findMany();
+  console.log(`Successfully fetched ${projects.length} projects.`);
 
-    if (nameParts.length >= 2) {
-      orConditions.push({
-        AND: [
-          { firstName: { contains: nameParts[0], mode: 'insensitive' } },
-          { lastName: { contains: nameParts[nameParts.length - 1], mode: 'insensitive' } }
-        ]
-      });
-    }
-
-    const users = await prisma.user.findMany({
-      where: { OR: orConditions }
+  if (projects.length > 0) {
+    // 3. Create a test task list with isFavorite
+    console.log('Creating test task group...');
+    const testList = await prisma.taskList.create({
+      data: {
+        name: 'Test Auto Verification Group',
+        projectId: projects[0].id,
+        isFavorite: true
+      }
     });
+    console.log('Created test task list:', testList);
 
-    console.log('\nFound users:', users.length);
-    users.forEach(u => {
-      console.log(`  - fullName: "${u.fullName}", firstName: "${u.firstName}", lastName: "${u.lastName}", email: "${u.email}"`);
+    // 4. Update the favorite status
+    console.log('Updating test task group favorite status...');
+    const updatedList = await prisma.taskList.update({
+      where: { id: testList.id },
+      data: { isFavorite: false }
     });
-    
-  } catch (err) {
-    console.error('Error:', err.message);
-  } finally {
-    await prisma.$disconnect();
+    console.log('Updated test task list:', updatedList);
+
+    // 5. Clean up/delete the test list
+    console.log('Deleting test task group...');
+    await prisma.taskList.delete({
+      where: { id: testList.id }
+    });
+    console.log('Test task group cleaned up successfully.');
+  } else {
+    console.log('No projects found, skipping test list creation.');
   }
 }
 
-test();
+verify()
+  .then(() => console.log('Verification finished successfully!'))
+  .catch((err) => {
+    console.error('Verification failed with error:', err);
+    process.exit(1);
+  })
+  .finally(() => prisma.$disconnect());
