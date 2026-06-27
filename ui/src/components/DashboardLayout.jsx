@@ -98,6 +98,22 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       drawerBg: '#7c3aed'
     },
     {
+      id: 'projects',
+      label: 'Projects',
+      module: 'projects',
+      bottomNavIcon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+      ),
+      drawerIcon: (
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+      ),
+      drawerBg: '#7c3aed'
+    },
+    {
       id: 'task-groups',
       label: 'Task Groups',
       module: 'tasks',
@@ -112,23 +128,6 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         </svg>
       ),
       drawerBg: '#6366f1'
-    },
-    {
-      id: 'projects',
-      label: 'Projects',
-      module: 'projects',
-      bottomNavIcon: (
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <polygon points="23 7 16 12 23 17 23 7"></polygon>
-          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-        </svg>
-      ),
-      drawerIcon: (
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-        </svg>
-      ),
-      drawerBg: '#7c3aed'
     },
     {
       id: 'track-team',
@@ -256,7 +255,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   });
   const showMoreButton = permittedModules.length > 3;
   const bottomNavItems = showMoreButton ? permittedModules.slice(0, 2) : permittedModules;
-  const drawerItems = showMoreButton ? permittedModules : [];
+  const drawerItems = showMoreButton ? permittedModules.filter(m => !bottomNavItems.some(b => b.id === m.id)) : [];
 
 
   useEffect(() => {

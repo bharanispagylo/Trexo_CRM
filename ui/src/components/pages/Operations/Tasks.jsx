@@ -132,7 +132,7 @@ const formatMobileDueDate = (dateStr) => {
   return { text: formatted, isOverdue };
 };
 
-const formatDDMonDate = (dateStr) => {
+export const formatDDMonDate = (dateStr) => {
   if (!dateStr) return '—';
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return '—';
