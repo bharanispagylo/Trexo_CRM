@@ -15,7 +15,11 @@ const REPORT_ACTIONS = [
   { id: 'reports-status-based',   label: 'Tasks - Work Log' },
   { id: 'timesheet-overall',      label: 'Timesheet - Summary' },
   { id: 'timesheet-individual',   label: 'Timesheet - Individual' },
+  { id: 'daily-load-all',         label: 'Daily Load - All' },
+  { id: 'daily-load-individual',  label: 'Daily Load - Individual' },
 ];
+
+
 
 const getActionsForModule = (modId) => {
   if (modId === 'reports') return REPORT_ACTIONS;
