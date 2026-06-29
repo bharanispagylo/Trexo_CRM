@@ -108,6 +108,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [listNameError, setListNameError] = useState(false);
   const [editingListId, setEditingListId] = useState(null);
   const [editingListName, setEditingListName] = useState('');
+  const [togglingFavoriteId, setTogglingFavoriteId] = useState(null);
+  const [deletingListId, setDeletingListId] = useState(null);
   const [detailTab, setDetailTab] = useState('General');
   const [selectedTaskListId, setSelectedTaskListId] = useState(null);
   const [expandedListId, setExpandedListId] = useState('__first__');
@@ -174,6 +176,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [inlineSubtaskParentId, setInlineSubtaskParentId] = useState(null);
   const [inlineSubtaskTitle, setInlineSubtaskTitle] = useState('');
   const [inlineSubtaskSaving, setInlineSubtaskSaving] = useState(false);
+  const [isAddingList, setIsAddingList] = useState(false);
   const [subtaskTitle, setSubtaskTitle] = useState('');
   const [subtaskAssignee, setSubtaskAssignee] = useState('');
   const [subtaskDueDate, setSubtaskDueDate] = useState('');
@@ -374,6 +377,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
   const handleAddList = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    if (isAddingList) return;
     if (!newListName.trim()) {
       setListNameError(true);
       alert('Task Group name is required.', 'warning', 'Required Field');
@@ -381,6 +385,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     }
     setListNameError(false);
     if (!selectedProject) return;
+    setIsAddingList(true);
     try {
       await api.post('/task-lists', {
         name: newListName.trim(),
@@ -392,6 +397,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     } catch (error) {
       console.error('Add list error:', error);
       alert('Failed to create task group', 'error');
+    } finally {
+      setIsAddingList(false);
     }
   };
 
@@ -470,12 +477,16 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       alert('You do not have permission to delete task groups.', 'warning', 'Access Denied');
       return;
     }
+    setDeletingListId(listId);
     try {
       await api.delete(`/task-lists/${listId}`);
-      fetchData(true);
+      toast('Task Group deleted successfully', 'success');
+      await fetchData(true);
     } catch (error) {
       console.error('Delete list error:', error);
       alert(error.message || 'Failed to delete task group', 'error', 'Error');
+    } finally {
+      setDeletingListId(null);
     }
   };
 
@@ -496,14 +507,18 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleToggleFavorite = async (list) => {
+    if (togglingFavoriteId === list.id) return;
+    setTogglingFavoriteId(list.id);
     try {
       const updatedStatus = !list.isFavorite;
       await api.put(`/task-lists/${list.id}`, { isFavorite: updatedStatus });
       toast(updatedStatus ? 'Added to Favourites' : 'Removed from Favourites', 'success');
-      fetchData(true);
+      await fetchData(true);
     } catch (error) {
       console.error('Error toggling favorite:', error);
       toast('Failed to update favorite status', 'error');
+    } finally {
+      setTogglingFavoriteId(null);
     }
   };
 
@@ -580,13 +595,17 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleDeleteTask = async (taskId) => {
-    confirm('Are you sure you want to delete this task?', async () => {
+    confirm('Delete this task? It will be moved to the Archive.', async () => {
       try {
-        await api.delete(`/tasks/${taskId}`);
+        const allTasks = (selectedProject?.taskLists || []).flatMap(l => l.tasks || []);
+        const targetTask = allTasks.find(t => t.id === taskId);
+        const prevSt = targetTask?.status && targetTask.status !== 'Archived' && targetTask.status !== 'Archive' ? targetTask.status : 'To Do';
+        await api.put(`/tasks/${taskId}`, { status: 'Archived', previousStatus: prevSt });
+        toast('Task moved to Archive', 'success');
         fetchData(true);
       } catch (error) {
-        console.error('Delete task error:', error);
-        alert('Failed to delete task', 'error', 'Error');
+        console.error('Archive task error:', error);
+        alert('Failed to move task to Archive', 'error', 'Error');
       }
     }, 'Delete Task');
   };
@@ -1442,10 +1461,23 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     <button
                       type="submit"
                       className="saas-btn-submit add-taskgroup-btn"
-                      style={{ padding: '0 1rem', height: '36px', fontSize: '0.8rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
+                      disabled={isAddingList}
+                      style={{ padding: '0 1rem', height: '36px', fontSize: '0.8rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: isAddingList ? 'not-allowed' : 'pointer', opacity: isAddingList ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
                     >
-                      <span className="add-taskgroup-btn-text">Add Task Group</span>
-                      <span className="add-taskgroup-btn-icon">+</span>
+                      {isAddingList ? (
+                        <>
+                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                            <circle cx="12" cy="12" r="10" strokeOpacity="0.25"></circle>
+                            <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round"></path>
+                          </svg>
+                          Adding...
+                        </>
+                      ) : (
+                        <>
+                          <span className="add-taskgroup-btn-text">Add Task Group</span>
+                          <span className="add-taskgroup-btn-icon">+</span>
+                        </>
+                      )}
                     </button>
                   </form>
                 )}
@@ -1468,7 +1500,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         ? idx !== 0
                         : expandedListId !== list.id;
 
-                      const listTasks = (list.tasks || []).sort((a, b) => {
+                      const listTasks = (list.tasks || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive').sort((a, b) => {
                         if (!a.dueDate) return 1;
                         if (!b.dueDate) return -1;
                         return new Date(a.dueDate) - new Date(b.dueDate);
@@ -1494,24 +1526,33 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                   e.stopPropagation();
                                   handleToggleFavorite(list);
                                 }}
+                                disabled={togglingFavoriteId === list.id}
                                 style={{
                                   background: 'none',
                                   border: 'none',
-                                  cursor: 'pointer',
+                                  cursor: togglingFavoriteId === list.id ? 'not-allowed' : 'pointer',
                                   padding: 0,
                                   display: 'flex',
                                   alignItems: 'center',
                                   color: list.isFavorite ? '#eab308' : '#cbd5e1',
                                   transition: 'transform 0.15s, color 0.15s',
                                   flexShrink: 0,
-                                  marginRight: '0.35rem'
+                                  marginRight: '0.35rem',
+                                  opacity: togglingFavoriteId === list.id ? 0.6 : 1
                                 }}
                                 className="tg-accordion-star-btn"
                                 title={list.isFavorite ? 'Remove from Favourites' : 'Add to Favourites'}
                               >
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill={list.isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-                                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                                </svg>
+                                {togglingFavoriteId === list.id ? (
+                                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                                    <circle cx="12" cy="12" r="10" strokeOpacity="0.25"/>
+                                    <path d="M12 2a10 10 0 0 1 10 10" />
+                                  </svg>
+                                ) : (
+                                  <svg viewBox="0 0 24 24" width="16" height="16" fill={list.isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                  </svg>
+                                )}
                               </button>
                               <span className="cu-section-chevron" style={{ display: 'flex', alignItems: 'center', visibility: hasTasks ? 'visible' : 'hidden' }}>
                                 <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: (hasTasks && isCollapsed) ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
@@ -1598,10 +1639,21 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                             )}
                             {can('projects', 'delete') && editingListId !== list.id && (
                               <button
-                                style={{ background: 'none', border: 'none', color: listTasks.length > 0 ? '#cbd5e1' : '#ef4444', cursor: listTasks.length > 0 ? 'not-allowed' : 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                                disabled={deletingListId === list.id || listTasks.length > 0}
+                                style={{ 
+                                  background: 'none', 
+                                  border: 'none', 
+                                  color: (listTasks.length > 0 || deletingListId === list.id) ? '#cbd5e1' : '#ef4444', 
+                                  cursor: (listTasks.length > 0 || deletingListId === list.id) ? 'not-allowed' : 'pointer', 
+                                  padding: '0.25rem', 
+                                  display: 'flex', 
+                                  alignItems: 'center',
+                                  opacity: deletingListId === list.id ? 0.6 : 1
+                                }}
                                 title={listTasks.length > 0 ? `Cannot delete — ${listTasks.length} task${listTasks.length > 1 ? 's' : ''} exist in this group` : 'Delete Category'}
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  if (deletingListId === list.id) return;
                                   if (listTasks.length > 0) {
                                     alert(`"${list.name}" has ${listTasks.length} task${listTasks.length > 1 ? 's' : ''}. Remove all tasks from this group before deleting it.`, 'warning', 'Cannot Delete');
                                     return;
@@ -1609,7 +1661,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                   confirm(`Delete "${list.name}" task group?`, () => handleRemoveList(list.id), 'Delete Task Group');
                                 }}
                               >
-                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                {deletingListId === list.id ? (
+                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                                    <circle cx="12" cy="12" r="10" strokeOpacity="0.25"/>
+                                    <path d="M12 2a10 10 0 0 1 10 10" />
+                                  </svg>
+                                ) : (
+                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                )}
                               </button>
                             )}
                           </div>

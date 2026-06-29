@@ -34,6 +34,7 @@ export function PermissionProvider({ children, userRole }) {
             clients: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
             users: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
             roles: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
+            archive: { view: 'All', restore: 'All', delete: 'All' },
           });
         } else {
           // Default empty permissions for others

@@ -44,7 +44,7 @@ export default function TrackTeam({ user, onMemberClick }) {
         api.get('/projects').catch(() => []),
         api.get('/task-lists').catch(() => [])
       ]);
-      setTasks(taskData || []);
+      setTasks((taskData || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive'));
       setTeamMembers(teamData || []);
       setUsers(userData || []);
       setProjects(projectsData || []);

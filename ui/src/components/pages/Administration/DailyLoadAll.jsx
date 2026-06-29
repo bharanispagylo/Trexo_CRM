@@ -47,7 +47,7 @@ export default function DailyLoadAll({ onUserClick }) {
           api.get('/worklogs').catch(() => [])
         ]);
         setUsers(userData || []);
-        setAllTasks(taskData || []);
+        setAllTasks((taskData || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive'));
         setAllWorklogs(worklogData || []);
       } catch (err) {
         console.error('Error fetching Daily Load All report data:', err);

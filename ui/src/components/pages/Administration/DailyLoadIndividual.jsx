@@ -62,7 +62,7 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
           return nameA.localeCompare(nameB);
         });
         setUsers(sortedUsers);
-        setAllTasks(taskData || []);
+        setAllTasks((taskData || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive'));
         setAllWorklogs(worklogData || []);
 
         if (sortedUsers.length > 0) {
