@@ -2058,6 +2058,37 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 
                 <div className="billing-fields-container" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                   
+                  {/* Estimated Hours */}
+                  <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
+                    <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
+                      Estimated Hours
+                    </label>
+                    <div>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={form.estimatedHoursStr !== undefined ? form.estimatedHoursStr : (form.estimatedHours !== undefined && form.estimatedHours !== null ? String(form.estimatedHours) : '0')}
+                          onChange={e => {
+                            const val = e.target.value;
+                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                              setForm(f => ({
+                                ...f,
+                                estimatedHoursStr: val,
+                                estimatedHours: val === '' || val === '.' ? 0 : parseFloat(val) || 0
+                              }));
+                            }
+                          }}
+                          className="saas-grid-input"
+                          placeholder="e.g. 20"
+                        />
+                      ) : (
+                        <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
+                          {String(form.estimatedHours || 0)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Billable Row with Radio Buttons */}
                   <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
                     <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
@@ -2107,37 +2138,6 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   {form.isBillable && (
                     <>
 
-
-                      {/* Estimated Hours */}
-                      <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
-                        <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
-                          Estimated Hours
-                        </label>
-                        <div>
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              value={form.estimatedHoursStr !== undefined ? form.estimatedHoursStr : (form.estimatedHours !== undefined && form.estimatedHours !== null ? String(form.estimatedHours) : '0')}
-                              onChange={e => {
-                                const val = e.target.value;
-                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                  setForm(f => ({
-                                    ...f,
-                                    estimatedHoursStr: val,
-                                    estimatedHours: val === '' || val === '.' ? 0 : parseFloat(val) || 0
-                                  }));
-                                }
-                              }}
-                              className="saas-grid-input"
-                              placeholder="e.g. 20"
-                            />
-                          ) : (
-                            <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
-                              {String(form.estimatedHours || 0)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
 
                       {/* Billable Hours */}
                       <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
@@ -4648,47 +4648,60 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                
                                const isAddingSubtask = addingSubtaskParentId === task.id;
                                if (isAddingSubtask) {
-                                 rows.push(
-                                   <div key={`mob-add-sub-${task.id}`} className="cu-mob-task-row" style={{ paddingLeft: '1.25rem', background: '#f8fafc' }}>
-                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '100%' }}>
-                                       <span style={{ color: '#cbd5e1', fontSize: '0.8rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
-                                       <input
-                                         type="text"
-                                         placeholder="Subtask name..."
-                                         value={subtaskTitle}
-                                         onChange={e => setSubtaskTitle(e.target.value)}
-                                         onKeyDown={e => {
-                                           if (e.key === 'Enter') submitSubtask(task);
-                                           if (e.key === 'Escape') setAddingSubtaskParentId(null);
-                                         }}
-                                         autoFocus
-                                         style={{
-                                           flex: 1,
-                                           border: '1px solid #cbd5e1',
-                                           borderRadius: '4px',
-                                           padding: '2px 6px',
-                                           fontSize: '0.82rem',
-                                           outline: 'none',
-                                           background: '#ffffff'
-                                         }}
-                                       />
-                                       <button 
-                                         style={{ background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '3px', padding: '2px 6px', fontSize: '0.75rem', cursor: 'pointer' }}
-                                         onClick={() => submitSubtask(task)}
-                                       >
-                                         Save
-                                       </button>
-                                       <button 
-                                         style={{ background: 'none', color: '#64748b', border: 'none', padding: '2px 4px', fontSize: '0.75rem', cursor: 'pointer' }}
-                                         onClick={() => setAddingSubtaskParentId(null)}
-                                       >
-                                         Cancel
-                                       </button>
-                                     </div>
-                                   </div>
-                                 );
-                               }
-                               
+                                  rows.push(
+                                    <div key={`mob-add-sub-${task.id}`} className="cu-mob-task-row" style={{ paddingLeft: '1.25rem', background: '#f8fafc' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '100%', flexWrap: 'wrap' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: '160px' }}>
+                                          <span style={{ color: '#cbd5e1', fontSize: '0.8rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
+                                          <input
+                                            type="text"
+                                            placeholder="Subtask name..."
+                                            value={subtaskTitle}
+                                            onChange={e => setSubtaskTitle(e.target.value)}
+                                            onKeyDown={e => {
+                                              if (e.key === 'Enter') submitSubtask(task);
+                                              if (e.key === 'Escape') setAddingSubtaskParentId(null);
+                                            }}
+                                            autoFocus
+                                            style={{
+                                              flex: 1,
+                                              border: '1px solid #cbd5e1',
+                                              borderRadius: '4px',
+                                              padding: '2px 6px',
+                                              fontSize: '0.82rem',
+                                              outline: 'none',
+                                              background: '#ffffff'
+                                            }}
+                                          />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                                          <div className="ntib-dropdown-wrapper" style={{ flexShrink: 0 }}>
+                                            <button type="button" className="ntib-btn-icon" title="Assignee" style={{ width: '26px', height: '26px' }}>
+                                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                            </button>
+                                            <select className="ntib-hidden-select" value={subtaskAssignee} onChange={e => setSubtaskAssignee(e.target.value)}>
+                                              <option value="">Assignee</option>
+                                              {getFilteredUsersForProject(getTaskProjectId(task)).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                            </select>
+                                            {subtaskAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === subtaskAssignee) || {}).fullName || subtaskAssignee)}</span>}
+                                          </div>
+                                          <button 
+                                            style={{ background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '3px', padding: '2px 6px', fontSize: '0.75rem', cursor: 'pointer' }}
+                                            onClick={() => submitSubtask(task)}
+                                          >
+                                            Save
+                                          </button>
+                                          <button 
+                                            style={{ background: 'none', color: '#64748b', border: 'none', padding: '2px 4px', fontSize: '0.75rem', cursor: 'pointer' }}
+                                            onClick={() => setAddingSubtaskParentId(null)}
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                }
                                return rows;
                              });
                            })()}
@@ -5028,7 +5041,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                         {subtaskAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === subtaskAssignee) || {}).fullName || subtaskAssignee)}</span>}
                                                       </div>
                                                       
-                                                      <div className="ntib-dropdown-wrapper">
+                                                      <div className="ntib-dropdown-wrapper ntib-hide-mobile">
                                                         <button type="button" className="ntib-btn-icon" title="Due Date">
                                                           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                                         </button>
@@ -5036,7 +5049,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                         {subtaskDueDate && <span className="ntib-badge">{new Date(subtaskDueDate).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>}
                                                       </div>
                                                       
-                                                      <div className="ntib-dropdown-wrapper">
+                                                      <div className="ntib-dropdown-wrapper ntib-hide-mobile">
                                                         <button type="button" className="ntib-btn-icon" title="Priority">
                                                           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
                                                         </button>
@@ -5305,41 +5318,55 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                         if (isAddingSubtask) {
                           rows.push(
                             <div key={`mob-add-sub-${task.id}`} className="cu-flat-task-row" style={{ paddingLeft: '1.25rem', background: '#f8fafc' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '100%' }}>
-                                <span style={{ color: '#cbd5e1', fontSize: '0.8rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
-                                <input
-                                  type="text"
-                                  placeholder="Subtask name..."
-                                  value={subtaskTitle}
-                                  onChange={e => setSubtaskTitle(e.target.value)}
-                                  onKeyDown={e => {
-                                    if (e.key === 'Enter' && !isSaving) submitSubtask(task);
-                                    if (e.key === 'Escape') setAddingSubtaskParentId(null);
-                                  }}
-                                  autoFocus
-                                  style={{
-                                    flex: 1,
-                                    border: '1px solid #cbd5e1',
-                                    borderRadius: '4px',
-                                    padding: '2px 6px',
-                                    fontSize: '0.82rem',
-                                    outline: 'none',
-                                    background: '#ffffff'
-                                  }}
-                                />
-                                <button 
-                                  style={{ background: isSaving ? '#93c5fd' : '#2563eb', color: '#ffffff', border: 'none', borderRadius: '3px', padding: '2px 6px', fontSize: '0.75rem', cursor: isSaving ? 'not-allowed' : 'pointer' }}
-                                  disabled={isSaving}
-                                  onClick={() => submitSubtask(task)}
-                                >
-                                  {isSaving ? 'Saving...' : 'Save'}
-                                </button>
-                                <button 
-                                  style={{ background: 'none', color: '#64748b', border: 'none', padding: '2px 4px', fontSize: '0.75rem', cursor: 'pointer' }}
-                                  onClick={() => setAddingSubtaskParentId(null)}
-                                >
-                                  Cancel
-                                </button>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '100%', flexWrap: 'wrap' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: '160px' }}>
+                                  <span style={{ color: '#cbd5e1', fontSize: '0.8rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
+                                  <input
+                                    type="text"
+                                    placeholder="Subtask name..."
+                                    value={subtaskTitle}
+                                    onChange={e => setSubtaskTitle(e.target.value)}
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter' && !isSaving) submitSubtask(task);
+                                      if (e.key === 'Escape') setAddingSubtaskParentId(null);
+                                    }}
+                                    autoFocus
+                                    style={{
+                                      flex: 1,
+                                      border: '1px solid #cbd5e1',
+                                      borderRadius: '4px',
+                                      padding: '2px 6px',
+                                      fontSize: '0.82rem',
+                                      outline: 'none',
+                                      background: '#ffffff'
+                                    }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                                  <div className="ntib-dropdown-wrapper" style={{ flexShrink: 0 }}>
+                                    <button type="button" className="ntib-btn-icon" title="Assignee" style={{ width: '26px', height: '26px' }}>
+                                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                    </button>
+                                    <select className="ntib-hidden-select" value={subtaskAssignee} onChange={e => setSubtaskAssignee(e.target.value)}>
+                                      <option value="">Assignee</option>
+                                      {getFilteredUsersForProject(getTaskProjectId(task)).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                    </select>
+                                    {subtaskAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === subtaskAssignee) || {}).fullName || subtaskAssignee)}</span>}
+                                  </div>
+                                  <button 
+                                    style={{ background: isSaving ? '#93c5fd' : '#2563eb', color: '#ffffff', border: 'none', borderRadius: '3px', padding: '2px 6px', fontSize: '0.75rem', cursor: isSaving ? 'not-allowed' : 'pointer' }}
+                                    disabled={isSaving}
+                                    onClick={() => submitSubtask(task)}
+                                  >
+                                    {isSaving ? 'Saving...' : 'Save'}
+                                  </button>
+                                  <button 
+                                    style={{ background: 'none', color: '#64748b', border: 'none', padding: '2px 4px', fontSize: '0.75rem', cursor: 'pointer' }}
+                                    onClick={() => setAddingSubtaskParentId(null)}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           );
@@ -5594,7 +5621,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                         {subtaskAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === subtaskAssignee) || {}).fullName || subtaskAssignee)}</span>}
                                                       </div>
                                                       
-                                                      <div className="ntib-dropdown-wrapper">
+                                                      <div className="ntib-dropdown-wrapper ntib-hide-mobile">
                                                         <button type="button" className="ntib-btn-icon" title="Due Date">
                                                           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                                         </button>
@@ -5602,7 +5629,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                         {subtaskDueDate && <span className="ntib-badge">{new Date(subtaskDueDate).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>}
                                                       </div>
                                                       
-                                                      <div className="ntib-dropdown-wrapper">
+                                                      <div className="ntib-dropdown-wrapper ntib-hide-mobile">
                                                         <button type="button" className="ntib-btn-icon" title="Priority">
                                                           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
                                                         </button>

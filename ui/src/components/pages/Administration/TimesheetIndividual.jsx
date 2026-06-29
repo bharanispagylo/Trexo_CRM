@@ -108,10 +108,11 @@ const downloadCSV = (filename, headers, rowsData) => {
 const STATUS_COLORS = {
   'completed':    { bg: '#dcfce7', color: '#16a34a' },
   'in progress':  { bg: '#dbeafe', color: '#2563eb' },
-  'to do':        { bg: '#f1f5f9', color: '#475569' },
+  'to do':        { bg: '#78350f', color: '#ffffff' },
   'delivered':    { bg: '#f0fdf4', color: '#15803d' },
   'prod verified':{ bg: '#ecfdf5', color: '#059669' },
 };
+
 
 export default function TimesheetIndividual({ initialUserId, onClearInitialUser }) {
   const [filter, setFilter] = useState('daily');
@@ -123,13 +124,21 @@ export default function TimesheetIndividual({ initialUserId, onClearInitialUser 
 
   useEffect(() => {
     api.get('/users').then(data => {
-      const list = data || [];
-      setUsers(list);
+      const raw = data || [];
+      const sortedUsers = [...raw].sort((a, b) => {
+        const isAdminA = (a.role || '').toLowerCase().trim() === 'admin' ? 0 : 1;
+        const isAdminB = (b.role || '').toLowerCase().trim() === 'admin' ? 0 : 1;
+        if (isAdminA !== isAdminB) return isAdminA - isAdminB;
+        const nameA = a.fullName || a.name || `${a.firstName || ''} ${a.lastName || ''}`.trim() || '';
+        const nameB = b.fullName || b.name || `${b.firstName || ''} ${b.lastName || ''}`.trim() || '';
+        return nameA.localeCompare(nameB);
+      });
+      setUsers(sortedUsers);
       if (initialUserId) {
         setSelectedUserId(initialUserId);
         if (onClearInitialUser) onClearInitialUser();
-      } else if (list.length > 0) {
-        setSelectedUserId(list[0].id);
+      } else if (sortedUsers.length > 0) {
+        setSelectedUserId(sortedUsers[0].id);
       }
     }).catch(console.error);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -208,11 +217,11 @@ export default function TimesheetIndividual({ initialUserId, onClearInitialUser 
         <select
           value={selectedUserId}
           onChange={e => setSelectedUserId(e.target.value)}
-          style={{ padding: '0.45rem 1.6rem 0.45rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '400', color: '#1a1a1a', background: 'white', appearance: 'none', WebkitAppearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.45rem center' }}
+          style={{ padding: '0.45rem 1.6rem 0.45rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '500', color: '#64748b', background: 'white', appearance: 'none', WebkitAppearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.45rem center' }}
         >
           {users.map(u => {
-            const name = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email;
-            return <option key={u.id} value={u.id}>{name}</option>;
+            const name = u.fullName || u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email;
+            return <option key={u.id} value={u.id} style={{ color: '#475569' }}>{name}</option>;
           })}
         </select>
 
