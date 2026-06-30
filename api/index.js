@@ -1173,6 +1173,48 @@ app.get('/api/tasks', async (req, res) => {
   }
 });
 
+app.get('/api/tasks/:idOrDisplayId', async (req, res) => {
+  try {
+    const param = req.params.idOrDisplayId;
+    let task = null;
+
+    // Check if it is a UUID
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(param);
+
+    if (isUuid) {
+      task = await prisma.task.findUnique({
+        where: { id: param },
+        include: { projectRef: { select: { name: true } } }
+      });
+    } else {
+      // It's a display ID, e.g. T359369 or S12345
+      const digits = param.substring(1);
+      const tasks = await prisma.task.findMany({
+        where: {
+          taskNo: {
+            contains: digits
+          }
+        },
+        include: { projectRef: { select: { name: true } } }
+      });
+
+      task = tasks.find(t => getTaskDisplayId(t).toLowerCase() === param.toLowerCase());
+    }
+
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    const result = {
+      ...task,
+      projectName: task.projectRef?.name || ''
+    };
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/tasks', async (req, res) => {
   try {
     console.log('POST /api/tasks body:', req.body);
@@ -1446,7 +1488,7 @@ app.get('/api/worklogs', async (req, res) => {
         where.logDate.lte = end;
       }
     }
-    if (userId) where.userId = userId;
+    if (userId && userId !== 'all') where.userId = userId;
     where.isBilled = false;
     const logs = await prisma.workLog.findMany({
       where,
@@ -1981,7 +2023,7 @@ app.get('/api/reports/monthly', async (req, res) => {
     const taskIds = reportRecords.map(r => r.id);
     const [dbTasks, workLogs] = await Promise.all([
       prisma.task.findMany({ where: { id: { in: taskIds } }, select: { id: true, parentId: true } }),
-      prisma.workLog.findMany({ where: { taskId: { in: taskIds } } })
+      prisma.workLog.findMany({ where: { taskId: { in: taskIds }, isBilled: false } })
     ]);
     const taskParentMap = new Map(dbTasks.map(t => [t.id, t.parentId]));
     const timeSpentMap = {};
@@ -2049,7 +2091,7 @@ app.get('/api/reports/range', async (req, res) => {
     const taskIds = reportRecords.map(r => r.id);
     const [dbTasks, workLogs] = await Promise.all([
       prisma.task.findMany({ where: { id: { in: taskIds } }, select: { id: true, parentId: true } }),
-      prisma.workLog.findMany({ where: { taskId: { in: taskIds } } })
+      prisma.workLog.findMany({ where: { taskId: { in: taskIds }, isBilled: false } })
     ]);
     const taskParentMap = new Map(dbTasks.map(t => [t.id, t.parentId]));
     const timeSpentMap = {};
@@ -2108,7 +2150,7 @@ app.get('/api/reports/status-based', async (req, res) => {
     }
 
     // ── Step 1: fetch work logs in the date range ─────────────────────────────
-    const workLogWhere = { logDate: { gte: startDate, lte: endDate } };
+    const workLogWhere = { logDate: { gte: startDate, lte: endDate }, isBilled: false };
     if (assignee && assignee !== 'All Assignees') workLogWhere.userId = assignee;
 
     const workLogs = await prisma.workLog.findMany({ where: workLogWhere });
