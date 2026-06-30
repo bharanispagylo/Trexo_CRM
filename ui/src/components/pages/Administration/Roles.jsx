@@ -19,10 +19,15 @@ const REPORT_ACTIONS = [
   { id: 'daily-load-individual',  label: 'Daily Load - Individual' },
 ];
 
-
+const ARCHIVE_ACTIONS = [
+  { id: 'view',    label: 'View' },
+  { id: 'restore', label: 'Restore' },
+  { id: 'delete',  label: 'Delete' },
+];
 
 const getActionsForModule = (modId) => {
   if (modId === 'reports') return REPORT_ACTIONS;
+  if (modId === 'archive') return ARCHIVE_ACTIONS;
   if (modId === 'dashboard') return ACTIONS.filter(a => a.id === 'view');
   return ACTIONS;
 };
@@ -37,6 +42,7 @@ const MODULES = [
   { id: 'clients', label: 'Clients' },
   { id: 'users', label: 'Users' },
   { id: 'roles', label: 'Roles' },
+  { id: 'archive', label: 'Archive' },
 ];
 
 export default function Roles() {

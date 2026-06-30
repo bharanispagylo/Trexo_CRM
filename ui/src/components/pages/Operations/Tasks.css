@@ -5396,7 +5396,8 @@
 }
 
 @media (max-width: 768px) {
-  .cu-mob-hover-subtask-btn {
+  .cu-mob-hover-subtask-btn,
+  .cu-hover-subtask-btn {
     opacity: 1;
     visibility: visible;
   }

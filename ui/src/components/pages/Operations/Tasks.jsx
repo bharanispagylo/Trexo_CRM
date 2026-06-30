@@ -38,6 +38,11 @@ const COLUMNS = [
   { id: 'Delivered',     label: 'Delivered',     color: 'col-delivered' },
 ];
 
+export const STATUS_OPTIONS = [
+  ...COLUMNS,
+  { id: 'Archived', label: 'Archived', color: 'col-archive' }
+];
+
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 
 
@@ -50,6 +55,8 @@ const STATUS_HEADER_META = {
   'Prod Deployed': { bg: '#ea580c', fg: '#ffffff', dotColor: '#fde68a', isDone: false },
   'Prod Verified': { bg: '#0d9488', fg: '#ffffff', dotColor: '#bbf7d0', isDone: false },
   'Delivered':     { bg: '#16a34a', fg: '#ffffff', dotColor: '#99f6e4', isDone: true  },
+  'Archived':      { bg: '#475569', fg: '#ffffff', dotColor: '#94a3b8', isDone: false },
+  'Archive':       { bg: '#475569', fg: '#ffffff', dotColor: '#94a3b8', isDone: false },
 };
 
 const PRIORITY_FLAGS = {
@@ -68,7 +75,7 @@ const getStatusString = (statusVal) => {
   return String(statusVal);
 };
 
-const PriorityFlag = ({ priority }) => {
+export const PriorityFlag = ({ priority }) => {
   const meta = PRIORITY_FLAGS[priority] || PRIORITY_FLAGS['Medium'];
   return (
     <svg 
@@ -1187,19 +1194,21 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   };
 
   const handleDeleteSubtaskDrawer = async (subtaskId) => {
-    confirm("Are you sure you want to delete this subtask?", async () => {
+    confirm("Move this subtask to Archive?", async () => {
       try {
-        await api.delete(`/tasks/${subtaskId}`);
+        const sub = subtasks.find(s => s.id === subtaskId);
+        const prevSt = sub?.status && sub.status !== 'Archived' && sub.status !== 'Archive' ? sub.status : 'To Do';
+        await api.put(`/tasks/${subtaskId}`, { status: 'Archived', previousStatus: prevSt });
         fetchSubtasks();
         if (onRefresh) {
           await onRefresh();
         }
-        alert("Subtask deleted successfully.", "success", "Deleted");
+        alert("Subtask moved to Archive successfully.", "success", "Archived");
       } catch (err) {
         console.error(err);
-        alert("Failed to delete subtask.", "error", "Error");
+        alert("Failed to move subtask to Archive.", "error", "Error");
       }
-    }, "Delete Subtask");
+    }, "Archive Subtask");
   };
 
   const handleOpenSubtask = (subtask) => {
@@ -1738,7 +1747,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               className="saas-btn-nav saas-btn-danger"
               disabled={isDeleting}
               style={{ opacity: isDeleting ? 0.7 : 1, cursor: isDeleting ? 'not-allowed' : 'pointer' }}
-              onClick={() => confirm('Are you sure you want to delete this task?', async () => {
+              onClick={() => confirm('Delete this task? It will be moved to the Archive.', async () => {
                 setIsDeleting(true);
                 try { await onDelete(task.id); onClose(); } finally { setIsDeleting(false); }
               }, 'Delete Task')}
@@ -1746,7 +1755,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               {isDeleting ? (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}><circle cx="12" cy="12" r="10" strokeOpacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" /></svg>
-                  <span className="saas-btn-delete-text">Deleting...</span>
+                  <span className="saas-btn-delete-text">Archiving...</span>
                 </span>
               ) : (
                 <>
@@ -1904,8 +1913,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 <div className="saas-meta-row saas-meta-row-4col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconStatus /> Status</span>
                   <span className="saas-meta-value">
-                    <select value={form.status} onChange={e => { const updated = { ...form, status: e.target.value }; setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
-                      {COLUMNS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
+                    <select value={form.status} onChange={e => { const newSt = e.target.value; const updated = { ...form, status: newSt }; if (newSt === 'Archived' || newSt === 'Archive') { updated.previousStatus = (form.status !== 'Archived' && form.status !== 'Archive') ? form.status : (form.previousStatus || 'To Do'); } setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
+                      {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                     </select>
                   </span>
                   
@@ -3554,6 +3563,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const isTeamLeadOrAdmin = user?.role?.toLowerCase() === 'team lead' || user?.role?.toLowerCase() === 'admin';
   const [tasks, setTasks]       = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [openingInitialTask, setOpeningInitialTask] = useState(!!(initialTaskId || initialSelectedTask));
   const [isSaving, setIsSaving] = useState(false);
   const [viewMode, setViewMode] = useState('list');
   const [subTab, setSubTab]     = useState('my');
@@ -3611,34 +3621,56 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     }
   }, [initialSelectedTask]);
 
+  // Reset opening state when a new task is requested
   useEffect(() => {
-    if (initialSelectedTaskId.current && tasks.length > 0) {
-      const fullTask = tasks.find(t => t.id === initialSelectedTaskId.current);
-      if (fullTask) {
-        initialSelectedTaskId.current = null;
-        setDrawerTask(fullTask);
-        setDrawerOpen(true);
-        setTaskDetailMode(false);
-        if (onTaskSelect) onTaskSelect(getDisplayId(fullTask));
-        if (onClearInitialTask) onClearInitialTask();
-      }
+    if (initialSelectedTask || initialTaskId) {
+      setOpeningInitialTask(true);
+    }
+  }, [initialSelectedTask, initialTaskId]);
+
+  useEffect(() => {
+    if (initialSelectedTask && initialSelectedTaskId.current && openingInitialTask) {
+      const targetId = initialSelectedTaskId.current;
+      api.get(`/tasks/${targetId}`)
+        .then(task => {
+          if (task) {
+            initialSelectedTaskId.current = null;
+            setDrawerTask(task);
+            setDrawerOpen(true);
+            setTaskDetailMode(false);
+            if (onTaskSelect) onTaskSelect(getDisplayId(task));
+            if (onClearInitialTask) onClearInitialTask();
+          }
+          setOpeningInitialTask(false);
+        })
+        .catch(err => {
+          console.error('Failed to load initial task:', err);
+          setOpeningInitialTask(false);
+        });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialSelectedTask, tasks]);
+  }, [initialSelectedTask, openingInitialTask]);
 
   // Auto-open task from URL deep-link (e.g. /tasks/taskId)
   const initialTaskIdHandled = useRef(false);
   useEffect(() => {
-    if (initialTaskId && !initialTaskIdHandled.current && tasks.length > 0) {
+    if (initialTaskId && !initialTaskIdHandled.current && openingInitialTask) {
       initialTaskIdHandled.current = true;
-      const task = tasks.find(t => getDisplayId(t) === initialTaskId);
-      if (task) {
-        setDrawerTask(task);
-        setDrawerOpen(true);
-        setTaskDetailMode(false);
-      }
+      api.get(`/tasks/${initialTaskId}`)
+        .then(task => {
+          if (task) {
+            setDrawerTask(task);
+            setDrawerOpen(true);
+            setTaskDetailMode(false);
+          }
+          setOpeningInitialTask(false);
+        })
+        .catch(err => {
+          console.error('Failed to load task from deep-link:', err);
+          setOpeningInitialTask(false);
+        });
     }
-  }, [initialTaskId, tasks]);
+  }, [initialTaskId, openingInitialTask]);
 
   useEffect(() => {
     if (onDetailViewChange) {
@@ -3872,13 +3904,15 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const handleDeleteTask = async (id) => {
     setIsSaving(true);
     try {
-      await api.delete(`/tasks/${id}`);
+      const targetTask = tasks.find(t => t.id === id);
+      const prevSt = targetTask?.status && targetTask.status !== 'Archived' && targetTask.status !== 'Archive' ? targetTask.status : 'To Do';
+      await api.put(`/tasks/${id}`, { status: 'Archived', previousStatus: prevSt });
       setTasks(prev => prev.filter(t => t.id !== id));
-      toast('Task deleted successfully.', 'success');
+      toast('Task moved to Archive', 'success');
       fetchTasks();
     } catch (error) {
-      console.error('Delete error:', error);
-      alert('Failed to delete task.', 'error', 'Error');
+      console.error('Archive error:', error);
+      alert('Failed to move task to Archive.', 'error', 'Error');
     } finally {
       setIsSaving(false);
     }
@@ -3980,6 +4014,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   };
 
   const filteredTasks = tasks.filter(t => {
+    if (t.status === 'Archived' || t.status === 'Archive') return false;
+
     // 1. Project Filter
     if (filterProjectName && t.projectName !== filterProjectName) {
       return false;
@@ -4016,6 +4052,21 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   });
 
   const pageTitle = subTab === 'my' ? '' : 'All Tasks';
+
+  if (openingInitialTask) {
+    return (
+      <div className="loading-screen" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f8fafc', flexDirection: 'column', gap: '1.2rem' }}>
+        <div className="saas-spinner" style={{ width: '40px', height: '40px', border: '3px solid #f3f3f3', borderTop: '3px solid #2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+        <div style={{ color: '#64748b', fontWeight: 600, fontSize: '0.95rem' }}>Loading task details...</div>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   if (drawerOpen) {
     return (
@@ -4934,8 +4985,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                             </td>
                                             <td className="cu-td cu-td-list" onClick={e => e.stopPropagation()}>
                                               <div className="cu-inline-field-wrapper">
-                                                <select className="cu-inline-dropdown" value={task.status || 'To Do'} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Delivered' && !task.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${task.id}`, updateData); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: meta.dotColor, fontWeight: 'bold' }}>
-                                                  {COLUMNS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
+                                                <select className="cu-inline-dropdown" value={task.status || 'To Do'} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (task.status !== 'Archived' && task.status !== 'Archive') ? task.status : (task.previousStatus || 'To Do'); } else if (newStatus === 'Delivered' && !task.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${task.id}`, updateData); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: meta.dotColor, fontWeight: 'bold' }}>
+                                                  {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                                                 </select>
                                               </div>
                                             </td>
@@ -4986,8 +5037,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </td>
                                                 <td className="cu-td cu-td-list" onClick={e => e.stopPropagation()}>
                                                   <div className="cu-inline-field-wrapper">
-                                                    <select className="cu-inline-dropdown" value={sub.status || 'To Do'} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Delivered' && !sub.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${sub.id}`, updateData); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: subMeta.dotColor, fontWeight: 'bold' }}>
-                                                      {COLUMNS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
+                                                    <select className="cu-inline-dropdown" value={sub.status || 'To Do'} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (sub.status !== 'Archived' && sub.status !== 'Archive') ? sub.status : (sub.previousStatus || 'To Do'); } else if (newStatus === 'Delivered' && !sub.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${sub.id}`, updateData); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: subMeta.dotColor, fontWeight: 'bold' }}>
+                                                      {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                                                     </select>
                                                   </div>
                                                 </td>

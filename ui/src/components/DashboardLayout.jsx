@@ -4,8 +4,9 @@ import './DashboardLayout.css';
 import { usePermissions } from '../hooks/usePermissions';
 import Projects from './pages/Operations/Projects';
 import TrackTeam from './pages/Operations/TrackTeam';
-import Tasks from './pages/Operations/Tasks';
+import Tasks, { getDisplayId } from './pages/Operations/Tasks';
 import TaskGroups from './pages/Operations/TaskGroups';
+import Archive from './pages/Operations/Archive';
 import Estimations from './pages/Operations/Estimations';
 import Clients from './pages/Operations/Clients';
 import Users from './pages/Administration/Users';
@@ -248,6 +249,26 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         </svg>
       ),
       drawerBg: '#3b82f6'
+    },
+    {
+      id: 'archive',
+      label: 'Archive',
+      module: 'archive',
+      bottomNavIcon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <polyline points="21 8 21 21 3 21 3 8"></polyline>
+          <rect x="1" y="3" width="22" height="5"></rect>
+          <line x1="10" y1="12" x2="14" y2="12"></line>
+        </svg>
+      ),
+      drawerIcon: (
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <polyline points="21 8 21 21 3 21 3 8"></polyline>
+          <rect x="1" y="3" width="22" height="5"></rect>
+          <line x1="10" y1="12" x2="14" y2="12"></line>
+        </svg>
+      ),
+      drawerBg: '#64748b'
     }
   ];
 
@@ -575,6 +596,15 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
           });
         }
         return <TaskGroups key={taskGroupsKey} user={user} onBack={() => setActiveTab('tasks')} />;
+      case 'archive':
+        if (!can('archive', 'view') && user?.role?.toLowerCase() !== 'admin') {
+          return renderOverview(setActiveTab, (taskData) => {
+            setSearchSelectedTask(taskData);
+            setIsTaskDetailOpen(true);
+            setActiveTab('tasks');
+          });
+        }
+        return <Archive user={user} />;
       case 'users': 
         if (!can('users', 'view') && user?.role?.toLowerCase() !== 'admin') {
           return renderOverview(setActiveTab, (taskData) => {
@@ -616,7 +646,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         return <TimesheetOverall onUserClick={(userId) => { setTimesheetUserId(userId); setActiveTab('timesheet-individual'); }} />;
       case 'timesheet-individual':
         if (!canReport('timesheet-individual')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
-        return <TimesheetIndividual initialUserId={timesheetUserId} onClearInitialUser={() => setTimesheetUserId(null)} />;
+        return <TimesheetIndividual user={user} onTaskClick={(taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); }} initialUserId={timesheetUserId} onClearInitialUser={() => setTimesheetUserId(null)} />;
       case 'daily-load-all':
         if (!canReport('daily-load-all')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
         return <DailyLoadAll onUserClick={(userId) => { setTimesheetUserId(userId); setActiveTab('daily-load-individual'); }} />;
@@ -626,10 +656,18 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
       case 'reports-status-based':
         if (!canReport('reports-status-based')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
-        return <ReportsStatusBased user={user} onNavigateToTask={(taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); }} />;
+        return <ReportsStatusBased user={user} onNavigateToTask={(taskData) => {
+            const displayId = getDisplayId(taskData);
+            setSelectedTaskId(displayId);
+            setSearchSelectedTask(taskData);
+            setIsTaskDetailOpen(true);
+            setActiveTab('tasks');
+          }} />;
       case 'reports':
         if (!canReport('tasks-report')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
         return <Reports user={user} onNavigateToTask={(taskData) => {
+            const displayId = getDisplayId(taskData);
+            setSelectedTaskId(displayId);
             setSearchSelectedTask(taskData);
             setIsTaskDetailOpen(true);
             setActiveTab('tasks');
@@ -708,7 +746,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'timesheet-individual': return { title: 'Timesheet - Individual', back: 'Reports', id: 'TimesheetIndividual' };
       case 'daily-load-all': return { title: 'Daily Load - All', back: 'Reports', id: 'DailyLoadAll' };
       case 'daily-load-individual': return { title: 'Daily Load - Individual', back: 'Reports', id: 'DailyLoadIndividual' };
-
+      case 'archive': return { title: 'Archive', back: 'Admin', id: 'Archive' };
 
       default: return { title: 'Dashboard', back: 'Main', id: 'Overview' };
     }
@@ -797,10 +835,11 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             {can('clients', 'view') && <NavItem id="clients" label="Clients" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>} />}
           </div>
 
-          {(can('users', 'view') || can('roles', 'view')) && (
+          {(can('users', 'view') || can('roles', 'view') || can('archive', 'view')) && (
             <div className="saas-nav-group">
               {can('users', 'view') && <NavItem id="users" label="Users" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-3-3.87"></path><path d="M2 21v-2a4 4 0 0 1 3-3.87"></path><circle cx="12" cy="7" r="4"></circle></svg>} />}
               {can('roles', 'view') && <NavItem id="roles" label="Roles" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>} />}
+              {can('archive', 'view') && <NavItem id="archive" label="Archive" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>} />}
             </div>
           )}
 

@@ -365,14 +365,14 @@ export default function Reports({ user, onNavigateToTask }) {
           <table className="reports-table">
             <thead>
               <tr>
-                <th>Task # No</th>
-                <th>Title</th>
-                <th>Project</th>
-                <th>Assignee</th>
-                <th>TimeSpent hrs</th>
-                <th>Billable hrs</th>
-                <th>Already Billed</th>
-                <th>Delivered Date</th>
+                <th>TASK # NO</th>
+                <th>TITLE</th>
+                <th>PROJECT</th>
+                <th>ASSIGNEE</th>
+                <th>TIME SPENT HRS</th>
+                <th>BILLABLE HRS</th>
+                <th>ALREADY BILLED</th>
+                <th>DELIVERED DATE</th>
               </tr>
             </thead>
             <tbody>
@@ -382,7 +382,7 @@ export default function Reports({ user, onNavigateToTask }) {
                   <td className="task-title-cell">
                     <span
                       style={{ color: '#2563eb', cursor: 'pointer', fontWeight: '600' }}
-                      onClick={() => onNavigateToTask && onNavigateToTask({ id: task.id, title: task.title })}
+                      onClick={() => onNavigateToTask && onNavigateToTask(task)}
                     >
                       {task.title}
                     </span>
@@ -452,7 +452,7 @@ export default function Reports({ user, onNavigateToTask }) {
                   <span 
                     className="reports-mobile-card-id"
                     style={{ cursor: 'pointer' }}
-                    onClick={() => onNavigateToTask && onNavigateToTask({ id: task.id, title: task.title })}
+                    onClick={() => onNavigateToTask && onNavigateToTask(task)}
                   >
                     #{displayId}
                   </span>

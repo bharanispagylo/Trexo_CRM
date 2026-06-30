@@ -79,6 +79,13 @@ const formatRelativeDueDate = (dateStr) => {
   }
 };
 
+const initials = (name) => {
+  if (!name) return '?';
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 export default function TaskGroups({ user, onBack }) {
   const [taskLists, setTaskLists] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -92,27 +99,84 @@ export default function TaskGroups({ user, onBack }) {
   const [editingListId, setEditingListId] = useState(null);
   const [editingListName, setEditingListName] = useState('');
 
+  // Inline subtask state
+  const [inlineSubtaskParentId, setInlineSubtaskParentId] = useState(null);
+  const [subtaskTitle, setSubtaskTitle] = useState('');
+  const [subtaskAssignee, setSubtaskAssignee] = useState('');
+  const [subtaskDueDate, setSubtaskDueDate] = useState('');
+  const [subtaskPriority, setSubtaskPriority] = useState('Medium');
+  const [inlineSubtaskSaving, setInlineSubtaskSaving] = useState(false);
+
   // Task group modal (only for add)
   const [showGroupModal, setShowGroupModal] = useState(false);
+  const [isSavingGroup, setIsSavingGroup] = useState(false);
   const [groupForm, setGroupForm] = useState({ name: '', projectId: '' });
 
   // Quick Add Task Modal
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [targetGroup, setTargetGroup] = useState(null);
   const [taskForm, setTaskForm] = useState({ title: '', assignees: '', priority: 'Medium', dueDate: '' });
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
 
   // Drawer detail view state
   const [viewingTask, setViewingTask] = useState(null);
   const [showTaskViewModal, setShowTaskViewModal] = useState(false);
   const [drawerEditMode, setDrawerEditMode] = useState(false);
   const [activeTab, setActiveTab] = useState('favourites');
-  const [collapsedStatusSections, setCollapsedStatusSections] = useState({});
-  const toggleStatusSection = (key) => {
-    setCollapsedStatusSections(prev => ({ ...prev, [key]: !prev[key] }));
+  const [deletingTaskId, setDeletingTaskId] = useState(null);
+  const [togglingFavoriteId, setTogglingFavoriteId] = useState(null);
+  const [expandedStatusSections, setExpandedStatusSections] = useState({});
+  const toggleStatusSection = (listId, statusId) => {
+    setExpandedStatusSections(prev => {
+      const current = prev[listId];
+      let defaultActive = null;
+      if (current === undefined) {
+        const list = taskLists.find(l => l.id === listId);
+        const allTasks = list?.tasks || [];
+        defaultActive = COLUMNS.find(c => allTasks.some(t => (t.status || 'To Do') === c.id))?.id || null;
+      }
+      const active = current !== undefined ? current : defaultActive;
+      return {
+        ...prev,
+        [listId]: active === statusId ? null : statusId
+      };
+    });
   };
 
   const { alert, confirm, toast } = useAlert();
   const { can } = usePermissions();
+
+  const handleInlineSubtaskSave = async (task) => {
+    if (!subtaskTitle.trim()) {
+      toast('Subtask title is required', 'warning');
+      return;
+    }
+    setInlineSubtaskSaving(true);
+    try {
+      const payload = {
+        title: subtaskTitle.trim(),
+        parentId: task.id,
+        taskListId: task.taskListId,
+        status: 'To Do',
+        priority: subtaskPriority || 'Medium',
+        assignees: subtaskAssignee || '',
+        dueDate: subtaskDueDate || null
+      };
+      await api.post('/tasks', payload);
+      toast('Subtask added successfully', 'success');
+      setSubtaskTitle('');
+      setSubtaskAssignee('');
+      setSubtaskDueDate('');
+      setSubtaskPriority('Medium');
+      setInlineSubtaskParentId(null);
+      fetchInitialData();
+    } catch (err) {
+      console.error('Failed to save subtask:', err);
+      toast('Failed to save subtask', 'error');
+    } finally {
+      setInlineSubtaskSaving(false);
+    }
+  };
 
   const fetchInitialData = useCallback(async () => {
     setLoading(true);
@@ -154,14 +218,18 @@ export default function TaskGroups({ user, onBack }) {
 
   // Toggle Favorite status
   const handleToggleFavorite = async (list) => {
+    if (togglingFavoriteId === list.id) return;
+    setTogglingFavoriteId(list.id);
     try {
       const updatedStatus = !list.isFavorite;
       await api.put(`/task-lists/${list.id}`, { isFavorite: updatedStatus });
       toast(updatedStatus ? 'Added to Favourites' : 'Removed from Favourites', 'success');
-      fetchTaskListsOnly();
+      await fetchTaskListsOnly();
     } catch (error) {
       console.error('Error toggling favorite:', error);
       toast('Failed to update favorite status', 'error');
+    } finally {
+      setTogglingFavoriteId(null);
     }
   };
 
@@ -175,6 +243,7 @@ export default function TaskGroups({ user, onBack }) {
   // Create Task Group
   const handleSaveGroup = async (e) => {
     e.preventDefault();
+    if (isSavingGroup) return;
     if (!groupForm.name.trim()) {
       alert('Task Group Name is required.', 'warning');
       return;
@@ -184,6 +253,7 @@ export default function TaskGroups({ user, onBack }) {
       return;
     }
 
+    setIsSavingGroup(true);
     try {
       await api.post('/task-lists', {
         name: groupForm.name.trim(),
@@ -196,6 +266,8 @@ export default function TaskGroups({ user, onBack }) {
     } catch (error) {
       console.error('Error creating task group:', error);
       alert('Failed to create task group', 'error');
+    } finally {
+      setIsSavingGroup(false);
     }
   };
 
@@ -262,13 +334,19 @@ export default function TaskGroups({ user, onBack }) {
   // Save Quick Add Task
   const handleSaveTask = async (e) => {
     e.preventDefault();
+    if (isCreatingTask) return;
     if (!taskForm.title.trim()) {
       alert('Task Title is required.', 'warning');
       return;
     }
+    if (!taskForm.assignees) {
+      alert('Assignee is required.', 'warning');
+      return;
+    }
 
+    setIsCreatingTask(true);
     try {
-      await api.post('/tasks', {
+      const createdTask = await api.post('/tasks', {
         title: taskForm.title.trim(),
         taskListId: targetGroup.id,
         projectId: targetGroup.projectId || null,
@@ -280,22 +358,51 @@ export default function TaskGroups({ user, onBack }) {
       toast('Task added successfully!', 'success');
       setShowTaskModal(false);
       setTargetGroup(null);
-      fetchTaskListsOnly();
+      await fetchTaskListsOnly();
+      if (createdTask && createdTask.id) {
+        const fullTaskObj = {
+          ...createdTask,
+          projectName: targetGroup?.project?.name || createdTask.projectName || ''
+        };
+        setViewingTask(fullTaskObj);
+        setDrawerEditMode(false);
+        setShowTaskViewModal(true);
+      }
     } catch (error) {
       console.error('Error creating task:', error);
       alert('Failed to add task', 'error');
+    } finally {
+      setIsCreatingTask(false);
     }
   };
 
-  // Delete task inside details drawer
-  const handleDeleteTask = async (id) => {
-    try {
-      await api.delete(`/tasks/${id}`);
-      toast('Task deleted successfully', 'success');
-      fetchTaskListsOnly();
-    } catch (error) {
-      console.error('Error deleting task:', error);
-      alert('Failed to delete task', 'error');
+  // Delete task inside details drawer / table (move to archive)
+  const handleDeleteTask = async (id, skipConfirm = false) => {
+    const doDelete = async () => {
+      setDeletingTaskId(id);
+      try {
+        const allTasks = taskLists.flatMap(l => l.tasks || []);
+        const targetTask = allTasks.find(t => t.id === id);
+        const prevSt = targetTask?.status && targetTask.status !== 'Archived' && targetTask.status !== 'Archive' ? targetTask.status : 'To Do';
+        await api.put(`/tasks/${id}`, { status: 'Archived', previousStatus: prevSt });
+        toast('Task moved to Archive', 'success');
+        await fetchTaskListsOnly();
+      } catch (error) {
+        console.error('Error archiving task:', error);
+        alert('Failed to move task to Archive', 'error');
+      } finally {
+        setDeletingTaskId(null);
+      }
+    };
+
+    if (skipConfirm) {
+      await doDelete();
+    } else {
+      confirm(
+        'Delete this task? It will be moved to the Archive.',
+        doDelete,
+        'Delete Task'
+      );
     }
   };
 
@@ -335,7 +442,7 @@ export default function TaskGroups({ user, onBack }) {
   // Common Accordion rendering function
   const renderAccordion = (list, idx) => {
     const isCollapsed = !expandedListIds.includes(list.id);
-    const listTasks = (list.tasks || []).sort((a, b) => {
+    const listTasks = (list.tasks || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive').sort((a, b) => {
       const titleA = a.title || '';
       const titleB = b.title || '';
       return titleA.localeCompare(titleB, undefined, { sensitivity: 'base' });
@@ -357,23 +464,32 @@ export default function TaskGroups({ user, onBack }) {
                 e.stopPropagation();
                 handleToggleFavorite(list);
               }}
+              disabled={togglingFavoriteId === list.id}
               style={{
                 background: 'none',
                 border: 'none',
-                cursor: 'pointer',
+                cursor: togglingFavoriteId === list.id ? 'not-allowed' : 'pointer',
                 padding: 0,
                 display: 'flex',
                 alignItems: 'center',
                 color: list.isFavorite ? '#eab308' : '#cbd5e1',
                 transition: 'transform 0.15s, color 0.15s',
-                flexShrink: 0
+                flexShrink: 0,
+                opacity: togglingFavoriteId === list.id ? 0.6 : 1
               }}
               className="tg-accordion-star-btn"
               title={list.isFavorite ? 'Remove from Favourites' : 'Add to Favourites'}
             >
-              <svg viewBox="0 0 24 24" width="16" height="16" fill={list.isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-              </svg>
+              {togglingFavoriteId === list.id ? (
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                  <circle cx="12" cy="12" r="10" strokeOpacity="0.25"/>
+                  <path d="M12 2a10 10 0 0 1 10 10" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="16" height="16" fill={list.isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+              )}
             </button>
 
             <span className="cu-section-chevron" style={{ display: 'flex', alignItems: 'center', visibility: hasTasks ? 'visible' : 'hidden', flexShrink: 0 }}>
@@ -453,21 +569,25 @@ export default function TaskGroups({ user, onBack }) {
           </div>
         </div>
 
-        {/* Accordion Table Body */}
-        {!isCollapsed && hasTasks && (
-          <div className="cu-list-root task-group-sections" style={{ marginTop: '0.5rem', marginBottom: '1.5rem' }}>
-            {COLUMNS.map(col => {
-              const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
-              const allTasks = list.tasks || [];
-              const statusTasks = allTasks.filter(t => (t.status || 'To Do') === col.id);
-              const sectionKey = `${list.id}_${col.id}`;
-              const isStatusCollapsed = !!collapsedStatusSections[sectionKey];
+        {!isCollapsed && hasTasks && (() => {
+          const allTasks = list.tasks || [];
+          const firstStatusWithTasks = COLUMNS.find(c => allTasks.some(t => (t.status || 'To Do') === c.id))?.id || null;
 
-              return (
-                <div key={col.id} className="cu-status-section" style={{ marginBottom: '1rem' }}>
-                  {/* Section Header */}
-                  <div className="cu-section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.35rem 0.75rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-                    <div className="cu-section-left" onClick={() => toggleStatusSection(sectionKey)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+          return (
+            <div className="cu-list-root task-group-sections" style={{ marginTop: '0.5rem', marginBottom: '1.5rem' }}>
+              {COLUMNS.map(col => {
+                const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
+                const statusTasks = allTasks.filter(t => (t.status || 'To Do') === col.id);
+                const isStatusExpanded = expandedStatusSections[list.id] !== undefined
+                  ? expandedStatusSections[list.id] === col.id
+                  : firstStatusWithTasks === col.id;
+                const isStatusCollapsed = !isStatusExpanded;
+
+                return (
+                  <div key={col.id} className="cu-status-section" style={{ marginBottom: '1rem' }}>
+                    {/* Section Header */}
+                    <div className="cu-section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.35rem 0.75rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                      <div className="cu-section-left" onClick={() => toggleStatusSection(list.id, col.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                       <span className="cu-section-chevron">
                         <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isStatusCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}>
                           <path d="M0 0l5 6 5-6z"/>
@@ -548,6 +668,26 @@ export default function TaskGroups({ user, onBack }) {
                                           {subTasks.length}
                                         </span>
                                       )}
+                                      {can('tasks', 'create') && (
+                                        <button
+                                          className="cu-hover-subtask-btn"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setExpandedSubtasks(prev => ({ ...prev, [task.id]: true }));
+                                            setInlineSubtaskParentId(task.id);
+                                            setSubtaskTitle('');
+                                            setSubtaskAssignee('');
+                                            setSubtaskDueDate('');
+                                            setSubtaskPriority('Medium');
+                                          }}
+                                          title="Add Subtask"
+                                        >
+                                          <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                                          </svg>
+                                        </button>
+                                      )}
                                     </div>
                                   </td>
                                   <td className="cu-td cu-td-assignee" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
@@ -582,8 +722,18 @@ export default function TaskGroups({ user, onBack }) {
                                         </button>
                                       )}
                                       {can('tasks', 'delete') && (
-                                        <button className="cu-act-btn danger" onClick={() => handleDeleteTask(task.id)} title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }}>
-                                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                        <button 
+                                          className="cu-act-btn danger" 
+                                          disabled={deletingTaskId === task.id}
+                                          onClick={() => handleDeleteTask(task.id)} 
+                                          title="Delete" 
+                                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: deletingTaskId === task.id ? 'not-allowed' : 'pointer', padding: '0.25rem', opacity: deletingTaskId === task.id ? 0.6 : 1 }}
+                                        >
+                                          {deletingTaskId === task.id ? (
+                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}><circle cx="12" cy="12" r="10" strokeOpacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" /></svg>
+                                          ) : (
+                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                          )}
                                         </button>
                                       )}
                                     </div>
@@ -592,6 +742,66 @@ export default function TaskGroups({ user, onBack }) {
                               );
 
                               const rows = [parentRow];
+
+                              // Inline subtask creation row
+                              if (inlineSubtaskParentId === task.id) {
+                                rows.push(
+                                  <tr key={`add-sub-${task.id}`} className="cu-inline-row animate-fade-in" style={{ background: '#f8fafc' }}>
+                                    <td colSpan="4" style={{ paddingLeft: '2.5rem' }}>
+                                      <div className="new-task-inline-bar" style={{ borderLeft: '2px solid #2563eb', paddingLeft: '8px' }} onClick={e => e.stopPropagation()}>
+                                        <div className="ntib-left">
+                                          <span className="ntib-dotted-circle"></span>
+                                          <input
+                                            type="text"
+                                            placeholder="Subtask Name or type '/' for commands"
+                                            value={subtaskTitle}
+                                            onChange={e => setSubtaskTitle(e.target.value)}
+                                            onKeyDown={e => { if (e.key === 'Enter' && !inlineSubtaskSaving) handleInlineSubtaskSave(task); if (e.key === 'Escape') setInlineSubtaskParentId(null); }}
+                                            autoFocus
+                                            className="ntib-input"
+                                          />
+                                        </div>
+                                        <div className="ntib-right">
+                                          <div className="ntib-dropdown-wrapper">
+                                            <button type="button" className="ntib-btn-icon" title="Assignee">
+                                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                            </button>
+                                            <select className="ntib-hidden-select" value={subtaskAssignee} onChange={e => setSubtaskAssignee(e.target.value)}>
+                                              <option value="">Assignee</option>
+                                              {users.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                            </select>
+                                            {subtaskAssignee && <span className="ntib-badge">{initials((users.find(u => u.id === subtaskAssignee) || {}).fullName || subtaskAssignee)}</span>}
+                                          </div>
+                                          
+                                          <div className="ntib-dropdown-wrapper ntib-hide-mobile">
+                                            <button type="button" className="ntib-btn-icon" title="Due Date">
+                                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                            </button>
+                                            <input type="date" className="ntib-hidden-date" value={subtaskDueDate} onChange={e => setSubtaskDueDate(e.target.value)} />
+                                            {subtaskDueDate && <span className="ntib-badge">{new Date(subtaskDueDate).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>}
+                                          </div>
+                                          
+                                          <div className="ntib-dropdown-wrapper ntib-hide-mobile">
+                                            <button type="button" className="ntib-btn-icon" title="Priority">
+                                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                                            </button>
+                                            <select className="ntib-hidden-select" value={subtaskPriority} onChange={e => setSubtaskPriority(e.target.value)}>
+                                              <option value="Critical">Critical Priority</option>
+                                              <option value="High">High Priority</option>
+                                              <option value="Medium">Medium Priority</option>
+                                              <option value="Low">Low Priority</option>
+                                            </select>
+                                            {subtaskPriority && <span className="ntib-badge priority-color">{subtaskPriority}</span>}
+                                          </div>
+                                          
+                                          <button type="button" className="ntib-cancel-btn" onClick={() => setInlineSubtaskParentId(null)}>Cancel</button>
+                                          <button type="button" className="ntib-save-btn" disabled={inlineSubtaskSaving} onClick={() => handleInlineSubtaskSave(task)}>{inlineSubtaskSaving ? 'Saving...' : 'Save ↵'}</button>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              }
 
                               if (isExpanded) {
                                 const sortedSubtasks = [...subTasks].sort((a, b) => {
@@ -647,8 +857,18 @@ export default function TaskGroups({ user, onBack }) {
                                             </button>
                                           )}
                                           {can('tasks', 'delete') && (
-                                            <button className="cu-act-btn danger" onClick={() => handleDeleteTask(sub.id)} title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }}>
-                                              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                            <button 
+                                              className="cu-act-btn danger" 
+                                              disabled={deletingTaskId === sub.id}
+                                              onClick={() => handleDeleteTask(sub.id)} 
+                                              title="Delete" 
+                                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: deletingTaskId === sub.id ? 'not-allowed' : 'pointer', padding: '0.25rem', opacity: deletingTaskId === sub.id ? 0.6 : 1 }}
+                                            >
+                                              {deletingTaskId === sub.id ? (
+                                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}><circle cx="12" cy="12" r="10" strokeOpacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" /></svg>
+                                              ) : (
+                                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                              )}
                                             </button>
                                           )}
                                         </div>
@@ -668,8 +888,9 @@ export default function TaskGroups({ user, onBack }) {
                 </div>
               );
             })}
-          </div>
-        )}
+            </div>
+          );
+        })()}
       </div>
     );
   };
@@ -784,8 +1005,18 @@ export default function TaskGroups({ user, onBack }) {
                 <button type="button" className="tg-btn-secondary" onClick={() => setShowGroupModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="tg-btn-primary">
-                  Save Group
+                <button type="submit" className="tg-btn-primary" disabled={isSavingGroup} style={{ opacity: isSavingGroup ? 0.7 : 1, cursor: isSavingGroup ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                  {isSavingGroup ? (
+                    <>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                        <circle cx="12" cy="12" r="10" strokeOpacity="0.25"></circle>
+                        <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round"></path>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Group'
+                  )}
                 </button>
               </div>
             </form>
@@ -814,8 +1045,9 @@ export default function TaskGroups({ user, onBack }) {
                   />
                 </div>
                 <div className="tg-form-field">
-                  <label>Assignee</label>
+                  <label>Assignee *</label>
                   <select
+                    required
                     value={taskForm.assignees}
                     onChange={(e) => setTaskForm({ ...taskForm, assignees: e.target.value })}
                   >
@@ -852,8 +1084,18 @@ export default function TaskGroups({ user, onBack }) {
                 <button type="button" className="tg-btn-secondary" onClick={() => setShowTaskModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="tg-btn-primary">
-                  Create Task
+                <button type="submit" className="tg-btn-primary" disabled={isCreatingTask} style={{ opacity: isCreatingTask ? 0.7 : 1, cursor: isCreatingTask ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                  {isCreatingTask ? (
+                    <>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                        <circle cx="12" cy="12" r="10" strokeOpacity="0.25"></circle>
+                        <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round"></path>
+                      </svg>
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Task'
+                  )}
                 </button>
               </div>
             </form>
@@ -894,7 +1136,7 @@ export default function TaskGroups({ user, onBack }) {
                 }
               }}
               onDelete={async (id) => {
-                await handleDeleteTask(id);
+                await handleDeleteTask(id, true);
                 setShowTaskViewModal(false);
                 setViewingTask(null);
               }}

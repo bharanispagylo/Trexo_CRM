@@ -47,7 +47,7 @@ export default function DailyLoadAll({ onUserClick }) {
           api.get('/worklogs').catch(() => [])
         ]);
         setUsers(userData || []);
-        setAllTasks(taskData || []);
+        setAllTasks((taskData || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive'));
         setAllWorklogs(worklogData || []);
       } catch (err) {
         console.error('Error fetching Daily Load All report data:', err);
@@ -118,10 +118,7 @@ export default function DailyLoadAll({ onUserClick }) {
   return (
     <div style={{ padding: '1.5rem' }}>
       {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '0.75rem' }}>
-        <h2 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0f172a', margin: 0, flex: 1, minWidth: 0 }}>
-          Daily Load - All
-        </h2>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', marginBottom: '1.25rem', gap: '0.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexShrink: 0 }}>
           <button
             onClick={handleExport}
