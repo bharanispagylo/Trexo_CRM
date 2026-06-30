@@ -1983,7 +1983,19 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   </span>
                 </div>
 
-
+                {/* Row 3b: Created Date (Mobile Only) */}
+                {createdDateToDisplay && (
+                  <div className="saas-meta-row saas-meta-row-2col saas-meta-created-row" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <IconCalendar /> Created
+                    </span>
+                    <span className="saas-meta-value">
+                      <span style={{ padding: '0.4rem 0', display: 'inline-block' }}>
+                        {createdDateToDisplay.replace('Created ', '')}
+                      </span>
+                    </span>
+                  </div>
+                )}
 
                 <div className="saas-meta-divider" style={{ borderBottom: '1px solid #f1f5f9', margin: '1.5rem 0' }}></div>
 
