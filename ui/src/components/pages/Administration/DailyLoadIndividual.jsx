@@ -40,7 +40,7 @@ const STATUS_HEADER_META = {
 
 export default function DailyLoadIndividual({ user, onTaskClick }) {
   const [users, setUsers] = useState([]);
-  const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('all');
   const [allTasks, setAllTasks] = useState([]);
   const [allWorklogs, setAllWorklogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,10 +65,7 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
         setAllTasks((taskData || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive'));
         setAllWorklogs(worklogData || []);
 
-        if (sortedUsers.length > 0) {
-          const currentInList = user?.id ? sortedUsers.find(u => u.id === user.id) : null;
-          setSelectedUserId(currentInList ? currentInList.id : sortedUsers[0].id);
-        }
+        setSelectedUserId('all');
       } catch (err) {
         console.error('Error fetching Daily Load Individual report data:', err);
       } finally {
@@ -79,15 +76,34 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
   }, [user]);
 
   const selectedUserObj = users.find(u => u.id === selectedUserId);
-  const selectedUserName = selectedUserObj
-    ? (selectedUserObj.fullName || selectedUserObj.name || `${selectedUserObj.firstName || ''} ${selectedUserObj.lastName || ''}`.trim() || selectedUserObj.email || '')
-    : '';
+  const selectedUserName = selectedUserId === 'all'
+    ? 'All Member'
+    : (selectedUserObj
+      ? (selectedUserObj.fullName || selectedUserObj.name || `${selectedUserObj.firstName || ''} ${selectedUserObj.lastName || ''}`.trim() || selectedUserObj.email || '')
+      : '');
 
   // Filter tasks assigned to selected user in status 'To Do' or 'In Progress'
   const matchingTasks = allTasks.filter(t => {
     const st = (t.status || '').toLowerCase().trim();
     const isTargetStatus = st === 'to do' || st === 'in progress';
-    return isTargetStatus && isTaskAssignedToUser(t, selectedUserObj);
+    if (!isTargetStatus) return false;
+
+    if (selectedUserId === 'all') {
+      if (!t.assignees) return false;
+      const rawAssignees = t.assignees.split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
+      return users.some(u => {
+        const targetId = (u.id || '').toLowerCase().trim();
+        const targetName = (u.fullName || u.name || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase().trim();
+        const targetFirstName = (u.firstName || '').toLowerCase().trim();
+        return rawAssignees.some(a => 
+          a === targetId || 
+          (targetName && a === targetName) || 
+          (targetFirstName && a === targetFirstName)
+        );
+      });
+    }
+
+    return isTaskAssignedToUser(t, selectedUserObj);
   });
 
   // Calculate Remaining Hrs for each task
@@ -167,7 +183,6 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
 
       {/* Controls row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-        <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Select User:</label>
         <select
           value={selectedUserId}
           onChange={e => setSelectedUserId(e.target.value)}
@@ -187,6 +202,7 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
             minWidth: '220px'
           }}
         >
+          <option value="all" style={{ color: '#475569' }}>All Member</option>
           {users.map(u => {
             const name = u.fullName || u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email;
             return <option key={u.id} value={u.id} style={{ color: '#475569' }}>{name}</option>;

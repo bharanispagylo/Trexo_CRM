@@ -119,7 +119,7 @@ export default function TimesheetIndividual({ user, onTaskClick, initialUserId, 
   const [filter, setFilter] = useState('daily');
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [users, setUsers] = useState([]);
-  const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('all');
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [viewingTask, setViewingTask] = useState(null);
@@ -139,8 +139,8 @@ export default function TimesheetIndividual({ user, onTaskClick, initialUserId, 
       if (initialUserId) {
         setSelectedUserId(initialUserId);
         if (onClearInitialUser) onClearInitialUser();
-      } else if (sortedUsers.length > 0) {
-        setSelectedUserId(sortedUsers[0].id);
+      } else {
+        setSelectedUserId('all');
       }
     }).catch(console.error);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -191,17 +191,19 @@ export default function TimesheetIndividual({ user, onTaskClick, initialUserId, 
   const distinctTasksCount = new Set(logs.filter(log => !log.isBilled).map(log => log.taskId)).size;
 
   const selectedUser = users.find(u => u.id === selectedUserId);
-  const selectedUserName = selectedUser
-    ? (selectedUser.fullName || `${selectedUser.firstName || ''} ${selectedUser.lastName || ''}`.trim())
-    : '';
+  const selectedUserName = selectedUserId === 'all'
+    ? 'All Members'
+    : (selectedUser
+      ? (selectedUser.fullName || `${selectedUser.firstName || ''} ${selectedUser.lastName || ''}`.trim())
+      : '');
 
   const handleExport = () => {
     const label = formatDisplayDate(filter, selectedDate).replace(/\//g, '-').replace(/ /g, '');
     const name = selectedUserName || 'user';
     downloadCSV(
       `timesheet-${name}-${label}.csv`,
-      ['Task', 'TIMESPENT HRS', 'Billable Hrs', 'Estimated Hrs', 'Status'],
-      rows.map(r => [r.title, r.timeSpent.toFixed(1), r.billableHours, r.estimatedHours, r.status])
+      ['Task', 'Status', 'TIMESPENT HRS', 'Billable Hrs', 'Estimated Hrs'],
+      rows.map(r => [r.title, r.status, r.timeSpent.toFixed(1), r.billableHours, r.estimatedHours])
     );
   };
 
@@ -234,6 +236,7 @@ export default function TimesheetIndividual({ user, onTaskClick, initialUserId, 
           onChange={e => setSelectedUserId(e.target.value)}
           style={{ padding: '0.45rem 1.6rem 0.45rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '500', color: '#64748b', background: 'white', appearance: 'none', WebkitAppearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.45rem center' }}
         >
+          <option value="all" style={{ color: '#475569' }}>All Members</option>
           {users.map(u => {
             const name = u.fullName || u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email;
             return <option key={u.id} value={u.id} style={{ color: '#475569' }}>{name}</option>;
@@ -290,10 +293,10 @@ export default function TimesheetIndividual({ user, onTaskClick, initialUserId, 
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                   <th style={{ padding: '0.85rem 1.25rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Task</th>
+                  <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Status</th>
                   <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>TIMESPENT HRS</th>
                   <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Billable Hrs</th>
                   <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Estimated Hrs</th>
-                  <th style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -309,14 +312,14 @@ export default function TimesheetIndividual({ user, onTaskClick, initialUserId, 
                       >
                         {row.title}
                       </td>
-                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.87rem', fontWeight: '700', color: '#2563eb' }}>{row.timeSpent.toFixed(1)}</td>
-                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.billableHours}</td>
-                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.estimatedHours}</td>
                       <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
                         <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.2rem 0.6rem', borderRadius: '5px', background: statusStyle.bg, color: statusStyle.color, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                           {row.status}
                         </span>
                       </td>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.87rem', fontWeight: '700', color: '#2563eb' }}>{row.timeSpent.toFixed(1)}</td>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.billableHours}</td>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.estimatedHours}</td>
                     </tr>
                   );
                 })}

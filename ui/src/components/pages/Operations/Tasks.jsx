@@ -3563,6 +3563,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const isTeamLeadOrAdmin = user?.role?.toLowerCase() === 'team lead' || user?.role?.toLowerCase() === 'admin';
   const [tasks, setTasks]       = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [openingInitialTask, setOpeningInitialTask] = useState(!!(initialTaskId || initialSelectedTask));
   const [isSaving, setIsSaving] = useState(false);
   const [viewMode, setViewMode] = useState('list');
   const [subTab, setSubTab]     = useState('my');
@@ -3620,34 +3621,56 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     }
   }, [initialSelectedTask]);
 
+  // Reset opening state when a new task is requested
   useEffect(() => {
-    if (initialSelectedTaskId.current && tasks.length > 0) {
-      const fullTask = tasks.find(t => t.id === initialSelectedTaskId.current);
-      if (fullTask) {
-        initialSelectedTaskId.current = null;
-        setDrawerTask(fullTask);
-        setDrawerOpen(true);
-        setTaskDetailMode(false);
-        if (onTaskSelect) onTaskSelect(getDisplayId(fullTask));
-        if (onClearInitialTask) onClearInitialTask();
-      }
+    if (initialSelectedTask || initialTaskId) {
+      setOpeningInitialTask(true);
+    }
+  }, [initialSelectedTask, initialTaskId]);
+
+  useEffect(() => {
+    if (initialSelectedTask && initialSelectedTaskId.current && openingInitialTask) {
+      const targetId = initialSelectedTaskId.current;
+      api.get(`/tasks/${targetId}`)
+        .then(task => {
+          if (task) {
+            initialSelectedTaskId.current = null;
+            setDrawerTask(task);
+            setDrawerOpen(true);
+            setTaskDetailMode(false);
+            if (onTaskSelect) onTaskSelect(getDisplayId(task));
+            if (onClearInitialTask) onClearInitialTask();
+          }
+          setOpeningInitialTask(false);
+        })
+        .catch(err => {
+          console.error('Failed to load initial task:', err);
+          setOpeningInitialTask(false);
+        });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialSelectedTask, tasks]);
+  }, [initialSelectedTask, openingInitialTask]);
 
   // Auto-open task from URL deep-link (e.g. /tasks/taskId)
   const initialTaskIdHandled = useRef(false);
   useEffect(() => {
-    if (initialTaskId && !initialTaskIdHandled.current && tasks.length > 0) {
+    if (initialTaskId && !initialTaskIdHandled.current && openingInitialTask) {
       initialTaskIdHandled.current = true;
-      const task = tasks.find(t => getDisplayId(t) === initialTaskId);
-      if (task) {
-        setDrawerTask(task);
-        setDrawerOpen(true);
-        setTaskDetailMode(false);
-      }
+      api.get(`/tasks/${initialTaskId}`)
+        .then(task => {
+          if (task) {
+            setDrawerTask(task);
+            setDrawerOpen(true);
+            setTaskDetailMode(false);
+          }
+          setOpeningInitialTask(false);
+        })
+        .catch(err => {
+          console.error('Failed to load task from deep-link:', err);
+          setOpeningInitialTask(false);
+        });
     }
-  }, [initialTaskId, tasks]);
+  }, [initialTaskId, openingInitialTask]);
 
   useEffect(() => {
     if (onDetailViewChange) {
@@ -4029,6 +4052,21 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   });
 
   const pageTitle = subTab === 'my' ? '' : 'All Tasks';
+
+  if (openingInitialTask) {
+    return (
+      <div className="loading-screen" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f8fafc', flexDirection: 'column', gap: '1.2rem' }}>
+        <div className="saas-spinner" style={{ width: '40px', height: '40px', border: '3px solid #f3f3f3', borderTop: '3px solid #2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+        <div style={{ color: '#64748b', fontWeight: 600, fontSize: '0.95rem' }}>Loading task details...</div>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   if (drawerOpen) {
     return (

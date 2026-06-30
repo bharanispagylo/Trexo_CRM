@@ -113,9 +113,22 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [detailTab, setDetailTab] = useState('General');
   const [selectedTaskListId, setSelectedTaskListId] = useState(null);
   const [expandedListId, setExpandedListId] = useState('__first__');
-  const [collapsedStatusSections, setCollapsedStatusSections] = useState({});
-  const toggleStatusSection = (key) => {
-    setCollapsedStatusSections(prev => ({ ...prev, [key]: !prev[key] }));
+  const [expandedStatusSections, setExpandedStatusSections] = useState({});
+  const toggleStatusSection = (listId, statusId) => {
+    setExpandedStatusSections(prev => {
+      const current = prev[listId];
+      let defaultActive = null;
+      if (current === undefined) {
+        const lst = (selectedProject?.taskLists || []).find(l => l.id === listId);
+        const allTasks = lst?.tasks || [];
+        defaultActive = COLUMNS.find(c => allTasks.some(t => (t.status || 'To Do') === c.id))?.id || null;
+      }
+      const active = current !== undefined ? current : defaultActive;
+      return {
+        ...prev,
+        [listId]: active === statusId ? null : statusId
+      };
+    });
   };
   const toggleListAccordion = (id) => {
     setExpandedListId(prev => prev === id ? null : id);
@@ -168,6 +181,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [uploadForm, setUploadForm] = useState({ name: '', description: '', file: null });
   const [uploading, setUploading] = useState(false);
   const attachFileRef = React.useRef(null);
+  const [previewImage, setPreviewImage] = useState(null); // { url, name }
 
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
   const [statusFilter, setStatusFilter] = useState('All');
@@ -837,7 +851,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     const assigneesList = (memberIds.length > 0 ? memberIds : users.map(u => u.id))
       .map(id => {
         const u = users.find(x => x.id === id);
-        return u ? { id: u.id, name: u.name || u.username || u.email || id } : null;
+        return u ? { id: u.id, name: u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.name || u.username || u.email || id } : null;
       })
       .filter(Boolean);
 
@@ -940,7 +954,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     if (!viewingQuery) return null;
     const sentUser = users.find(u => u.id === viewingQuery.sentTo);
     const sentName = sentUser
-      ? (sentUser.fullName || sentUser.name || sentUser.username || sentUser.email)
+      ? (sentUser.fullName || `${sentUser.firstName || ''} ${sentUser.lastName || ''}`.trim() || sentUser.name || sentUser.username || sentUser.email)
       : (viewingQuery.sentTo || 'Unassigned');
 
     const closeDetail = () => setViewingQuery(null);
@@ -1674,20 +1688,24 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                           </div>
                         </div>
 
-                                {!isCollapsed && hasTasks && (
+                                {!isCollapsed && hasTasks && (() => {
+                          const allTasks = list.tasks || [];
+                          const firstStatusWithTasks = COLUMNS.find(c => allTasks.some(t => (t.status || 'To Do') === c.id))?.id || null;
+                          return (
                           <div className="cu-list-root task-group-sections" style={{ marginTop: '0.5rem', marginBottom: '1.5rem' }}>
                             {COLUMNS.map(col => {
                               const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
-                              const allTasks = list.tasks || [];
                               const statusTasks = allTasks.filter(t => (t.status || 'To Do') === col.id);
-                              const sectionKey = `${list.id}_${col.id}`;
-                              const isStatusCollapsed = !!collapsedStatusSections[sectionKey];
+                              const isStatusExpanded = expandedStatusSections[list.id] !== undefined
+                                ? expandedStatusSections[list.id] === col.id
+                                : firstStatusWithTasks === col.id;
+                              const isStatusCollapsed = !isStatusExpanded;
 
                               return (
                                 <div key={col.id} className="cu-status-section" style={{ marginBottom: '1rem' }}>
                                   {/* Section Header */}
                                   <div className="cu-section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.35rem 0.75rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-                                    <div className="cu-section-left" onClick={() => toggleStatusSection(sectionKey)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                    <div className="cu-section-left" onClick={() => toggleStatusSection(list.id, col.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                                       <span className="cu-section-chevron">
                                         <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isStatusCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}>
                                           <path d="M0 0l5 6 5-6z"/>
@@ -1969,7 +1987,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                               );
                             })}
                           </div>
-                        )}
+                          );
+                        })()}
                         </div>
                       );
                     })
@@ -2336,7 +2355,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       <option value="All Sent To">All Sent To</option>
                       {projMembers.map(memberId => {
                         const memberUser = users.find(u => u.id === memberId);
-                        const memberName = memberUser ? (memberUser.name || memberUser.fullName || memberUser.username || memberUser.email) : memberId;
+                        const memberName = memberUser ? (memberUser.fullName || `${memberUser.firstName || ''} ${memberUser.lastName || ''}`.trim() || memberUser.name || memberUser.username || memberUser.email) : memberId;
                         return <option key={memberId} value={memberId}>{memberName}</option>;
                       })}
                     </select>
@@ -2458,14 +2477,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                   <td data-label="Sent To" style={{ padding: '1rem 1.5rem' }}>
                                     {q.sentTo ? (() => {
                                       const sentUser = users.find(u => u.id === q.sentTo);
-                                      const displayName = sentUser ? (sentUser.name || sentUser.username || sentUser.email) : q.sentTo;
+                                      const displayName = sentUser ? (sentUser.fullName || `${sentUser.firstName || ''} ${sentUser.lastName || ''}`.trim() || sentUser.name || sentUser.username || sentUser.email) : q.sentTo;
                                       return (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                          <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: getAvatarColor(displayName), color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.65rem' }}>
-                                            {getInitials(displayName)}
-                                          </div>
-                                          <span style={{ fontSize: '0.8rem', fontWeight: '500', color: '#334155' }}>{displayName}</span>
-                                        </div>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: '500', color: '#334155' }}>{displayName}</span>
                                       );
                                     })() : (
                                       <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Unassigned</span>
@@ -2616,14 +2630,16 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
             const paginated = filtered.slice((attachPage - 1) * perPage, attachPage * perPage);
 
+            const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
+            const isImageFile = (name) => IMAGE_EXTS.includes(getFileExt(name));
+
             const handleUpload = async () => {
               if (!can('projects', 'create')) {
                 alert('You do not have permission to upload attachments.', 'warning', 'Access Denied');
                 return;
               }
-              if (!uploadForm.name.trim()) { alert('Please enter a file name', 'warning', 'Required'); return; }
-              if (!uploadForm.description.trim()) { alert('Please enter a description', 'warning', 'Required'); return; }
               if (!uploadForm.file) { alert('Please choose a file to upload', 'warning', 'Required'); return; }
+              if (!uploadForm.description.trim()) { alert('Please enter a description', 'warning', 'Required'); return; }
               setUploading(true);
               let fileUrl = '';
               let fileSize = '';
@@ -2649,7 +2665,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
               try {
                 await api.post(`/projects/${selectedProject.id}/attachments`, {
-                  name: uploadForm.name,
+                  name: uploadForm.file?.name || uploadForm.name,
                   description: uploadForm.description,
                   uploadedBy: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Unknown',
                   fileSize: fileSize || '-',
@@ -2680,7 +2696,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             };
 
             return (
-              <div>
+              <>
+                <div>
                 {/* Toolbar */}
                 <div className="attach-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                   <div className="attach-toolbar-left" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
@@ -2735,15 +2752,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>File Name *</label>
-                        <input
-                          value={uploadForm.name}
-                          onChange={e => setUploadForm({ ...uploadForm, name: e.target.value })}
-                          placeholder="e.g. Project_Requirements.pdf"
-                          style={{ width: '100%', padding: '0.6rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div>
                         <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Description *</label>
                         <textarea
                           value={uploadForm.description}
@@ -2763,13 +2771,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         >
                           <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#94a3b8" strokeWidth="1.5" style={{ margin: '0 auto 0.5rem', display: 'block' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                           <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>
-                            {uploadForm.file ? uploadForm.file.name : 'Click here to browse for a local folder'}
+                            {uploadForm.file ? uploadForm.file.name : 'Click here to browse files'}
                           </p>
                           {uploadForm.file && <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>{(uploadForm.file.size / (1024 * 1024)).toFixed(2)} MB</p>}
                         </div>
                         <input ref={attachFileRef} type="file" style={{ display: 'none' }} onChange={e => {
                           const f = e.target.files[0];
-                          if (f) setUploadForm(prev => ({ ...prev, file: f, name: prev.name || f.name }));
+                          if (f) setUploadForm(prev => ({ ...prev, file: f, name: f.name }));
                         }} />
                       </div>
                     </div>
@@ -2822,8 +2830,18 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                             </td>
                             <td data-label="Actions" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
                               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', alignItems: 'center' }}>
+                                {a.fileUrl && isImageFile(a.name) && (
+                                  <button
+                                    type="button"
+                                    onClick={e => { e.stopPropagation(); setPreviewImage({ url: a.fileUrl, name: a.name }); }}
+                                    style={{ color: '#8b5cf6', cursor: 'pointer', display: 'flex', background: 'none', border: 'none', padding: 0 }}
+                                    title="View Image"
+                                  >
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                  </button>
+                                )}
                                 {a.fileUrl && (
-                                  <button 
+                                  <button
                                     type="button"
                                     onClick={async (e) => {
                                       e.stopPropagation();
@@ -2842,7 +2860,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                         window.open(a.fileUrl, '_blank');
                                       }
                                     }}
-                                    style={{ color: '#3b82f6', cursor: 'pointer', display: 'flex', background: 'none', border: 'none', padding: 0 }} 
+                                    style={{ color: '#3b82f6', cursor: 'pointer', display: 'flex', background: 'none', border: 'none', padding: 0 }}
                                     title="Download"
                                   >
                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -2881,9 +2899,63 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     </div>
                   </div>
                 )}
+                </div>
 
-
-              </div>
+              {/* Image Preview Lightbox */}
+              {previewImage && (
+                <div
+                  onClick={() => setPreviewImage(null)}
+                  onKeyDown={e => e.key === 'Escape' && setPreviewImage(null)}
+                  style={{
+                    position: 'fixed', inset: 0, zIndex: 9999,
+                    background: 'rgba(0,0,0,0.82)',
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center',
+                    padding: '1.5rem'
+                  }}
+                >
+                  <div
+                    onClick={e => e.stopPropagation()}
+                    style={{
+                      background: 'white', borderRadius: '16px',
+                      boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+                      maxWidth: '90vw', maxHeight: '90vh',
+                      display: 'flex', flexDirection: 'column',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1.25rem', borderBottom: '1px solid #f1f5f9' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60vw' }}>
+                        {previewImage.name}
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
+                        <a
+                          href={previewImage.url}
+                          download={previewImage.name}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ color: '#3b82f6', display: 'flex', padding: '0.3rem', borderRadius: '6px', background: '#eff6ff' }}
+                          title="Download"
+                        >
+                          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        </a>
+                        <button
+                          onClick={() => setPreviewImage(null)}
+                          style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#94a3b8', display: 'flex', padding: '0.3rem', borderRadius: '6px', lineHeight: 1 }}
+                        >✕</button>
+                      </div>
+                    </div>
+                    <div style={{ overflow: 'auto', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <img
+                        src={previewImage.url}
+                        alt={previewImage.name}
+                        style={{ maxWidth: '80vw', maxHeight: '75vh', borderRadius: '8px', objectFit: 'contain', display: 'block' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
             );
           })()}
         </div>
@@ -3007,14 +3079,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <thead>
               <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
 
-                <th style={{ padding: '0.55rem 1rem 0.55rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>#</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Project Name</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Status</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Estimated Hours</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Billed Hours</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Billable Hours</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'capitalize' }}>Created On</th>
-                <th style={{ padding: '0.55rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', textAlign: 'center', background: 'white', textTransform: 'capitalize' }}>Actions</th>
+                <th style={{ padding: '0.55rem 1rem 0.55rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'uppercase' }}>#</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'uppercase' }}>PROJECT NAME</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'uppercase' }}>STATUS</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'uppercase' }}>ESTIMATED HOURS</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'uppercase' }}>BILLED HOURS</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'uppercase' }}>BILLABLE HOURS</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'uppercase' }}>CREATED ON</th>
+                <th style={{ padding: '0.55rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', textAlign: 'center', background: 'white', textTransform: 'uppercase' }}>ACTIONS</th>
               </tr>
             </thead>
             <tbody>

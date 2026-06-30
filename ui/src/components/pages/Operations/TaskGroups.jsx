@@ -125,9 +125,22 @@ export default function TaskGroups({ user, onBack }) {
   const [activeTab, setActiveTab] = useState('favourites');
   const [deletingTaskId, setDeletingTaskId] = useState(null);
   const [togglingFavoriteId, setTogglingFavoriteId] = useState(null);
-  const [collapsedStatusSections, setCollapsedStatusSections] = useState({});
-  const toggleStatusSection = (key) => {
-    setCollapsedStatusSections(prev => ({ ...prev, [key]: !prev[key] }));
+  const [expandedStatusSections, setExpandedStatusSections] = useState({});
+  const toggleStatusSection = (listId, statusId) => {
+    setExpandedStatusSections(prev => {
+      const current = prev[listId];
+      let defaultActive = null;
+      if (current === undefined) {
+        const list = taskLists.find(l => l.id === listId);
+        const allTasks = list?.tasks || [];
+        defaultActive = COLUMNS.find(c => allTasks.some(t => (t.status || 'To Do') === c.id))?.id || null;
+      }
+      const active = current !== undefined ? current : defaultActive;
+      return {
+        ...prev,
+        [listId]: active === statusId ? null : statusId
+      };
+    });
   };
 
   const { alert, confirm, toast } = useAlert();
@@ -556,21 +569,25 @@ export default function TaskGroups({ user, onBack }) {
           </div>
         </div>
 
-        {/* Accordion Table Body */}
-        {!isCollapsed && hasTasks && (
-          <div className="cu-list-root task-group-sections" style={{ marginTop: '0.5rem', marginBottom: '1.5rem' }}>
-            {COLUMNS.map(col => {
-              const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
-              const allTasks = list.tasks || [];
-              const statusTasks = allTasks.filter(t => (t.status || 'To Do') === col.id);
-              const sectionKey = `${list.id}_${col.id}`;
-              const isStatusCollapsed = !!collapsedStatusSections[sectionKey];
+        {!isCollapsed && hasTasks && (() => {
+          const allTasks = list.tasks || [];
+          const firstStatusWithTasks = COLUMNS.find(c => allTasks.some(t => (t.status || 'To Do') === c.id))?.id || null;
 
-              return (
-                <div key={col.id} className="cu-status-section" style={{ marginBottom: '1rem' }}>
-                  {/* Section Header */}
-                  <div className="cu-section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.35rem 0.75rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-                    <div className="cu-section-left" onClick={() => toggleStatusSection(sectionKey)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+          return (
+            <div className="cu-list-root task-group-sections" style={{ marginTop: '0.5rem', marginBottom: '1.5rem' }}>
+              {COLUMNS.map(col => {
+                const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
+                const statusTasks = allTasks.filter(t => (t.status || 'To Do') === col.id);
+                const isStatusExpanded = expandedStatusSections[list.id] !== undefined
+                  ? expandedStatusSections[list.id] === col.id
+                  : firstStatusWithTasks === col.id;
+                const isStatusCollapsed = !isStatusExpanded;
+
+                return (
+                  <div key={col.id} className="cu-status-section" style={{ marginBottom: '1rem' }}>
+                    {/* Section Header */}
+                    <div className="cu-section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.35rem 0.75rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                      <div className="cu-section-left" onClick={() => toggleStatusSection(list.id, col.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                       <span className="cu-section-chevron">
                         <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isStatusCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}>
                           <path d="M0 0l5 6 5-6z"/>
@@ -871,8 +888,9 @@ export default function TaskGroups({ user, onBack }) {
                 </div>
               );
             })}
-          </div>
-        )}
+            </div>
+          );
+        })()}
       </div>
     );
   };
