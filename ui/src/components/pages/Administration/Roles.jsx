@@ -35,6 +35,7 @@ const getActionsForModule = (modId) => {
 const MODULES = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'tasks', label: 'Tasks' },
+  { id: 'taskGroups', label: 'Task Groups' },
   { id: 'projects', label: 'Projects' },
   { id: 'teams', label: 'My Team' },
   { id: 'estimations', label: 'Estimations' },

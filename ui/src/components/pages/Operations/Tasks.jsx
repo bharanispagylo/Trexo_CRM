@@ -460,7 +460,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const commentTextareaRef = useRef(null);
   const commentPostingRef = useRef(false);
   const taskSavingRef = useRef(false);
-  const { getLevel } = usePermissions();
+  const { getLevel, can } = usePermissions();
   
   const isAssigned = () => {
     if (!task) return true;
@@ -472,6 +472,36 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
   const canEdit = getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && isAssigned());
   const canDelete = getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && isAssigned());
+
+  const isTeamLeadOrAdmin = currentUser?.role?.toLowerCase() === 'team lead' || currentUser?.role?.toLowerCase() === 'admin';
+  const viewLvl = getLevel('tasks', 'view');
+  const editLvl = getLevel('tasks', 'edit');
+  const deleteLvl = getLevel('tasks', 'delete');
+  const canView = isEdit 
+    ? (isTeamLeadOrAdmin || viewLvl === 'All' || editLvl === 'All' || deleteLvl === 'All' || ((viewLvl === 'Self' || editLvl === 'Self' || deleteLvl === 'Self') && isAssigned()))
+    : (isTeamLeadOrAdmin || getLevel('tasks', 'create') === 'All' || getLevel('tasks', 'create') === 'Self');
+
+  const isSubtaskAssigned = (sub) => {
+    if (!sub) return true;
+    const userName = (currentUser?.fullName || currentUser?.name || '').trim().toLowerCase();
+    if (!userName) return false;
+    const assignees = (sub.assignees || '').split(',').map(a => a.trim().toLowerCase());
+    return assignees.includes(userName) || (currentUser?.id && assignees.includes(currentUser.id.toLowerCase().trim()));
+  };
+
+  const canViewSubtask = (sub) => {
+    return isTeamLeadOrAdmin ||
+      viewLvl === 'All' || editLvl === 'All' || deleteLvl === 'All' ||
+      ((viewLvl === 'Self' || editLvl === 'Self' || deleteLvl === 'Self') && isSubtaskAssigned(sub));
+  };
+
+  const canDeleteSubtask = (sub) => {
+    return isTeamLeadOrAdmin ||
+      deleteLvl === 'All' ||
+      (deleteLvl === 'Self' && isSubtaskAssigned(sub));
+  };
+
+  const visibleSubtasks = subtasks.filter(canViewSubtask);
 
   const fetchComments = useCallback(() => {
     if (isEdit && task?.id) {
@@ -1099,6 +1129,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   };
   
   const handleAddWorkLog = async (isBilledArg = false) => {
+    if (!canEdit) {
+      alert("You do not have permission to modify work logs.", "error", "Permission Denied");
+      return;
+    }
     if (!workLogForm.hoursWorked) {
       alert("Please fill in Hours.", "warning", "Required");
       return;
@@ -1139,6 +1173,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   };
 
   const handleDeleteWorkLog = async (logId) => {
+    if (!canDelete) {
+      alert("You do not have permission to delete work logs.", "error", "Permission Denied");
+      return;
+    }
     confirm("Delete this work log?", async () => {
       setWorkLogSaving(true);
       try {
@@ -1154,6 +1192,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   };
 
   const handleAddSubtaskDrawer = async () => {
+    if (!can('tasks', 'create') || !canEdit) {
+      alert("You do not have permission to create subtasks.", "error", "Permission Denied");
+      return;
+    }
     if (!newSubtaskTitle.trim()) {
       alert("Subtask title is required", "warning", "Required");
       return;
@@ -1198,6 +1240,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   };
 
   const handleDeleteSubtaskDrawer = async (subtaskId) => {
+    const sub = subtasks.find(s => s.id === subtaskId);
+    if (!sub || !canDeleteSubtask(sub)) {
+      alert("You do not have permission to delete this subtask.", "error", "Permission Denied");
+      return;
+    }
     confirm("Move this subtask to Archive?", async () => {
       try {
         const sub = subtasks.find(s => s.id === subtaskId);
@@ -1729,6 +1776,32 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   );
 };
 
+  if (!canView) {
+    return (
+      <div className="saas-task-page">
+        <div className="saas-nav">
+          <div className="saas-nav-left">
+            <button className="saas-back-btn" onClick={onClose}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+            <span className="saas-breadcrumb-active">Access Denied</span>
+          </div>
+          <div className="saas-nav-right">
+            <button className="saas-btn-nav saas-btn-secondary" onClick={onClose}>Close</button>
+          </div>
+        </div>
+        <div className="saas-main-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px', width: '100%', color: '#64748b' }}>
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginBottom: '1rem', color: '#ef4444' }}>
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <h3 style={{ color: '#0f172a', margin: '0 0 0.5rem 0', fontSize: '1.25rem', fontWeight: 600 }}>Access Denied</h3>
+          <p style={{ margin: 0, textAlign: 'center', fontSize: '0.9rem' }}>You do not have permission to access this task.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="saas-task-page">
       {/* Top Navigation Bar */}
@@ -1902,7 +1975,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 className={`saas-tab-header-btn ${activeTab === 'subtasks' ? 'active' : ''}`}
                 onClick={() => setActiveTab('subtasks')}
               >
-                Subtasks ({subtasks.length})
+                Subtasks ({visibleSubtasks.length})
               </button>
             )}
             {currentUser?.role?.toLowerCase() === 'admin' && !task?.parentId && (
@@ -2262,11 +2335,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       <div style={{ marginBottom: '0.75rem' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                           <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Timespent</label>
-                          <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                          <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} disabled={!canEdit} />
                         </div>
                       </div>
                       <div className="worklog-btn-row" style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button className="saas-btn-primary" onClick={() => handleAddWorkLog(false)} disabled={workLogSaving} style={{ padding: '0.5rem 1rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                        <button className="saas-btn-primary" onClick={() => handleAddWorkLog(false)} disabled={workLogSaving || !canEdit} style={{ padding: '0.5rem 1rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: canEdit ? 'pointer' : 'default', opacity: canEdit ? 1 : 0.6 }}>
                           {workLogSaving ? 'Saving...' : (workLogForm.id ? 'Update Work Log' : 'Add Work Log')}
                         </button>
                         {workLogForm.id && (
@@ -2276,8 +2349,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                               const taskDate = task?.createdAt ? new Date(task.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
                               setWorkLogForm({ logDate: taskDate, hoursWorked: '', description: '', isBilled: false, id: null });
                             }}
-                            disabled={workLogSaving}
-                            style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}
+                            disabled={workLogSaving || !canEdit}
+                            style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: canEdit ? 'pointer' : 'default' }}
                           >
                             Cancel Edit
                           </button>
@@ -2315,20 +2388,24 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                   <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{log.hoursWorked}h</td>
                                   <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
                                     <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                      <button title="Edit" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', background: 'white', cursor: 'pointer' }} onClick={() => {
-                                        setWorkLogForm({
-                                          id: log.id,
-                                          logDate: new Date(log.logDate).toISOString().split('T')[0],
-                                          hoursWorked: String(log.hoursWorked),
-                                          description: log.description || '',
-                                          isBilled: false
-                                        });
-                                      }}>
-                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                      </button>
-                                      <button title="Delete" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', background: '#fef2f2', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
-                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                      </button>
+                                      {canEdit && (
+                                        <button title="Edit" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', background: 'white', cursor: 'pointer' }} onClick={() => {
+                                          setWorkLogForm({
+                                            id: log.id,
+                                            logDate: new Date(log.logDate).toISOString().split('T')[0],
+                                            hoursWorked: String(log.hoursWorked),
+                                            description: log.description || '',
+                                            isBilled: false
+                                          });
+                                        }}>
+                                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                        </button>
+                                      )}
+                                      {canDelete && (
+                                        <button title="Delete" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', background: '#fef2f2', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
+                                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                        </button>
+                                      )}
                                     </div>
                                   </td>
                                 </tr>
@@ -2363,19 +2440,20 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         value={workLogForm.logDate} 
                         onChange={e => setWorkLogForm({...workLogForm, logDate: e.target.value})} 
                         style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} 
+                        disabled={!canEdit}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                       <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Hours</label>
-                      <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                      <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} disabled={!canEdit} />
                     </div>
                   </div>
                   <div style={{ marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                     <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Description</label>
-                    <input type="text" className="saas-input" placeholder="What did you work on?" value={workLogForm.description} onChange={e => setWorkLogForm({...workLogForm, description: e.target.value})} style={{ width: '100%', boxSizing: 'border-box' }} />
+                    <input type="text" className="saas-input" placeholder="What did you work on?" value={workLogForm.description} onChange={e => setWorkLogForm({...workLogForm, description: e.target.value})} style={{ width: '100%', boxSizing: 'border-box' }} disabled={!canEdit} />
                   </div>
                   <section style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="saas-btn-primary" onClick={() => handleAddWorkLog(true)} disabled={workLogSaving} style={{ width: 'auto', minWidth: '150px', padding: '0.5rem 1rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                    <button className="saas-btn-primary" onClick={() => handleAddWorkLog(true)} disabled={workLogSaving || !canEdit} style={{ width: 'auto', minWidth: '150px', padding: '0.5rem 1rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: canEdit ? 'pointer' : 'default', opacity: canEdit ? 1 : 0.6 }}>
                       {workLogSaving ? 'Saving...' : (workLogForm.id ? 'Update Billing Log' : 'Add Billing Log')}
                     </button>
                     {workLogForm.id && (
@@ -2385,8 +2463,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                           const taskDate = task?.createdAt ? new Date(task.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
                           setWorkLogForm({ logDate: taskDate, hoursWorked: '', description: '', isBilled: false, id: null });
                         }}
-                        disabled={workLogSaving}
-                        style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}
+                        disabled={workLogSaving || !canEdit}
+                        style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: canEdit ? 'pointer' : 'default' }}
                       >
                         Cancel Edit
                       </button>
@@ -2419,20 +2497,24 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                             <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.description || '-'}</td>
                             <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
                               <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                <button title="Edit" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', background: 'white', cursor: 'pointer' }} onClick={() => {
-                                  setWorkLogForm({
-                                    id: log.id,
-                                    logDate: new Date(log.logDate).toISOString().split('T')[0],
-                                    hoursWorked: log.hoursWorked,
-                                    description: log.description || '',
-                                    isBilled: true
-                                  });
-                                }}>
-                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                </button>
-                                <button title="Delete" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', background: '#fef2f2', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
-                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                </button>
+                                {canEdit && (
+                                  <button title="Edit" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', background: 'white', cursor: 'pointer' }} onClick={() => {
+                                    setWorkLogForm({
+                                      id: log.id,
+                                      logDate: new Date(log.logDate).toISOString().split('T')[0],
+                                      hoursWorked: log.hoursWorked,
+                                      description: log.description || '',
+                                      isBilled: true
+                                    });
+                                  }}>
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                  </button>
+                                )}
+                                {canDelete && (
+                                  <button title="Delete" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', background: '#fef2f2', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -2459,7 +2541,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <button 
                     type="button" 
                     onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                    disabled={uploading}
+                    disabled={uploading || !canEdit}
                     style={{
                       background: 'white',
                       border: '1px solid #e2e8f0',
@@ -2633,7 +2715,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                   </button>
 
                                   {/* Delete/Action Button */}
-                                  {(isEditing || canEdit) && (
+                                  {canEdit && (
                                     <button 
                                       type="button" 
                                       onClick={async () => {
@@ -2707,11 +2789,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             {activeTab === 'subtasks' && isEdit && (
               <div className="saas-subtasks-pane animate-fade-in" style={{ padding: '0.25rem 0' }}>
                 <h2 style={{ fontSize: '1.15rem', fontWeight: '700', margin: '0 0 1.5rem 0', color: '#0f172a' }}>
-                  Subtasks ({subtasks.length})
+                  Subtasks ({visibleSubtasks.length})
                 </h2>
                 
                 {/* Form to add subtask */}
-                <div style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', boxSizing: 'border-box' }}>
+                {can('tasks', 'create') && canEdit && (
+                  <div style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', boxSizing: 'border-box' }}>
                   <h4 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '0.9rem', fontWeight: '700' }}>Add New Subtask</h4>
                   <div className="subtask-form-grid-1">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
@@ -2776,6 +2859,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* Subtask List Table */}
                 <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
@@ -2792,14 +2876,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         </tr>
                       </thead>
                       <tbody>
-                        {subtasks.length === 0 ? (
+                        {visibleSubtasks.length === 0 ? (
                           <tr>
                             <td colSpan="6" style={{ padding: '3rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem' }}>
                               No subtasks created for this task yet.
                             </td>
                           </tr>
                         ) : (
-                          subtasks.map(sub => {
+                          visibleSubtasks.map(sub => {
                             const subAssigneeObj = users.find(u => u.id === sub.assignees);
                             const subAssigneeName = subAssigneeObj ? (subAssigneeObj.fullName || `${subAssigneeObj.firstName || ''} ${subAssigneeObj.lastName || ''}`.trim() || 'Unknown') : 'Unassigned';
                             const subRelDate = formatRelativeDueDate(sub.dueDate);
@@ -2866,13 +2950,15 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                       </svg>
                                     </button>
-                                    <button 
-                                      title="Delete Subtask" 
-                                      style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', background: '#fef2f2', cursor: 'pointer' }} 
-                                      onClick={() => handleDeleteSubtaskDrawer(sub.id)}
-                                    >
-                                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                    </button>
+                                    {canDeleteSubtask(sub) && (
+                                      <button 
+                                        title="Delete Subtask" 
+                                        style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', background: '#fef2f2', cursor: 'pointer' }} 
+                                        onClick={() => handleDeleteSubtaskDrawer(sub.id)}
+                                      >
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                      </button>
+                                    )}
                                   </div>
                                 </td>
                               </tr>

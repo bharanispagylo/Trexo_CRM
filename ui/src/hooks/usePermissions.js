@@ -27,6 +27,7 @@ export function PermissionProvider({ children, userRole }) {
           setPermissions({
             dashboard: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
             tasks: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
+            taskGroups: { create: 'All', view: 'All', edit: 'All', delete: 'All' },
             projects: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
             teams: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
             estimations: { create: 'All', view: 'All', edit: 'All', delete: 'All', assign: 'All' },
