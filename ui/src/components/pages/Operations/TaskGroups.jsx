@@ -150,6 +150,50 @@ export default function TaskGroups({ user, onBack }) {
   const { alert, confirm, toast } = useAlert();
   const { can, getLevel } = usePermissions();
 
+  const isTeamLeadOrAdmin = user?.role?.toLowerCase() === 'team lead' || user?.role?.toLowerCase() === 'admin';
+  const tgViewLevel = getLevel('taskGroups', 'view');
+  const tgEditLevel = getLevel('taskGroups', 'edit');
+  const tgDeleteLevel = getLevel('taskGroups', 'delete');
+  const tgCreateLevel = getLevel('taskGroups', 'create');
+
+  const isMemberOfProject = (projectId) => {
+    if (!projectId) return false;
+    const proj = projects.find(p => p.id === projectId);
+    if (!proj) return false;
+    const memberIds = (proj.members || '').split(',').map(m => m.trim().toLowerCase()).filter(Boolean);
+    const userId = (user?.id || '').trim().toLowerCase();
+    return userId && memberIds.includes(userId);
+  };
+
+  const isSelfTaskGroup = (list) => {
+    return isMemberOfProject(list?.projectId);
+  };
+
+  const canViewTG = (list) => {
+    return isTeamLeadOrAdmin ||
+      tgViewLevel === 'All' || tgEditLevel === 'All' || tgDeleteLevel === 'All' ||
+      ((tgViewLevel === 'Self' || tgEditLevel === 'Self' || tgDeleteLevel === 'Self') && isSelfTaskGroup(list));
+  };
+
+  const canEditTG = (list) => {
+    return isTeamLeadOrAdmin ||
+      tgEditLevel === 'All' ||
+      (tgEditLevel === 'Self' && isSelfTaskGroup(list));
+  };
+
+  // eslint-disable-next-line no-unused-vars
+  const canDeleteTG = (list) => {
+    return isTeamLeadOrAdmin ||
+      tgDeleteLevel === 'All' ||
+      (tgDeleteLevel === 'Self' && isSelfTaskGroup(list));
+  };
+
+  const canCreateTG = () => {
+    return isTeamLeadOrAdmin ||
+      tgCreateLevel === 'All' ||
+      tgCreateLevel === 'Self';
+  };
+
   const canEditTask = (task) => {
     if (!task) return false;
     if (user?.role?.toLowerCase() === 'admin') return true;
@@ -275,6 +319,10 @@ export default function TaskGroups({ user, onBack }) {
   // Create Task Group
   const handleSaveGroup = async (e) => {
     e.preventDefault();
+    if (!canCreateTG()) {
+      alert('You do not have permission to create task groups.', 'error');
+      return;
+    }
     if (isSavingGroup) return;
     if (!groupForm.name.trim()) {
       alert('Task Group Name is required.', 'warning');
@@ -305,6 +353,11 @@ export default function TaskGroups({ user, onBack }) {
 
   // Inline Rename
   const handleRenameList = async (listId) => {
+    const list = taskLists.find(l => l.id === listId);
+    if (!list || !canEditTG(list)) {
+      alert('You do not have permission to rename this task group.', 'error');
+      return;
+    }
     if (!editingListName.trim()) {
       alert('Task Group name cannot be empty.', 'warning');
       return;
@@ -464,8 +517,9 @@ export default function TaskGroups({ user, onBack }) {
   };
 
   const sortedTaskLists = sortTaskGroups(taskLists);
-  const favouriteLists = getFilteredLists(sortedTaskLists.filter(l => l.isFavorite));
-  const allLists = getFilteredLists(sortedTaskLists);
+  const visibleTaskLists = sortedTaskLists.filter(canViewTG);
+  const favouriteLists = getFilteredLists(visibleTaskLists.filter(l => l.isFavorite));
+  const allLists = getFilteredLists(visibleTaskLists);
 
   if (loading) {
     return <div className="tg-loading-screen">Loading Task Groups...</div>;
@@ -584,7 +638,7 @@ export default function TaskGroups({ user, onBack }) {
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               </button>
             )}
-            {can('projects', 'edit') && editingListId !== list.id && (
+            {canEditTG(list) && editingListId !== list.id && (
               <button
                 style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
                 title="Rename Category"
@@ -943,7 +997,7 @@ export default function TaskGroups({ user, onBack }) {
               style={{ minWidth: '280px' }}
             />
           </div>
-          {can('projects', 'create') && (
+          {canCreateTG() && (
             <button className="tg-btn-primary" onClick={() => { setGroupForm({ name: '', projectId: '' }); setShowGroupModal(true); }}>
               <span>+ Add Task Group</span>
             </button>
@@ -1022,7 +1076,7 @@ export default function TaskGroups({ user, onBack }) {
                     onChange={(e) => setGroupForm({ ...groupForm, projectId: e.target.value })}
                   >
                     <option value="">-- Select Project --</option>
-                    {projects.map((proj) => (
+                    {projects.filter(proj => tgCreateLevel === 'All' || isTeamLeadOrAdmin || isMemberOfProject(proj.id)).map((proj) => (
                       <option key={proj.id} value={proj.id}>
                         {proj.name}
                       </option>

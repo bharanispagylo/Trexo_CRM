@@ -330,6 +330,8 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         setActiveTab('overview');
       } else if (activeTab === 'tasks' && !can('tasks', 'view') && user?.role?.toLowerCase() !== 'admin') {
         setActiveTab('overview');
+      } else if (activeTab === 'task-groups' && !can('taskGroups', 'view') && user?.role?.toLowerCase() !== 'admin') {
+        setActiveTab('overview');
       } else if (activeTab === 'reports'             && !canReport('tasks-report'))         { setActiveTab('overview');
       } else if (activeTab === 'reports-status-based' && !canReport('reports-status-based')) { setActiveTab('overview');
       } else if (activeTab === 'timesheet-overall'    && !canReport('timesheet-overall'))    { setActiveTab('overview');
@@ -588,7 +590,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         />
       );
       case 'task-groups':
-        if (!can('tasks', 'view') && user?.role?.toLowerCase() !== 'admin') {
+        if (!can('taskGroups', 'view') && user?.role?.toLowerCase() !== 'admin') {
           return renderOverview(setActiveTab, (taskData) => {
             setSearchSelectedTask(taskData);
             setIsTaskDetailOpen(true);
@@ -796,7 +798,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
           <div className="saas-nav-group">
             {can('tasks', 'view') && <NavItem id="tasks" label="Tasks" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>} />}
-            {can('tasks', 'view') && <NavItem id="task-groups" label="Task Groups" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>} />}
+            {can('taskGroups', 'view') && <NavItem id="task-groups" label="Task Groups" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>} />}
             {can('projects', 'view') && <NavItem id="projects" label="Projects" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>} />}
             {can('teams', 'view') && <NavItem id="track-team" label="My Team" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>} />}
             {can('estimations', 'view') && <NavItem id="estimations" label="Estimations" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>} />}
