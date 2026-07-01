@@ -1723,7 +1723,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                                   {/* Task Table if there are tasks in this status and section is not collapsed */}
                                   {!isStatusCollapsed && statusTasks.length > 0 && (
-                                    <div className="cu-table-wrapper" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: 'white', marginTop: '0.5rem', marginLeft: '2rem', marginRight: '1rem' }}>
+                                    <div className="cu-table-wrapper" style={{ overflow: 'hidden', background: 'white', marginTop: '0.5rem', marginLeft: '2rem', marginRight: '1rem' }}>
                                       <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                         <thead>
                                           <tr className="cu-thead-row" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>

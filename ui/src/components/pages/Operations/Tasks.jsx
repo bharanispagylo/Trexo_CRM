@@ -3459,10 +3459,6 @@ function TaskCardWithDates({ task, onDragStart, onClick, onDelete, currentUser, 
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', margin: '0.4rem 0', padding: '0.4rem 0.5rem', background: '#f8fafc', borderRadius: '6px', border: '1px solid #f1f5f9', fontSize: '0.72rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ color: '#64748b' }}>Start:</span>
-          <span style={{ fontWeight: 600, color: startVal ? '#334155' : '#94a3b8' }}>{startVal || 'Not started'}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ color: '#64748b' }}>Delivery (Due):</span>
           <span style={{ fontWeight: 600, color: deliveryVal ? '#334155' : '#94a3b8' }}>{deliveryVal || 'No deadline'}</span>
         </div>
@@ -3628,6 +3624,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const [expandedListId, setExpandedListId] = useState('__first__');
   const toggleListAccordion = (id) => {
     setExpandedListId(prev => prev === id ? null : id);
+  };
+
+  const [expandedMobileStatusKey, setExpandedMobileStatusKey] = useState('__first__');
+  const toggleMobileStatusGroup = (key) => {
+    setExpandedMobileStatusKey(prev => prev === key ? null : key);
   };
 
   const initialSelectedTaskId = useRef(null);
@@ -4589,38 +4590,60 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                   )}
                 </div>
               )}
-              {finalProjectGroups.map(projGroup => {
-                const allProjTasks = projGroup.lists.flatMap(l => l.tasks);
-                if (allProjTasks.length === 0) return null;
-                return (
-                  <div key={projGroup.id} className="cu-mob-proj-section">
-
-
-                    {COLUMNS.map(col => {
+              {(() => {
+                let firstKey = null;
+                for (const projGroup of finalProjectGroups) {
+                  const allProjTasks = projGroup.lists.flatMap(l => l.tasks);
+                  if (allProjTasks.length > 0) {
+                    for (const col of COLUMNS) {
                       const statusTasks = allProjTasks.filter(t => (t.status || 'To Do') === col.id);
-                      if (statusTasks.length === 0) return null;
-                      const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#ffffff', dotColor: '#94a3b8' };
-                      return (
-                        <div key={col.id} className="cu-mob-status-group">
-                          <div className="cu-mob-status-header">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <svg viewBox="0 0 10 6" width="9" height="9" fill="#94a3b8"><path d="M0 0l5 6 5-6z"/></svg>
-                              <span className="cu-mob-status-pill" style={{ background: meta.bg, color: meta.fg, border: meta.border || 'none', fontWeight: col.id === 'To Do' ? '700' : '600' }}>
-                                {col.label.toUpperCase()}
-                              </span>
-                              <span className="cu-mob-status-count">{statusTasks.length} Task{statusTasks.length !== 1 ? 's' : ''}</span>
-                            </div>
-                            {can('tasks', 'create') && (
-                              <button className="cu-mob-add-btn" onClick={e => {
-                                e.stopPropagation();
-                                const list = projGroup.lists[0];
-                                const p = taskProjects.find(pr => pr.id === projGroup.id);
-                                openNewTask(col.id, projGroup.name, projGroup.id, list && !String(list.id).startsWith('gen_') ? list.id : null, p ? p.clientId : null);
-                              }}>+ Add</button>
-                            )}
-                          </div>
-                          {(() => {
-                             const mainTasks = statusTasks.filter(t => !t.parentId || !allProjTasks.some(p => p.id === t.parentId));
+                      if (statusTasks.length > 0) {
+                        firstKey = `${projGroup.id}_${col.id}`;
+                        break;
+                      }
+                    }
+                  }
+                  if (firstKey) break;
+                }
+
+                return finalProjectGroups.map(projGroup => {
+                  const allProjTasks = projGroup.lists.flatMap(l => l.tasks);
+                  if (allProjTasks.length === 0) return null;
+                  return (
+                    <div key={projGroup.id} className="cu-mob-proj-section">
+                      {COLUMNS.map(col => {
+                        const statusTasks = allProjTasks.filter(t => (t.status || 'To Do') === col.id);
+                        if (statusTasks.length === 0) return null;
+                        const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#ffffff', dotColor: '#94a3b8' };
+                        const key = `${projGroup.id}_${col.id}`;
+                        const isMobCollapsed = expandedMobileStatusKey === '__first__'
+                          ? key !== firstKey
+                          : expandedMobileStatusKey !== key;
+
+                        return (
+                          <div key={col.id} className="cu-mob-status-group">
+                            {(() => {
+                              return (
+                                <>
+                                  <div className="cu-mob-status-header" style={{ background: 'transparent', borderTop: 'none', borderBottom: 'none' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => toggleMobileStatusGroup(key)}>
+                                    <svg viewBox="0 0 10 6" width="9" height="9" fill="#94a3b8" style={{ transform: isMobCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}><path d="M0 0l5 6 5-6z"/></svg>
+                                    <span className="cu-mob-status-pill" style={{ color: meta.bg, fontWeight: col.id === 'To Do' ? '700' : '600', padding: '0', background: 'transparent', border: 'none' }}>
+                                      {col.label.toUpperCase()}
+                                    </span>
+                                    <span className="cu-mob-status-count">{statusTasks.length} Task{statusTasks.length !== 1 ? 's' : ''}</span>
+                                  </div>
+                                  {can('tasks', 'create') && (
+                                    <button className="cu-mob-add-btn" onClick={e => {
+                                      e.stopPropagation();
+                                      const list = projGroup.lists[0];
+                                      const p = taskProjects.find(pr => pr.id === projGroup.id);
+                                      openNewTask(col.id, projGroup.name, projGroup.id, list && !String(list.id).startsWith('gen_') ? list.id : null, p ? p.clientId : null);
+                                    }}>+ Add</button>
+                                  )}
+                                </div>
+                                {!isMobCollapsed && (() => {
+                                   const mainTasks = statusTasks.filter(t => !t.parentId || !allProjTasks.some(p => p.id === t.parentId));
                              
                              return mainTasks.flatMap(task => {
                                const subTasks = tasks.filter(t => t.parentId === task.id);
@@ -4769,16 +4792,20 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                     </div>
                                   );
                                 }
-                               return rows;
-                             });
-                           })()}
+                                return rows;
+                              });
+                            })()}
+                              </>
+                            );
+                          })()}
                         </div>
                       );
                     })}
                   </div>
                 );
-              })}
-            </div>
+              });
+            })()}
+          </div>
 
             {/* ── Desktop: project → task list view (hidden on mobile) ── */}
             <div className="cu-list-root all-tasks-list">
@@ -5275,17 +5302,21 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 const groupTasks = flatSorted.filter(t => (t.status || 'To Do') === col.id);
                 if (groupTasks.length === 0) return null;
                 const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#ffffff', dotColor: '#94a3b8' };
+                const isCollapsed = expandedGroupId !== col.id;
                 return (
                   <div key={col.id} className="cu-mobile-status-group">
                     {/* Status group header */}
-                    <div className="cu-mobile-group-header">
-                      <span className="cu-mobile-group-pill" style={{ background: meta.bg, color: meta.fg, border: meta.border || 'none', fontWeight: col.id === 'To Do' ? '700' : '600' }}>
+                    <div className="cu-mobile-group-header" style={{ background: 'transparent', borderTop: 'none', borderBottom: 'none', cursor: 'pointer' }} onClick={() => toggleGroup(col.id)}>
+                      <span className="cu-section-chevron" style={{ display: 'flex', alignItems: 'center', marginRight: '4px' }}>
+                        <svg viewBox="0 0 10 6" width="9" height="9" fill="#94a3b8" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s" }}><path d="M0 0l5 6 5-6z"/></svg>
+                      </span>
+                      <span className="cu-mobile-group-pill" style={{ color: meta.bg, fontWeight: col.id === 'To Do' ? '700' : '600', padding: '0', background: 'transparent', border: 'none' }}>
                         {col.label.toUpperCase()}
                       </span>
                       <span className="cu-mobile-group-count">{groupTasks.length}</span>
                     </div>
                     {/* Tasks in this group */}
-                    {(() => {
+                    {!isCollapsed && (() => {
                       const mainTasks = groupTasks.filter(t => !t.parentId || !flatSorted.some(p => p.id === t.parentId));
                       
                       return mainTasks.flatMap(task => {
