@@ -816,6 +816,12 @@
     margin: 0 0.25rem;
   }
 
+  .saas-search-results-overlay {
+    width: 290px;
+    right: -40px;
+    left: auto;
+  }
+
   .saas-search-kbd {
     display: none;
   }
@@ -935,7 +941,39 @@
 
 @media (max-width: 480px) {
   .saas-header-center-search {
-    display: none;
+    display: flex;
+    flex: 1;
+    min-width: 80px;
+    max-width: 145px;
+    padding: 0.3rem 0.5rem;
+    margin: 0 0.2rem;
+    gap: 0.3rem;
+    border-radius: 8px;
+  }
+  .saas-header-center-search svg {
+    width: 13px;
+    height: 13px;
+  }
+  .saas-header-center-search input {
+    font-size: 0.78rem;
+  }
+  .saas-search-results-overlay {
+    width: 270px;
+    right: -30px;
+  }
+  .saas-breadcrumbs {
+    font-size: 0.72rem;
+    max-width: 70px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .saas-breadcrumb-item {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    max-width: 70px;
   }
 }
 

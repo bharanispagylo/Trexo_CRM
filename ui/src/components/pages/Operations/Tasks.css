@@ -4177,7 +4177,6 @@
 }
 
 .project-task-lists-wrapper {
-  padding-left: 1.5rem;
   border-left: 2px solid #e2e8f0;
   margin-left: 0.75rem;
 }
@@ -5754,4 +5753,16 @@
     display: none !important;
   }
 }
+
+/* Custom created row display behavior */
+.saas-meta-created-row {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .saas-meta-created-row {
+    display: flex !important;
+  }
+}
+
 

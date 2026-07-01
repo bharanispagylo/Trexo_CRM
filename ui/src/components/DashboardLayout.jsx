@@ -684,39 +684,42 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
     }
   };
 
+  const navigateToTab = (id) => {
+    if (id === 'projects') {
+      setProjectsKey(prev => prev + 1);
+      setSearchSelectedProject(null);
+      setInitialProjectName(null);
+      setSelectedProjectName(null);
+    } else if (id === 'tasks') {
+      setTasksKey(prev => prev + 1);
+      setSearchSelectedTask(null);
+      setInitialTaskId(null);
+      setSelectedTaskId(null);
+      setIsTaskDetailOpen(false);
+    } else if (id === 'task-groups') {
+      setTaskGroupsKey(prev => prev + 1);
+    } else if (id === 'track-team') {
+      setTrackTeamKey(prev => prev + 1);
+      setTeamMemberAssigneeFilter(null);
+    } else if (id === 'estimations') {
+      setEstimationsKey(prev => prev + 1);
+    } else if (id === 'clients') {
+      setClientsKey(prev => prev + 1);
+    } else if (id === 'users') {
+      setUsersKey(prev => prev + 1);
+      setUserToEdit(null);
+    } else if (id === 'roles') {
+      setRolesKey(prev => prev + 1);
+    }
+    setActiveTab(id);
+    setSidebarOpen(false);
+    setMobileMoreOpen(false);
+  };
+
   const NavItem = ({ id, label, icon }) => (
     <button 
       className={`nav-item ${activeTab === id ? 'active' : ''}`} 
-      onClick={() => {
-        if (id === 'projects') {
-          setProjectsKey(prev => prev + 1);
-          setSearchSelectedProject(null);
-          setInitialProjectName(null);
-          setSelectedProjectName(null);
-        } else if (id === 'tasks') {
-          setTasksKey(prev => prev + 1);
-          setSearchSelectedTask(null);
-          setInitialTaskId(null);
-          setSelectedTaskId(null);
-          setIsTaskDetailOpen(false);
-        } else if (id === 'task-groups') {
-          setTaskGroupsKey(prev => prev + 1);
-        } else if (id === 'track-team') {
-          setTrackTeamKey(prev => prev + 1);
-          setTeamMemberAssigneeFilter(null);
-        } else if (id === 'estimations') {
-          setEstimationsKey(prev => prev + 1);
-        } else if (id === 'clients') {
-          setClientsKey(prev => prev + 1);
-        } else if (id === 'users') {
-          setUsersKey(prev => prev + 1);
-          setUserToEdit(null);
-        } else if (id === 'roles') {
-          setRolesKey(prev => prev + 1);
-        }
-        setActiveTab(id);
-        setSidebarOpen(false);
-      }}
+      onClick={() => navigateToTab(id)}
     >
       <span className="nav-icon">{icon}</span>
       <span className="nav-label">{label}</span>
@@ -885,37 +888,37 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {canReport('tasks-report') && (
-                  <button onClick={() => { setActiveTab('reports'); setMobileMoreOpen(false); setMobileReportsOpen(false); }}
+                  <button onClick={() => { navigateToTab('reports'); setMobileReportsOpen(false); }}
                     style={{ padding: '0.9rem 1.5rem', textAlign: 'left', background: activeTab === 'reports' ? '#eff6ff' : 'none', border: 'none', borderBottom: '1px solid #f1f5f9', fontWeight: activeTab === 'reports' ? '700' : '500', color: activeTab === 'reports' ? '#2563eb' : '#0f172a', cursor: 'pointer', fontSize: '0.95rem' }}>
                     Tasks - Delivery
                   </button>
                 )}
                 {canReport('reports-status-based') && (
-                  <button onClick={() => { setActiveTab('reports-status-based'); setMobileMoreOpen(false); setMobileReportsOpen(false); }}
+                  <button onClick={() => { navigateToTab('reports-status-based'); setMobileReportsOpen(false); }}
                     style={{ padding: '0.9rem 1.5rem', textAlign: 'left', background: activeTab === 'reports-status-based' ? '#eff6ff' : 'none', border: 'none', borderBottom: '1px solid #f1f5f9', fontWeight: activeTab === 'reports-status-based' ? '700' : '500', color: activeTab === 'reports-status-based' ? '#2563eb' : '#0f172a', cursor: 'pointer', fontSize: '0.95rem' }}>
                     Tasks - Work Log
                   </button>
                 )}
                 {canReport('timesheet-overall') && (
-                  <button onClick={() => { setActiveTab('timesheet-overall'); setMobileMoreOpen(false); setMobileReportsOpen(false); }}
+                  <button onClick={() => { navigateToTab('timesheet-overall'); setMobileReportsOpen(false); }}
                     style={{ padding: '0.9rem 1.5rem', textAlign: 'left', background: activeTab === 'timesheet-overall' ? '#eff6ff' : 'none', border: 'none', borderBottom: '1px solid #f1f5f9', fontWeight: activeTab === 'timesheet-overall' ? '700' : '500', color: activeTab === 'timesheet-overall' ? '#2563eb' : '#0f172a', cursor: 'pointer', fontSize: '0.95rem' }}>
                     Timesheet - Summary
                   </button>
                 )}
                 {canReport('timesheet-individual') && (
-                  <button onClick={() => { setActiveTab('timesheet-individual'); setMobileMoreOpen(false); setMobileReportsOpen(false); }}
+                  <button onClick={() => { navigateToTab('timesheet-individual'); setMobileMoreOpen(false); setMobileReportsOpen(meta => false); }}
                     style={{ padding: '0.9rem 1.5rem', textAlign: 'left', background: activeTab === 'timesheet-individual' ? '#eff6ff' : 'none', border: 'none', borderBottom: '1px solid #f1f5f9', fontWeight: activeTab === 'timesheet-individual' ? '700' : '500', color: activeTab === 'timesheet-individual' ? '#2563eb' : '#0f172a', cursor: 'pointer', fontSize: '0.95rem' }}>
                     Timesheet - Individual
                   </button>
                 )}
                 {canReport('daily-load-all') && (
-                  <button onClick={() => { setActiveTab('daily-load-all'); setMobileMoreOpen(false); setMobileReportsOpen(false); }}
+                  <button onClick={() => { navigateToTab('daily-load-all'); setMobileReportsOpen(false); }}
                     style={{ padding: '0.9rem 1.5rem', textAlign: 'left', background: activeTab === 'daily-load-all' ? '#eff6ff' : 'none', border: 'none', borderBottom: '1px solid #f1f5f9', fontWeight: activeTab === 'daily-load-all' ? '700' : '500', color: activeTab === 'daily-load-all' ? '#2563eb' : '#0f172a', cursor: 'pointer', fontSize: '0.95rem' }}>
                     Daily Load - All
                   </button>
                 )}
                 {canReport('daily-load-individual') && (
-                  <button onClick={() => { setActiveTab('daily-load-individual'); setMobileMoreOpen(false); setMobileReportsOpen(false); }}
+                  <button onClick={() => { navigateToTab('daily-load-individual'); setMobileReportsOpen(meta => false); }}
                     style={{ padding: '0.9rem 1.5rem', textAlign: 'left', background: activeTab === 'daily-load-individual' ? '#eff6ff' : 'none', border: 'none', borderBottom: '1px solid #f1f5f9', fontWeight: activeTab === 'daily-load-individual' ? '700' : '500', color: activeTab === 'daily-load-individual' ? '#2563eb' : '#0f172a', cursor: 'pointer', fontSize: '0.95rem' }}>
                     Daily Load - Individual
                   </button>
@@ -928,7 +931,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
               {drawerItems.map(item => (
                 <div key={item.id} className="more-item" onClick={() => {
                   if (item.id === 'reports') { setMobileReportsOpen(true); }
-                  else { setActiveTab(item.id); setMobileMoreOpen(false); }
+                  else { navigateToTab(item.id); }
                 }}>
                   <div className="more-icon" style={{ background: item.drawerBg }}>
                     {item.drawerIcon}
@@ -943,12 +946,12 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
       {/* MOBILE BOTTOM FIXED NAVIGATION TAB BAR */}
       <nav className="saas-mobile-bottom-nav">
-        <button className={`mobile-nav-btn ${activeTab === 'overview' && !mobileMoreOpen ? 'active' : ''}`} onClick={() => { setActiveTab('overview'); setMobileMoreOpen(false); }}>
+        <button className={`mobile-nav-btn ${activeTab === 'overview' && !mobileMoreOpen ? 'active' : ''}`} onClick={() => navigateToTab('overview')}>
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
           <span className="mobile-nav-label">Home</span>
         </button>
         {bottomNavItems.map(item => (
-          <button key={item.id} className={`mobile-nav-btn ${activeTab === item.id && !mobileMoreOpen ? 'active' : ''}`} onClick={() => { setActiveTab(item.id); setMobileMoreOpen(false); }}>
+          <button key={item.id} className={`mobile-nav-btn ${activeTab === item.id && !mobileMoreOpen ? 'active' : ''}`} onClick={() => navigateToTab(item.id)}>
             {item.bottomNavIcon}
             <span className="mobile-nav-label">{item.label}</span>
           </button>
