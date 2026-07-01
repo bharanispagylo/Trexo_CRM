@@ -148,7 +148,35 @@ export default function TaskGroups({ user, onBack }) {
   };
 
   const { alert, confirm, toast } = useAlert();
-  const { can } = usePermissions();
+  const { can, getLevel } = usePermissions();
+
+  const canEditTask = (task) => {
+    if (!task) return false;
+    if (user?.role?.toLowerCase() === 'admin') return true;
+    const level = getLevel('tasks', 'edit');
+    if (level === 'All') return true;
+    if (level === 'Self') {
+      const taskAssignees = (task.assignees || '').toLowerCase();
+      const userId = (user?.id || '').toLowerCase();
+      const userName = (user?.fullName || user?.name || '').toLowerCase();
+      return (userId && taskAssignees.includes(userId)) || (userName && taskAssignees.includes(userName));
+    }
+    return false;
+  };
+
+  const canDeleteTask = (task) => {
+    if (!task) return false;
+    if (user?.role?.toLowerCase() === 'admin') return true;
+    const level = getLevel('tasks', 'delete');
+    if (level === 'All') return true;
+    if (level === 'Self') {
+      const taskAssignees = (task.assignees || '').toLowerCase();
+      const userId = (user?.id || '').toLowerCase();
+      const userName = (user?.fullName || user?.name || '').toLowerCase();
+      return (userId && taskAssignees.includes(userId)) || (userName && taskAssignees.includes(userName));
+    }
+    return false;
+  };
 
   const handleInlineSubtaskSave = async (task) => {
     if (!subtaskTitle.trim()) {
@@ -717,12 +745,12 @@ export default function TaskGroups({ user, onBack }) {
                                   <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
                                     <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                                       <PriorityFlag priority={task.priority} />
-                                      {can('tasks', 'edit') && (
+                                      {canEditTask(task) && (
                                         <button className="cu-act-btn" onClick={() => { setViewingTask(task); setDrawerEditMode(true); setShowTaskViewModal(true); }} title="Edit" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
                                           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                         </button>
                                       )}
-                                      {can('tasks', 'delete') && (
+                                      {canDeleteTask(task) && (
                                         <button 
                                           className="cu-act-btn danger" 
                                           disabled={deletingTaskId === task.id}
@@ -852,12 +880,12 @@ export default function TaskGroups({ user, onBack }) {
                                       <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
                                         <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                                           <PriorityFlag priority={sub.priority} />
-                                          {can('tasks', 'edit') && (
+                                          {canEditTask(sub) && (
                                             <button className="cu-act-btn" onClick={() => { setViewingTask(sub); setDrawerEditMode(true); setShowTaskViewModal(true); }} title="Edit" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
                                               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                             </button>
                                           )}
-                                          {can('tasks', 'delete') && (
+                                          {canDeleteTask(sub) && (
                                             <button 
                                               className="cu-act-btn danger" 
                                               disabled={deletingTaskId === sub.id}
