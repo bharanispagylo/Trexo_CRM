@@ -1772,27 +1772,35 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
 
 
-          <button className="saas-btn-nav saas-btn-secondary saas-nav-cancel-btn" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            className="saas-btn-nav saas-btn-primary"
-            onClick={submit}
-            disabled={taskSaving}
-            style={{
-              cursor: taskSaving ? 'not-allowed' : 'pointer',
-              opacity: taskSaving ? 0.7 : 1
-            }}
-          >
-            {taskSaving ? (
-              <span>{isEdit ? 'Saving...' : 'Creating...'}</span>
-            ) : (
-              <>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                {isEdit ? 'Save' : 'Create Task'}
-              </>
-            )}
-          </button>
+          {canEdit ? (
+            <>
+              <button className="saas-btn-nav saas-btn-secondary saas-nav-cancel-btn" onClick={onClose}>
+                Cancel
+              </button>
+              <button
+                className="saas-btn-nav saas-btn-primary"
+                onClick={submit}
+                disabled={taskSaving}
+                style={{
+                  cursor: taskSaving ? 'not-allowed' : 'pointer',
+                  opacity: taskSaving ? 0.7 : 1
+                }}
+              >
+                {taskSaving ? (
+                  <span>{isEdit ? 'Saving...' : 'Creating...'}</span>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    {isEdit ? 'Save' : 'Create Task'}
+                  </>
+                )}
+              </button>
+            </>
+          ) : (
+            <button className="saas-btn-nav saas-btn-secondary saas-nav-cancel-btn" onClick={onClose}>
+              Close
+            </button>
+          )}
         </div>
       </div>
 
@@ -1824,7 +1832,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 </button>
               </div>
             )}
-            {isEditing ? (
+            {isEditing && canEdit ? (
               <>
                 <textarea
                   value={form.title}
@@ -1917,14 +1925,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 <div className="saas-meta-row saas-meta-row-4col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconStatus /> Status</span>
                   <span className="saas-meta-value">
-                    <select value={form.status} onChange={e => { const newSt = e.target.value; const updated = { ...form, status: newSt }; if (newSt === 'Archived' || newSt === 'Archive') { updated.previousStatus = (form.status !== 'Archived' && form.status !== 'Archive') ? form.status : (form.previousStatus || 'To Do'); } setForm(updated); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
+                    <select value={form.status} onChange={e => { const newSt = e.target.value; const updated = { ...form, status: newSt }; if (newSt === 'Archived' || newSt === 'Archive') { updated.previousStatus = (form.status !== 'Archived' && form.status !== 'Archive') ? form.status : (form.previousStatus || 'To Do'); } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
                       {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                     </select>
                   </span>
                   
                   <span className="saas-meta-label" style={{ color: errors.assignees ? '#ef4444' : '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconAssignee /> Assignee *</span>
                   <span className="saas-meta-value">
-                    <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (errors.assignees) setErrors(prev => { const { assignees: _, ...rest } = prev; return rest; }); if (!isEditing) handleInlineSave(updated); }} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: errors.assignees ? '1px solid #ef4444' : '1px solid transparent', borderRadius: '4px', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
+                    <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (errors.assignees) setErrors(prev => { const { assignees: _, ...rest } = prev; return rest; }); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: errors.assignees ? '1px solid #ef4444' : '1px solid transparent', borderRadius: '4px', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
                       <option value="">Select Assignee...</option>
                       {finalUsers.map(u => {
                         const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
@@ -1947,7 +1955,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                           className="saas-detail-date-input"
                           value={form.dueDate ? new Date(form.dueDate).toISOString().split('T')[0] : ''} 
                           onChange={e => set('dueDate', e.target.value)} 
-                          style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '120px', cursor: 'pointer', fontWeight: 600 }} 
+                          disabled={!canEdit}
+                          style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '120px', cursor: canEdit ? 'pointer' : 'default', fontWeight: 600 }} 
                           title="Due Date"
                         />
                         <span className={`saas-date-display-overlay${!form.dueDate ? ' saas-date-empty' : ''}`}>
@@ -1964,7 +1973,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                           className="saas-detail-date-input"
                           value={form.deliveredDate ? new Date(form.deliveredDate).toISOString().split('T')[0] : ''} 
                           onChange={e => set('deliveredDate', e.target.value)} 
-                          style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '120px', cursor: 'pointer', fontWeight: 600 }} 
+                          disabled={!canEdit}
+                          style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '120px', cursor: canEdit ? 'pointer' : 'default', fontWeight: 600 }} 
                           title="Delivery Date"
                         />
                         <span className={`saas-date-display-overlay${!form.deliveredDate ? ' saas-date-empty' : ''}`}>
@@ -1980,7 +1990,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconPriority /> Priority</span>
                   <span className="saas-meta-value">
-                    <select value={form.priority} onChange={e => set('priority', e.target.value)} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
+                    <select value={form.priority} onChange={e => set('priority', e.target.value)} disabled={!canEdit} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
                       <option value="">Empty</option>
                       {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
@@ -2004,10 +2014,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 <div className="saas-meta-divider" style={{ borderBottom: '1px solid #f1f5f9', margin: '1.5rem 0' }}></div>
 
                 <div style={{ padding: '0.5rem 0' }}>
-                  {isEditing ? (
+                  {isEditing && canEdit ? (
                     <textarea value={form.description} onChange={e => set('description', e.target.value)} onPaste={handleDescriptionPaste} className="saas-grid-textarea" style={{ minHeight: '120px', width: '100%', maxWidth: '100%', border: 'none', background: '#f8fafc', outline: 'none', fontSize: '0.95rem', padding: '1rem', borderRadius: '8px', boxSizing: 'border-box' }} placeholder="Add description, or write with AI..." />
                   ) : (
-                    <div style={{ color: form.description ? '#334155' : '#94a3b8', whiteSpace: 'normal', fontSize: '0.95rem', minHeight: '60px', cursor: 'text', padding: '0.5rem', wordBreak: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }} onClick={() => setIsEditing(true)}>
+                    <div style={{ color: form.description ? '#334155' : '#94a3b8', whiteSpace: 'normal', fontSize: '0.95rem', minHeight: '60px', cursor: canEdit ? 'text' : 'default', padding: '0.5rem', wordBreak: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }} onClick={() => canEdit && setIsEditing(true)}>
                       {renderDescriptionWithPreviews(form.description)}
                     </div>
                   )}
@@ -3730,6 +3740,19 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
   const dragId = useRef(null);
   const { can, getLevel } = usePermissions();
+  const canEditTask = (task) => {
+    if (!task) return false;
+    if (user?.role?.toLowerCase() === 'admin') return true;
+    const level = getLevel('tasks', 'edit');
+    if (level === 'All') return true;
+    if (level === 'Self') {
+      const taskAssignees = (task.assignees || '').toLowerCase();
+      const userId = (user?.id || '').toLowerCase();
+      const userName = (user?.fullName || user?.name || '').toLowerCase();
+      return (userId && taskAssignees.includes(userId)) || (userName && taskAssignees.includes(userName));
+    }
+    return false;
+  };
   const { alert, confirm: showConfirm, toast } = useAlert();
 
   // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ FETCH from API ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
@@ -5019,25 +5042,25 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               </div>
                                             </td>
                                             <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
-                                              <div className="cu-inline-field-wrapper">
-                                                <select className="cu-inline-dropdown" value={task.assignees || ''} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${task.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }}>
+                                              <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                                                <select className="cu-inline-dropdown" value={task.assignees || ''} disabled={!canEditTask(task)} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${task.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
                                                   <option value="">Unassigned</option>
                                                   {getFilteredUsersForProject(getTaskProjectId(task), task.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                 </select>
                                               </div>
                                             </td>
                                             <td className="cu-td cu-td-list" onClick={e => e.stopPropagation()}>
-                                              <div className="cu-inline-field-wrapper">
-                                                <select className="cu-inline-dropdown" value={task.status || 'To Do'} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (task.status !== 'Archived' && task.status !== 'Archive') ? task.status : (task.previousStatus || 'To Do'); } else if (newStatus === 'Delivered' && !task.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${task.id}`, updateData); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: meta.dotColor, fontWeight: 'bold' }}>
+                                              <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                                                <select className="cu-inline-dropdown" value={task.status || 'To Do'} disabled={!canEditTask(task)} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (task.status !== 'Archived' && task.status !== 'Archive') ? task.status : (task.previousStatus || 'To Do'); } else if (newStatus === 'Delivered' && !task.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${task.id}`, updateData); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: meta.dotColor, fontWeight: 'bold', cursor: canEditTask(task) ? 'pointer' : 'default' }}>
                                                   {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                                                 </select>
                                               </div>
                                             </td>
                                             <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
-                                              <div className="cu-inline-field-wrapper cu-date-cell">
+                                              <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
                                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                                 <span className="cu-date-text" style={{ color: relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(task.dueDate)}</span>
-                                                <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { e.stopPropagation(); try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                                <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(task)} onClick={(e) => { e.stopPropagation(); if (canEditTask(task)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }} />
                                               </div>
                                             </td>
                                             <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
@@ -5071,25 +5094,25 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
-                                                  <div className="cu-inline-field-wrapper">
-                                                    <select className="cu-inline-dropdown" value={sub.assignees || ''} onChange={async (e) => { e.stopPropagation(); const updated = { ...sub, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${sub.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === sub.id ? updated : t)); } catch(err) { console.error(err); } }}>
+                                                  <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                                                    <select className="cu-inline-dropdown" value={sub.assignees || ''} disabled={!canEditTask(sub)} onChange={async (e) => { e.stopPropagation(); const updated = { ...sub, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${sub.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === sub.id ? updated : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
                                                       <option value="">Unassigned</option>
                                                       {getFilteredUsersForProject(getTaskProjectId(sub) || getTaskProjectId(task), sub.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                     </select>
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-list" onClick={e => e.stopPropagation()}>
-                                                  <div className="cu-inline-field-wrapper">
-                                                    <select className="cu-inline-dropdown" value={sub.status || 'To Do'} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (sub.status !== 'Archived' && sub.status !== 'Archive') ? sub.status : (sub.previousStatus || 'To Do'); } else if (newStatus === 'Delivered' && !sub.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${sub.id}`, updateData); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: subMeta.dotColor, fontWeight: 'bold' }}>
+                                                  <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                                                    <select className="cu-inline-dropdown" value={sub.status || 'To Do'} disabled={!canEditTask(sub)} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (sub.status !== 'Archived' && sub.status !== 'Archive') ? sub.status : (sub.previousStatus || 'To Do'); } else if (newStatus === 'Delivered' && !sub.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${sub.id}`, updateData); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: subMeta.dotColor, fontWeight: 'bold', cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
                                                       {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                                                     </select>
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
-                                                  <div className="cu-inline-field-wrapper cu-date-cell">
+                                                  <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
                                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                                     <span className="cu-date-text" style={{ color: subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(sub.dueDate)}</span>
-                                                    <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { e.stopPropagation(); try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                                    <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(sub)} onClick={(e) => { e.stopPropagation(); if (canEditTask(sub)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }} />
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
@@ -5627,10 +5650,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               ) : <span className="cu-empty-cell">-</span>}
                                             </td>
                                             <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
-                                              <div className="cu-inline-field-wrapper cu-date-cell">
+                                              <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
                                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                                 <span className="cu-date-text" style={{ color: relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(task.dueDate)}</span>
-                                                <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { e.stopPropagation(); try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                                <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(task)} onClick={(e) => { e.stopPropagation(); if (canEditTask(task)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }} />
                                               </div>
                                             </td>
                                             <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
@@ -5669,10 +5692,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   ) : <span className="cu-empty-cell">-</span>}
                                                 </td>
                                                 <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
-                                                  <div className="cu-inline-field-wrapper cu-date-cell">
+                                                  <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
                                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                                     <span className="cu-date-text" style={{ color: subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(sub.dueDate)}</span>
-                                                    <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} onClick={(e) => { e.stopPropagation(); try { e.target.showPicker(); } catch (err) {} }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} />
+                                                    <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(sub)} onClick={(e) => { e.stopPropagation(); if (canEditTask(sub)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }} />
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
