@@ -83,6 +83,10 @@ export const PriorityFlag = ({ priority }) => {
       width="14" 
       height="14" 
       fill="currentColor" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
       style={{ color: meta.color, display: 'inline-block', flexShrink: 0 }}
       title={`Priority: ${meta.label}`}
     >
@@ -5457,13 +5461,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
               return (
                 <div key={col.id} className="cu-status-section">
-                  {/* Section Header */}
-                  <div className="cu-section-header">
+                  <div className="cu-section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.35rem 0.75rem', background: 'transparent', borderRadius: '0', border: 'none' }}>
                     <div className="cu-section-left" onClick={() => toggleGroup(col.id)}>
                       <span className="cu-section-chevron">
                         <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
                       </span>
-                      <span className="cu-status-pill" style={{ background: meta.bg, color: meta.fg, border: meta.border || 'none', fontWeight: col.id === 'To Do' ? '700' : '600' }}>
+                      <span className="cu-status-pill" style={{ color: meta.bg, fontSize: '0.68rem', fontWeight: '700', textTransform: 'uppercase', padding: '0', background: 'transparent', border: 'none' }}>
                         {col.label.toUpperCase()}
                       </span>
                       <span className="cu-section-count">{statusTasks.length}</span>

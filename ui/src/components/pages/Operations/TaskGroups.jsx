@@ -42,6 +42,10 @@ const PriorityFlag = ({ priority }) => {
       width="14" 
       height="14" 
       fill="currentColor" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
       style={{ color: meta.color, display: 'inline-block', flexShrink: 0 }}
       title={`Priority: ${meta.label}`}
     >
@@ -458,40 +462,6 @@ export default function TaskGroups({ user, onBack }) {
               toggleListAccordion(list.id);
             }
           }}>
-            {/* Star toggle button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleToggleFavorite(list);
-              }}
-              disabled={togglingFavoriteId === list.id}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: togglingFavoriteId === list.id ? 'not-allowed' : 'pointer',
-                padding: 0,
-                display: 'flex',
-                alignItems: 'center',
-                color: list.isFavorite ? '#eab308' : '#cbd5e1',
-                transition: 'transform 0.15s, color 0.15s',
-                flexShrink: 0,
-                opacity: togglingFavoriteId === list.id ? 0.6 : 1
-              }}
-              className="tg-accordion-star-btn"
-              title={list.isFavorite ? 'Remove from Favourites' : 'Add to Favourites'}
-            >
-              {togglingFavoriteId === list.id ? (
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
-                  <circle cx="12" cy="12" r="10" strokeOpacity="0.25"/>
-                  <path d="M12 2a10 10 0 0 1 10 10" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" width="16" height="16" fill={list.isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                </svg>
-              )}
-            </button>
-
             <span className="cu-section-chevron" style={{ display: 'flex', alignItems: 'center', visibility: hasTasks ? 'visible' : 'hidden', flexShrink: 0 }}>
               <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: (hasTasks && isCollapsed) ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
             </span>
@@ -542,6 +512,38 @@ export default function TaskGroups({ user, onBack }) {
           </div>
 
           <div className="cu-section-right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, marginLeft: '0.5rem' }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleFavorite(list);
+              }}
+              disabled={togglingFavoriteId === list.id}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: togglingFavoriteId === list.id ? 'not-allowed' : 'pointer',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                color: list.isFavorite ? '#eab308' : '#cbd5e1',
+                transition: 'transform 0.15s, color 0.15s',
+                flexShrink: 0,
+                opacity: togglingFavoriteId === list.id ? 0.6 : 1
+              }}
+              className="tg-accordion-star-btn"
+              title={list.isFavorite ? 'Remove from Favourites' : 'Add to Favourites'}
+            >
+              {togglingFavoriteId === list.id ? (
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                  <circle cx="12" cy="12" r="10" strokeOpacity="0.25"/>
+                  <path d="M12 2a10 10 0 0 1 10 10" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="16" height="16" fill={list.isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+              )}
+            </button>
             {can('tasks', 'create') && (
               <button
                 style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
@@ -586,14 +588,14 @@ export default function TaskGroups({ user, onBack }) {
                 return (
                   <div key={col.id} className="cu-status-section" style={{ marginBottom: '1rem' }}>
                     {/* Section Header */}
-                    <div className="cu-section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.35rem 0.75rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                    <div className="cu-section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.35rem 0.75rem', paddingLeft: '2rem', background: 'transparent', borderRadius: '0', border: 'none' }}>
                       <div className="cu-section-left" onClick={() => toggleStatusSection(list.id, col.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                       <span className="cu-section-chevron">
                         <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isStatusCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}>
                           <path d="M0 0l5 6 5-6z"/>
                         </svg>
                       </span>
-                      <span className="cu-status-pill" style={{ background: meta.bg, color: meta.fg, border: meta.border || 'none', padding: '0.15rem 0.45rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: col.id === 'To Do' ? '700' : '600', textTransform: 'uppercase' }}>
+                      <span className="cu-status-pill" style={{ color: meta.bg, fontSize: '0.68rem', fontWeight: '700', textTransform: 'uppercase', padding: '0', background: 'transparent', border: 'none' }}>
                         {col.label.toUpperCase()}
                       </span>
                       <span className="cu-section-count" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', background: '#e2e8f0', padding: '0.1rem 0.4rem', borderRadius: '10px' }}>{statusTasks.length}</span>
@@ -602,7 +604,7 @@ export default function TaskGroups({ user, onBack }) {
 
                   {/* Task Table if there are tasks in this status and section is not collapsed */}
                   {!isStatusCollapsed && statusTasks.length > 0 && (
-                    <div className="cu-table-wrapper" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: 'white', marginTop: '0.5rem' }}>
+                    <div className="cu-table-wrapper" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: 'white', marginTop: '0.5rem', marginLeft: '2rem', marginRight: '1rem' }}>
                       <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                           <tr className="cu-thead-row" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
@@ -630,7 +632,7 @@ export default function TaskGroups({ user, onBack }) {
                               const parentRow = (
                                 <tr key={task.id} className="cu-row" onClick={() => { setViewingTask(task); setDrawerEditMode(false); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
                                   <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                       {subTasks.length > 0 && (
                                         <button
                                           style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -643,7 +645,6 @@ export default function TaskGroups({ user, onBack }) {
                                           <svg viewBox="0 0 10 6" width="8" height="8" fill="currentColor" style={{ transform: isExpanded ? "none" : "rotate(-90deg)", transition: "transform 0.15s", color: "#64748b" }}><path d="M0 0l5 6 5-6z"/></svg>
                                         </button>
                                       )}
-                                      {subTasks.length === 0 && <span style={{ width: '18px', display: 'inline-block' }} />}
                                       <TaskTitleTooltip text={`${getDisplayId(task)} ${task.title || 'Untitled Task'}`}>
                                         <span className="cu-task-id-prefix">{getDisplayId(task)}</span>
                                         <span className="cu-task-title" style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{task.title || 'Untitled Task'}</span>
@@ -817,8 +818,8 @@ export default function TaskGroups({ user, onBack }) {
                                   rows.push(
                                     <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { setViewingTask(sub); setDrawerEditMode(false); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
                                       <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem', paddingLeft: '2.5rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
-                                          <span className="cu-subtask-indicator" style={{ color: '#94a3b8', marginRight: '4px', fontSize: '1rem', fontWeight: 'bold' }}>↳</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
+                                          <span className="cu-subtask-indicator" style={{ color: '#94a3b8', marginRight: '2px', fontSize: '1rem', fontWeight: 'bold' }}>↳</span>
                                           <TaskTitleTooltip text={`${getDisplayId(sub)} ${sub.title || 'Untitled Subtask'}`}>
                                             <span className="cu-task-id-prefix">{getDisplayId(sub)}</span>
                                             <span className="cu-task-title" style={{ fontSize: '0.85rem', color: '#475569' }}>{sub.title || 'Untitled Subtask'}</span>
@@ -946,7 +947,7 @@ export default function TaskGroups({ user, onBack }) {
               No favourites added yet. Click the star icon next to any group name to add it here.
             </div>
           ) : (
-            <div className="cu-list-root" style={{ display: 'flex', flexDirection: 'column', gap: '3px', border: 'none', background: 'transparent', boxShadow: 'none' }}>
+            <div className="cu-list-root">
               {favouriteLists.map((list, idx) => renderAccordion(list, idx))}
             </div>
           )}
@@ -958,7 +959,7 @@ export default function TaskGroups({ user, onBack }) {
               No task groups found. Click "+ Add Task Group" to create one.
             </div>
           ) : (
-            <div className="cu-list-root" style={{ display: 'flex', flexDirection: 'column', gap: '3px', border: 'none', background: 'transparent', boxShadow: 'none' }}>
+            <div className="cu-list-root">
               {allLists.map((list, idx) => renderAccordion(list, idx))}
             </div>
           )}

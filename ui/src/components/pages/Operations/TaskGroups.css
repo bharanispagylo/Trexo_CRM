@@ -488,11 +488,16 @@
 /* Card layout overrides for Task Groups page */
 .tg-page-container .cu-status-section {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  margin-bottom: 0.75rem;
+  border: none;
+  border-bottom: 1px solid #e2e8f0;
+  border-radius: 0;
+  overflow: visible;
+  box-shadow: none;
+  margin-bottom: 0;
+}
+
+.tg-page-container .cu-status-section:first-child {
+  border-top: 1px solid #e2e8f0;
 }
 
 .tg-page-container .cu-status-section:last-child {
@@ -501,8 +506,19 @@
 
 .tg-page-container .cu-section-header {
   background: #fafbfc;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: none;
   padding: 0.75rem 1.25rem;
+}
+
+.tg-page-container .cu-list-root {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: #fff;
+  border-radius: 5px;
+  border: none;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .tg-section-header-title {
