@@ -11,6 +11,11 @@ const isAssigneeMatch = (assigneeStr, userId) => {
   return assigneeStr.includes(userId);
 };
 
+const normalizeName = (name) => {
+  if (!name) return '';
+  return name.replace(/\s+/g, ' ').trim().toLowerCase();
+};
+
 export default function TrackTeam({ user, onMemberClick }) {
   const [tasks, setTasks] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
@@ -176,9 +181,8 @@ export default function TrackTeam({ user, onMemberClick }) {
   // Filter tasks assigned to currently selected member by matching name
   const selectedUser = selectedMember
     ? users.find(u => {
-        const uName = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).trim().toLowerCase();
-        const mName = (selectedMember.name || '').trim().toLowerCase();
-        return uName === mName;
+        const uName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`;
+        return normalizeName(uName) === normalizeName(selectedMember.name);
       })
     : null;
 
@@ -282,8 +286,11 @@ export default function TrackTeam({ user, onMemberClick }) {
                       <option value="">Select Member...</option>
                       {users
                         .filter(u => {
-                          const uName = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).trim().toLowerCase();
-                          return !teamMembers.some(m => (m.name || '').trim().toLowerCase() === uName);
+                          if (u.role && u.role.toLowerCase() === 'admin') {
+                            return false;
+                          }
+                          const uName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`;
+                          return !teamMembers.some(m => normalizeName(m.name) === normalizeName(uName));
                         })
                         .slice()
                         .sort((a, b) => {
@@ -523,8 +530,8 @@ export default function TrackTeam({ user, onMemberClick }) {
                     {teamMembers.map(m => {
                       const displayName = m.name || 'Unknown';
                       const matchedUser = users.find(u => {
-                        const uName = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).trim().toLowerCase();
-                        return uName === (m.name || '').trim().toLowerCase();
+                        const uName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`;
+                        return normalizeName(uName) === normalizeName(m.name);
                       });
                       return (
                         <tr key={m.id} onClick={() => {
