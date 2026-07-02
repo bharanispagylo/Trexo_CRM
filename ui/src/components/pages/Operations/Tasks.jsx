@@ -3124,7 +3124,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                     {(sub.status || 'To Do').toUpperCase()}
                                   </span>
                                 </td>
-                                <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: subRelDate?.isOverdue ? '#ef4444' : '#475569' }}>
+                                <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ef4444' : '#475569' }}>
                                   {sub.dueDate ? new Date(sub.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '-'}
                                 </td>
                                 <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem' }}>
@@ -3552,7 +3552,7 @@ function TaskCard({ task, onDragStart, onClick, onDelete, currentUser, listUsers
           </div>
 
           {/* Due date */}
-          <div className={`card-clickup-meta-item ${relativeDate ? (relativeDate.isOverdue ? 'overdue' : (relativeDate.isToday ? 'today' : '')) : 'empty'}`} title={task.dueDate ? `Due date: ${new Date(task.dueDate).toLocaleDateString()}` : 'No due date'}>
+          <div className={`card-clickup-meta-item ${task.status === 'Delivered' ? 'delivered' : relativeDate ? (relativeDate.isOverdue ? 'overdue' : (relativeDate.isToday ? 'today' : '')) : 'empty'}`} title={task.dueDate ? `Due date: ${new Date(task.dueDate).toLocaleDateString()}` : 'No due date'}>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
               <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -5339,8 +5339,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                             </td>
                                             <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
                                               <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
-                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                <span className="cu-date-text" style={{ color: relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(task.dueDate)}</span>
+                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                <span className="cu-date-text" style={{ color: task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(task.dueDate)}</span>
                                                 <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(task)} onClick={(e) => { e.stopPropagation(); if (canEditTask(task)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }} />
                                               </div>
                                             </td>
@@ -5391,8 +5391,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </td>
                                                 <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
                                                   <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
-                                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                    <span className="cu-date-text" style={{ color: subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(sub.dueDate)}</span>
+                                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                    <span className="cu-date-text" style={{ color: sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(sub.dueDate)}</span>
                                                     <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(sub)} onClick={(e) => { e.stopPropagation(); if (canEditTask(sub)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }} />
                                                   </div>
                                                 </td>
@@ -5862,7 +5862,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   {(dueDateLabel || taskGroupName) && (
                                                     <div className="cu-mobile-task-sub">
                                                       {dueDateLabel && (
-                                                        <span className={`cu-mobile-due${relDate?.isOverdue ? ' cu-due-overdue' : relDate?.isToday ? ' cu-due-today' : ''}`}>
+                                                        <span className={`cu-mobile-due${task.status === 'Delivered' ? ' cu-due-delivered' : relDate?.isOverdue ? ' cu-due-overdue' : relDate?.isToday ? ' cu-due-today' : ''}`}>
                                                           <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                                           {dueDateLabel}
                                                         </span>
@@ -5932,8 +5932,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                             </td>
                                             <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
                                               <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
-                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                <span className="cu-date-text" style={{ color: relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(task.dueDate)}</span>
+                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                <span className="cu-date-text" style={{ color: task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(task.dueDate)}</span>
                                                 <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(task)} onClick={(e) => { e.stopPropagation(); if (canEditTask(task)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }} />
                                               </div>
                                             </td>
@@ -5974,8 +5974,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </td>
                                                 <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
                                                   <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
-                                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                    <span className="cu-date-text" style={{ color: subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(sub.dueDate)}</span>
+                                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                    <span className="cu-date-text" style={{ color: sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(sub.dueDate)}</span>
                                                     <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(sub)} onClick={(e) => { e.stopPropagation(); if (canEditTask(sub)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }} />
                                                   </div>
                                                 </td>

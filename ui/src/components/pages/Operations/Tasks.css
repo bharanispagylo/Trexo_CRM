@@ -2794,6 +2794,12 @@
   border-color: #fed7aa;
 }
 
+.card-clickup-meta-item.delivered {
+  color: #16a34a;
+  background: #dcfce7;
+  border-color: #bbf7d0;
+}
+
 .card-clickup-meta-item.today {
   color: #2563eb;
   background: #dbeafe;
@@ -3042,6 +3048,12 @@
   color: #ea580c;
   background: #ffedd5;
   border-color: #fed7aa;
+}
+
+.clickup-due-badge.delivered {
+  color: #16a34a;
+  background: #dcfce7;
+  border-color: #bbf7d0;
 }
 
 .clickup-due-badge.today {
@@ -3586,6 +3598,11 @@
   color: #ea580c;
   background: #ffedd5;
   border-color: #fed7aa;
+}
+.cu-due-badge.delivered {
+  color: #16a34a;
+  background: #dcfce7;
+  border-color: #bbf7d0;
 }
 .cu-due-badge.today {
   color: #2563eb;
@@ -4740,6 +4757,10 @@
     color: #ef4444;
   }
 
+  .cu-mobile-due.cu-due-delivered {
+    color: #16a34a;
+  }
+
   .cu-mobile-due.cu-due-today {
     color: #f59e0b;
   }
@@ -5165,6 +5186,10 @@
 
   .cu-flat-task-date.cu-flat-overdue {
     color: #ef4444;
+  }
+
+  .cu-flat-task-date.cu-flat-delivered {
+    color: #16a34a;
   }
 
   .cu-flat-task-date.cu-flat-today {
