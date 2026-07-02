@@ -474,6 +474,48 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const canDelete = getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && isAssigned());
 
   const isTeamLeadOrAdmin = currentUser?.role?.toLowerCase() === 'team lead' || currentUser?.role?.toLowerCase() === 'admin';
+
+  const canEditWorkLog = (log) => {
+    return isAssigned() || isTeamLeadOrAdmin;
+  };
+
+  const canDeleteWorkLog = (log) => {
+    return isAssigned() || isTeamLeadOrAdmin;
+  };
+
+  const canDeleteAttachment = (meta) => {
+    return isAssigned() || isTeamLeadOrAdmin;
+  };
+
+  const handleDownloadFile = async (url, fileName) => {
+    try {
+      if (url.startsWith('data:')) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName || 'download';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
+      }
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName || 'download';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.warn('CORS fetch failed, opening in new tab:', err);
+      window.open(url, '_blank');
+    }
+  };
+
+  const isWorkLogFormAllowed = !workLogForm.id || canEditWorkLog(workLogs.find(l => l.id === workLogForm.id));
   const viewLvl = getLevel('tasks', 'view');
   const editLvl = getLevel('tasks', 'edit');
   const deleteLvl = getLevel('tasks', 'delete');
@@ -537,7 +579,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
             : 'Admin';
           const uploadTimestamp = new Date().toISOString();
-          const newEntry = `${data.secure_url}|${uploaderName}|${uploadTimestamp}|${file.name}`;
+          const uploaderId = currentUser?.id || 'UnknownId';
+          const newEntry = `${data.secure_url}|${uploaderName}|${uploadTimestamp}|${file.name}|${uploaderId}`;
           const updatedAttachments = [...current, newEntry].join(',');
           set('attachments', updatedAttachments);
           setUploading(false);
@@ -567,7 +610,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
           : 'Admin';
         const uploadTimestamp = new Date().toISOString();
-        const newEntry = `${reader.result}|${uploaderName}|${uploadTimestamp}|${file.name}`;
+        const uploaderId = currentUser?.id || 'UnknownId';
+        const newEntry = `${reader.result}|${uploaderName}|${uploadTimestamp}|${file.name}|${uploaderId}`;
         const updatedAttachments = [...current, newEntry].join(',');
         set('attachments', updatedAttachments);
         setUploading(false);
@@ -664,7 +708,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
               : 'Admin';
             const uploadTimestamp = new Date().toISOString();
-            const newEntry = `${imgUrl}|${uploaderName}|${uploadTimestamp}|${fileName}`;
+            const uploaderId = currentUser?.id || 'UnknownId';
+            const newEntry = `${imgUrl}|${uploaderName}|${uploadTimestamp}|${fileName}|${uploaderId}`;
             const updatedAttachments = [...current, newEntry].join(',');
             set('attachments', updatedAttachments);
             setUploading(false);
@@ -683,7 +728,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
             : 'Admin';
           const uploadTimestamp = new Date().toISOString();
-          const newEntry = `${imgUrl}|${uploaderName}|${uploadTimestamp}|${fileName}`;
+          const uploaderId = currentUser?.id || 'UnknownId';
+          const newEntry = `${imgUrl}|${uploaderName}|${uploadTimestamp}|${fileName}|${uploaderId}`;
           const updatedAttachments = [...current, newEntry].join(',');
           set('attachments', updatedAttachments);
           setUploading(false);
@@ -708,7 +754,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
         : 'Admin';
       const uploadTimestamp = new Date().toISOString();
-      const newEntry = `${imgUrl}|${uploaderName}|${uploadTimestamp}|${fileName}`;
+      const uploaderId = currentUser?.id || 'UnknownId';
+      const newEntry = `${imgUrl}|${uploaderName}|${uploadTimestamp}|${fileName}|${uploaderId}`;
       const updatedAttachments = [...current, newEntry].join(',');
       set('attachments', updatedAttachments);
       if (isEdit) {
@@ -787,11 +834,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           } else {
             return (
               <div key={idx} style={{ margin: '0.25rem 0' }} onClick={(e) => e.stopPropagation()}>
-                <a 
-                  href={part.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  onClick={(e) => e.stopPropagation()}
+                <button 
+                  type="button"
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    handleDownloadFile(part.url, part.fileName); 
+                  }}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -801,14 +849,16 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     border: '1px solid #e2e8f0',
                     borderRadius: '6px',
                     color: '#2563eb',
-                    textDecoration: 'none',
                     fontSize: '0.8rem',
-                    fontWeight: 500
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    outline: 'none',
+                    fontFamily: 'inherit'
                   }}
                 >
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                   {part.fileName}
-                </a>
+                </button>
               </div>
             );
           }
@@ -990,8 +1040,17 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
   const renderCommentAttachmentPill = (attachment) => {
     const isPdf = attachment.name.toLowerCase().endsWith('.pdf') || attachment.url.startsWith('data:application/pdf');
-    const iconColor = isPdf ? '#ef4444' : '#22c55e';
-    const iconBg = isPdf ? '#fef2f2' : '#f0fdf4';
+    const isImage = (() => {
+      const imageExtensions = ['png', 'jpeg', 'jpg', 'gif', 'webp', 'svg', 'bmp'];
+      const ext = attachment.name.split('.').pop()?.toLowerCase();
+      if (imageExtensions.includes(ext)) return true;
+      if (attachment.url.startsWith('data:image/')) return true;
+      return false;
+    })();
+    const label = isPdf ? 'PDF' : (isImage ? 'IMG' : 'FILE');
+    const iconColor = isPdf ? '#ef4444' : (isImage ? '#3b82f6' : '#64748b');
+    const iconBg = isPdf ? '#fef2f2' : (isImage ? '#eff6ff' : '#f8fafc');
+    const iconBorder = isPdf ? '#fee2e2' : (isImage ? '#dbeafe' : '#e2e8f0');
     
     return (
       <div style={{
@@ -1017,28 +1076,64 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           fontWeight: '800',
           background: iconBg,
           color: iconColor,
-          border: `1px solid ${isPdf ? '#fee2e2' : '#dcfce7'}`
+          border: `1px solid ${iconBorder}`
         }}>
-          {isPdf ? 'PDF' : 'IMG'}
+          {label}
         </div>
-        <a 
-          href={attachment.url} 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          style={{ 
-            fontSize: '0.8rem', 
-            fontWeight: '600', 
-            color: '#2563eb', 
-            textDecoration: 'none', 
-            textOverflow: 'ellipsis', 
-            overflow: 'hidden', 
-            whiteSpace: 'nowrap',
-            maxWidth: '180px'
-          }}
-          title={attachment.name}
-        >
-          {attachment.name}
-        </a>
+        {isImage ? (
+          <button 
+            type="button"
+            onClick={(e) => { 
+              setPreviewImageUrl(attachment.url); 
+              setPreviewImageName(attachment.name); 
+            }}
+            style={{ 
+              fontSize: '0.8rem', 
+              fontWeight: '600', 
+              color: '#2563eb', 
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              textDecoration: 'none', 
+              textOverflow: 'ellipsis', 
+              overflow: 'hidden', 
+              whiteSpace: 'nowrap',
+              maxWidth: '180px',
+              textAlign: 'left',
+              fontFamily: 'inherit'
+            }}
+            title={attachment.name}
+          >
+            {attachment.name}
+          </button>
+        ) : (
+          <button 
+            type="button"
+            onClick={(e) => { 
+              handleDownloadFile(attachment.url, attachment.name); 
+            }}
+            style={{ 
+              fontSize: '0.8rem', 
+              fontWeight: '600', 
+              color: '#2563eb', 
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              textDecoration: 'none', 
+              textOverflow: 'ellipsis', 
+              overflow: 'hidden', 
+              whiteSpace: 'nowrap',
+              maxWidth: '180px',
+              textAlign: 'left',
+              fontFamily: 'inherit'
+            }}
+            title={attachment.name}
+          >
+            {attachment.name}
+          </button>
+        )}
       </div>
     );
   };
@@ -1129,9 +1224,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   };
   
   const handleAddWorkLog = async (isBilledArg = false) => {
-    if (!canEdit) {
-      alert("You do not have permission to modify work logs.", "error", "Permission Denied");
-      return;
+    if (workLogForm.id) {
+      const existingLog = workLogs.find(log => log.id === workLogForm.id);
+      if (!canEditWorkLog(existingLog)) {
+        alert("You do not have permission to modify this work log.", "error", "Permission Denied");
+        return;
+      }
     }
     if (!workLogForm.hoursWorked) {
       alert("Please fill in Hours.", "warning", "Required");
@@ -1173,8 +1271,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   };
 
   const handleDeleteWorkLog = async (logId) => {
-    if (!canDelete) {
-      alert("You do not have permission to delete work logs.", "error", "Permission Denied");
+    const existingLog = workLogs.find(log => log.id === logId);
+    if (!canDeleteWorkLog(existingLog)) {
+      alert("You do not have permission to delete this work log.", "error", "Permission Denied");
       return;
     }
     confirm("Delete this work log?", async () => {
@@ -1384,6 +1483,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     const encodedUploader = parts[1] || '';
     const encodedTime = parts[2] || '';
     const encodedFileName = parts[3] || '';
+    const encodedUserId = parts[4] || '';
 
     const isBase64 = url.startsWith('data:');
     let fileName = 'Attachment File';
@@ -1473,7 +1573,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       isImage,
       uploadedBy,
       uploadedOn,
-      fileSize
+      fileSize,
+      userId: encodedUserId
     };
   };
 
@@ -2335,11 +2436,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       <div style={{ marginBottom: '0.75rem' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                           <label className="saas-field-label" style={{ fontWeight: 600, color: '#475569', fontSize: '0.78rem' }}>Timespent</label>
-                          <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} disabled={!canEdit} />
+                          <input type="number" step="0.25" className="saas-input" placeholder="e.g. 2.5" value={workLogForm.hoursWorked} onChange={e => setWorkLogForm({...workLogForm, hoursWorked: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', height: '36px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }} disabled={!isWorkLogFormAllowed} />
                         </div>
                       </div>
                       <div className="worklog-btn-row" style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button className="saas-btn-primary" onClick={() => handleAddWorkLog(false)} disabled={workLogSaving || !canEdit} style={{ padding: '0.5rem 1rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: canEdit ? 'pointer' : 'default', opacity: canEdit ? 1 : 0.6 }}>
+                        <button className="saas-btn-primary" onClick={() => handleAddWorkLog(false)} disabled={workLogSaving || !isWorkLogFormAllowed} style={{ padding: '0.5rem 1rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: isWorkLogFormAllowed ? 'pointer' : 'default', opacity: isWorkLogFormAllowed ? 1 : 0.6 }}>
                           {workLogSaving ? 'Saving...' : (workLogForm.id ? 'Update Work Log' : 'Add Work Log')}
                         </button>
                         {workLogForm.id && (
@@ -2349,8 +2450,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                               const taskDate = task?.createdAt ? new Date(task.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
                               setWorkLogForm({ logDate: taskDate, hoursWorked: '', description: '', isBilled: false, id: null });
                             }}
-                            disabled={workLogSaving || !canEdit}
-                            style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: canEdit ? 'pointer' : 'default' }}
+                            disabled={workLogSaving || !isWorkLogFormAllowed}
+                            style={{ padding: '0.5rem 1rem', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: isWorkLogFormAllowed ? 'pointer' : 'default' }}
                           >
                             Cancel Edit
                           </button>
@@ -2388,7 +2489,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                   <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{log.hoursWorked}h</td>
                                   <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
                                     <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                      {canEdit && (
+                                      {canEditWorkLog(log) && (
                                         <button title="Edit" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', background: 'white', cursor: 'pointer' }} onClick={() => {
                                           setWorkLogForm({
                                             id: log.id,
@@ -2401,7 +2502,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                         </button>
                                       )}
-                                      {canDelete && (
+                                      {canDeleteWorkLog(log) && (
                                         <button title="Delete" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', background: '#fef2f2', cursor: 'pointer' }} onClick={() => handleDeleteWorkLog(log.id)}>
                                           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                         </button>
@@ -2541,7 +2642,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <button 
                     type="button" 
                     onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                    disabled={uploading || !canEdit}
+                    disabled={uploading}
                     style={{
                       background: 'white',
                       border: '1px solid #e2e8f0',
@@ -2634,23 +2735,71 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                   );
                                 })()}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflow: 'hidden', width: '100%' }}>
-                                  <a 
-                                    href={meta.url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    style={{ fontSize: '0.75rem', fontWeight: '500', color: '#2563eb', textDecoration: 'none', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}
-                                    className="file-name-link"
-                                    title={meta.fileName}
-                                  >
-                                    {meta.fileName}
-                                  </a>
+                                  {meta.isImage ? (
+                                    <button 
+                                      type="button"
+                                      onClick={() => { 
+                                        setPreviewImageUrl(meta.url); 
+                                        setPreviewImageName(meta.fileName); 
+                                      }}
+                                      style={{ 
+                                        fontSize: '0.75rem', 
+                                        fontWeight: '500', 
+                                        color: '#2563eb', 
+                                        background: 'none',
+                                        border: 'none',
+                                        padding: 0,
+                                        cursor: 'pointer',
+                                        textDecoration: 'none', 
+                                        textOverflow: 'ellipsis', 
+                                        overflow: 'hidden', 
+                                        whiteSpace: 'nowrap', 
+                                        display: 'block',
+                                        textAlign: 'left',
+                                        width: '100%',
+                                        fontFamily: 'inherit'
+                                      }}
+                                      className="file-name-link"
+                                      title={meta.fileName}
+                                    >
+                                      {meta.fileName}
+                                    </button>
+                                  ) : (
+                                    <button 
+                                      type="button"
+                                      onClick={() => { 
+                                        handleDownloadFile(meta.url, meta.fileName); 
+                                      }}
+                                      style={{ 
+                                        fontSize: '0.75rem', 
+                                        fontWeight: '500', 
+                                        color: '#2563eb', 
+                                        background: 'none',
+                                        border: 'none',
+                                        padding: 0,
+                                        cursor: 'pointer',
+                                        textDecoration: 'none', 
+                                        textOverflow: 'ellipsis', 
+                                        overflow: 'hidden', 
+                                        whiteSpace: 'nowrap', 
+                                        display: 'block',
+                                        textAlign: 'left',
+                                        width: '100%',
+                                        fontFamily: 'inherit'
+                                      }}
+                                      className="file-name-link"
+                                      title={meta.fileName}
+                                    >
+                                      {meta.fileName}
+                                    </button>
+                                  )}
                                   {meta.isImage && (
                                     <div style={{ marginTop: '0.25rem' }}>
                                       <img 
                                         src={meta.url} 
                                         alt={meta.fileName} 
                                         style={{ maxWidth: '120px', maxHeight: '80px', borderRadius: '4px', border: '1px solid #e2e8f0', objectFit: 'contain', cursor: 'pointer', display: 'block' }}
-                                        onClick={() => window.open(meta.url, '_blank')}
+                                        onClick={() => { setPreviewImageUrl(meta.url); setPreviewImageName(meta.fileName); }}
                                       />
                                     </div>
                                   )}
@@ -2676,24 +2825,15 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                               <td style={{ padding: '0.85rem 0.5rem', textAlign: 'right' }}>
                                 <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                                   
-                                  {/* Download Icon Button */}
+                                  {/* Download/Preview Icon Button */}
                                   <button 
                                     type="button"
                                     onClick={async () => {
-                                      try {
-                                        const response = await fetch(meta.url);
-                                        const blob = await response.blob();
-                                        const blobUrl = window.URL.createObjectURL(blob);
-                                        const link = document.createElement('a');
-                                        link.href = blobUrl;
-                                        link.download = meta.fileName || 'download';
-                                        document.body.appendChild(link);
-                                        link.click();
-                                        document.body.removeChild(link);
-                                        window.URL.revokeObjectURL(blobUrl);
-                                      } catch (err) {
-                                        // Fallback: open in new tab if fetch fails
-                                        window.open(meta.url, '_blank');
+                                      if (meta.isImage) {
+                                        setPreviewImageUrl(meta.url);
+                                        setPreviewImageName(meta.fileName);
+                                      } else {
+                                        await handleDownloadFile(meta.url, meta.fileName);
                                       }
                                     }}
                                     style={{
@@ -2708,14 +2848,18 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                       background: 'white',
                                       cursor: 'pointer'
                                     }}
-                                    title="Download File"
+                                    title={meta.isImage ? "Preview Image" : "Download File"}
                                     className="action-icon-btn"
                                   >
-                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    {meta.isImage ? (
+                                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    ) : (
+                                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    )}
                                   </button>
 
                                   {/* Delete/Action Button */}
-                                  {canEdit && (
+                                  {canDeleteAttachment(meta) && (
                                     <button 
                                       type="button" 
                                       onClick={async () => {
