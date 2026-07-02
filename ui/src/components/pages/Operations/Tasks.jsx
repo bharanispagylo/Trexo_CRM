@@ -2212,6 +2212,57 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         if (!meta || !meta.isImage) return null;
                         return (
                           <div key={meta.url} style={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', background: '#f8fafc', padding: '4px' }} onClick={(e) => e.stopPropagation()}>
+                            {canDeleteAttachment(meta) && (
+                              <button
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  confirm('Are you sure you want to remove this attachment?', async () => {
+                                    const current = form.attachments ? form.attachments.split(',') : [];
+                                    const filtered = current.filter(u => u !== item).join(',');
+                                    
+                                    set('attachments', filtered);
+                                    if (isEdit) {
+                                      try {
+                                        const updatedTask = { ...form, attachments: filtered };
+                                        const { comments, taskList, ...payload } = updatedTask;
+                                        await onSave(payload, true);
+                                      } catch (error) {
+                                        console.error('Failed to remove attachment:', error);
+                                        alert('Failed to remove attachment: ' + error.message, 'error', 'Error');
+                                      }
+                                    }
+                                  });
+                                }}
+                                style={{
+                                  position: 'absolute',
+                                  top: '6px',
+                                  right: '6px',
+                                  width: '20px',
+                                  height: '20px',
+                                  borderRadius: '50%',
+                                  background: 'rgba(239, 68, 68, 0.9)',
+                                  border: 'none',
+                                  color: '#ffffff',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                                  zIndex: 10,
+                                  fontSize: '10px',
+                                  fontWeight: 'bold',
+                                  lineHeight: 1,
+                                  padding: 0,
+                                  transition: 'transform 0.1s ease, background-color 0.1s ease'
+                                }}
+                                title="Delete Image"
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dc2626'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.9)'; e.currentTarget.style.transform = 'scale(1)'; }}
+                              >
+                                ✕
+                              </button>
+                            )}
                             <img 
                               src={meta.url} 
                               alt={meta.fileName} 
