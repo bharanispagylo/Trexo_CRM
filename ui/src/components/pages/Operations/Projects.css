@@ -1414,6 +1414,16 @@
 
   .attach-upload-btn-text { display: none; }
 
+  /* Task Groups tab — reduce left indentation on status sub-sections on mobile */
+  .task-group-sections .cu-section-header {
+    padding-left: 0.75rem !important;
+  }
+
+  .task-group-sections .cu-table-wrapper {
+    margin-left: 0.5rem !important;
+    margin-right: 0.5rem !important;
+  }
+
   /* Queries stats grid — 3 columns on mobile */
   .queries-stats-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -1476,13 +1486,24 @@
 
   .queries-filter-select {
     flex: 1;
-    min-width: 80px;
+    min-width: 70px;
     font-size: 0.78rem !important;
     padding: 0.35rem 0.5rem !important;
+    padding-right: 1.5rem !important;
+    background-position: right 0.45rem center !important;
+    background-size: 0.75rem !important;
     height: 36px !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .queries-filter-select-narrow {
+    min-width: 70px !important;
+    max-width: none !important;
+    padding-right: 1.5rem !important;
+    background-position: right 0.45rem center !important;
+    background-size: 0.75rem !important;
   }
 
   /* Hide text, show icon-only on mobile */

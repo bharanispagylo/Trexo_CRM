@@ -634,6 +634,16 @@
     gap: 0.35rem !important;
     margin-left: 0.35rem !important;
   }
+
+  /* Reduce left indentation on status sub-sections on mobile */
+  .task-group-sections .cu-section-header {
+    padding-left: 0.75rem !important;
+  }
+
+  .task-group-sections .cu-table-wrapper {
+    margin-left: 0.5rem !important;
+    margin-right: 0.5rem !important;
+  }
 }
 
 @media (max-width: 480px) {
