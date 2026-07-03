@@ -64,13 +64,20 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
       <div style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
         
         <!-- Top header with logo -->
-        <div style="border-top: 4px solid #000000; text-align: center; padding: 20px 0; border-bottom: 1px solid #e5e7eb;">
-          <h1 style="margin:0; padding-left:40px; font-size:20px; font-weight:700; color:#1a1d1f; display:flex;">
-             Trexo CRM
-          </h1>
+        <div style="border-top: 4px solid #000000; padding: 20px 32px; border-bottom: 1px solid #e5e7eb;">
+          <table cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td valign="middle" style="padding-right: 10px;">
+                <img src="https://crm.spagylo.com/spagylo-logo.png" alt="Spagylo" width="36" height="36" style="display:block; border-radius:6px;" />
+              </td>
+              <td valign="middle">
+                <span style="font-size:20px; font-weight:700; color:#dc2626;">Spagylo CRM</span>
+              </td>
+            </tr>
+          </table>
           ${context.taskId ? `
-            <div style="margin:0; padding-left:40px; font-size:13px; font-weight:600; color:#6b7280; display:flex; margin-top:2px;">
-              (${context.taskId})
+            <div style="font-size:13px; font-weight:600; color:#6b7280; margin-top:6px;">
+              ${context.taskId}
             </div>
           ` : ''}
         </div>
@@ -100,7 +107,7 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
                 <strong>Task Group:</strong> ${context.boardName || 'To Do'}
              </div>
              <div style="font-size: 13px; color: #6b7280;">
-                <strong>Project Name:</strong> ${context.projectName || 'General'}
+                <strong>Project:</strong> ${context.projectName || 'General'}
              </div>
           </div>
           
@@ -118,7 +125,7 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
 
           <!-- Action Button -->
           <div style="margin-left: 48px; margin-top: 16px;">
-            <a href="${context.buttonLink || process.env.FRONTEND_URL || 'https://trexocrm.vercel.app'}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 24px; border-radius: 4px;">
+            <a href="${context.buttonLink || process.env.FRONTEND_URL || 'https://crm.spagylo.com'}" style="display: inline-block; background-color: #6b7280; color: #000000; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 24px; border-radius: 4px;">
               ${context.buttonText || 'View Item'}
             </a>
           </div>
@@ -179,10 +186,17 @@ async function sendOtpEmail(to, otp) {
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f4f5f7; padding: 40px 20px;">
       <div style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <div style="border-top: 4px solid #2563eb; text-align: center; padding: 20px 0; border-bottom: 1px solid #e5e7eb;">
-          <h1 style="margin:0; font-size:20px; font-weight:700; color:#1a1d1f;">
-             Trexo CRM Password Reset
-          </h1>
+        <div style="border-top: 4px solid #000000; padding: 20px 32px; border-bottom: 1px solid #e5e7eb; text-align: center;">
+          <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+            <tr>
+              <td valign="middle" style="padding-right: 10px;">
+                <img src="https://crm.spagylo.com/spagylo-logo.png" alt="Spagylo" width="36" height="36" style="display:block; border-radius:6px;" />
+              </td>
+              <td valign="middle">
+                <span style="font-size:20px; font-weight:700; color:#dc2626;">Spagylo CRM Password Reset</span>
+              </td>
+            </tr>
+          </table>
         </div>
         <div style="padding: 32px 40px; text-align: center;">
           <h2 style="color: #1f2937; margin-bottom: 8px;">Verification Code</h2>
@@ -223,7 +237,7 @@ async function sendOtpEmail(to, otp) {
       },
       Subject: {
         Charset: 'UTF-8',
-        Data: 'Your Password Reset OTP - Trexo CRM',
+        Data: 'Your Password Reset OTP - Spagylo CRM',
       },
     },
     Source: fromAddress,
