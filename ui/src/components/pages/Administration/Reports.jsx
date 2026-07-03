@@ -42,17 +42,17 @@ const getWeekRange = (dateStr) => {
 };
 
 export default function Reports({ user, onNavigateToTask }) {
-  const [reportType, setReportType] = useState('monthly'); // 'monthly' | 'weekly' | 'custom'
+  const [reportType, setReportType] = useState('daily'); // 'daily' | 'weekly' | 'monthly' | 'custom'
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  
-  const [selectedWeekDate, setSelectedWeekDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const [selectedDailyDate, setSelectedDailyDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedMonth, setSelectedMonth]         = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear]           = useState(new Date().getFullYear());
+  const [selectedWeekDate, setSelectedWeekDate]   = useState(new Date().toISOString().split('T')[0]);
 
   const [customStartDate, setCustomStartDate] = useState(new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]);
-  const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [customEndDate, setCustomEndDate]     = useState(new Date().toISOString().split('T')[0]);
 
   const [selectedProject, setSelectedProject] = useState('All Projects');
   const [selectedAssignee, setSelectedAssignee] = useState('All Assignees');
@@ -66,33 +66,32 @@ export default function Reports({ user, onNavigateToTask }) {
     try {
       setLoading(true);
       let data;
-      if (reportType === 'monthly') {
-        const params = new URLSearchParams({
-          month: selectedMonth,
-          year: selectedYear,
-          project: selectedProject,
-          assignee: selectedAssignee,
-          client: selectedClient
-        });
+      const common = { project: selectedProject, assignee: selectedAssignee, client: selectedClient };
+
+      if (reportType === 'daily') {
+        const start = new Date(selectedDailyDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(selectedDailyDate);
+        end.setHours(23, 59, 59, 999);
+        const params = new URLSearchParams({ startDate: start.toISOString(), endDate: end.toISOString(), ...common });
+        data = await api.get(`/reports/range?${params.toString()}`);
+      } else if (reportType === 'monthly') {
+        const params = new URLSearchParams({ month: selectedMonth, year: selectedYear, ...common });
         data = await api.get(`/reports/monthly?${params.toString()}`);
       } else if (reportType === 'weekly') {
         const range = getWeekRange(selectedWeekDate);
         const params = new URLSearchParams({
           startDate: new Date(range.monday).toISOString(),
-          endDate: new Date(new Date(range.sunday).setHours(23, 59, 59, 999)).toISOString(),
-          project: selectedProject,
-          assignee: selectedAssignee,
-          client: selectedClient
+          endDate:   new Date(new Date(range.sunday).setHours(23, 59, 59, 999)).toISOString(),
+          ...common,
         });
         data = await api.get(`/reports/range?${params.toString()}`);
       } else {
         if (customStartDate && customEndDate) {
           const params = new URLSearchParams({
             startDate: new Date(customStartDate).toISOString(),
-            endDate: new Date(new Date(customEndDate).setHours(23, 59, 59, 999)).toISOString(),
-            project: selectedProject,
-            assignee: selectedAssignee,
-            client: selectedClient
+            endDate:   new Date(new Date(customEndDate).setHours(23, 59, 59, 999)).toISOString(),
+            ...common,
           });
           data = await api.get(`/reports/range?${params.toString()}`);
         } else {
@@ -126,7 +125,7 @@ export default function Reports({ user, onNavigateToTask }) {
   useEffect(() => {
     fetchReports();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportType, selectedMonth, selectedYear, customStartDate, customEndDate, selectedClient, selectedWeekDate]);
+  }, [reportType, selectedDailyDate, selectedMonth, selectedYear, customStartDate, customEndDate, selectedClient, selectedWeekDate]);
 
   const totalTasks = tasks.length;
   const totalApprovedHours = tasks.reduce((sum, t) => sum + (parseFloat(t.taskApprovedHours) || 0), 0);
@@ -147,7 +146,7 @@ export default function Reports({ user, onNavigateToTask }) {
   };
 
   const handleExport = () => {
-    const headers = ['Task # No', 'Title', 'Project', 'Assignee', 'Time Spent', 'Billable Hours', 'Already Billed', 'Delivered Date'];
+    const headers = ['TASK # NO', 'TITLE', 'PROJECT', 'ASSIGNEE', 'TIME SPENT HRS', 'BILLABLE HRS', 'ALREADY BILLED', 'DELIVERED DATE'];
     const rows = tasks.map(t => {
       const resolvedProj = t.projectName || (projects.find(p => p.id === t.projectId)?.name) || '-';
       
@@ -180,7 +179,9 @@ export default function Reports({ user, onNavigateToTask }) {
     a.style.display = 'none';
     a.href = url;
     let downloadFilename;
-    if (reportType === 'monthly') {
+    if (reportType === 'daily') {
+      downloadFilename = `Daily_Report_${selectedDailyDate}.csv`;
+    } else if (reportType === 'monthly') {
       downloadFilename = `Monthly_Report_${selectedYear}_${selectedMonth}.csv`;
     } else if (reportType === 'weekly') {
       const range = getWeekRange(selectedWeekDate);
@@ -221,24 +222,10 @@ export default function Reports({ user, onNavigateToTask }) {
 
         <div className="reports-actions">
           <div className="report-type-toggle">
-            <button 
-              className={reportType === 'monthly' ? 'active' : ''} 
-              onClick={() => setReportType('monthly')}
-            >
-              Monthly
-            </button>
-            <button 
-              className={reportType === 'weekly' ? 'active' : ''} 
-              onClick={() => setReportType('weekly')}
-            >
-              Weekly
-            </button>
-            <button 
-              className={reportType === 'custom' ? 'active' : ''} 
-              onClick={() => setReportType('custom')}
-            >
-              Custom
-            </button>
+            <button className={reportType === 'daily'   ? 'active' : ''} onClick={() => setReportType('daily')}>Daily</button>
+            <button className={reportType === 'weekly'  ? 'active' : ''} onClick={() => setReportType('weekly')}>Weekly</button>
+            <button className={reportType === 'monthly' ? 'active' : ''} onClick={() => setReportType('monthly')}>Monthly</button>
+            <button className={reportType === 'custom'  ? 'active' : ''} onClick={() => setReportType('custom')}>Custom</button>
           </div>
 
           <button className="reports-export-btn" onClick={handleExport}>
@@ -251,47 +238,40 @@ export default function Reports({ user, onNavigateToTask }) {
       <div className="reports-filters-bar">
         <div className="reports-filter-left">
           <button className="reports-nav-btn" onClick={() => {
-            if (reportType === 'monthly') {
-              if (selectedMonth === 1) {
-                setSelectedMonth(12);
-                setSelectedYear(selectedYear - 1);
-              } else {
-                setSelectedMonth(selectedMonth - 1);
-              }
+            if (reportType === 'daily') {
+              const d = new Date(selectedDailyDate); d.setDate(d.getDate() - 1);
+              setSelectedDailyDate(d.toISOString().split('T')[0]);
+            } else if (reportType === 'monthly') {
+              if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear(selectedYear - 1); }
+              else setSelectedMonth(selectedMonth - 1);
             } else if (reportType === 'weekly') {
-              const d = new Date(selectedWeekDate);
-              d.setDate(d.getDate() - 7);
+              const d = new Date(selectedWeekDate); d.setDate(d.getDate() - 7);
               setSelectedWeekDate(d.toISOString().split('T')[0]);
             } else {
-              const start = new Date(customStartDate);
-              const end = new Date(customEndDate);
+              const start = new Date(customStartDate), end = new Date(customEndDate);
               const diff = end - start;
               const newEnd = new Date(start.getTime() - 1);
-              const newStart = new Date(newEnd.getTime() - diff);
-              setCustomStartDate(newStart.toISOString().split('T')[0]);
+              setCustomStartDate(new Date(newEnd.getTime() - diff).toISOString().split('T')[0]);
               setCustomEndDate(newEnd.toISOString().split('T')[0]);
             }
           }}>←</button>
           <div className={`reports-date-selector reports-date-selector-${reportType}`}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            {reportType === 'monthly' ? (
+            {reportType === 'daily' ? (
+              <input type="date" value={selectedDailyDate} onChange={e => setSelectedDailyDate(e.target.value)} style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+            ) : reportType === 'monthly' ? (
               <>
-                <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))}>
+                <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}>
                   {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
                 <span>,</span>
-                <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}>
+                <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))}>
                   {years.map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </>
             ) : reportType === 'weekly' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <input 
-                  type="date" 
-                  value={selectedWeekDate} 
-                  onChange={(e) => setSelectedWeekDate(e.target.value)} 
-                  style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} 
-                />
+                <input type="date" value={selectedWeekDate} onChange={e => setSelectedWeekDate(e.target.value)} style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                 <span style={{ fontSize: '0.875rem', fontWeight: '500', color: '#1e293b', backgroundColor: '#f1f5f9', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
                   {(() => {
                     const range = getWeekRange(selectedWeekDate);
@@ -302,12 +282,28 @@ export default function Reports({ user, onNavigateToTask }) {
               </div>
             ) : (
               <div className="reports-custom-date-range" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} className="reports-custom-date-input" style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} className="reports-custom-date-input" style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                 <span style={{ color: '#64748b', flexShrink: 0 }}>to</span>
-                <input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} className="reports-custom-date-input" style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} className="reports-custom-date-input" style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
               </div>
             )}
           </div>
+
+          {/* Forward arrow — not shown for custom (no natural next range) */}
+          {reportType !== 'custom' && (
+            <button className="reports-nav-btn" onClick={() => {
+              if (reportType === 'daily') {
+                const d = new Date(selectedDailyDate); d.setDate(d.getDate() + 1);
+                setSelectedDailyDate(d.toISOString().split('T')[0]);
+              } else if (reportType === 'monthly') {
+                if (selectedMonth === 12) { setSelectedMonth(1); setSelectedYear(selectedYear + 1); }
+                else setSelectedMonth(selectedMonth + 1);
+              } else if (reportType === 'weekly') {
+                const d = new Date(selectedWeekDate); d.setDate(d.getDate() + 7);
+                setSelectedWeekDate(d.toISOString().split('T')[0]);
+              }
+            }}>→</button>
+          )}
         </div>
         <div className="reports-filter-right">
           <select className="reports-select" value={selectedClient} onChange={e => setSelectedClient(e.target.value)}>

@@ -5,7 +5,7 @@
 
 :root {
   --saas-bg-sidebar: #F6F7F9;
-  --saas-bg-main: #FFFFFF;
+  --saas-bg-main: #f3f4f6;
   --saas-border: #E6E8EB;
   --saas-primary-green: #24B47E;
   --saas-text-primary: #1A1D23;
@@ -234,7 +234,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--saas-bg-main);
+  background: #ffffff;
 }
 
 .saas-header-left {
@@ -295,11 +295,9 @@
 .saas-user-profile-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.5rem 1rem;
-  background: #f8fafc;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  padding: 0.25rem;
+  background: transparent;
+  border: none;
 }
 
 .saas-user-info {
@@ -874,11 +872,11 @@
   .saas-dashboard-layout,
   .saas-main-area,
   .saas-page-content {
-    background-color: #ffffff !important;
+    background-color: #f3f4f6 !important;
   }
 
   .db-overview-page {
-    background-color: #ffffff !important;
+    background-color: #f3f4f6 !important;
     min-height: 100%;
     padding: 1rem;
   }
@@ -940,40 +938,66 @@
 }
 
 @media (max-width: 480px) {
-  .saas-header-center-search {
-    display: flex;
+  /* Two-row mobile header: [hamburger + title + icons] / [search full-width] */
+  .saas-main-header {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 56px;
+    padding: 0.5rem 0.75rem;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .saas-header-left-breadcrumbs-group {
     flex: 1;
-    min-width: 80px;
-    max-width: 145px;
-    padding: 0.3rem 0.5rem;
-    margin: 0 0.2rem;
-    gap: 0.3rem;
+    min-width: 0;
+    order: 1;
+  }
+
+  .saas-header-right {
+    order: 2;
+    flex-shrink: 0;
+    gap: 0.25rem;
+  }
+
+  /* Search moves to second row, full width */
+  .saas-header-center-search {
+    order: 3;
+    flex: 1 1 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0.35rem 0.65rem;
+    gap: 0.4rem;
     border-radius: 8px;
   }
   .saas-header-center-search svg {
-    width: 13px;
-    height: 13px;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
   }
   .saas-header-center-search input {
-    font-size: 0.78rem;
+    font-size: 0.82rem;
+    width: 100%;
   }
   .saas-search-results-overlay {
-    width: 270px;
-    right: -30px;
+    width: calc(100vw - 1.5rem);
+    left: 0;
+    right: auto;
   }
+
+  /* Title — full width, no truncation */
   .saas-breadcrumbs {
-    font-size: 0.72rem;
-    max-width: 70px;
+    font-size: 0.85rem;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    max-width: none;
   }
   .saas-breadcrumb-item {
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: inline-block;
-    max-width: 70px;
+    overflow: visible;
+    max-width: none;
+    display: inline;
   }
 }
 
@@ -1461,6 +1485,21 @@
 
 .saas-page-content.tasks-page-active {
   overflow-y: hidden;
+}
+
+/* Ensure all dashboard pages have a mild grey background */
+.saas-dashboard-layout,
+.saas-main-area,
+.saas-page-content,
+.kanban-root,
+.projects-page,
+.clients-page-container,
+.estimations-page-container,
+.roles-page-container,
+.users-page-container,
+.saas-page-content > div,
+.saas-page-content > div > div {
+  background-color: #f3f4f6 !important;
 }
 
 

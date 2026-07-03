@@ -140,8 +140,8 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
     const name = (selectedUserName || 'user').replace(/[^a-zA-Z0-9]/g, '_');
     downloadCSV(
       `daily-load-individual-${name}.csv`,
-      ['Task', 'Status', 'Estimated Hrs', 'Logged Hrs', 'Remaining Hrs'],
-      reportRows.map(r => [r.title, r.status, r.estimatedHours, r.loggedHours.toFixed(1), r.remainingHours.toFixed(1)])
+      ['TASK', 'STATUS', 'ESTIMATED HRS', 'TIMESPENT HRS', 'REMAINING HRS'],
+      reportRows.map(r => [r.title, r.status, r.estimatedHours.toFixed(1), r.loggedHours.toFixed(1), r.remainingHours.toFixed(1)])
     );
   };
 
@@ -236,9 +236,11 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
             <table className="reports-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '55%' }}>TASK</th>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '25%' }}>STATUS</th>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '20%', textAlign: 'right' }}>REMAINING HRS</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '40%' }}>TASK</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%' }}>STATUS</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%', textAlign: 'right' }}>ESTIMATED HRS</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%', textAlign: 'right' }}>TIMESPENT HRS</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%', textAlign: 'right' }}>REMAINING HRS</th>
                 </tr>
               </thead>
               <tbody>
@@ -268,6 +270,12 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
                         >
                           {row.status.toUpperCase()}
                         </span>
+                      </td>
+                      <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '600', color: '#475569', fontSize: '0.875rem' }}>
+                        {row.estimatedHours.toFixed(1)}
+                      </td>
+                      <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '600', color: '#475569', fontSize: '0.875rem' }}>
+                        {row.loggedHours.toFixed(1)}
                       </td>
                       <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '700', color: '#2563eb', fontSize: '0.9rem' }}>
                         {row.remainingHours.toFixed(1)}
@@ -299,11 +307,17 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
                     </span>
                   </div>
                   <div className="reports-mobile-card-body">
-                    <div className="reports-mobile-card-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                    <div className="reports-mobile-card-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
                       <div className="reports-mobile-card-grid-item">
                         <span className="reports-mobile-card-grid-label">Estimated Hrs</span>
                         <span className="reports-mobile-card-grid-value" style={{ color: '#475569' }}>
                           {row.estimatedHours.toFixed(1)}
+                        </span>
+                      </div>
+                      <div className="reports-mobile-card-grid-item">
+                        <span className="reports-mobile-card-grid-label">Timespent Hrs</span>
+                        <span className="reports-mobile-card-grid-value" style={{ color: '#475569' }}>
+                          {row.loggedHours.toFixed(1)}
                         </span>
                       </div>
                       <div className="reports-mobile-card-grid-item">

@@ -157,6 +157,22 @@
     margin-right: 1rem;
   }
 
+  /* Task title cell: constrain content so it doesn't overflow the card */
+  .archive-table td.cell-task > div {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    flex-wrap: wrap;
+  }
+
+  .archive-table td.cell-task .cu-task-title {
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    overflow: visible;
+    text-overflow: unset;
+  }
+
   .archive-search-wrapper {
     width: auto !important;
   }

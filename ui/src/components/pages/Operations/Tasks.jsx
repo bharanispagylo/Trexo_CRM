@@ -470,7 +470,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     return assignees.includes(userName) || (currentUser?.id && assignees.includes(currentUser.id.toLowerCase().trim()));
   };
 
-  const canEdit = getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && isAssigned());
+  const canEdit = !isEdit
+    ? can('tasks', 'create')
+    : (getLevel('tasks', 'edit') === 'All' || (getLevel('tasks', 'edit') === 'Self' && isAssigned()));
   const canDelete = getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && isAssigned());
 
   const isTeamLeadOrAdmin = currentUser?.role?.toLowerCase() === 'team lead' || currentUser?.role?.toLowerCase() === 'admin';
@@ -3999,7 +4001,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   
   // Explicit filters
   const [filterProjectName, setFilterProjectName] = useState('');
-  const [filterDate, setFilterDate] = useState('');
+  const [filterFromDate, setFilterFromDate] = useState('');
+  const [filterToDate, setFilterToDate] = useState('');
 
   useEffect(() => {
     api.get('/projects').then(data => {
@@ -4343,17 +4346,26 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     }
 
     // 2. Date Filter
-    if (filterDate) {
-      const targetDateStr = filterDate;
-      const matchDate = (dateStr) => {
-        if (!dateStr) return false;
+    if (filterFromDate || filterToDate) {
+      const getLocalDateStr = (dateStr) => {
+        if (!dateStr) return null;
         const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return false;
-        return d.toISOString().split('T')[0] === targetDateStr;
+        if (isNaN(d.getTime())) return null;
+        return d.toISOString().split('T')[0];
       };
-      if (!matchDate(t.startDate) && !matchDate(t.dueDate) && !matchDate(t.deliveredDate)) {
-        return false;
-      }
+
+      const matchRange = (dateStr) => {
+        if (!dateStr) return false;
+        const localStr = getLocalDateStr(dateStr);
+        if (!localStr) return false;
+        
+        if (filterFromDate && localStr < filterFromDate) return false;
+        if (filterToDate && localStr > filterToDate) return false;
+        return true;
+      };
+      
+      const hasMatch = matchRange(t.startDate) || matchRange(t.dueDate) || matchRange(t.deliveredDate);
+      if (!hasMatch) return false;
     }
 
     // 3. User Permission / SubTab Filter
@@ -4374,17 +4386,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
   const pageTitle = subTab === 'my' ? '' : 'All Tasks';
 
-  if (openingInitialTask) {
+  if (loading || openingInitialTask) {
     return (
       <div className="loading-screen" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f8fafc', flexDirection: 'column', gap: '1.2rem' }}>
-        <div className="saas-spinner" style={{ width: '40px', height: '40px', border: '3px solid #f3f3f3', borderTop: '3px solid #2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-        <div style={{ color: '#64748b', fontWeight: 600, fontSize: '0.95rem' }}>Loading task details...</div>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
+        <div style={{ color: '#64748b', fontWeight: 600, fontSize: '0.95rem' }}>
+          {openingInitialTask ? 'Loading task details...' : 'Loading tasks...'}
+        </div>
       </div>
     );
   }
@@ -4505,56 +4512,77 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         </div>
         <div className="kanban-controls">
           <div className="tasks-filter-row">
-            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Projects</label>
-            <select 
-              value={filterProjectName} 
-              onChange={e => setFilterProjectName(e.target.value)}
-              style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
-            >
-              {subTab === 'my' ? (
-                <>
-                  <option value="">All Projects</option>
-                  {taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                </>
-              ) : (
-                <>
-                  <option value="">All Projects</option>
-                  {taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                </>
-              )}
-            </select>
-            {filterDate ? (
+            <div className="filter-group-project">
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Projects</label>
+              <select 
+                value={filterProjectName} 
+                onChange={e => setFilterProjectName(e.target.value)}
+                style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
+              >
+                {subTab === 'my' ? (
+                  <>
+                    <option value="">All Projects</option>
+                    {taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                  </>
+                ) : (
+                  <>
+                    <option value="">All Projects</option>
+                    {taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                  </>
+                )}
+              </select>
+            </div>
+            
+            <div className="filter-group-date">
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>From</span>
               <input 
-                type="date" 
-                value={filterDate} 
-                onChange={e => setFilterDate(e.target.value)}
-                title="Filter by task date"
+                type={filterFromDate ? "date" : "text"} 
+                placeholder="Date"
+                value={filterFromDate} 
+                onFocus={(e) => { 
+                  e.target.type = 'date'; 
+                  if (!filterFromDate) {
+                    const today = new Date();
+                    const yyyy = today.getFullYear();
+                    const mm = String(today.getMonth() + 1).padStart(2, '0');
+                    const dd = String(today.getDate()).padStart(2, '0');
+                    setFilterFromDate(`${yyyy}-${mm}-${dd}`);
+                  }
+                }}
+                onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }}
+                onChange={e => setFilterFromDate(e.target.value)}
+                title="From date filter"
                 style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
               />
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  const today = new Date();
-                  const yyyy = today.getFullYear();
-                  const mm = String(today.getMonth() + 1).padStart(2, '0');
-                  const dd = String(today.getDate()).padStart(2, '0');
-                  setFilterDate(`${yyyy}-${mm}-${dd}`);
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>To</span>
+              <input 
+                type={filterToDate ? "date" : "text"} 
+                placeholder="Date"
+                value={filterToDate} 
+                onFocus={(e) => { 
+                  e.target.type = 'date'; 
+                  if (!filterToDate) {
+                    const today = new Date();
+                    const yyyy = today.getFullYear();
+                    const mm = String(today.getMonth() + 1).padStart(2, '0');
+                    const dd = String(today.getDate()).padStart(2, '0');
+                    setFilterToDate(`${yyyy}-${mm}-${dd}`);
+                  }
                 }}
-                style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#94a3b8', background: '#f8fafc', outline: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-              >
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                Date
-              </button>
-            )}
-            {(filterProjectName || filterDate) && (
-              <button 
-                onClick={() => { setFilterProjectName(''); setFilterDate(''); }}
-                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
-              >
-                Clear
-              </button>
-            )}
+                onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }}
+                onChange={e => setFilterToDate(e.target.value)}
+                title="To date filter"
+                style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
+              />
+              {(filterProjectName || filterFromDate || filterToDate) && (
+                <button 
+                  onClick={() => { setFilterProjectName(''); setFilterFromDate(''); setFilterToDate(''); }}
+                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
           <div className="view-toggle">
             <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>List</button>
@@ -4870,7 +4898,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           });
 
           const firstListId = finalProjectGroups[0]?.lists[0]?.id;
-          const hasActiveFilter = !!(filterProjectName || filterDate || assigneeFilter);
+          const hasActiveFilter = !!(filterProjectName || filterFromDate || filterToDate || assigneeFilter);
 
           return (
             <>

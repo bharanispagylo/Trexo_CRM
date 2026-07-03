@@ -65,7 +65,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
     return parsed.taskId;
   });
   const [userToEdit, setUserToEdit] = useState(null);
-  const { can, canReport, loading } = usePermissions();
+  const { can, canReport, loading, getLevel } = usePermissions();
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -401,6 +401,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const [allTasks, setAllTasks] = useState([]);
   const [allProjects, setAllProjects] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
+  const [allTaskGroups, setAllTaskGroups] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [searchSelectedTask, setSearchSelectedTask] = useState(null);
   const [searchSelectedProject, setSearchSelectedProject] = useState(null);
@@ -427,14 +428,16 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const handleSearchFocus = async () => {
     try {
       setShowSearchResults(true);
-      const [tasksData, projectsData, usersData] = await Promise.all([
+      const [tasksData, projectsData, usersData, taskGroupsData] = await Promise.all([
         api.get('/tasks'),
         api.get('/projects'),
-        api.get('/users')
+        api.get('/users'),
+        api.get('/task-lists').catch(() => [])
       ]);
       setAllTasks(tasksData || []);
       setAllProjects(projectsData || []);
       setAllUsers(usersData || []);
+      setAllTaskGroups(taskGroupsData || []);
     } catch (err) {
       console.error('Failed to pre-fetch search items:', err);
     }
@@ -444,6 +447,20 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
   const filteredTasks = q
     ? allTasks.filter(t => {
+        if (user?.role?.toLowerCase() !== 'admin') {
+          if (!can('tasks', 'view')) return false;
+          const level = getLevel('tasks', 'view');
+          if (level === 'Self') {
+            const assignees = t.assignees ? t.assignees.split(',').map(a => a.trim().toLowerCase()) : [];
+            const targetId = (user?.id || '').trim().toLowerCase();
+            const userName = (user?.fullName || user?.name || '').trim().toLowerCase();
+            const isAssignee = assignees.includes(targetId) || assignees.includes(userName);
+            if (!isAssignee) return false;
+          } else if (level !== 'All') {
+            return false;
+          }
+        }
+
         if ((t.title || '').toLowerCase().includes(q)) return true;
         if ((t.description || '').toLowerCase().includes(q)) return true;
         if ((t.taskNo || '').toLowerCase().includes(q)) return true;
@@ -474,21 +491,70 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
     : [];
 
   const filteredProjects = q
-    ? allProjects.filter(p =>
-      (p.name || '').toLowerCase().includes(q) ||
-      (p.client || '').toLowerCase().includes(q) ||
-      (p.status || '').toLowerCase().includes(q) ||
-      (p.description || '').toLowerCase().includes(q)
-    )
+    ? allProjects.filter(p => {
+        if (user?.role?.toLowerCase() !== 'admin') {
+          if (!can('projects', 'view')) return false;
+          const level = getLevel('projects', 'view');
+          if (level === 'Self') {
+            const memberIds = (p.members || '').split(',').map(m => m.trim().toLowerCase()).filter(Boolean);
+            const userId = (user?.id || '').trim().toLowerCase();
+            const isMember = userId && memberIds.includes(userId);
+            if (!isMember) return false;
+          } else if (level !== 'All') {
+            return false;
+          }
+        }
+
+        return (
+          (p.name || '').toLowerCase().includes(q) ||
+          (p.client || '').toLowerCase().includes(q) ||
+          (p.status || '').toLowerCase().includes(q) ||
+          (p.description || '').toLowerCase().includes(q)
+        );
+      })
     : [];
 
   const filteredUsers = q
-    ? allUsers.filter(u =>
-      (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase().includes(q) ||
-      (u.email || '').toLowerCase().includes(q) ||
-      (u.empId || '').toLowerCase().includes(q) ||
-      (u.role || '').toLowerCase().includes(q)
-    )
+    ? allUsers.filter(u => {
+        if (user?.role?.toLowerCase() !== 'admin') {
+          if (!can('users', 'view')) return false;
+          const level = getLevel('users', 'view');
+          if (level === 'Self') {
+            if (u.id !== user?.id) return false;
+          } else if (level !== 'All') {
+            return false;
+          }
+        }
+
+        return (
+          (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase().includes(q) ||
+          (u.email || '').toLowerCase().includes(q) ||
+          (u.empId || '').toLowerCase().includes(q) ||
+          (u.role || '').toLowerCase().includes(q)
+        );
+      })
+    : [];
+
+  const filteredTaskGroups = q
+    ? allTaskGroups.filter(tg => {
+        if (user?.role?.toLowerCase() !== 'admin') {
+          if (!can('taskGroups', 'view')) return false;
+          const level = getLevel('taskGroups', 'view');
+          if (level === 'Self') {
+            const memberIds = (tg.project?.members || '').split(',').map(m => m.trim().toLowerCase()).filter(Boolean);
+            const userId = (user?.id || '').trim().toLowerCase();
+            const isMember = userId && memberIds.includes(userId);
+            if (!isMember) return false;
+          } else if (level !== 'All') {
+            return false;
+          }
+        }
+
+        return (
+          (tg.name || '').toLowerCase().includes(q) ||
+          (tg.project?.name || '').toLowerCase().includes(q)
+        );
+      })
     : [];
 
   const handleItemClick = (type, item) => {
@@ -502,6 +568,8 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       setActiveTab('projects');
     } else if (type === 'user') {
       setActiveTab('users');
+    } else if (type === 'task-group') {
+      setActiveTab('task-groups');
     }
   };
 
@@ -786,7 +854,6 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             <img src="/spagylo-logo.png" alt="Spagylo CRM Logo" style={{ width: '2.5rem', height: 'auto', objectFit: 'contain' }} />
             <div className="saas-brand-text">
               <div className="saas-company">Spagylo CRM</div>
-              <div className="saas-user-role">{user?.role || 'Admin'}</div>
             </div>
           </div>
         </div>
@@ -988,14 +1055,14 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={e => { setSearchQuery(e.target.value); setShowSearchResults(true); }}
               onFocus={handleSearchFocus}
               placeholder="Search here..."
             />
 
             {showSearchResults && searchQuery.trim() && (
               <div className="saas-search-results-overlay">
-                {filteredTasks.length === 0 && filteredProjects.length === 0 && filteredUsers.length === 0 && (
+                {filteredTasks.length === 0 && filteredProjects.length === 0 && filteredUsers.length === 0 && filteredTaskGroups.length === 0 && (
                   <div className="no-comments-placeholder" style={{ padding: '1rem', fontSize: '0.85rem' }}>No results found for "{searchQuery}"</div>
                 )}                {filteredTasks.length > 0 && (
                   <div className="saas-search-category">
@@ -1040,6 +1107,23 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
                         <div className="saas-search-item-content">
                           <div className="saas-search-item-title">{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`}</div>
                           <div className="saas-search-item-subtitle">{u.role || 'Member'}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {filteredTaskGroups.length > 0 && (
+                  <div className="saas-search-category">
+                    <div className="saas-search-category-title">Task Groups</div>
+                    {filteredTaskGroups.slice(0, 5).map(tg => (
+                      <div key={tg.id} className="saas-search-item" onClick={() => handleItemClick('task-group', tg)}>
+                        <div className="saas-search-item-icon project-icon" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                        </div>
+                        <div className="saas-search-item-content">
+                          <div className="saas-search-item-title">{tg.name}</div>
+                          <div className="saas-search-item-subtitle">{tg.project?.name ? `Project: ${tg.project.name}` : ''}</div>
                         </div>
                       </div>
                     ))}
@@ -1105,13 +1189,6 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
                   </div>
                 )}
               </div>
-              <div className="saas-user-info">
-                <span className="saas-user-name">{user?.fullName || user?.name || user?.role || 'User'}</span>
-                <span className="saas-user-email">{user?.role || 'Admin'}</span>
-              </div>
-              <span className="saas-profile-chevron" style={{ transform: isProfileDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
-              </span>
 
               {/* Dropdown Menu */}
               {isProfileDropdownOpen && (
@@ -1131,8 +1208,9 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
                   gap: '0.25rem'
                 }}>
                   <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #f1f5f9', marginBottom: '0.25rem' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{user?.fullName || user?.firstName}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{user?.email}</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{user?.fullName || user?.firstName || user?.name || 'User'}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', marginBottom: '2px' }}>{user?.role ? user?.role.charAt(0).toUpperCase() + user?.role.slice(1) : 'Admin'}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{user?.email}</div>
                   </div>
                   <button
                     onClick={onLogout}

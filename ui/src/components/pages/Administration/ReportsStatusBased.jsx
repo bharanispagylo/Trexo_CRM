@@ -41,12 +41,13 @@ const STATUS_STYLE = {
 const STATUSES = ['To Do', 'In Progress', 'To Approved', 'Approved', 'Delivered', 'On Hold', 'In Testing', 'Prod Verified'];
 
 export default function ReportsStatusBased({ user, onNavigateToTask }) {
-  const [reportType, setReportType] = useState('monthly');
+  const [reportType, setReportType] = useState('daily');
 
-  const [selectedMonth, setSelectedMonth]       = useState(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear]         = useState(new Date().getFullYear());
-  const [selectedWeekDate, setSelectedWeekDate] = useState(new Date().toISOString().split('T')[0]);
-  const [customStartDate, setCustomStartDate]   = useState(
+  const [selectedDailyDate, setSelectedDailyDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedMonth, setSelectedMonth]         = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear]           = useState(new Date().getFullYear());
+  const [selectedWeekDate, setSelectedWeekDate]   = useState(new Date().toISOString().split('T')[0]);
+  const [customStartDate, setCustomStartDate]     = useState(
     new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]
   );
   const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
@@ -68,20 +69,20 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
     setLoading(true);
     try {
       let data;
-      if (reportType === 'monthly') {
+      const common = { project: selectedProject, assignee: selectedAssignee, client: selectedClient, status: selectedStatus };
+
+      if (reportType === 'daily') {
+        const params = new URLSearchParams({ period: 'daily', date: selectedDailyDate, ...common });
+        data = await api.get(`/reports/status-based?${params}`);
+      } else if (reportType === 'monthly') {
         const params = new URLSearchParams({
           period: 'monthly',
           date: `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`,
-          project: selectedProject, assignee: selectedAssignee,
-          client: selectedClient,   status: selectedStatus,
+          ...common,
         });
         data = await api.get(`/reports/status-based?${params}`);
       } else if (reportType === 'weekly') {
-        const params = new URLSearchParams({
-          period: 'weekly', date: selectedWeekDate,
-          project: selectedProject, assignee: selectedAssignee,
-          client: selectedClient,   status: selectedStatus,
-        });
+        const params = new URLSearchParams({ period: 'weekly', date: selectedWeekDate, ...common });
         data = await api.get(`/reports/status-based?${params}`);
       } else {
         if (customStartDate && customEndDate) {
@@ -89,8 +90,7 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
             period: 'custom',
             startDate: new Date(customStartDate).toISOString(),
             endDate:   new Date(new Date(customEndDate).setHours(23, 59, 59, 999)).toISOString(),
-            project: selectedProject, assignee: selectedAssignee,
-            client: selectedClient,   status: selectedStatus,
+            ...common,
           });
           data = await api.get(`/reports/status-based?${params}`);
         } else {
@@ -117,7 +117,7 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
   useEffect(() => {
     fetchData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportType, selectedMonth, selectedYear, customStartDate, customEndDate, selectedWeekDate]);
+  }, [reportType, selectedDailyDate, selectedMonth, selectedYear, customStartDate, customEndDate, selectedWeekDate]);
 
   const totalTasks     = tasks.length;
   const totalTimeSpent = tasks.reduce((s, t) => s + (parseFloat(t.timeSpent)      || 0), 0);
@@ -136,7 +136,7 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
   [tasks]);
 
   const handleExport = () => {
-    const headers = ['Task # No', 'Title', 'Project', 'Assignee', 'Time Spent', 'Billable hrs', 'Status', 'Estimated hrs'];
+    const headers = ['TASK # NO', 'TITLE', 'STATUS', 'PROJECT', 'ASSIGNEE', 'TIME SPENT HRS', 'BILLABLE HRS', 'ESTIMATED HRS'];
     const rows = tasks.map(t => {
       let resolvedAssignee = 'Unassigned';
       if (t.assignees) {
@@ -149,11 +149,11 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
       return [
         getDisplayId(t.taskNo, t.parentId),
         `"${(t.title || '').replace(/"/g, '""')}"`,
+        `"${t.status || ''}"`,
         `"${(t.projectName || '').replace(/"/g, '""')}"`,
         `"${resolvedAssignee.replace(/"/g, '""')}"`,
         formatDecimal(t.timeSpent),
         formatDecimal(t.billableHours),
-        `"${t.status || ''}"`,
         formatDecimal(t.estimatedHours),
       ];
     });
@@ -191,8 +191,9 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
         <div className="reports-title-area"></div>
         <div className="reports-actions">
           <div className="report-type-toggle">
-            <button className={reportType === 'monthly' ? 'active' : ''} onClick={() => setReportType('monthly')}>Monthly</button>
+            <button className={reportType === 'daily'   ? 'active' : ''} onClick={() => setReportType('daily')}>Daily</button>
             <button className={reportType === 'weekly'  ? 'active' : ''} onClick={() => setReportType('weekly')}>Weekly</button>
+            <button className={reportType === 'monthly' ? 'active' : ''} onClick={() => setReportType('monthly')}>Monthly</button>
             <button className={reportType === 'custom'  ? 'active' : ''} onClick={() => setReportType('custom')}>Custom</button>
           </div>
           <button className="reports-export-btn" onClick={handleExport}>
@@ -206,7 +207,10 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
       <div className="reports-filters-bar">
         <div className="reports-filter-left">
           <button className="reports-nav-btn" onClick={() => {
-            if (reportType === 'monthly') {
+            if (reportType === 'daily') {
+              const d = new Date(selectedDailyDate); d.setDate(d.getDate() - 1);
+              setSelectedDailyDate(d.toISOString().split('T')[0]);
+            } else if (reportType === 'monthly') {
               if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear(y => y - 1); }
               else setSelectedMonth(m => m - 1);
             } else if (reportType === 'weekly') {
@@ -223,7 +227,9 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
 
           <div className={`reports-date-selector reports-date-selector-${reportType}`}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            {reportType === 'monthly' ? (
+            {reportType === 'daily' ? (
+              <input type="date" value={selectedDailyDate} onChange={e => setSelectedDailyDate(e.target.value)} style={{ padding: '0.25rem', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+            ) : reportType === 'monthly' ? (
               <>
                 <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}>
                   {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
@@ -248,6 +254,22 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
               </div>
             )}
           </div>
+
+          {/* Forward arrow — hidden for custom (no natural "next" range) */}
+          {reportType !== 'custom' && (
+            <button className="reports-nav-btn" onClick={() => {
+              if (reportType === 'daily') {
+                const d = new Date(selectedDailyDate); d.setDate(d.getDate() + 1);
+                setSelectedDailyDate(d.toISOString().split('T')[0]);
+              } else if (reportType === 'monthly') {
+                if (selectedMonth === 12) { setSelectedMonth(1); setSelectedYear(y => y + 1); }
+                else setSelectedMonth(m => m + 1);
+              } else if (reportType === 'weekly') {
+                const d = new Date(selectedWeekDate); d.setDate(d.getDate() + 7);
+                setSelectedWeekDate(d.toISOString().split('T')[0]);
+              }
+            }}>→</button>
+          )}
         </div>
 
         <div className="reports-filter-right">

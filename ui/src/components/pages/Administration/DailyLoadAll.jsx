@@ -110,8 +110,8 @@ export default function DailyLoadAll({ onUserClick }) {
   const handleExport = () => {
     downloadCSV(
       `daily-load-all.csv`,
-      ['User Name', 'Role', 'Tasks #', 'Remaining Hrs'],
-      reportRows.map(r => [r.userName, r.role, r.tasksCount, r.remainingHours.toFixed(1)])
+      ['USER NAME', 'TASKS #', 'REMAINING HRS'],
+      reportRows.map(r => [r.userName, r.tasksCount, r.remainingHours.toFixed(1)])
     );
   };
 
