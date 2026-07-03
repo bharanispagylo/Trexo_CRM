@@ -431,7 +431,7 @@ export default function TaskGroups({ user, onBack }) {
 
     setIsCreatingTask(true);
     try {
-      const createdTask = await api.post('/tasks', {
+      await api.post('/tasks', {
         title: taskForm.title.trim(),
         taskListId: targetGroup.id,
         projectId: targetGroup.projectId || null,
