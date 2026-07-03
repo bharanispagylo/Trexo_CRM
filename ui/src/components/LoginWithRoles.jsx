@@ -650,44 +650,27 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
       today.setHours(0, 0, 0, 0);
       const todayTime = today.getTime();
 
+      const sevenDaysLater = new Date(today);
+      sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+      const sevenDaysTime = sevenDaysLater.getTime();
+
       let localToday = 0;
       let localOverdue = 0;
       let localUpcoming = 0;
 
       activeMyTasks.forEach(task => {
-        // Overdue check
-        let isBacklog = false;
-        if (task.deliveredDate) {
-          const d = new Date(task.deliveredDate);
-          d.setHours(0, 0, 0, 0);
-          if (d.getTime() < todayTime) isBacklog = true;
-        } else if (task.dueDate) {
+        if (task.dueDate) {
           const d = new Date(task.dueDate);
           d.setHours(0, 0, 0, 0);
-          if (d.getTime() < todayTime) isBacklog = true;
-        }
+          const dueTime = d.getTime();
 
-        if (isBacklog) {
-          localOverdue++;
-          return;
-        }
-
-        // Today check
-        let isToday = false;
-        if (task.assignedDate) {
-          const a = new Date(task.assignedDate);
-          a.setHours(0, 0, 0, 0);
-          if (a.getTime() === todayTime) isToday = true;
-        } else {
-          const c = new Date(task.createdAt || Date.now());
-          c.setHours(0, 0, 0, 0);
-          if (c.getTime() === todayTime) isToday = true;
-        }
-
-        if (isToday) {
-          localToday++;
-        } else {
-          localUpcoming++;
+          if (dueTime < todayTime) {
+            localOverdue++;
+          } else if (dueTime === todayTime) {
+            localToday++;
+          } else if (dueTime > todayTime && dueTime <= sevenDaysTime) {
+            localUpcoming++;
+          }
         }
       });
 
@@ -791,11 +774,11 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
 
   const statCards = [
     {
-      label: 'Today', count: mhdToday, iconBg: '#7c3aed',
+      label: 'Due today', count: mhdToday, iconBg: '#7c3aed',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
     },
     {
-      label: 'Overdue', count: mhdOverdue, iconBg: '#ef4444', warn: mhdOverdue > 0,
+      label: 'Backlog', count: mhdOverdue, iconBg: '#ef4444', warn: mhdOverdue > 0,
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
     },
     {
@@ -803,7 +786,7 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
     },
     {
-      label: 'Upcoming', count: mhdUpcoming, iconBg: '#f59e0b',
+      label: 'Due within a week', count: mhdUpcoming, iconBg: '#f59e0b',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     },
     {
@@ -954,6 +937,11 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayTime = today.getTime();
+
+        const sevenDaysLater = new Date(today);
+        sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+        const sevenDaysTime = sevenDaysLater.getTime();
+
         const todayTasks = [];
         const upcomingTasks = [];
         const backlogTasks = [];
@@ -961,51 +949,24 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
         allTasks.forEach(task => {
           if (task.status === 'Delivered' || task.status === 'Prod Verified') return;
 
-          // 1. Backlog Tasks: if deliveredDate or dueDate is in the past
-          let isBacklog = false;
-          if (task.deliveredDate) {
-            const d = new Date(task.deliveredDate);
-            d.setHours(0, 0, 0, 0);
-            if (d.getTime() < todayTime) {
-              isBacklog = true;
-            }
-          } else if (task.dueDate) {
+          if (task.dueDate) {
             const d = new Date(task.dueDate);
             d.setHours(0, 0, 0, 0);
-            if (d.getTime() < todayTime) {
-              isBacklog = true;
-            }
-          }
+            const dueTime = d.getTime();
 
-          if (isBacklog) {
-            backlogTasks.push(task);
-            return;
-          }
-
-          // 2. Today Tasks: based on assignedDate
-          let isToday = false;
-          if (task.assignedDate) {
-            const a = new Date(task.assignedDate);
-            a.setHours(0, 0, 0, 0);
-            if (a.getTime() === todayTime) {
-              isToday = true;
+            if (dueTime < todayTime) {
+              backlogTasks.push(task);
+            } else if (dueTime === todayTime) {
+              todayTasks.push(task);
+            } else if (dueTime > todayTime && dueTime <= sevenDaysTime) {
+              upcomingTasks.push(task);
             }
-          } else {
-            // Fallback to createdAt if assignedDate is not set
-            const c = new Date(task.createdAt || Date.now());
-            c.setHours(0, 0, 0, 0);
-            if (c.getTime() === todayTime) {
-              isToday = true;
-            }
-          }
-
-          if (isToday) {
-            todayTasks.push(task);
-          } else {
-            // 3. Upcoming Tasks: remaining tasks
-            upcomingTasks.push(task);
           }
         });
+
+        // Sort the tasks by Due Date in ascending order (earliest due date first)
+        upcomingTasks.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
         setTasks({ today: todayTasks, upcoming: upcomingTasks, backlog: backlogTasks });
 
 
@@ -1060,7 +1021,7 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
   // eslint-disable-next-line no-unused-vars
   const _cards = [
     {
-      label: 'Today',
+      label: 'Due today',
       count: tasks.today.length,
       bg: 'linear-gradient(135deg,#7c3aed,#6366f1)',
       icon: (
@@ -1073,7 +1034,7 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
       )
     },
     {
-      label: 'Overdue',
+      label: 'Backlog',
       count: _overdue,
       bg: 'linear-gradient(135deg,#ef4444,#f97316)',
       icon: (
@@ -1096,7 +1057,7 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
       )
     },
     {
-      label: 'Upcoming',
+      label: 'Due within a week',
       count: tasks.upcoming.length,
       bg: 'linear-gradient(135deg,#f59e0b,#fbbf24)',
       icon: (
@@ -1157,10 +1118,10 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem', marginTop: '1rem' }}>
           <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
             <div style={{ flex: '2 1 60%', minWidth: '300px', display: 'flex' }}>
-              {renderTaskCard("Today's Tasks", tasks.today, "today")}
+              {renderTaskCard("Due today", tasks.today, "today")}
             </div>
             <div style={{ flex: '1 1 30%', minWidth: '250px', display: 'flex' }}>
-              {renderTaskCard("Upcoming Tasks", tasks.upcoming, "upcoming")}
+              {renderTaskCard("Due within a week", tasks.upcoming, "upcoming")}
             </div>
           </div>
           <div style={{ width: '100%', display: 'flex' }}>
@@ -1222,6 +1183,10 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
         today.setHours(0, 0, 0, 0);
         const todayTime = today.getTime();
 
+        const sevenDaysLater = new Date(today);
+        sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+        const sevenDaysTime = sevenDaysLater.getTime();
+
         const todayTasks = [];
         const upcomingTasks = [];
         const backlogTasks = [];
@@ -1229,51 +1194,24 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
         myTasks.forEach(task => {
           if (task.status === 'Delivered' || task.status === 'Prod Verified') return; // ignore completed
 
-          // 1. Backlog Tasks: if deliveredDate or dueDate is in the past
-          let isBacklog = false;
-          if (task.deliveredDate) {
-            const d = new Date(task.deliveredDate);
-            d.setHours(0, 0, 0, 0);
-            if (d.getTime() < todayTime) {
-              isBacklog = true;
-            }
-          } else if (task.dueDate) {
+          if (task.dueDate) {
             const d = new Date(task.dueDate);
             d.setHours(0, 0, 0, 0);
-            if (d.getTime() < todayTime) {
-              isBacklog = true;
-            }
-          }
+            const dueTime = d.getTime();
 
-          if (isBacklog) {
-            backlogTasks.push(task);
-            return;
-          }
-
-          // 2. Today Tasks: based on assignedDate
-          let isToday = false;
-          if (task.assignedDate) {
-            const a = new Date(task.assignedDate);
-            a.setHours(0, 0, 0, 0);
-            if (a.getTime() === todayTime) {
-              isToday = true;
+            if (dueTime < todayTime) {
+              backlogTasks.push(task);
+            } else if (dueTime === todayTime) {
+              todayTasks.push(task);
+            } else if (dueTime > todayTime && dueTime <= sevenDaysTime) {
+              upcomingTasks.push(task);
             }
-          } else {
-            // Fallback to createdAt if assignedDate is not set
-            const c = new Date(task.createdAt || Date.now());
-            c.setHours(0, 0, 0, 0);
-            if (c.getTime() === todayTime) {
-              isToday = true;
-            }
-          }
-
-          if (isToday) {
-            todayTasks.push(task);
-          } else {
-            // 3. Upcoming Tasks: remaining tasks
-            upcomingTasks.push(task);
           }
         });
+
+        // Sort the tasks by Due Date in ascending order (earliest due date first)
+        upcomingTasks.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
         setTasks({ today: todayTasks, upcoming: upcomingTasks, backlog: backlogTasks });
 
       } catch (error) {
@@ -1322,7 +1260,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
   // eslint-disable-next-line no-unused-vars
   const _ecards = [
     {
-      label: 'Today',
+      label: 'Due today',
       count: tasks.today.length,
       bg: 'linear-gradient(135deg,#7c3aed,#6366f1)',
       icon: (
@@ -1335,7 +1273,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
       )
     },
     {
-      label: 'Overdue',
+      label: 'Backlog',
       count: _eovd,
       bg: 'linear-gradient(135deg,#ef4444,#f97316)',
       icon: (
@@ -1358,7 +1296,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
       )
     },
     {
-      label: 'Upcoming',
+      label: 'Due within a week',
       count: tasks.upcoming.length,
       bg: 'linear-gradient(135deg,#f59e0b,#fbbf24)',
       icon: (
@@ -1421,10 +1359,10 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
               <div style={{ flex: '2 1 60%', minWidth: '300px', display: 'flex' }}>
-                {renderTaskCard("Today's Tasks", tasks.today, "today")}
+                {renderTaskCard("Due today", tasks.today, "today")}
               </div>
               <div style={{ flex: '1 1 30%', minWidth: '250px', display: 'flex' }}>
-                {renderTaskCard("Upcoming Tasks", tasks.upcoming, "upcoming")}
+                {renderTaskCard("Due within a week", tasks.upcoming, "upcoming")}
               </div>
             </div>
             <div style={{ width: '100%', display: 'flex' }}>

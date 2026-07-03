@@ -260,7 +260,7 @@ const notifyEmailsByNames = async (userIds, subject, message, type) => {
       }
     });
 
-    const frontendUrl = process.env.FRONTEND_URL || 'https://trexocrm.vercel.app';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://crm.spagylo.com';
 
     for (const u of users) {
       if (u.email) {
@@ -1625,7 +1625,7 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
           boardName: taskListName,
           projectName: projectName,
           commentText: comment.text,
-          buttonText: 'Reply on Trexo CRM',
+          buttonText: 'Reply on Spagylo CRM',
           taskId: getTaskDisplayId(task)
         }, 'comment');
       }
@@ -1944,40 +1944,30 @@ app.post('/api/estimations/:id/convert', async (req, res) => {
 const syncReportsTable = async () => {
   try {
     const tasks = await prisma.task.findMany({
+      where: { status: 'Delivered' },
       include: {
         clientRef: true,
         projectRef: true,
-        workLogs: true
       }
     });
 
-    const reportsToInsert = tasks.map(task => {
-      let deliveredDate = task.deliveredDate || task.dueDate;
-      if (task.workLogs && task.workLogs.length > 0) {
-        const dates = task.workLogs.map(wl => new Date(wl.logDate));
-        deliveredDate = new Date(Math.max(...dates));
-      }
-
-      return {
-        id: task.id,
-        taskNo: task.taskNo,
-        title: task.title,
-        companyName: task.clientRef ? (task.clientRef.company || task.clientRef.name) : null,
-        projectName: task.projectName || (task.projectRef ? task.projectRef.name : null),
-        projectId: task.projectId,
-        clientId: task.clientId,
-        assignees: task.assignees,
-        billableHours: task.approvedHours || 0.0,
-        alreadyBilled: task.actualHours || 0.0,
-        deliveredDate: deliveredDate
-      };
-    });
+    const reportsToInsert = tasks.map(task => ({
+      id: task.id,
+      taskNo: task.taskNo,
+      title: task.title,
+      companyName: task.clientRef ? (task.clientRef.company || task.clientRef.name) : null,
+      projectName: task.projectName || (task.projectRef ? task.projectRef.name : null),
+      projectId: task.projectId,
+      clientId: task.clientId,
+      assignees: task.assignees,
+      billableHours: task.approvedHours || 0.0,
+      alreadyBilled: task.actualHours || 0.0,
+      deliveredDate: task.deliveredDate || task.updatedAt,
+    }));
 
     await prisma.$transaction([
       prisma.report.deleteMany(),
-      prisma.report.createMany({
-        data: reportsToInsert
-      })
+      prisma.report.createMany({ data: reportsToInsert })
     ]);
   } catch (err) {
     console.error('Failed to sync reports table:', err);
@@ -2133,7 +2123,12 @@ app.get('/api/reports/status-based', async (req, res) => {
       endDate   = new Date(qEnd);
     } else {
       const targetDate = date ? new Date(date) : new Date();
-      if (period === 'weekly') {
+      if (period === 'daily') {
+        startDate = new Date(targetDate);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(targetDate);
+        endDate.setHours(23, 59, 59, 999);
+      } else if (period === 'weekly') {
         const day = targetDate.getDay();
         const diffToMonday = day === 0 ? -6 : 1 - day;
         startDate = new Date(targetDate);
@@ -2143,14 +2138,14 @@ app.get('/api/reports/status-based', async (req, res) => {
         endDate.setDate(startDate.getDate() + 6);
         endDate.setHours(23, 59, 59, 999);
       } else {
-        // monthly (and daily falls here too with same start/end day)
+        // monthly
         startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
         endDate   = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999);
       }
     }
 
     // ── Step 1: fetch work logs in the date range ─────────────────────────────
-    const workLogWhere = { logDate: { gte: startDate, lte: endDate }, isBilled: false };
+    const workLogWhere = { logDate: { gte: startDate, lte: endDate } };
     if (assignee && assignee !== 'All Assignees') workLogWhere.userId = assignee;
 
     const workLogs = await prisma.workLog.findMany({ where: workLogWhere });

@@ -95,7 +95,7 @@ export default function TaskGroups({ user, onBack }) {
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const searchQuery = '';
   const [expandedListIds, setExpandedListIds] = useState([]);
   const [expandedSubtasks, setExpandedSubtasks] = useState({});
   
@@ -431,7 +431,7 @@ export default function TaskGroups({ user, onBack }) {
 
     setIsCreatingTask(true);
     try {
-      const createdTask = await api.post('/tasks', {
+      await api.post('/tasks', {
         title: taskForm.title.trim(),
         taskListId: targetGroup.id,
         projectId: targetGroup.projectId || null,
@@ -444,15 +444,6 @@ export default function TaskGroups({ user, onBack }) {
       setShowTaskModal(false);
       setTargetGroup(null);
       await fetchTaskListsOnly();
-      if (createdTask && createdTask.id) {
-        const fullTaskObj = {
-          ...createdTask,
-          projectName: targetGroup?.project?.name || createdTask.projectName || ''
-        };
-        setViewingTask(fullTaskObj);
-        setDrawerEditMode(false);
-        setShowTaskViewModal(true);
-      }
     } catch (error) {
       console.error('Error creating task:', error);
       alert('Failed to add task', 'error');
@@ -980,23 +971,8 @@ export default function TaskGroups({ user, onBack }) {
 
   return (
     <div className="tg-page-container">
-      {/* HEADER SECTION */}
       <div className="tg-header-row" style={{ marginBottom: '1.5rem' }}>
-        <div className="tg-actions-area" style={{ display: 'flex', width: '100%', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-          <div className="tg-search-wrapper">
-            <svg className="tg-search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input
-              type="text"
-              placeholder="Search groups or projects..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="tg-search-input"
-              style={{ minWidth: '280px' }}
-            />
-          </div>
+        <div className="tg-actions-area" style={{ display: 'flex', width: '100%', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
           {canCreateTG() && (
             <button className="tg-btn-primary" onClick={() => { setGroupForm({ name: '', projectId: '' }); setShowGroupModal(true); }}>
               <span>+ Add Task Group</span>
