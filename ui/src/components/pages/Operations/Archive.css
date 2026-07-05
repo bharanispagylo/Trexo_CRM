@@ -4,7 +4,7 @@
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: 0 1px 3px rgba(252, 211, 211, 0.05);
 }
 
@@ -29,22 +29,35 @@
   text-transform: uppercase;
 }
 
-.archive-table th.col-task {
-  width: 45%;
+.archive-table th.col-task,
+.archive-table td.cell-task {
+  width: 40%;
 }
 
 .archive-table th.col-project,
-.archive-table th.col-status,
-.archive-table th.col-priority {
+.archive-table td.cell-project {
+  width: 20%;
   padding: 0.85rem 1rem;
 }
 
 .archive-table th.col-status,
-.archive-table th.col-priority {
+.archive-table td.cell-status {
+  width: 15%;
+  padding: 0.85rem 1rem;
   text-align: center;
 }
 
-.archive-table th.col-actions {
+.archive-table th.col-priority,
+.archive-table td.cell-priority {
+  width: 10%;
+  padding: 0.85rem 1rem;
+  text-align: center;
+}
+
+.archive-table th.col-actions,
+.archive-table td.cell-actions {
+  width: 15%;
+  min-width: 120px;
   padding: 0.85rem 1.25rem;
   text-align: right;
 }
@@ -70,16 +83,6 @@
 .archive-table td.cell-project {
   font-size: 0.85rem;
   color: #475569;
-}
-
-.archive-table td.cell-status,
-.archive-table td.cell-priority {
-  text-align: center;
-}
-
-.archive-table td.cell-actions {
-  padding: 0.85rem 1.25rem;
-  text-align: right;
 }
 
 .archive-search-input {
