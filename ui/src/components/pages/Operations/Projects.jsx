@@ -2532,20 +2532,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       <option value="Closed">Closed</option>
                     </select>
 
-                    {/* Sent To filter dropdown */}
-                    <select
-                      className="saas-select queries-filter-select queries-filter-select-narrow"
-                      value={querySentToFilter}
-                      onChange={e => setQuerySentToFilter(e.target.value)}
-                    >
-                      <option value="All Sent To">All Sent To</option>
-                      {projMembers.map(memberId => {
-                        const memberUser = users.find(u => u.id === memberId);
-                        const memberName = memberUser ? (memberUser.fullName || `${memberUser.firstName || ''} ${memberUser.lastName || ''}`.trim() || memberUser.name || memberUser.username || memberUser.email) : memberId;
-                        return <option key={memberId} value={memberId}>{memberName}</option>;
-                      })}
-                    </select>
-
                     {/* Priority filter dropdown */}
                     <select
                       className="saas-select queries-filter-select"

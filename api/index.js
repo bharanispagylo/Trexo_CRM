@@ -1288,9 +1288,9 @@ app.post('/api/tasks', async (req, res) => {
       });
       let maxNo = 0;
       for (const t of allTasks) {
-        if (t.taskNo) {
+        if (t.taskNo && !t.taskNo.startsWith('TSK-')) {
           const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
-          if (!isNaN(digits) && digits > maxNo) {
+          if (!isNaN(digits) && digits > maxNo && digits < 50000) {
             maxNo = digits;
           }
         }
@@ -2522,9 +2522,9 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
     });
     let maxNo = 0;
     for (const t of allTasks) {
-      if (t.taskNo) {
+      if (t.taskNo && !t.taskNo.startsWith('TSK-')) {
         const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
-        if (!isNaN(digits) && digits > maxNo) {
+        if (!isNaN(digits) && digits > maxNo && digits < 50000) {
           maxNo = digits;
         }
       }
@@ -2574,8 +2574,42 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+const runMigrationIfNecessary = async () => {
+  try {
+    const tasks = await prisma.task.findMany({
+      orderBy: { createdAt: 'asc' }
+    });
+    
+    let updatedCount = 0;
+    for (let i = 0; i < tasks.length; i++) {
+      const task = tasks[i];
+      const targetNo = `T${i + 1}`;
+      
+      const currentNo = task.taskNo || '';
+      const digits = currentNo.replace(/\D/g, '');
+      const isSequentialFormat = currentNo.startsWith('T') && digits && !currentNo.startsWith('TSK-');
+
+      const isHugeId = digits && parseInt(digits, 10) >= 50000;
+
+      if (isHugeId || !isSequentialFormat || currentNo !== targetNo) {
+        await prisma.task.update({
+          where: { id: task.id },
+          data: { taskNo: targetNo }
+        });
+        updatedCount++;
+      }
+    }
+    if (updatedCount > 0) {
+      console.log(`[Startup Migration] Successfully migrated task numbers. Updated ${updatedCount} out of ${tasks.length} tasks.`);
+    }
+  } catch (err) {
+    console.error('[Startup Migration Error]', err);
+  }
+};
+
+app.listen(PORT, async () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+  await runMigrationIfNecessary();
 });
 
 module.exports = app;
