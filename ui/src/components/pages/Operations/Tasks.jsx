@@ -477,11 +477,23 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
   const isTeamLeadOrAdmin = currentUser?.role?.toLowerCase() === 'team lead' || currentUser?.role?.toLowerCase() === 'admin';
 
+  const isWorkLogToday = (log) => {
+    if (!log) return false;
+    const logDate = new Date(log.logDate || log.createdAt);
+    if (isNaN(logDate.getTime())) return false;
+    const today = new Date();
+    return logDate.getFullYear() === today.getFullYear()
+      && logDate.getMonth() === today.getMonth()
+      && logDate.getDate() === today.getDate();
+  };
+
   const canEditWorkLog = (log) => {
+    if (!isWorkLogToday(log)) return false;
     return isAssigned() || isTeamLeadOrAdmin;
   };
 
   const canDeleteWorkLog = (log) => {
+    if (!isWorkLogToday(log)) return false;
     return isAssigned() || isTeamLeadOrAdmin;
   };
 
@@ -648,7 +660,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
   const insertAttachmentAtCursor = (url, fileName) => {
     const textarea = document.querySelector('.saas-grid-textarea');
-    const attachmentText = `[ATTACHMENT:${url}|${fileName}]`;
+    const attachmentText = `[ATTACHMENT:${fileName}]`;
     if (!textarea) {
       set('description', `${form.description || ''} ${attachmentText}`.trim());
       return;
@@ -773,7 +785,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const renderDescriptionWithPreviews = (text) => {
     if (!text) return 'Add description, or write with AI...';
     
-    const regex = /\[ATTACHMENT:([^|]+)\|([^\]]+)\]/g;
+    const regex = /\[ATTACHMENT:([^|\]]+)(?:\|([^\]]+))?\]/g;
     const parts = [];
     let lastIndex = 0;
     let match;
@@ -781,8 +793,27 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     regex.lastIndex = 0;
     while ((match = regex.exec(text)) !== null) {
       const matchIndex = match.index;
-      const url = match[1];
-      const fileName = match[2];
+      let url = match[1];
+      let fileName = match[2];
+
+      if (!fileName) {
+        fileName = match[1];
+        url = '';
+        const attachmentsStr = form.attachments || '';
+        const items = attachmentsStr.split(',').filter(Boolean);
+        for (const item of items) {
+          const parts = item.split('|');
+          const itemUrl = parts[0];
+          const itemName = parts[3];
+          if (itemName === fileName || itemUrl.split('/').pop() === fileName) {
+            url = itemUrl;
+            break;
+          }
+        }
+        if (!url) {
+          url = fileName;
+        }
+      }
 
       if (matchIndex > lastIndex) {
         parts.push(text.substring(lastIndex, matchIndex));
@@ -4587,7 +4618,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           <div className="view-toggle">
             <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>List</button>
             <button className={viewMode === 'kanban' ? 'active' : ''} onClick={() => setViewMode('kanban')}>Kanban</button>
-            <button className={viewMode === 'schedule' ? 'active' : ''} onClick={() => setViewMode('schedule')}>Schedule</button>
           </div>
 
 
@@ -5374,7 +5404,42 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                             </td>
                                             <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
                                               <div className="cu-row-actions">
-                                                <PriorityFlag priority={task.priority} />
+                                                <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                                  <PriorityFlag priority={task.priority} />
+                                                  {canEditTask(task) && (
+                                                    <select
+                                                      value={task.priority || 'Medium'}
+                                                      onClick={e => e.stopPropagation()}
+                                                      onChange={async (e) => {
+                                                        e.stopPropagation();
+                                                        const newPriority = e.target.value;
+                                                        const updated = { ...task, priority: newPriority };
+                                                        try {
+                                                          const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                          await api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName });
+                                                          setTasks(ts => ts.map(t => t.id === task.id ? updated : t));
+                                                        } catch (err) {
+                                                          console.error(err);
+                                                        }
+                                                      }}
+                                                      style={{
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        left: 0,
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        opacity: 0,
+                                                        cursor: 'pointer',
+                                                        border: 'none',
+                                                        outline: 'none'
+                                                      }}
+                                                    >
+                                                      {Object.keys(PRIORITY_FLAGS).map(p => (
+                                                        <option key={p} value={p}>{p}</option>
+                                                      ))}
+                                                    </select>
+                                                  )}
+                                                </div>
                                                 {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && ((user?.id && (task.assignees || '').toLowerCase().includes(user.id.toLowerCase())) || ((user?.fullName || user?.name) && (task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))))) && (
                                                   <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task'); }} title="Delete">
                                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -5426,7 +5491,42 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </td>
                                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
                                                   <div className="cu-row-actions">
-                                                    <PriorityFlag priority={sub.priority} />
+                                                    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                                      <PriorityFlag priority={sub.priority} />
+                                                      {canEditTask(sub) && (
+                                                        <select
+                                                          value={sub.priority || 'Medium'}
+                                                          onClick={e => e.stopPropagation()}
+                                                          onChange={async (e) => {
+                                                            e.stopPropagation();
+                                                            const newPriority = e.target.value;
+                                                            const updated = { ...sub, priority: newPriority };
+                                                            try {
+                                                              const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                              await api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName });
+                                                              setTasks(ts => ts.map(t => t.id === sub.id ? updated : t));
+                                                            } catch (err) {
+                                                              console.error(err);
+                                                            }
+                                                          }}
+                                                          style={{
+                                                            position: 'absolute',
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            opacity: 0,
+                                                            cursor: 'pointer',
+                                                            border: 'none',
+                                                            outline: 'none'
+                                                          }}
+                                                        >
+                                                          {Object.keys(PRIORITY_FLAGS).map(p => (
+                                                            <option key={p} value={p}>{p}</option>
+                                                          ))}
+                                                        </select>
+                                                      )}
+                                                    </div>
                                                     {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && ((user?.id && (sub.assignees || '').toLowerCase().includes(user.id.toLowerCase())) || ((user?.fullName || user?.name) && (sub.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))))) && (
                                                       <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this subtask?', () => handleDeleteTask(sub.id), 'Delete Subtask'); }} title="Delete">
                                                         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -5967,7 +6067,42 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                             </td>
                                             <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
                                               <div className="cu-row-actions">
-                                                <PriorityFlag priority={task.priority} />
+                                                <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                                  <PriorityFlag priority={task.priority} />
+                                                  {canEditTask(task) && (
+                                                    <select
+                                                      value={task.priority || 'Medium'}
+                                                      onClick={e => e.stopPropagation()}
+                                                      onChange={async (e) => {
+                                                        e.stopPropagation();
+                                                        const newPriority = e.target.value;
+                                                        const updated = { ...task, priority: newPriority };
+                                                        try {
+                                                          const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                          await api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName });
+                                                          setTasks(ts => ts.map(t => t.id === task.id ? updated : t));
+                                                        } catch (err) {
+                                                          console.error(err);
+                                                        }
+                                                      }}
+                                                      style={{
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        left: 0,
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        opacity: 0,
+                                                        cursor: 'pointer',
+                                                        border: 'none',
+                                                        outline: 'none'
+                                                      }}
+                                                    >
+                                                      {Object.keys(PRIORITY_FLAGS).map(p => (
+                                                        <option key={p} value={p}>{p}</option>
+                                                      ))}
+                                                    </select>
+                                                  )}
+                                                </div>
                                                 {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && ((user?.id && (task.assignees || '').toLowerCase().includes(user.id.toLowerCase())) || ((user?.fullName || user?.name) && (task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))))) && (
                                                   <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task'); }} title="Delete">
                                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -6009,7 +6144,42 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </td>
                                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
                                                   <div className="cu-row-actions">
-                                                    <PriorityFlag priority={sub.priority} />
+                                                    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                                      <PriorityFlag priority={sub.priority} />
+                                                      {canEditTask(sub) && (
+                                                        <select
+                                                          value={sub.priority || 'Medium'}
+                                                          onClick={e => e.stopPropagation()}
+                                                          onChange={async (e) => {
+                                                            e.stopPropagation();
+                                                            const newPriority = e.target.value;
+                                                            const updated = { ...sub, priority: newPriority };
+                                                            try {
+                                                              const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                              await api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName });
+                                                              setTasks(ts => ts.map(t => t.id === sub.id ? updated : t));
+                                                            } catch (err) {
+                                                              console.error(err);
+                                                            }
+                                                          }}
+                                                          style={{
+                                                            position: 'absolute',
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            opacity: 0,
+                                                            cursor: 'pointer',
+                                                            border: 'none',
+                                                            outline: 'none'
+                                                          }}
+                                                        >
+                                                          {Object.keys(PRIORITY_FLAGS).map(p => (
+                                                            <option key={p} value={p}>{p}</option>
+                                                          ))}
+                                                        </select>
+                                                      )}
+                                                    </div>
                                                     {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && ((user?.id && (sub.assignees || '').toLowerCase().includes(user.id.toLowerCase())) || ((user?.fullName || user?.name) && (sub.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))))) && (
                                                       <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this subtask?', () => handleDeleteTask(sub.id), 'Delete Subtask'); }} title="Delete">
                                                         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>

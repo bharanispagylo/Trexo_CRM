@@ -9,6 +9,7 @@ export default function AddUser({ onBack }) {
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState({});
   const [existingUsers, setExistingUsers] = useState([]);
+  const [showPassword, setShowPassword] = useState(false);
   const { alert } = useAlert();
 
 
@@ -139,12 +140,13 @@ export default function AddUser({ onBack }) {
     const phoneRegex = /^\+?[\d\s-]{10,}$/;
     const empIdRegex = /^[A-Z0-9-]{3,10}$/i;
     const singleNameRegex = /^[a-z\s]{2,50}$/i;
+    const lastNameRegex = /^[a-z\s]{1,50}$/i;
 
     if (!form.firstName) newErrors.firstName = "First name is required";
     else if (!singleNameRegex.test(form.firstName)) newErrors.firstName = "Letters only, min 2 chars";
 
     if (!form.lastName) newErrors.lastName = "Last name is required";
-    else if (!singleNameRegex.test(form.lastName)) newErrors.lastName = "Letters only, min 2 chars";
+    else if (!lastNameRegex.test(form.lastName)) newErrors.lastName = "Letters only, min 1 char";
 
     if (!form.email) newErrors.email = "Email is required";
     else if (!emailRegex.test(form.email)) newErrors.email = "Invalid email format";
@@ -253,14 +255,42 @@ export default function AddUser({ onBack }) {
           </div>
           <div className="saas-field">
             <label className="saas-label">Password *</label>
-            <input 
-              className={`saas-input ${errors.password ? 'error' : ''}`} 
-              type="password" 
-              placeholder="••••••••" 
-              value={form.password} 
-              autoComplete="new-password" 
-              onChange={e => setForm({...form, password: e.target.value})} 
-            />
+            <div style={{ position: 'relative', width: '100%' }}>
+              <input 
+                className={`saas-input ${errors.password ? 'error' : ''}`} 
+                type={showPassword ? "text" : "password"} 
+                placeholder="••••••••" 
+                value={form.password} 
+                autoComplete="new-password" 
+                onChange={e => setForm({...form, password: e.target.value})} 
+                style={{ paddingRight: '2.5rem' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '4px',
+                  outline: 'none'
+                }}
+              >
+                {showPassword ? (
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                )}
+              </button>
+            </div>
             {errors.password && <span className="error-text">{errors.password}</span>}
           </div>
           <div className="saas-field">

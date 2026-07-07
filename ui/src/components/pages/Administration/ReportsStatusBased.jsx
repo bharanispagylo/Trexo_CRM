@@ -126,11 +126,6 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
 
   const uniqueProjects = useMemo(() => new Set(tasks.map(t => t.projectName).filter(Boolean)).size, [tasks]);
 
-  const uniqueAssignees = useMemo(() => {
-    const set = new Set(tasks.flatMap(t => (t.assignees || '').split(',').map(s => s.trim()).filter(Boolean)));
-    return set.size;
-  }, [tasks]);
-
   const statusGroups = useMemo(() =>
     tasks.reduce((acc, t) => { const s = t.status || 'Unknown'; acc[s] = (acc[s] || 0) + 1; return acc; }, {}),
   [tasks]);
@@ -315,11 +310,14 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
         </div>
         <div className="reports-kpi-card">
           <div className="kpi-icon-wrapper orange">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-3-3.87"></path><path d="M4 21v-2a4 4 0 0 1 3-3.87"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
           </div>
           <div className="kpi-info">
-            <span className="kpi-label">Total Assignees</span>
-            <span className="kpi-value">{uniqueAssignees}</span>
+            <span className="kpi-label">Total Hours</span>
+            <span className="kpi-value">{formatDecimal(totalTimeSpent)}</span>
           </div>
         </div>
       </div>

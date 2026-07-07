@@ -70,9 +70,6 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
               <td valign="middle" style="padding-right: 10px;">
                 <img src="https://crm.spagylo.com/spagylo-logo.png" alt="Spagylo" width="36" height="36" style="display:block; border-radius:6px;" />
               </td>
-              <td valign="middle">
-                <span style="font-size:20px; font-weight:700; color:#dc2626;">Spagylo CRM</span>
-              </td>
             </tr>
           </table>
           ${context.taskId ? `
@@ -125,7 +122,7 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
 
           <!-- Action Button -->
           <div style="margin-left: 48px; margin-top: 16px;">
-            <a href="${context.buttonLink || process.env.FRONTEND_URL || 'https://crm.spagylo.com'}" style="display: inline-block; background-color: #6b7280; color: #000000; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 24px; border-radius: 4px;">
+            <a href="${context.buttonLink || process.env.FRONTEND_URL || 'https://crm.spagylo.com'}" style="display: inline-block; background-color: #ffffff; color: #000000; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 24px; border-radius: 4px; border: 1px solid #d1d5db;">
               ${context.buttonText || 'View Item'}
             </a>
           </div>

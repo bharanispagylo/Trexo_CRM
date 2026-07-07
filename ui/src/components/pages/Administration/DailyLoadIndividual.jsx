@@ -258,10 +258,7 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
                       <td style={{ padding: '0.85rem 1.25rem' }}>
                         <span
                           style={{
-                            background: meta.bg,
-                            color: meta.fg,
-                            padding: '0.2rem 0.55rem',
-                            borderRadius: '4px',
+                            color: meta.bg,
                             fontSize: '0.7rem',
                             fontWeight: '700',
                             textTransform: 'uppercase',
@@ -302,7 +299,7 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
                     <span className="reports-mobile-card-title" style={{ fontSize: '0.92rem', fontWeight: '700', color: '#0f172a' }}>
                       {row.title}
                     </span>
-                    <span style={{ fontSize: '0.68rem', fontWeight: '700', padding: '0.2rem 0.5rem', borderRadius: '5px', background: meta.bg, color: meta.fg, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: '700', color: meta.bg, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                       {row.status}
                     </span>
                   </div>
