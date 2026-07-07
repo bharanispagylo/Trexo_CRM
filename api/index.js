@@ -34,6 +34,37 @@ const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 const { sendNotificationEmail, sendOtpEmail } = require('./emailSender');
 const { hashPassword, verifyPassword } = require('./cryptoUtils');
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'spagylo-browser-ext-secret-2024';
+const JWT_EXPIRES_IN = '30d';
+
+function signBrowserToken(user) {
+  return jwt.sign(
+    { userId: user.id, email: user.email, role: user.role },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
+}
+
+async function verifyBrowserToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing or invalid authorization header' });
+  }
+  try {
+    const token = authHeader.slice(7);
+    const payload = jwt.verify(token, JWT_SECRET);
+    const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+    if (!user || user.status !== 'Active') {
+      return res.status(401).json({ error: 'User not found or inactive' });
+    }
+    req.browserUser = user;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
 
 const app = express();
 const prisma = new PrismaClient();
@@ -349,7 +380,8 @@ const sanitizeLeaveData = (leaveData) => {
 };
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 // Clean up empty string ID on POST requests so that default generator works
 app.use((req, res, next) => {
@@ -1248,6 +1280,23 @@ app.post('/api/tasks', async (req, res) => {
     
     // Universal model field sanitizer to protect Prisma against drift
     taskData = sanitizeTaskData(taskData);
+
+    // Auto-generate sequential task number if not provided or placeholder
+    if (!taskData.taskNo || taskData.taskNo.startsWith('TSK-')) {
+      const allTasks = await prisma.task.findMany({
+        select: { taskNo: true }
+      });
+      let maxNo = 0;
+      for (const t of allTasks) {
+        if (t.taskNo) {
+          const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
+          if (!isNaN(digits) && digits > maxNo) {
+            maxNo = digits;
+          }
+        }
+      }
+      taskData.taskNo = `T${maxNo + 1}`;
+    }
 
     const task = await prisma.task.create({
       data: taskData
@@ -2312,6 +2361,218 @@ app.put('/api/notifications/user/:userId/read-all', async (req, res) => {
   }
 });
 
+
+// ══════════════════════════════════════════════════════════════════
+//  BROWSER EXTENSION API
+// ══════════════════════════════════════════════════════════════════
+
+// POST /api/browser/login — authenticate and return JWT
+app.post('/api/browser/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+
+    const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+    const isMatch = user ? await verifyPassword(password, user.password) : false;
+    if (!user || !isMatch) return res.status(401).json({ error: 'Invalid email or password' });
+    if (user.status !== 'Active') return res.status(403).json({ error: 'Account is inactive or pending approval' });
+
+    const token = signBrowserToken(user);
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        role: user.role,
+        empId: user.empId,
+      }
+    });
+  } catch (err) {
+    console.error('POST /api/browser/login error:', err);
+    res.status(500).json({ error: 'Login failed', details: err.message });
+  }
+});
+
+// GET /api/browser/me — return current user info
+app.get('/api/browser/me', verifyBrowserToken, (req, res) => {
+  const u = req.browserUser;
+  res.json({
+    id: u.id,
+    email: u.email,
+    fullName: u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+    role: u.role,
+    empId: u.empId,
+  });
+});
+
+// GET /api/browser/projects — return active projects for assignee selection
+app.get('/api/browser/projects', verifyBrowserToken, async (req, res) => {
+  try {
+    const projects = await prisma.project.findMany({
+      where: { status: 'Active' },
+      select: { id: true, name: true, projectNo: true },
+      orderBy: { name: 'asc' },
+    });
+    res.json(projects);
+  } catch (err) {
+    console.error('GET /api/browser/projects error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/browser/users — return users for assignee selection
+app.get('/api/browser/users', verifyBrowserToken, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: { status: 'Active' },
+      select: { id: true, fullName: true, firstName: true, lastName: true, email: true, role: true },
+      orderBy: { fullName: 'asc' },
+    });
+    const mapped = users.map(u => ({
+      id: u.id,
+      name: u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+      email: u.email,
+      role: u.role,
+    }));
+    res.json(mapped);
+  } catch (err) {
+    console.error('GET /api/browser/users error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/browser/task — create a bug report task from the extension
+app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
+  try {
+    const {
+      comment,
+      url,
+      pageTitle,
+      screenshot,          // base64 annotated JPEG
+      elementSelector,
+      elementXPath,
+      elementHTML,
+      elementText,
+      elementTag,
+      elementId,
+      elementClasses,
+      bounds,
+      viewportWidth,
+      viewportHeight,
+      scrollX,
+      scrollY,
+      browser,
+      userAgent,
+      projectId,
+      assignees,           // comma-separated user IDs or names
+      priority,
+    } = req.body;
+
+    if (!comment) return res.status(400).json({ error: 'Comment is required' });
+
+    const reporter = req.browserUser;
+    const reporterName = reporter.fullName || `${reporter.firstName || ''} ${reporter.lastName || ''}`.trim();
+    const now = new Date();
+
+    // Build structured description
+    const boundsStr = bounds
+      ? `x:${bounds.x}, y:${bounds.y}, ${bounds.width}×${bounds.height}px`
+      : 'N/A';
+    const description = [
+      `## Bug Report from Browser Extension`,
+      ``,
+      `**Reported by:** ${reporterName}`,
+      `**URL:** ${url || 'N/A'}`,
+      `**Page Title:** ${pageTitle || 'N/A'}`,
+      `**Browser:** ${browser || 'N/A'}`,
+      `**Viewport:** ${viewportWidth || 0}×${viewportHeight || 0}`,
+      `**Scroll:** ${scrollX || 0}, ${scrollY || 0}`,
+      `**Timestamp:** ${now.toISOString()}`,
+      ``,
+      `### Comment`,
+      comment,
+      ``,
+      `### Element Info`,
+      `- **Tag:** ${elementTag || 'N/A'}`,
+      `- **ID:** ${elementId || 'none'}`,
+      `- **Classes:** ${elementClasses ? elementClasses.join(' ') : 'none'}`,
+      `- **Selector:** \`${elementSelector || 'N/A'}\``,
+      `- **XPath:** \`${elementXPath || 'N/A'}\``,
+      `- **Visible Text:** ${elementText || 'N/A'}`,
+      `- **Bounds:** ${boundsStr}`,
+      ``,
+      `### HTML Snippet`,
+      `\`\`\`html`,
+      elementHTML || 'N/A',
+      `\`\`\``,
+      ``,
+      `---`,
+      `*Reported via Spagylo Browser Extension*`,
+    ].join('\n');
+
+    // Store screenshot in attachments field as JSON
+    const attachmentData = screenshot
+      ? JSON.stringify([{ name: 'browser-report-screenshot.jpg', data: screenshot, type: 'browser-report', reportedBy: reporterName, reportedAt: now.toISOString() }])
+      : null;
+
+    // Auto-generate task number
+    const allTasks = await prisma.task.findMany({
+      select: { taskNo: true }
+    });
+    let maxNo = 0;
+    for (const t of allTasks) {
+      if (t.taskNo) {
+        const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
+        if (!isNaN(digits) && digits > maxNo) {
+          maxNo = digits;
+        }
+      }
+    }
+    const taskNo = `T${maxNo + 1}`;
+
+    // Resolve project
+    let resolvedProjectId = null;
+    let projectName = null;
+    if (projectId) {
+      const project = await prisma.project.findUnique({ where: { id: projectId }, select: { id: true, name: true } });
+      if (project) { resolvedProjectId = project.id; projectName = project.name; }
+    }
+
+    const task = await prisma.task.create({
+      data: {
+        taskNo,
+        title: `Bug: ${comment.substring(0, 80)}${comment.length > 80 ? '...' : ''}`,
+        description,
+        taskType: 'Bug Report',
+        status: 'To Do',
+        priority: priority || 'Medium',
+        projectId: resolvedProjectId,
+        assignees: assignees || reporterName,
+        attachments: attachmentData,
+        tag: 'browser-report',
+        assignedDate: now,
+      }
+    });
+
+    // Notify admins
+    await notifyAdmins(
+      `New Bug Report: ${task.title}`,
+      `${reporterName} reported a bug via the browser extension. URL: ${url || 'N/A'}`
+    );
+
+    console.log(`[Browser Extension] Task ${taskNo} created by ${reporterName} from ${url}`);
+    res.status(201).json({
+      success: true,
+      taskId: task.id,
+      taskNo: task.taskNo,
+      title: task.title,
+    });
+  } catch (err) {
+    console.error('POST /api/browser/task error:', err);
+    res.status(500).json({ error: 'Failed to create task', details: err.message });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

@@ -80,7 +80,6 @@ model ProjectQuery {
   title       String
   description String?  @db.Text
   sentToId    String?  @map("sent_to")
-  assignedUser User?   @relation(fields: [sentToId], references: [id])
   status      String?  @default("Open") // Open, In Progress, Closed
   solved      Boolean  @default(false)
   priority    String?  @default("Medium") // Low, Medium, High
@@ -211,7 +210,6 @@ model User {
 
   workLogs     WorkLog[]
   comments     Comment[]
-  queries      ProjectQuery[]
   notifications Notification[]
 
   @@map("users")
