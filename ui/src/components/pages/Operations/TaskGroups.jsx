@@ -222,6 +222,14 @@ export default function TaskGroups({ user, onBack }) {
     return false;
   };
 
+  const getFilteredUsersForGroup = (group) => {
+    if (!group || !group.projectId) return users;
+    const proj = projects.find(p => p.id === group.projectId);
+    if (!proj) return users;
+    const memberIds = (proj.members || '').split(',').map(m => m.trim()).filter(Boolean);
+    return users.filter(usr => memberIds.includes(usr.id));
+  };
+
   const handleInlineSubtaskSave = async (task) => {
     if (!subtaskTitle.trim()) {
       toast('Subtask title is required', 'warning');
@@ -519,6 +527,7 @@ export default function TaskGroups({ user, onBack }) {
   // Common Accordion rendering function
   const renderAccordion = (list, idx) => {
     const isCollapsed = !expandedListIds.includes(list.id);
+    const filteredUsersForList = getFilteredUsersForGroup(list);
     const listTasks = (list.tasks || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive').sort((a, b) => {
       const titleA = a.title || '';
       const titleB = b.title || '';
@@ -700,7 +709,6 @@ export default function TaskGroups({ user, onBack }) {
                               const subTasks = allTasks.filter(t => t.parentId === task.id);
                               const isExpanded = !!expandedSubtasks[task.id];
                               const relDate = formatRelativeDueDate(task.dueDate);
-                              const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
 
                               const parentRow = (
                                 <tr key={task.id} className="cu-row" onClick={() => { setViewingTask(task); setDrawerEditMode(false); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
@@ -764,37 +772,92 @@ export default function TaskGroups({ user, onBack }) {
                                       )}
                                     </div>
                                   </td>
-                                  <td className="cu-td cu-td-assignee" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
-                                      {assignees.length === 0 ? (
-                                        <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>-</span>
-                                      ) : (
-                                        assignees.map(a => {
-                                          const uObj = users.find(u => u.id === a);
-                                          const dispName = uObj ? (uObj.firstName || uObj.fullName?.split(' ')[0] || 'Unknown') : 'Unknown';
-                                          return (
-                                            <span key={a} style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{dispName}</span>
-                                          );
-                                        })
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className="cu-td cu-td-delivery" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                    {task.dueDate ? (
-                                      <span className={`cu-due-badge ${relDate?.isOverdue ? 'overdue' : ''}`} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: relDate?.isOverdue ? '#fee2e2' : '#f1f5f9', color: relDate?.isOverdue ? '#ef4444' : '#475569' }}>
-                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                        {formatDDMonDate(task.dueDate)}
-                                      </span>
-                                    ) : <span className="cu-empty-cell">-</span>}
-                                  </td>
+                                  <td className="cu-td cu-td-assignee" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                                     <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                                       <select 
+                                         className="cu-inline-dropdown" 
+                                         value={task.assignees || ''} 
+                                         disabled={!canEditTask(task)} 
+                                         onChange={async (e) => { 
+                                           e.stopPropagation(); 
+                                           const val = e.target.value;
+                                           try { 
+                                             const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; 
+                                             await api.put(`/tasks/${task.id}`, { assignees: val, updatedBy: updatedByName }); 
+                                             fetchTaskListsOnly();
+                                           } catch(err) { 
+                                             console.error(err); 
+                                           } 
+                                         }} 
+                                         style={{ cursor: canEditTask(task) ? 'pointer' : 'default', textAlignLast: 'center' }}
+                                       >
+                                         <option value="">Unassigned</option>
+                                         {filteredUsersForList.map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                       </select>
+                                     </div>
+                                   </td>
+                                   <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                     <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(task) ? 'pointer' : 'default', justifyContent: 'center' }}>
+                                       <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke={task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                       <span className="cu-date-text" style={{ color: task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : '#475569', fontSize: '0.75rem' }}>{task.dueDate ? formatDDMonDate(task.dueDate) : '-'}</span>
+                                       <input 
+                                         type="date" 
+                                         className="cu-date-hidden-input" 
+                                         value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} 
+                                         disabled={!canEditTask(task)} 
+                                         onClick={(e) => { e.stopPropagation(); if (canEditTask(task)) { try { e.target.showPicker(); } catch (err) {} } }} 
+                                         onChange={async (e) => { 
+                                           e.stopPropagation(); 
+                                           const val = e.target.value; 
+                                           try { 
+                                             await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); 
+                                             fetchTaskListsOnly();
+                                           } catch(err) { 
+                                             console.error(err); 
+                                           } 
+                                         }} 
+                                         style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }} 
+                                       />
+                                     </div>
+                                   </td>
                                   <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
                                     <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                      <PriorityFlag priority={task.priority} />
-                                      {canEditTask(task) && (
-                                        <button className="cu-act-btn" onClick={() => { setViewingTask(task); setDrawerEditMode(true); setShowTaskViewModal(true); }} title="Edit" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
-                                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                        </button>
-                                      )}
+                                      <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                         <PriorityFlag priority={task.priority} />
+                                         {canEditTask(task) && (
+                                           <select
+                                             value={task.priority || 'Medium'}
+                                             onClick={e => e.stopPropagation()}
+                                             onChange={async (e) => {
+                                               e.stopPropagation();
+                                               const newPriority = e.target.value;
+                                               try {
+                                                 const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                 await api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName });
+                                                 fetchTaskListsOnly();
+                                               } catch (err) {
+                                                 console.error(err);
+                                               }
+                                             }}
+                                             style={{
+                                               position: 'absolute',
+                                               top: 0,
+                                               left: 0,
+                                               width: '100%',
+                                               height: '100%',
+                                               opacity: 0,
+                                               cursor: 'pointer',
+                                               border: 'none',
+                                               outline: 'none'
+                                             }}
+                                           >
+                                             {Object.keys(PRIORITY_FLAGS).map(p => (
+                                               <option key={p} value={p}>{p}</option>
+                                             ))}
+                                           </select>
+                                         )}
+                                       </div>
+
                                       {canDeleteTask(task) && (
                                         <button 
                                           className="cu-act-btn danger" 
@@ -842,7 +905,7 @@ export default function TaskGroups({ user, onBack }) {
                                             </button>
                                             <select className="ntib-hidden-select" value={subtaskAssignee} onChange={e => setSubtaskAssignee(e.target.value)}>
                                               <option value="">Assignee</option>
-                                              {users.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                              {filteredUsersForList.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                             </select>
                                             {subtaskAssignee && <span className="ntib-badge">{initials((users.find(u => u.id === subtaskAssignee) || {}).fullName || subtaskAssignee)}</span>}
                                           </div>
@@ -886,7 +949,6 @@ export default function TaskGroups({ user, onBack }) {
 
                                 sortedSubtasks.forEach(sub => {
                                   const subRelDate = formatRelativeDueDate(sub.dueDate);
-                                  const subAssignees = sub.assignees ? sub.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
 
                                   rows.push(
                                     <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { setViewingTask(sub); setDrawerEditMode(false); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
@@ -899,37 +961,91 @@ export default function TaskGroups({ user, onBack }) {
                                           </TaskTitleTooltip>
                                         </div>
                                       </td>
-                                      <td className="cu-td cu-td-assignee" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
-                                          {subAssignees.length === 0 ? (
-                                            <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>-</span>
-                                          ) : (
-                                            subAssignees.map(a => {
-                                              const uObj = users.find(u => u.id === a);
-                                              const dispName = uObj ? (uObj.firstName || uObj.fullName?.split(' ')[0] || 'Unknown') : 'Unknown';
-                                              return (
-                                                <span key={a} style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{dispName}</span>
-                                              );
-                                            })
-                                          )}
+                                      <td className="cu-td cu-td-assignee" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                                        <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                                          <select 
+                                            className="cu-inline-dropdown" 
+                                            value={sub.assignees || ''} 
+                                            disabled={!canEditTask(sub)} 
+                                            onChange={async (e) => { 
+                                              e.stopPropagation(); 
+                                              const val = e.target.value;
+                                              try { 
+                                                const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; 
+                                                await api.put(`/tasks/${sub.id}`, { assignees: val, updatedBy: updatedByName }); 
+                                                fetchTaskListsOnly();
+                                              } catch(err) { 
+                                                console.error(err); 
+                                              } 
+                                            }} 
+                                            style={{ cursor: canEditTask(sub) ? 'pointer' : 'default', textAlignLast: 'center' }}
+                                          >
+                                            <option value="">Unassigned</option>
+                                            {filteredUsersForList.map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                          </select>
                                         </div>
                                       </td>
-                                      <td className="cu-td cu-td-delivery" style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                        {sub.dueDate ? (
-                                          <span className={`cu-due-badge ${subRelDate?.isOverdue ? 'overdue' : ''}`} style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: subRelDate?.isOverdue ? '#fee2e2' : '#f1f5f9', color: subRelDate?.isOverdue ? '#ef4444' : '#475569' }}>
-                                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                            {formatDDMonDate(sub.dueDate)}
-                                          </span>
-                                        ) : <span className="cu-empty-cell">-</span>}
-                                      </td>
+                                      <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                         <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default', justifyContent: 'center' }}>
+                                           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke={sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                           <span className="cu-date-text" style={{ color: sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : '#475569', fontSize: '0.75rem' }}>{sub.dueDate ? formatDDMonDate(sub.dueDate) : '-'}</span>
+                                           <input 
+                                             type="date" 
+                                             className="cu-date-hidden-input" 
+                                             value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} 
+                                             disabled={!canEditTask(sub)} 
+                                             onClick={(e) => { e.stopPropagation(); if (canEditTask(sub)) { try { e.target.showPicker(); } catch (err) {} } }} 
+                                             onChange={async (e) => { 
+                                               e.stopPropagation(); 
+                                               const val = e.target.value; 
+                                               try { 
+                                                 await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); 
+                                                 fetchTaskListsOnly();
+                                               } catch(err) { 
+                                                 console.error(err); 
+                                               } 
+                                             }} 
+                                             style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }} 
+                                           />
+                                         </div>
+                                       </td>
                                       <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
                                         <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                          <PriorityFlag priority={sub.priority} />
-                                          {canEditTask(sub) && (
-                                            <button className="cu-act-btn" onClick={() => { setViewingTask(sub); setDrawerEditMode(true); setShowTaskViewModal(true); }} title="Edit" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
-                                              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                            </button>
-                                          )}
+                                          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                            <PriorityFlag priority={sub.priority} />
+                                            {canEditTask(sub) && (
+                                              <select
+                                                value={sub.priority || 'Medium'}
+                                                onClick={e => e.stopPropagation()}
+                                                onChange={async (e) => {
+                                                  e.stopPropagation();
+                                                  const newPriority = e.target.value;
+                                                  try {
+                                                    const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                    await api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName });
+                                                    fetchTaskListsOnly();
+                                                  } catch (err) {
+                                                    console.error(err);
+                                                  }
+                                                }}
+                                                style={{
+                                                  position: 'absolute',
+                                                  top: 0,
+                                                  left: 0,
+                                                  width: '100%',
+                                                  height: '100%',
+                                                  opacity: 0,
+                                                  cursor: 'pointer',
+                                                  border: 'none',
+                                                  outline: 'none'
+                                                }}
+                                              >
+                                                {Object.keys(PRIORITY_FLAGS).map(p => (
+                                                  <option key={p} value={p}>{p}</option>
+                                                ))}
+                                              </select>
+                                            )}
+                                          </div>
                                           {canDeleteTask(sub) && (
                                             <button 
                                               className="cu-act-btn danger" 
@@ -1111,7 +1227,7 @@ export default function TaskGroups({ user, onBack }) {
                     onChange={(e) => setTaskForm({ ...taskForm, assignees: e.target.value })}
                   >
                     <option value="">-- Select Assignee --</option>
-                    {users.map((usr) => (
+                    {getFilteredUsersForGroup(targetGroup).map((usr) => (
                       <option key={usr.id} value={usr.id}>
                         {usr.fullName || `${usr.firstName || ''} ${usr.lastName || ''}`}
                       </option>

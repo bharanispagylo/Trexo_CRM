@@ -183,7 +183,17 @@ export default function Archive({ user }) {
                       {t.projectName || '-'}
                     </td>
                     <td className="cell-status" data-label="PREVIOUS STATUS">
-                      <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.2rem 0.5rem', borderRadius: '4px', background: '#e2e8f0', color: '#475569' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: '700', color: (() => {
+                        const s = (t.previousStatus || 'To Do').toLowerCase().trim();
+                        if (s === 'in progress') return '#2563eb';
+                        if (s === 'to do') return '#78350f';
+                        if (s === 'in testing') return '#7c3aed';
+                        if (s === 're-opened') return '#db2777';
+                        if (s === 'prod deployed') return '#ea580c';
+                        if (s === 'prod verified') return '#0d9488';
+                        if (s === 'delivered' || s === 'completed') return '#16a34a';
+                        return '#475569';
+                      })(), textTransform: 'uppercase' }}>
                         {t.previousStatus || 'To Do'}
                       </span>
                     </td>

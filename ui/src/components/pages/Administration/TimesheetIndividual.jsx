@@ -107,11 +107,16 @@ const downloadCSV = (filename, headers, rowsData) => {
 };
 
 const STATUS_COLORS = {
-  'completed':    { bg: '#dcfce7', color: '#16a34a' },
-  'in progress':  { bg: '#dbeafe', color: '#2563eb' },
-  'to do':        { bg: '#78350f', color: '#ffffff' },
-  'delivered':    { bg: '#f0fdf4', color: '#15803d' },
-  'prod verified':{ bg: '#ecfdf5', color: '#059669' },
+  'completed':      { bg: '#dcfce7', color: '#16a34a' },
+  'in progress':    { bg: '#dbeafe', color: '#2563eb' },
+  'to do':          { bg: '#fef3c7', color: '#78350f' },
+  'in testing':     { bg: '#f3e8ff', color: '#7c3aed' },
+  're-opened':      { bg: '#fce7f3', color: '#db2777' },
+  'prod deployed':  { bg: '#ffedd5', color: '#ea580c' },
+  'prod verified':  { bg: '#ecfdf5', color: '#0d9488' },
+  'delivered':      { bg: '#f0fdf4', color: '#16a34a' },
+  'archived':       { bg: '#f1f5f9', color: '#475569' },
+  'archive':        { bg: '#f1f5f9', color: '#475569' },
 };
 
 
@@ -313,7 +318,7 @@ export default function TimesheetIndividual({ user, onTaskClick, initialUserId, 
                         {row.title}
                       </td>
                       <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
-                        <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.2rem 0.6rem', borderRadius: '5px', background: statusStyle.bg, color: statusStyle.color, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: '700', color: statusStyle.color, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                           {row.status}
                         </span>
                       </td>
@@ -343,7 +348,7 @@ export default function TimesheetIndividual({ user, onTaskClick, initialUserId, 
                     >
                       {row.title}
                     </span>
-                    <span style={{ fontSize: '0.68rem', fontWeight: '700', padding: '0.2rem 0.5rem', borderRadius: '5px', background: statusStyle.bg, color: statusStyle.color, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: '700', color: statusStyle.color, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                       {row.status}
                     </span>
                   </div>

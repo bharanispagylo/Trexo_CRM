@@ -552,14 +552,24 @@ function ForgotPasswordPage({ onBackToLogin }) {
 
               <div className="input-group" style={{ marginTop: '1rem' }}>
                 <label className="input-label">Confirm New Password</label>
-                <input
-                  type={showPwd ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && handleResetPassword()}
-                  placeholder="Confirm new password"
-                  className="input-field"
-                />
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showPwd ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && handleResetPassword()}
+                    placeholder="Confirm new password"
+                    className="input-field"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(v => !v)}
+                    className="pwd-toggle-btn"
+                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    <PasswordToggleIcon show={showPwd} />
+                  </button>
+                </div>
               </div>
 
               <button
