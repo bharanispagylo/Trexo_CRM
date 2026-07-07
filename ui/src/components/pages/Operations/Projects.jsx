@@ -306,9 +306,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const getFilteredUsersForProject = () => {
     const activeUsers = users.filter(u => u.status !== 'Inactive');
     if (!selectedProject) return activeUsers;
-    const rawMembers = (selectedProject.members || '').split(',').map(m => m.trim()).filter(Boolean);
+    const rawMembers = (selectedProject.members || '').split(',').map(m => m.trim().toLowerCase()).filter(Boolean);
     if (rawMembers.length === 0) return [];
-    return activeUsers.filter(u => rawMembers.includes(u.id));
+    return activeUsers.filter(u => rawMembers.includes(u.id.toLowerCase()));
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1905,7 +1905,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                          style={{ cursor: canEditTask(task) ? 'pointer' : 'default', textAlignLast: 'center' }}
                                                        >
                                                          <option value="">Unassigned</option>
-                                                         {users.map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                         {getFilteredUsersForProject().map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                        </select>
                                                      </div>
                                                    </td>
@@ -2023,7 +2023,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                              style={{ cursor: canEditTask(sub) ? 'pointer' : 'default', textAlignLast: 'center' }}
                                                            >
                                                              <option value="">Unassigned</option>
-                                                             {users.map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                             {getFilteredUsersForProject().map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                            </select>
                                                          </div>
                                                        </td>

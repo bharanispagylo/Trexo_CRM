@@ -226,8 +226,8 @@ export default function TaskGroups({ user, onBack }) {
     if (!group || !group.projectId) return users;
     const proj = projects.find(p => p.id === group.projectId);
     if (!proj) return users;
-    const memberIds = (proj.members || '').split(',').map(m => m.trim()).filter(Boolean);
-    return users.filter(usr => memberIds.includes(usr.id));
+    const memberIds = (proj.members || '').split(',').map(m => m.trim().toLowerCase()).filter(Boolean);
+    return users.filter(usr => memberIds.includes(usr.id.toLowerCase()));
   };
 
   const handleInlineSubtaskSave = async (task) => {
