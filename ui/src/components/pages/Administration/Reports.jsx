@@ -8,11 +8,23 @@ const formatDecimal = (hours) => {
   return Number(hours).toFixed(1);
 };
 
-const getDisplayId = (taskNo, parentId) => {
+const getDisplayId = (task) => {
+  if (!task) return '-';
+  const taskNo = task.taskNo;
+  const parentId = task.parentId;
+  const taskType = task.taskType;
   if (!taskNo) return '-';
   const digits = taskNo.replace(/\D/g, '');
-  const prefix = parentId ? 'S' : 'T';
-  return `${prefix}${digits}`;
+  if (parentId) return 'S' + digits;
+  
+  let prefix = 'T';
+  const type = (taskType || '').toLowerCase();
+  if (type === 'bug') prefix = 'B';
+  else if (type === 'calls/meetings') prefix = 'C';
+  else if (taskNo && /^[A-Za-z]/.test(taskNo) && !taskNo.startsWith('TSK-')) {
+    prefix = taskNo.charAt(0).toUpperCase();
+  }
+  return prefix + digits;
 };
 
 const getWeekRange = (dateStr) => {
@@ -161,7 +173,7 @@ export default function Reports({ user, onNavigateToTask }) {
       }
 
       return [
-        getDisplayId(t.taskNo, t.parentId),
+        getDisplayId(t),
         `"${(t.title || '').replace(/"/g, '""')}"`,
         `"${resolvedProj.replace(/"/g, '""')}"`,
         `"${resolvedAssignee.replace(/"/g, '""')}"`,
@@ -207,9 +219,9 @@ export default function Reports({ user, onNavigateToTask }) {
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
-  const { can } = usePermissions();
+  const { canReport } = usePermissions();
 
-  if (!can('reports', 'view') && user?.role?.toLowerCase() !== 'admin') {
+  if (!canReport('tasks-report') && user?.role?.toLowerCase() !== 'admin') {
     return <div className="reports-container"><h3>Access Denied. You do not have permission to view reports.</h3></div>;
   }
 
@@ -328,7 +340,7 @@ export default function Reports({ user, onNavigateToTask }) {
              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
           </div>
           <div className="kpi-info">
-            <span className="kpi-label">Total Delivered Tasks</span>
+            <span className="kpi-label">Delivered Tasks</span>
             <span className="kpi-value">{totalTasks}</span>
           </div>
         </div>
@@ -338,7 +350,7 @@ export default function Reports({ user, onNavigateToTask }) {
              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
           </div>
           <div className="kpi-info">
-            <span className="kpi-label">{reportType === 'monthly' ? 'Total Projects' : 'Total Projects Delivered'}</span>
+            <span className="kpi-label">{reportType === 'monthly' ? 'Projects' : 'Projects Delivered'}</span>
             <span className="kpi-value">{uniqueProjects}</span>
           </div>
         </div>
@@ -347,7 +359,7 @@ export default function Reports({ user, onNavigateToTask }) {
              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-3-3.87"></path><path d="M4 21v-2a4 4 0 0 1 3-3.87"></path><circle cx="12" cy="7" r="4"></circle></svg>
           </div>
           <div className="kpi-info">
-            <span className="kpi-label">Total Assignees</span>
+            <span className="kpi-label">Assignees</span>
             <span className="kpi-value">{uniqueAssignees}</span>
           </div>
         </div>
@@ -374,7 +386,7 @@ export default function Reports({ user, onNavigateToTask }) {
             <tbody>
               {tasks.map(task => (
                 <tr key={task.id}>
-                  <td>{getDisplayId(task.taskNo, task.parentId)}</td>
+                  <td>{getDisplayId(task)}</td>
                   <td className="task-title-cell">
                     <span
                       style={{ color: '#2563eb', cursor: 'pointer', fontWeight: '600' }}
@@ -427,7 +439,7 @@ export default function Reports({ user, onNavigateToTask }) {
         {/* Mobile View */}
         <div className="mobile-cards-view">
           {tasks.map(task => {
-            const displayId = getDisplayId(task.taskNo, task.parentId);
+            const displayId = getDisplayId(task);
             const projName = task.projectName || (projects.find(p => p.id === task.projectId)?.name) || '-';
             const deliveredStr = task.deliveredDate ? new Date(task.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
             

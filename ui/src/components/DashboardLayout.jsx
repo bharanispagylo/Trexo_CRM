@@ -407,6 +407,8 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const [searchSelectedProject, setSearchSelectedProject] = useState(null);
   const [teamMemberAssigneeFilter, setTeamMemberAssigneeFilter] = useState(null);
   const [timesheetUserId, setTimesheetUserId] = useState(null);
+  const [timesheetInitialFilter, setTimesheetInitialFilter] = useState(null);
+  const [timesheetInitialDate, setTimesheetInitialDate] = useState(null);
   const searchContainerRef = useRef(null);
 
   useEffect(() => {
@@ -713,10 +715,10 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         return <EditUser userToEdit={userToEdit} onBack={() => setActiveTab('users')} />;
       case 'timesheet-overall':
         if (!canReport('timesheet-overall')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
-        return <TimesheetOverall onUserClick={(userId) => { setTimesheetUserId(userId); setActiveTab('timesheet-individual'); }} />;
+        return <TimesheetOverall onUserClick={(userId, initialFilter, initialDate) => { setTimesheetUserId(userId); setTimesheetInitialFilter(initialFilter); setTimesheetInitialDate(initialDate); setActiveTab('timesheet-individual'); }} />;
       case 'timesheet-individual':
         if (!canReport('timesheet-individual')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
-        return <TimesheetIndividual user={user} onTaskClick={(taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); }} initialUserId={timesheetUserId} onClearInitialUser={() => setTimesheetUserId(null)} />;
+        return <TimesheetIndividual user={user} onTaskClick={(taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); }} initialUserId={timesheetUserId} onClearInitialUser={() => setTimesheetUserId(null)} initialFilter={timesheetInitialFilter} onClearInitialFilter={() => setTimesheetInitialFilter(null)} initialDate={timesheetInitialDate} onClearInitialDate={() => setTimesheetInitialDate(null)} />;
       case 'daily-load-all':
         if (!canReport('daily-load-all')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
         return <DailyLoadAll onUserClick={(userId) => { setTimesheetUserId(userId); setActiveTab('daily-load-individual'); }} />;
@@ -734,7 +736,21 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             setActiveTab('tasks');
           }} />;
       case 'reports':
-        if (!canReport('tasks-report')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
+        if (!canReport('tasks-report')) {
+          const reportTabs = [
+            { key: 'reports-status-based', action: 'reports-status-based' },
+            { key: 'timesheet-overall', action: 'timesheet-overall' },
+            { key: 'timesheet-individual', action: 'timesheet-individual' },
+            { key: 'daily-load-all', action: 'daily-load-all' },
+            { key: 'daily-load-individual', action: 'daily-load-individual' }
+          ];
+          const firstPermitted = reportTabs.find(rt => canReport(rt.action));
+          if (firstPermitted) {
+            setTimeout(() => setActiveTab(firstPermitted.key), 0);
+            return <div className="loading-screen">Loading Report...</div>;
+          }
+          return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
+        }
         return <Reports user={user} onNavigateToTask={(taskData) => {
             const displayId = getDisplayId(taskData);
             setSelectedTaskId(displayId);
@@ -1072,7 +1088,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
                         <div className="saas-search-item-icon">#</div>
                         <div className="saas-search-item-content">
                           <div className="saas-search-item-title">{t.title}</div>
-                          <div className="saas-search-item-subtitle">{t.taskNo || ''} • {t.status} • {t.priority}{t.projectName ? ` • ${t.projectName}` : ''}</div>
+                          <div className="saas-search-item-subtitle">{getDisplayId(t)} • {t.status} • {t.priority}{t.projectName ? ` • ${t.projectName}` : ''}</div>
                         </div>
                       </div>
                     ))}

@@ -67,6 +67,8 @@
   color: #64748b;
   cursor: pointer;
   transition: all 0.2s;
+  min-width: 80px;
+  text-align: center;
 }
 
 .view-toggle button.active {
@@ -118,10 +120,12 @@
 .col-todo          { background: #f8fafc; border-color: #e2e8f0; }
 .col-progress      { background: #eff6ff; border-color: #bfdbfe; }
 .col-testing       { background: #faf5ff; border-color: #e9d5ff; }
+.col-dev-verified  { background: #ecfeff; border-color: #a5f3fc; }
 .col-reopened      { background: #fff1f2; border-color: #fecdd3; }
 .col-prod-deployed { background: #fefce8; border-color: #fde68a; }
 .col-prod-verified { background: #f0fdf4; border-color: #bbf7d0; }
 .col-delivered     { background: #f0fdfa; border-color: #99f6e4; }
+.col-not-issue     { background: #f1f5f9; border-color: #cbd5e1; }
 
 .kanban-col.drag-over {
   border-color: #2563eb !important;
@@ -3455,6 +3459,7 @@
 
 /* All Tasks List View Column Widths */
 .all-tasks-list .cu-th-name     { width: 50%; }
+.all-tasks-list .cu-th-project  { width: 10%; }
 .all-tasks-list .cu-th-assignee { width: 12%; text-align: center; }
 .all-tasks-list .cu-th-list     { width: 8%; }
 .all-tasks-list .cu-th-delivery { width: 8%; text-align: center; }
@@ -4189,6 +4194,9 @@
 .saas-meta-row-4col {
   grid-template-columns: 100px 1fr 100px 1fr;
 }
+.saas-meta-row-6col {
+  grid-template-columns: 100px 1fr 100px 1fr 100px 1fr;
+}
 .saas-meta-row-2col {
   grid-template-columns: 100px 1fr;
 }
@@ -4240,6 +4248,7 @@
   flex-wrap: nowrap;
 }
 
+.filter-group-type,
 .filter-group-project,
 .filter-group-date {
   display: flex;
@@ -4257,6 +4266,7 @@
     gap: 0.5rem;
   }
 
+  .filter-group-type,
   .filter-group-project,
   .filter-group-date {
     display: flex;
@@ -4476,7 +4486,8 @@
   /* ── ClickUp-style field layout: label above value, full-width ── */
 
   /* 4-col row (Status + Assignee): stack each pair vertically */
-  .saas-meta-row-4col {
+  .saas-meta-row-4col,
+  .saas-meta-row-6col {
     display: flex !important;
     flex-direction: column !important;
     align-items: stretch !important;
@@ -4485,7 +4496,8 @@
   }
 
   /* Labels: small gray text — divider on top of each except first */
-  .saas-meta-row-4col > .saas-meta-label {
+  .saas-meta-row-4col > .saas-meta-label,
+  .saas-meta-row-6col > .saas-meta-label {
     display: flex !important;
     align-items: center !important;
     gap: 0.4rem !important;
@@ -4496,13 +4508,15 @@
     border-top: 1px solid #f1f5f9 !important;
   }
 
-  .saas-meta-row-4col > .saas-meta-label:first-child {
+  .saas-meta-row-4col > .saas-meta-label:first-child,
+  .saas-meta-row-6col > .saas-meta-label:first-child {
     border-top: none !important;
     padding-top: 0.25rem !important;
   }
 
   /* Values: bold, larger — sits directly below its label */
-  .saas-meta-row-4col > .saas-meta-value {
+  .saas-meta-row-4col > .saas-meta-value,
+  .saas-meta-row-6col > .saas-meta-value {
     padding: 0 0 0.75rem !important;
     font-size: 0.95rem !important;
     font-weight: 600 !important;
@@ -5807,6 +5821,42 @@
 @media (max-width: 768px) {
   .saas-meta-created-row {
     display: flex !important;
+  }
+}
+
+.calls-add-btn {
+  padding: 0.4rem 1rem;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+.calls-add-btn:hover {
+  background: #1d4ed8;
+}
+.calls-add-btn-mobile {
+  display: none;
+}
+.calls-add-btn-desktop {
+  display: inline;
+}
+
+@media (max-width: 768px) {
+  .calls-add-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+    align-self: flex-start;
+  }
+  .calls-add-btn-desktop {
+    display: none;
+  }
+  .calls-add-btn-mobile {
+    display: inline;
   }
 }
 

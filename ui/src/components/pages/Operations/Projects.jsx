@@ -11,20 +11,24 @@ const STATUS_HEADER_META = {
   'To Do':         { bg: '#78350f', fg: '#ffffff', border: '1px solid #5c2c06', dotColor: '#78350f', isDone: false },
   'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', isDone: false },
   'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', isDone: false },
+  'Dev Verified':   { bg: '#0891b2', fg: '#ffffff', dotColor: '#a5f3fc', isDone: false },
   'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', isDone: false },
   'Prod Deployed': { bg: '#ea580c', fg: '#ffffff', dotColor: '#fde68a', isDone: false },
   'Prod Verified': { bg: '#0d9488', fg: '#ffffff', dotColor: '#bbf7d0', isDone: false },
   'Delivered':     { bg: '#16a34a', fg: '#ffffff', dotColor: '#99f6e4', isDone: true  },
+  'Not an issue':  { bg: '#64748b', fg: '#ffffff', dotColor: '#cbd5e1', isDone: true  },
 };
 
 const COLUMNS = [
   { id: 'To Do', label: 'To Do' },
   { id: 'In Progress', label: 'In Progress' },
   { id: 'In Testing', label: 'In Testing' },
+  { id: 'Dev Verified', label: 'Dev Verified' },
   { id: 'Re-opened', label: 'Re-opened' },
   { id: 'Prod Deployed', label: 'Prod Deployed' },
   { id: 'Prod Verified', label: 'Prod Verified' },
-  { id: 'Delivered', label: 'Delivered' }
+  { id: 'Delivered', label: 'Delivered' },
+  { id: 'Not an issue', label: 'Not an issue' }
 ];
 
 const PRIORITY_FLAGS = {
@@ -662,6 +666,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         clientId: selectedProject.clientId,
         taskListId: selectedTaskListId
       };
+      if (payload.taskType === 'calls/meetings') {
+        payload.assignees = user?.id || '';
+        payload.dueDate = null;
+        payload.deliveredDate = null;
+      }
 
       if (taskFormType === 'edit' && editingTask) {
         payload.updatedBy = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
@@ -1134,7 +1143,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     const inProgressTasksCount = allProjectTasks.filter(t => (t.status || '').toLowerCase() === 'in progress').length;
     const pendingTasksCount = allProjectTasks.filter(t => {
       const s = (t.status || '').toLowerCase();
-      return s !== 'completed' && s !== 'in progress';
+      return s !== 'completed' && s !== 'in progress' && s !== 'not an issue';
     }).length;
     const teamCount = projMembers.length;
     const queriesCount = (selectedProject.queries || []).length;
@@ -1144,7 +1153,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     now.setHours(0, 0, 0, 0);
     const activeTasks = allProjectTasks.filter(t => {
       const s = (t.status || '').toLowerCase();
-      return s !== 'completed' && s !== 'prod verified' && s !== 'delivered';
+      return s !== 'completed' && s !== 'prod verified' && s !== 'delivered' && s !== 'not an issue';
     });
     const overdueTasks = activeTasks.filter(t => t.dueDate && new Date(t.dueDate) < now);
     const atRiskTasks = activeTasks.filter(t => {
@@ -1193,7 +1202,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           <div className="task-drawer-overlay" onClick={e => { if (e.target === e.currentTarget) setShowTaskFormModal(false); }}>
             <div className="task-drawer-panel">
               <TaskDetailView
-                task={editingTask}
+                task={editingTask ? { projectId: selectedProject.id, projectName: selectedProject.name, clientId: selectedProject.clientId, ...editingTask } : { projectId: selectedProject.id, projectName: selectedProject.name, clientId: selectedProject.clientId, taskListId: selectedTaskListId }}
                 onSelectTask={(parent) => {
                   setShowTaskFormModal(false);
                   setViewingTask(parent);
@@ -1243,7 +1252,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           <div className="task-drawer-overlay" onClick={e => { if (e.target === e.currentTarget) { setShowTaskViewModal(false); setViewingTask(null); } }}>
             <div className="task-drawer-panel">
               <TaskDetailView
-                task={viewingTask}
+                task={viewingTask ? { projectId: selectedProject.id, projectName: selectedProject.name, clientId: selectedProject.clientId, ...viewingTask } : null}
                 onSelectTask={(parent) => {
                   setViewingTask(parent);
                 }}

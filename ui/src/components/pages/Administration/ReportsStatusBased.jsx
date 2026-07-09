@@ -8,10 +8,23 @@ const formatDecimal = (hours) => {
   return Number(hours).toFixed(1);
 };
 
-const getDisplayId = (taskNo, parentId) => {
+const getDisplayId = (task) => {
+  if (!task) return '-';
+  const taskNo = task.taskNo;
+  const parentId = task.parentId;
+  const taskType = task.taskType;
   if (!taskNo) return '-';
   const digits = taskNo.replace(/\D/g, '');
-  return (parentId ? 'S' : 'T') + digits;
+  if (parentId) return 'S' + digits;
+  
+  let prefix = 'T';
+  const type = (taskType || '').toLowerCase();
+  if (type === 'bug') prefix = 'B';
+  else if (type === 'calls/meetings') prefix = 'C';
+  else if (taskNo && /^[A-Za-z]/.test(taskNo) && !taskNo.startsWith('TSK-')) {
+    prefix = taskNo.charAt(0).toUpperCase();
+  }
+  return prefix + digits;
 };
 
 const getWeekRange = (dateStr) => {
@@ -35,10 +48,12 @@ const STATUS_STYLE = {
   'Delivered':    { bg: '#dcfce7', color: '#166534' },
   'On Hold':      { bg: '#fee2e2', color: '#b91c1c' },
   'In Testing':   { bg: '#ede9fe', color: '#7c3aed' },
+  'Dev Verified':  { bg: '#e0f7fa', color: '#0891b2' },
   'Prod Verified':{ bg: '#f0fdf4', color: '#15803d' },
+  'Not an issue': { bg: '#e2e8f0', color: '#64748b' },
 };
 
-const STATUSES = ['To Do', 'In Progress', 'To Approved', 'Approved', 'Delivered', 'On Hold', 'In Testing', 'Prod Verified'];
+const STATUSES = ['To Do', 'In Progress', 'To Approved', 'Approved', 'Delivered', 'On Hold', 'In Testing', 'Dev Verified', 'Prod Verified', 'Not an issue'];
 
 export default function ReportsStatusBased({ user, onNavigateToTask }) {
   const [reportType, setReportType] = useState('daily');
@@ -62,14 +77,26 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
   const [projects,  setProjects]  = useState([]);
   const [assignees, setAssignees] = useState([]);
   const [clients,   setClients]   = useState([]);
+  const [worklogTab, setWorklogTab] = useState('tasks');
 
-  const { can } = usePermissions();
+  const { canReport, getLevel } = usePermissions();
+  const worklogLevel = getLevel('reports', 'reports-status-based');
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const isTeamLeadOrAdmin = isAdmin || user?.role?.toLowerCase() === 'team lead';
+
+  useEffect(() => {
+    if ((worklogLevel === 'Self' || !isTeamLeadOrAdmin) && user?.id) {
+      setSelectedAssignee(user.id);
+    }
+  }, [worklogLevel, isTeamLeadOrAdmin, user?.id]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
       let data;
-      const common = { project: selectedProject, assignee: selectedAssignee, client: selectedClient, status: selectedStatus };
+      const isSelfOnly = worklogLevel === 'Self' || !isTeamLeadOrAdmin;
+      const assigneeValue = isSelfOnly ? (user?.id || '') : selectedAssignee;
+      const common = { project: selectedProject, assignee: assigneeValue, client: selectedClient, status: selectedStatus };
 
       if (reportType === 'daily') {
         const params = new URLSearchParams({ period: 'daily', date: selectedDailyDate, ...common });
@@ -119,20 +146,186 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportType, selectedDailyDate, selectedMonth, selectedYear, customStartDate, customEndDate, selectedWeekDate]);
 
-  const totalTasks     = tasks.length;
-  const totalTimeSpent = tasks.reduce((s, t) => s + (parseFloat(t.timeSpent)      || 0), 0);
-  const totalBillable  = tasks.reduce((s, t) => s + (parseFloat(t.billableHours)  || 0), 0);
-  const totalEstimated = tasks.reduce((s, t) => s + (parseFloat(t.estimatedHours) || 0), 0);
+  const taskItems = useMemo(() => {
+    let filtered = tasks.filter(t => (t.taskType || 'Task').toLowerCase() !== 'calls/meetings');
+    if (!isTeamLeadOrAdmin) {
+      filtered = filtered.filter(t => {
+        const taskAssignees = (t.assignees || '').split(',').map(a => a.trim().toLowerCase());
+        const myId = (user?.id || '').toLowerCase().trim();
+        const myName = (user?.fullName || '').toLowerCase().trim();
+        return (myId && taskAssignees.includes(myId)) || (myName && taskAssignees.includes(myName));
+      });
+    }
+    return filtered;
+  }, [tasks, isTeamLeadOrAdmin, user]);
+  const callItems = useMemo(() => {
+    let filtered = tasks.filter(t => (t.taskType || 'Task').toLowerCase() === 'calls/meetings');
+    if (!isTeamLeadOrAdmin) {
+      filtered = filtered.filter(t => {
+        const taskAssignees = (t.assignees || '').split(',').map(a => a.trim().toLowerCase());
+        const myId = (user?.id || '').toLowerCase().trim();
+        const myName = (user?.fullName || '').toLowerCase().trim();
+        return (myId && taskAssignees.includes(myId)) || (myName && taskAssignees.includes(myName));
+      });
+    }
+    return filtered;
+  }, [tasks, isTeamLeadOrAdmin, user]);
+  const displayedTasks = useMemo(() => worklogTab === 'calls' ? callItems : taskItems, [worklogTab, callItems, taskItems]);
 
-  const uniqueProjects = useMemo(() => new Set(tasks.map(t => t.projectName).filter(Boolean)).size, [tasks]);
+  const kpiCards = useMemo(() => {
+    // Tasks tab metrics
+    const tasksCount = taskItems.length;
+    const uniqueProjectsTasks = new Set(taskItems.map(t => t.projectName).filter(Boolean)).size;
+    const totalTimeSpentTasks = taskItems.reduce((s, t) => s + (parseFloat(t.timeSpent) || 0), 0);
 
-  const statusGroups = useMemo(() =>
-    tasks.reduce((acc, t) => { const s = t.status || 'Unknown'; acc[s] = (acc[s] || 0) + 1; return acc; }, {}),
-  [tasks]);
+    // Calls/Meeting tab metrics
+    const totalCallsTasks = callItems.length;
+    const uniqueProjectsCalls = new Set(callItems.map(t => t.projectName).filter(Boolean)).size;
+    const totalTimeSpentCalls = callItems.reduce((s, t) => s + (parseFloat(t.timeSpent) || 0), 0);
+
+    const totalHoursAll = totalTimeSpentTasks + totalTimeSpentCalls;
+
+    if (worklogTab === 'calls') {
+      const baseCards = [
+        {
+          label: 'Calls/Meetings',
+          value: totalCallsTasks,
+          colorClass: 'blue',
+          icon: (
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+          )
+        },
+        {
+          label: 'Projects',
+          value: uniqueProjectsCalls,
+          colorClass: 'purple',
+          icon: (
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          )
+        },
+        {
+          label: 'Call Hours',
+          value: formatDecimal(totalTimeSpentCalls),
+          colorClass: 'orange',
+          icon: (
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          )
+        }
+      ];
+      return [
+        ...baseCards,
+        {
+          label: 'Task Hours',
+          value: formatDecimal(totalTimeSpentTasks),
+          colorClass: 'purple',
+          icon: (
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          )
+        },
+        {
+          label: 'Total Hours',
+          value: formatDecimal(totalHoursAll),
+          colorClass: 'green',
+          icon: (
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          )
+        }
+      ];
+    } else {
+      const baseCards = [
+        {
+          label: 'Tasks',
+          value: tasksCount,
+          colorClass: 'blue',
+          icon: (
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+          )
+        },
+        {
+          label: 'Projects',
+          value: uniqueProjectsTasks,
+          colorClass: 'purple',
+          icon: (
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          )
+        },
+        {
+          label: 'Task Hours',
+          value: formatDecimal(totalTimeSpentTasks),
+          colorClass: 'orange',
+          icon: (
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          )
+        }
+      ];
+      return [
+        ...baseCards,
+        {
+          label: 'Call Hours',
+          value: formatDecimal(totalTimeSpentCalls),
+          colorClass: 'purple',
+          icon: (
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          )
+        },
+        {
+          label: 'Total Hours',
+          value: formatDecimal(totalHoursAll),
+          colorClass: 'green',
+          icon: (
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          )
+        }
+      ];
+    }
+  }, [taskItems, callItems, worklogTab]);
+
+  const { totalTimeSpent, totalBillable, totalEstimated } = useMemo(() => {
+    const totalTimeSpent = displayedTasks.reduce((s, t) => s + (parseFloat(t.timeSpent)      || 0), 0);
+    const totalBillable  = displayedTasks.reduce((s, t) => s + (parseFloat(t.billableHours)  || 0), 0);
+    const totalEstimated = displayedTasks.reduce((s, t) => s + (parseFloat(t.estimatedHours) || 0), 0);
+    return { totalTimeSpent, totalBillable, totalEstimated };
+  }, [displayedTasks]);
+
+
 
   const handleExport = () => {
     const headers = ['TASK # NO', 'TITLE', 'STATUS', 'PROJECT', 'ASSIGNEE', 'TIME SPENT HRS', 'BILLABLE HRS', 'ESTIMATED HRS'];
-    const rows = tasks.map(t => {
+    const rows = displayedTasks.map(t => {
       let resolvedAssignee = 'Unassigned';
       if (t.assignees) {
         const ids = t.assignees.split(',').map(id => id.trim()).filter(Boolean);
@@ -142,7 +335,7 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
         }).join(', ');
       }
       return [
-        getDisplayId(t.taskNo, t.parentId),
+        getDisplayId(t),
         `"${(t.title || '').replace(/"/g, '""')}"`,
         `"${t.status || ''}"`,
         `"${(t.projectName || '').replace(/"/g, '""')}"`,
@@ -157,7 +350,8 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Status_Report_${reportType}_${selectedYear}_${String(selectedMonth).padStart(2,'0')}.csv`;
+    const tabName = worklogTab === 'calls' ? 'Calls_Meeting' : 'Tasks';
+    a.download = `${tabName}_Report_${reportType}_${selectedYear}_${String(selectedMonth).padStart(2,'0')}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -172,7 +366,7 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
   ];
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
-  if (!can('reports', 'view') && user?.role?.toLowerCase() !== 'admin') {
+  if (!canReport('reports-status-based') && user?.role?.toLowerCase() !== 'admin') {
     return <div className="reports-container"><h3>Access Denied. You do not have permission to view reports.</h3></div>;
   }
 
@@ -203,13 +397,13 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
         <div className="reports-filter-left">
           <button className="reports-nav-btn" onClick={() => {
             if (reportType === 'daily') {
-              const d = new Date(selectedDailyDate); d.setDate(d.getDate() - 1);
+              const d = new Date(selectedDailyDate); d.setUTCDate(d.getUTCDate() - 1);
               setSelectedDailyDate(d.toISOString().split('T')[0]);
             } else if (reportType === 'monthly') {
               if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear(y => y - 1); }
               else setSelectedMonth(m => m - 1);
             } else if (reportType === 'weekly') {
-              const d = new Date(selectedWeekDate); d.setDate(d.getDate() - 7);
+              const d = new Date(selectedWeekDate); d.setUTCDate(d.getUTCDate() - 7);
               setSelectedWeekDate(d.toISOString().split('T')[0]);
             } else {
               const start = new Date(customStartDate), end = new Date(customEndDate);
@@ -254,13 +448,13 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
           {reportType !== 'custom' && (
             <button className="reports-nav-btn" onClick={() => {
               if (reportType === 'daily') {
-                const d = new Date(selectedDailyDate); d.setDate(d.getDate() + 1);
+                const d = new Date(selectedDailyDate); d.setUTCDate(d.getUTCDate() + 1);
                 setSelectedDailyDate(d.toISOString().split('T')[0]);
               } else if (reportType === 'monthly') {
                 if (selectedMonth === 12) { setSelectedMonth(1); setSelectedYear(y => y + 1); }
                 else setSelectedMonth(m => m + 1);
               } else if (reportType === 'weekly') {
-                const d = new Date(selectedWeekDate); d.setDate(d.getDate() + 7);
+                const d = new Date(selectedWeekDate); d.setUTCDate(d.getUTCDate() + 7);
                 setSelectedWeekDate(d.toISOString().split('T')[0]);
               }
             }}>→</button>
@@ -276,10 +470,12 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
             <option value="All Projects">All Projects</option>
             {projects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
           </select>
-          <select className="reports-select" value={selectedAssignee} onChange={e => setSelectedAssignee(e.target.value)}>
-            <option value="All Assignees">All Assignees</option>
-            {assignees.map(u => <option key={u.id} value={u.id}>{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`}</option>)}
-          </select>
+          {!(worklogLevel === 'Self' || !isTeamLeadOrAdmin) && (
+            <select className="reports-select" value={selectedAssignee} onChange={e => setSelectedAssignee(e.target.value)}>
+              <option value="All Assignees">All Assignees</option>
+              {assignees.map(u => <option key={u.id} value={u.id}>{u.fullName || `${u.firstName || ''} ${u.lastName || ''}`}</option>)}
+            </select>
+          )}
           <select className="reports-select" value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)}>
             <option value="All">All Statuses</option>
             {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -290,51 +486,57 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
 
       {/* ── KPI cards ── */}
       <div className="reports-kpi-grid">
-        <div className="reports-kpi-card">
-          <div className="kpi-icon-wrapper blue">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+        {kpiCards.map((card, idx) => (
+          <div className="reports-kpi-card" key={idx}>
+            <div className={`kpi-icon-wrapper ${card.colorClass}`}>
+              {card.icon}
+            </div>
+            <div className="kpi-info">
+              <span className="kpi-label">{card.label}</span>
+              <span className="kpi-value">{card.value}</span>
+            </div>
           </div>
-          <div className="kpi-info">
-            <span className="kpi-label">Total Tasks</span>
-            <span className="kpi-value">{totalTasks}</span>
-          </div>
-        </div>
-        <div className="reports-kpi-card">
-          <div className="kpi-icon-wrapper purple">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-          </div>
-          <div className="kpi-info">
-            <span className="kpi-label">Total Projects</span>
-            <span className="kpi-value">{uniqueProjects}</span>
-          </div>
-        </div>
-        <div className="reports-kpi-card">
-          <div className="kpi-icon-wrapper orange">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-          </div>
-          <div className="kpi-info">
-            <span className="kpi-label">Total Hours</span>
-            <span className="kpi-value">{formatDecimal(totalTimeSpent)}</span>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* ── Status breakdown chips ── */}
-      {Object.keys(statusGroups).length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
-          {Object.entries(statusGroups).map(([s, count]) => {
-            const st = STATUS_STYLE[s] || { bg: '#f1f5f9', color: '#475569' };
-            return (
-              <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.3rem 0.8rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: '500', background: st.bg, color: st.color }}>
-                {s} <strong>{count}</strong>
-              </span>
-            );
-          })}
-        </div>
-      )}
+      {/* ── Worklog Tab Switcher ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0', marginBottom: '1rem', borderBottom: '2px solid #e2e8f0' }}>
+        <button
+          onClick={() => setWorklogTab('tasks')}
+          style={{
+            padding: '0.5rem 1.25rem',
+            fontWeight: 600,
+            fontSize: '0.875rem',
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            color: worklogTab === 'tasks' ? '#2563eb' : '#64748b',
+            borderBottom: worklogTab === 'tasks' ? '2px solid #2563eb' : '2px solid transparent',
+            marginBottom: '-2px',
+            transition: 'color 0.15s, border-color 0.15s'
+          }}
+        >
+          Tasks
+        </button>
+        <button
+          onClick={() => setWorklogTab('calls')}
+          style={{
+            padding: '0.5rem 1.25rem',
+            fontWeight: 600,
+            fontSize: '0.875rem',
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            color: worklogTab === 'calls' ? '#2563eb' : '#64748b',
+            borderBottom: worklogTab === 'calls' ? '2px solid #2563eb' : '2px solid transparent',
+            marginBottom: '-2px',
+            transition: 'color 0.15s, border-color 0.15s'
+          }}
+        >
+          Calls / Meetings
+        </button>
+      </div>
+
 
       {/* ── Table ── */}
       <div className="reports-table-container">
@@ -354,11 +556,11 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
               </tr>
             </thead>
             <tbody>
-              {tasks.map(task => {
+              {displayedTasks.map(task => {
                 const st = STATUS_STYLE[task.status] || { bg: '#f1f5f9', color: '#475569' };
                 return (
                   <tr key={task.id}>
-                    <td>{getDisplayId(task.taskNo, task.parentId)}</td>
+                    <td>{getDisplayId(task)}</td>
                     <td className="task-title-cell">
                       <span
                         style={{ color: '#2563eb', cursor: 'pointer', fontWeight: '600' }}
@@ -368,7 +570,7 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
                       </span>
                     </td>
                     <td>
-                      <span style={{ display: 'inline-block', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600', background: st.bg, color: st.color, whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: '600', color: st.color, whiteSpace: 'nowrap' }}>
                         {task.status || '-'}
                       </span>
                     </td>
@@ -393,7 +595,7 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
                   </tr>
                 );
               })}
-              {tasks.length === 0 && (
+              {displayedTasks.length === 0 && (
                 <tr>
                   <td colSpan="8" className="no-data-cell" style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b', fontSize: '0.95rem' }}>
                     No tasks found for this period.
@@ -401,7 +603,7 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
                 </tr>
               )}
             </tbody>
-            {tasks.length > 0 && (
+            {displayedTasks.length > 0 && (
               <tfoot>
                 <tr>
                   <td colSpan="5" className="footer-total-label">Total</td>
@@ -416,8 +618,8 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
 
         {/* Mobile View */}
         <div className="mobile-cards-view">
-          {tasks.map(task => {
-            const displayId = getDisplayId(task.taskNo, task.parentId);
+          {displayedTasks.map(task => {
+            const displayId = getDisplayId(task);
             const st = STATUS_STYLE[task.status] || { bg: '#f1f5f9', color: '#475569' };
             const projName = task.projectName || '-';
             
@@ -454,7 +656,7 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
                   </div>
                   <div className="reports-mobile-card-row">
                     <span className="reports-mobile-card-label">Status:</span>
-                    <span style={{ display: 'inline-block', padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: '600', background: st.bg, color: st.color, whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: '600', color: st.color, whiteSpace: 'nowrap' }}>
                       {task.status || '-'}
                     </span>
                   </div>
@@ -484,13 +686,13 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
             );
           })}
 
-          {tasks.length === 0 && (
+          {displayedTasks.length === 0 && (
             <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#64748b', fontSize: '0.9rem', background: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
               No tasks found for this period.
             </div>
           )}
 
-          {tasks.length > 0 && (
+          {displayedTasks.length > 0 && (
             <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                 <span style={{ fontWeight: '700', color: '#475569' }}>Total Time Spent:</span>

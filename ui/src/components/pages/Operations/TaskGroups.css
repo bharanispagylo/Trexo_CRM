@@ -457,7 +457,16 @@
   letter-spacing: 0.05em;
 }
 
-.tg-form-field input,
+.tg-form-field input {
+  padding: 0.65rem 0.85rem;
+  font-size: 0.9rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #1e293b;
+  transition: all 0.2s;
+}
+
 .tg-form-field select {
   padding: 0.65rem 0.85rem;
   font-size: 0.9rem;
@@ -466,6 +475,14 @@
   background: #f8fafc;
   color: #1e293b;
   transition: all 0.2s;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 1.25rem center !important;
+  background-size: 0.9rem !important;
+  padding-right: 2.5rem !important;
 }
 
 .tg-form-field input:focus,
@@ -664,6 +681,76 @@
     padding: 0.1rem 0.3rem !important;
   }
 }
+
+/* Kanban View scroll and layout styles inside Favourites tab */
+.tg-section .kanban-board {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 1rem;
+  align-items: flex-start;
+  height: calc(100vh - 280px);
+  min-height: 450px;
+  box-sizing: border-box;
+}
+
+.tg-section .kanban-col-clickup {
+  flex: 0 0 290px;
+  width: 290px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  padding: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.tg-section .kanban-col-clickup.drag-over {
+  border: 2.5px dashed #2563eb !important;
+  background: #eff6ff !important;
+}
+
+.tg-section .col-clickup-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px; /* avoid scrollbar overlapping cards */
+}
+
+/* Custom Scrollbar format matching ClickUp / Tasks page */
+.tg-section .kanban-board::-webkit-scrollbar {
+  height: 8px;
+  background: transparent;
+}
+.tg-section .kanban-board::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+.tg-section .kanban-board::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.tg-section .col-clickup-cards::-webkit-scrollbar {
+  width: 6px;
+  background: transparent;
+}
+.tg-section .col-clickup-cards::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+.tg-section .col-clickup-cards::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 
 
 

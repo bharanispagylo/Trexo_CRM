@@ -188,10 +188,12 @@ export default function Archive({ user }) {
                         if (s === 'in progress') return '#2563eb';
                         if (s === 'to do') return '#78350f';
                         if (s === 'in testing') return '#7c3aed';
+                        if (s === 'dev verified') return '#0891b2';
                         if (s === 're-opened') return '#db2777';
                         if (s === 'prod deployed') return '#ea580c';
                         if (s === 'prod verified') return '#0d9488';
                         if (s === 'delivered' || s === 'completed') return '#16a34a';
+                        if (s === 'not an issue') return '#64748b';
                         return '#475569';
                       })(), textTransform: 'uppercase' }}>
                         {t.previousStatus || 'To Do'}
