@@ -62,7 +62,7 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
           return nameA.localeCompare(nameB);
         });
         setUsers(sortedUsers);
-        setAllTasks((taskData || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive'));
+        setAllTasks((taskData || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || '').toLowerCase() !== 'calls/meetings'));
         setAllWorklogs(worklogData || []);
 
         setSelectedUserId('all');

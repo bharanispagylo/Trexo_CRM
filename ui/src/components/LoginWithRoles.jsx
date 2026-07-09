@@ -652,8 +652,8 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
 
       const myTasks = (tasks || []).filter(isMyTask);
       
-      // Personal active tasks (excluding completed: 'Delivered' or 'Prod Verified')
-      const activeMyTasks = myTasks.filter(t => t.status !== 'Delivered' && t.status !== 'Prod Verified');
+      // Personal active tasks (excluding completed: 'Delivered', 'Prod Verified', or 'Not an issue')
+      const activeMyTasks = myTasks.filter(t => t.status !== 'Delivered' && t.status !== 'Prod Verified' && t.status !== 'Not an issue');
 
       // Calculate mobile dashboard stats internally based on activeMyTasks
       const today = new Date();
@@ -957,7 +957,7 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
         const backlogTasks = [];
 
         allTasks.forEach(task => {
-          if (task.status === 'Delivered' || task.status === 'Prod Verified') return;
+          if (task.status === 'Delivered' || task.status === 'Prod Verified' || task.status === 'Not an issue') return;
 
           if (task.dueDate) {
             const d = new Date(task.dueDate);
@@ -1202,7 +1202,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
         const backlogTasks = [];
 
         myTasks.forEach(task => {
-          if (task.status === 'Delivered' || task.status === 'Prod Verified') return; // ignore completed
+          if (task.status === 'Delivered' || task.status === 'Prod Verified' || task.status === 'Not an issue') return; // ignore completed
 
           if (task.dueDate) {
             const d = new Date(task.dueDate);
@@ -1388,42 +1388,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
 // ══════════════════════════════════════════════════════════
 //  ROOT — ENTRY POINT
 // ══════════════════════════════════════════════════════════
-function LoginSuccessToast({ user: u, onClose }) {
-  const name = u?.fullName || `${u?.firstName || ''} ${u?.lastName || ''}`.trim() || u?.email || 'User';
-  const role = u?.role ? (u.role.charAt(0).toUpperCase() + u.role.slice(1)) : 'User';
-  const isAdmin = u?.role?.toLowerCase() === 'admin';
 
-  useEffect(() => {
-    const t = setTimeout(onClose, 3000);
-    return () => clearTimeout(t);
-  }, [onClose]);
-
-  return (
-    <div className="login-toast-overlay" onClick={onClose}>
-      <div className="login-toast-card" onClick={e => e.stopPropagation()}>
-        <div className="login-toast-icon-wrap">
-          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" strokeWidth="2.5">
-            <circle cx="12" cy="12" r="10" fill="#22c55e" stroke="#22c55e"/>
-            <polyline points="9 12 11.5 14.5 16 9.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
-        <div className="login-toast-title">Login Successfully!</div>
-        <div className="login-toast-name">Welcome back, <strong>{name}</strong></div>
-        <div className={`login-toast-role-pill ${isAdmin ? 'login-toast-role-admin' : 'login-toast-role-user'}`}>
-          {isAdmin ? (
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          ) : (
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          )}
-          {role}
-        </div>
-        <div className="login-toast-bar">
-          <div className="login-toast-bar-fill" />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function LoginWithRoles() {
   const [user, setUser] = useState(() => {
@@ -1437,14 +1402,10 @@ export default function LoginWithRoles() {
   });
   const [isRegistering, setIsRegistering] = useState(false);
   const [isForgotPwd, setIsForgotPwd] = useState(false);
-  const [loginToast, setLoginToast] = useState(null);
-
-
 
   const handleLogin = (u) => {
     setUser(u);
     localStorage.setItem('crm_user', JSON.stringify(u));
-    setLoginToast(u);
   };
 
   const handleLogout = () => {
@@ -1468,7 +1429,6 @@ export default function LoginWithRoles() {
       <PermissionProvider userRole={user.role}>
         <DashboardContainer user={user} onLogout={handleLogout} />
       </PermissionProvider>
-      {loginToast && <LoginSuccessToast user={loginToast} onClose={() => setLoginToast(null)} />}
     </>
   );
 }

@@ -134,6 +134,8 @@
     border-bottom: 1px solid #f1f5f9;
     font-size: 0.875rem;
     text-align: left !important;
+    width: 100% !important;
+    box-sizing: border-box;
   }
 
   .archive-table td.cell-task,

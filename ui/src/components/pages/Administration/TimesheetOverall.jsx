@@ -212,7 +212,7 @@ export default function TimesheetOverall({ onUserClick }) {
                 {rows.map((row, i) => (
                   <tr
                     key={i}
-                    onClick={() => onUserClick && row.userId !== 'unknown' && onUserClick(row.userId)}
+                    onClick={() => onUserClick && row.userId !== 'unknown' && onUserClick(row.userId, filter, selectedDate)}
                     style={{ borderBottom: '1px solid #f1f5f9', cursor: onUserClick && row.userId !== 'unknown' ? 'pointer' : 'default', transition: 'background 0.12s' }}
                     onMouseEnter={e => { if (onUserClick && row.userId !== 'unknown') e.currentTarget.style.background = '#f8fafc'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = ''; }}
@@ -232,7 +232,7 @@ export default function TimesheetOverall({ onUserClick }) {
               <div 
                 key={i} 
                 className="reports-mobile-card"
-                onClick={() => onUserClick && row.userId !== 'unknown' && onUserClick(row.userId)}
+                onClick={() => onUserClick && row.userId !== 'unknown' && onUserClick(row.userId, filter, selectedDate)}
                 style={{ cursor: onUserClick && row.userId !== 'unknown' ? 'pointer' : 'default' }}
               >
                 <div className="reports-mobile-card-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>

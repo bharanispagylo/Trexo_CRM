@@ -111,20 +111,31 @@ const STATUS_COLORS = {
   'in progress':    { bg: '#dbeafe', color: '#2563eb' },
   'to do':          { bg: '#fef3c7', color: '#78350f' },
   'in testing':     { bg: '#f3e8ff', color: '#7c3aed' },
+  'dev verified':   { bg: '#e0f7fa', color: '#0097a7' },
   're-opened':      { bg: '#fce7f3', color: '#db2777' },
   'prod deployed':  { bg: '#ffedd5', color: '#ea580c' },
   'prod verified':  { bg: '#ecfdf5', color: '#0d9488' },
   'delivered':      { bg: '#f0fdf4', color: '#16a34a' },
+  'not an issue':   { bg: '#e2e8f0', color: '#64748b' },
   'archived':       { bg: '#f1f5f9', color: '#475569' },
   'archive':        { bg: '#f1f5f9', color: '#475569' },
 };
 
 
-export default function TimesheetIndividual({ user, onTaskClick, initialUserId, onClearInitialUser }) {
-  const [filter, setFilter] = useState('daily');
-  const [selectedDate, setSelectedDate] = useState(TODAY);
+export default function TimesheetIndividual({
+  user,
+  onTaskClick,
+  initialUserId,
+  onClearInitialUser,
+  initialFilter,
+  onClearInitialFilter,
+  initialDate,
+  onClearInitialDate
+}) {
+  const [filter, setFilter] = useState(initialFilter || 'daily');
+  const [selectedDate, setSelectedDate] = useState(initialDate || TODAY);
   const [users, setUsers] = useState([]);
-  const [selectedUserId, setSelectedUserId] = useState('all');
+  const [selectedUserId, setSelectedUserId] = useState(initialUserId || 'all');
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [viewingTask, setViewingTask] = useState(null);
@@ -142,10 +153,13 @@ export default function TimesheetIndividual({ user, onTaskClick, initialUserId, 
       });
       setUsers(sortedUsers);
       if (initialUserId) {
-        setSelectedUserId(initialUserId);
         if (onClearInitialUser) onClearInitialUser();
-      } else {
-        setSelectedUserId('all');
+      }
+      if (initialFilter) {
+        if (onClearInitialFilter) onClearInitialFilter();
+      }
+      if (initialDate) {
+        if (onClearInitialDate) onClearInitialDate();
       }
     }).catch(console.error);
   // eslint-disable-next-line react-hooks/exhaustive-deps

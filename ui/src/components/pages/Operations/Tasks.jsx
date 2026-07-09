@@ -32,10 +32,12 @@ const COLUMNS = [
   { id: 'To Do',         label: 'To Do',         color: 'col-todo' },
   { id: 'In Progress',   label: 'In Progress',   color: 'col-progress' },
   { id: 'In Testing',    label: 'In Testing',    color: 'col-testing' },
+  { id: 'Dev Verified',  label: 'Dev Verified',  color: 'col-dev-verified' },
   { id: 'Re-opened',     label: 'Re-opened',     color: 'col-reopened' },
   { id: 'Prod Deployed', label: 'Prod Deployed', color: 'col-prod-deployed' },
   { id: 'Prod Verified', label: 'Prod Verified', color: 'col-prod-verified' },
   { id: 'Delivered',     label: 'Delivered',     color: 'col-delivered' },
+  { id: 'Not an issue',  label: 'Not an issue',  color: 'col-not-issue' },
 ];
 
 export const STATUS_OPTIONS = [
@@ -51,10 +53,12 @@ const STATUS_HEADER_META = {
   'To Do':         { bg: '#78350f', fg: '#ffffff', border: '1px solid #5c2c06', dotColor: '#78350f', isDone: false },
   'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', isDone: false },
   'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', isDone: false },
+  'Dev Verified':   { bg: '#0891b2', fg: '#ffffff', dotColor: '#a5f3fc', isDone: false },
   'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', isDone: false },
   'Prod Deployed': { bg: '#ea580c', fg: '#ffffff', dotColor: '#fde68a', isDone: false },
   'Prod Verified': { bg: '#0d9488', fg: '#ffffff', dotColor: '#bbf7d0', isDone: false },
   'Delivered':     { bg: '#16a34a', fg: '#ffffff', dotColor: '#99f6e4', isDone: true  },
+  'Not an issue':  { bg: '#64748b', fg: '#ffffff', dotColor: '#cbd5e1', isDone: true  },
   'Archived':      { bg: '#475569', fg: '#ffffff', dotColor: '#94a3b8', isDone: false },
   'Archive':       { bg: '#475569', fg: '#ffffff', dotColor: '#94a3b8', isDone: false },
 };
@@ -181,10 +185,27 @@ const timeStrToDecimal = (timeStr) => {
 
 export const getDisplayId = (f) => {
   if (!f) return '';
-  const prefix = f.parentId ? 'S' : 'T';
   const no = f.taskNo || '';
   const digits = no.replace(/\D/g, '');
+  
+  if (f.parentId) {
+    if (digits) return `S${digits}`;
+    const idSlug = (f.id || '').replace(/-/g, '').substring(0, 8);
+    return `S${idSlug}`;
+  }
+  
+  let prefix = 'T';
+  const type = (f.taskType || '').toLowerCase();
+  if (type === 'bug') {
+    prefix = 'B';
+  } else if (type === 'calls/meetings') {
+    prefix = 'C';
+  } else if (no && /^[A-Za-z]/.test(no) && !no.startsWith('TSK-')) {
+    prefix = no.charAt(0).toUpperCase();
+  }
+  
   if (digits) return `${prefix}${digits}`;
+  
   // Fallback: use the task's UUID id (strip hyphens) so the URL is never just the prefix
   const idSlug = (f.id || '').replace(/-/g, '').substring(0, 8);
   return `${prefix}${idSlug}`;
@@ -261,12 +282,29 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const [isEditing, setIsEditing] = useState(true); // Always in edit mode
   const { alert, confirm } = useAlert();
   
+  const [activeTab, setActiveTab] = useState('general');
+  const [users, setUsers] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [taskLists, setTaskLists] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [errors, setErrors] = useState({});
+  const [promptState, setPromptState] = useState({ isOpen: false, title: '', onSubmit: null });
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [newSubtaskAssignee, setNewSubtaskAssignee] = useState('');
+  const [newSubtaskDueDate, setNewSubtaskDueDate] = useState('');
+  const [newSubtaskPriority, setNewSubtaskPriority] = useState('Medium');
+  const [subtaskSaving, setSubtaskSaving] = useState(false);
+  const [subtasks, setSubtasks] = useState([]);
+  const [parentTask, setParentTask] = useState(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState(null);
+  const [previewImageName, setPreviewImageName] = useState('');
+
   const [form, setForm] = useState(() => {
     const defaults = {
       taskNo: '',
       title: '',
       description: '',
-      assignees: '',
+      assignees: isEdit ? '' : (currentUser?.id || ''),
       dueDate: '',
       startDate: '',
       endDate: '',
@@ -275,7 +313,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       priority: 'Medium',
       status: 'To Do',
       tag: 'Engineering',
-      taskType: 'Feature',
+      taskType: isEdit ? 'Feature' : 'Task',
       projectName: '',
       isBillable: false,
       billableAmount: '',
@@ -287,17 +325,43 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       taskListId: '',
       attachments: ''
     };
+
+    const getNextSequentialTaskNoForType = (type) => {
+      let maxNo = 0;
+      let prefix = 'T';
+      if (type === 'Bug') {
+        prefix = 'B';
+      } else if (type === 'calls/meetings' || type === 'Calls/Meetings') {
+        prefix = 'C';
+      }
+      if (Array.isArray(tasks)) {
+        for (const t of tasks) {
+          if (t.taskNo && t.taskNo.toUpperCase().startsWith(prefix)) {
+            const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
+            if (!isNaN(digits) && digits > maxNo && digits < 50000) {
+              maxNo = digits;
+            }
+          }
+        }
+      }
+      return `${prefix}${maxNo + 1}`;
+    };
+
+    const fallbackNo = getNextSequentialTaskNoForType(task?.taskType || 'Task');
+
     if (task) {
       return {
         ...defaults,
         ...task,
+        assignees: task.assignees || defaults.assignees,
+        taskType: (task.taskType && task.taskType !== 'Feature') ? task.taskType : defaults.taskType,
         status: getStatusString(task.status),
-        taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : `TSK-${Math.floor(Math.random() * 900000) + 100000}`)
+        taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : fallbackNo)
       };
     }
     return {
       ...defaults,
-      taskNo: `TSK-${Math.floor(Math.random() * 900000) + 100000}`
+      taskNo: fallbackNo
     };
   });
 
@@ -317,13 +381,39 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
   useEffect(() => {
     if (task) {
+      const getNextSequentialTaskNoForType = (type) => {
+        let maxNo = 0;
+        let prefix = 'T';
+        if (type === 'Bug') {
+          prefix = 'B';
+        } else if (type === 'calls/meetings' || type === 'Calls/Meetings') {
+          prefix = 'C';
+        }
+        if (Array.isArray(tasks)) {
+          for (const t of tasks) {
+            if (t.taskNo && t.taskNo.toUpperCase().startsWith(prefix)) {
+              const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
+              if (!isNaN(digits) && digits > maxNo && digits < 50000) {
+                maxNo = digits;
+              }
+            }
+          }
+        }
+        return `${prefix}${maxNo + 1}`;
+      };
+
+      const fallbackNo = getNextSequentialTaskNoForType(task.taskType || 'Task');
+
       const loadedForm = {
         ...form,
         ...task,
         status: getStatusString(task.status),
-        taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : `TSK-${Math.floor(Math.random() * 900000) + 100000}`),
+        taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : fallbackNo),
         approvedHoursStr: task.approvedHours !== undefined && task.approvedHours !== null ? String(task.approvedHours) : '0'
       };
+      if (!isEdit && task.taskType === 'calls/meetings') {
+        loadedForm.assignees = currentUser?.id || '';
+      }
       setForm(loadedForm);
       setInitialForm(loadedForm);
       if (task.parentId) {
@@ -335,7 +425,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       setInitialForm(form);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [task]);
+    }, [task]);
+
+  useEffect(() => {
+    if (form.taskType === 'calls/meetings' && (activeTab === 'attachments' || activeTab === 'subtasks')) {
+      setActiveTab('general');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.taskType, activeTab]);
 
   const isChanged = () => {
     if (!task || !task.id) return true; // New tasks are always saveable
@@ -365,22 +462,28 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     return false;
   };
 
-  const [activeTab, setActiveTab] = useState('general');
-  const [users, setUsers] = useState([]);
-  const [clients, setClients] = useState([]);
-  const [taskLists, setTaskLists] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [errors, setErrors] = useState({});
-  const [promptState, setPromptState] = useState({ isOpen: false, title: '', onSubmit: null });
-  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-  const [newSubtaskAssignee, setNewSubtaskAssignee] = useState('');
-  const [newSubtaskDueDate, setNewSubtaskDueDate] = useState('');
-  const [newSubtaskPriority, setNewSubtaskPriority] = useState('Medium');
-  const [subtaskSaving, setSubtaskSaving] = useState(false);
-  const [subtasks, setSubtasks] = useState([]);
-  const [parentTask, setParentTask] = useState(null);
-  const [previewImageUrl, setPreviewImageUrl] = useState(null);
-  const [previewImageName, setPreviewImageName] = useState('');
+
+
+  const generateTaskNoForType = (type) => {
+    let maxNo = 0;
+    let prefix = 'T';
+    if (type === 'Bug') {
+      prefix = 'B';
+    } else if (type === 'calls/meetings' || type === 'Calls/Meetings') {
+      prefix = 'C';
+    }
+    if (Array.isArray(tasks)) {
+      for (const t of tasks) {
+        if (t.taskNo && t.taskNo.toUpperCase().startsWith(prefix)) {
+          const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
+          if (!isNaN(digits) && digits > maxNo && digits < 50000) {
+            maxNo = digits;
+          }
+        }
+      }
+    }
+    return `${prefix}${maxNo + 1}`;
+  };
 
   const fetchSubtasks = useCallback(() => {
     if (isEdit && task?.id) {
@@ -404,11 +507,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     || (form.projectName ? projects.find(p => p.name === form.projectName)?.id : null)
     || (task && (task.projectId || (task.taskListId && taskLists.find(l => l.id === task.taskListId)?.projectId)));
   const currentProject = currentProjId ? projects.find(p => p.id === currentProjId) : null;
-  const projectMemberIds = currentProject ? (currentProject.members || '').split(',').map(m => m.trim()).filter(Boolean) : [];
+  const projectMemberIds = currentProject ? (currentProject.members || '').split(',').map(m => m.trim().toLowerCase()).filter(Boolean) : [];
   
   const filteredUsers = (currentProject
     ? (projectMemberIds.length > 0
-      ? users.filter(u => projectMemberIds.includes(u.id))
+      ? users.filter(u => projectMemberIds.includes(u.id.toLowerCase()))
       : []
     )
     : users
@@ -1434,7 +1537,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       newErrors.title = "Title must be 3-100 characters";
     }
 
-    if (!form.assignees || !form.assignees.trim()) {
+    if (form.taskType !== 'calls/meetings' && (!form.assignees || !form.assignees.trim())) {
       newErrors.assignees = "Assignee is required";
     }
 
@@ -1453,6 +1556,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
     // Sanitize data for API
     const { comments, taskList, ...payload } = form;
+    if (form.taskType === 'calls/meetings') {
+      payload.assignees = currentUser?.id || '';
+      payload.dueDate = null;
+      payload.deliveredDate = null;
+    }
     if (!payload.id) {
       payload.createdBy = currentUser?.fullName || `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim() || currentUser?.name || currentUser?.email || 'User';
     }
@@ -1506,6 +1614,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
   const IconCalendar = () => (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+  );
+  const IconType = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="13" y2="17"></line></svg>
   );
 
 
@@ -2098,13 +2209,15 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 Billing ({form.isBillable ? 'Y' : 'N'})
               </button>
             )}
-            <button 
-              className={`saas-tab-header-btn ${activeTab === 'attachments' ? 'active' : ''}`}
-              onClick={() => setActiveTab('attachments')}
-            >
-              Attachments ({form.attachments ? form.attachments.split(',').filter(Boolean).length : 0})
-            </button>
-            {isEdit && !task?.parentId && (
+            {form.taskType !== 'calls/meetings' && (
+              <button 
+                className={`saas-tab-header-btn ${activeTab === 'attachments' ? 'active' : ''}`}
+                onClick={() => setActiveTab('attachments')}
+              >
+                Attachments ({form.attachments ? form.attachments.split(',').filter(Boolean).length : 0})
+              </button>
+            )}
+            {isEdit && !task?.parentId && form.taskType !== 'calls/meetings' && (
               <button 
                 className={`saas-tab-header-btn ${activeTab === 'subtasks' ? 'active' : ''}`}
                 onClick={() => setActiveTab('subtasks')}
@@ -2128,81 +2241,107 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               <>
               <div className="saas-meta-grid animate-fade-in" style={{ paddingBottom: '2rem' }}>
                 
-                {/* Row 1: Status & Assignees */}
-                <div className="saas-meta-row saas-meta-row-4col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconStatus /> Status</span>
+                {/* Row 1: Status */}
+                {form.taskType !== 'calls/meetings' && (
+                  <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconStatus /> Status</span>
+                    <span className="saas-meta-value">
+                      <select value={form.status} onChange={e => { const newSt = e.target.value; const updated = { ...form, status: newSt }; if (newSt === 'Archived' || newSt === 'Archive') { updated.previousStatus = (form.status !== 'Archived' && form.status !== 'Archive') ? form.status : (form.previousStatus || 'To Do'); } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
+                        {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
+                      </select>
+                    </span>
+                  </div>
+                )}
+
+                {/* Row 1b: Assignees & Type */}
+                <div className={`saas-meta-row ${form.taskType === 'calls/meetings' ? 'saas-meta-row-2col' : 'saas-meta-row-4col'}`} style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  {form.taskType !== 'calls/meetings' && (
+                    <>
+                      <span className="saas-meta-label" style={{ color: errors.assignees ? '#ef4444' : '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconAssignee /> Assignee *</span>
+                      <span className="saas-meta-value">
+                        <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (errors.assignees) setErrors(prev => { const { assignees: _, ...rest } = prev; return rest; }); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: errors.assignees ? '1px solid #ef4444' : '1px solid transparent', borderRadius: '4px', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
+                          <option value="">Select Assignee...</option>
+                          {finalUsers.map(u => {
+                            const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
+                            return <option key={u.id} value={u.id}>{displayName}</option>;
+                          })}
+                        </select>
+                        {errors.assignees && <span style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600, marginTop: '2px', display: 'block' }}>{errors.assignees}</span>}
+                      </span>
+                    </>
+                  )}
+
+                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconType /> Type</span>
                   <span className="saas-meta-value">
-                    <select value={form.status} onChange={e => { const newSt = e.target.value; const updated = { ...form, status: newSt }; if (newSt === 'Archived' || newSt === 'Archive') { updated.previousStatus = (form.status !== 'Archived' && form.status !== 'Archive') ? form.status : (form.previousStatus || 'To Do'); } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
-                      {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
+                    <select value={form.taskType || 'Task'} onChange={e => { const newType = e.target.value; const updated = { ...form, taskType: newType }; if (!isEdit) { updated.taskNo = generateTaskNoForType(newType); if (newType === 'calls/meetings') { updated.assignees = currentUser?.id || ''; } } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
+                      <option value="Task">Task</option>
+                      <option value="Bug">Bug</option>
+                      <option value="calls/meetings">Calls/Meetings</option>
                     </select>
-                  </span>
-                  
-                  <span className="saas-meta-label" style={{ color: errors.assignees ? '#ef4444' : '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconAssignee /> Assignee *</span>
-                  <span className="saas-meta-value">
-                    <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (errors.assignees) setErrors(prev => { const { assignees: _, ...rest } = prev; return rest; }); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: errors.assignees ? '1px solid #ef4444' : '1px solid transparent', borderRadius: '4px', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
-                      <option value="">Select Assignee...</option>
-                      {finalUsers.map(u => {
-                        const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
-                        return <option key={u.id} value={u.id}>{displayName}</option>;
-                      })}
-                    </select>
-                    {errors.assignees && <span style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600, marginTop: '2px', display: 'block' }}>{errors.assignees}</span>}
                   </span>
                 </div>
 
                 {/* Row 2: Dates (Due Date -> Delivery Date) */}
-                <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Dates</span>
-                  <span className="saas-meta-value">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Due:</span>
-                      <div className="saas-date-input-wrapper">
-                        <input 
-                          type="date" 
-                          className="saas-detail-date-input"
-                          value={form.dueDate ? new Date(form.dueDate).toISOString().split('T')[0] : ''} 
-                          onChange={e => set('dueDate', e.target.value)} 
-                          disabled={!canEdit}
-                          style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '120px', cursor: canEdit ? 'pointer' : 'default', fontWeight: 600 }} 
-                          title="Due Date"
-                        />
-                        <span className={`saas-date-display-overlay${!form.dueDate ? ' saas-date-empty' : ''}`}>
-                          {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'dd/mm/yyyy'}
-                        </span>
-                      </div>
-                      
-                      <span className="saas-date-arrow" style={{ color: '#94a3b8', fontSize: '0.8rem' }}>→</span>
+                {form.taskType !== 'calls/meetings' && (
+                  <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Dates</span>
+                    <span className="saas-meta-value">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Due:</span>
+                        <div className="saas-date-input-wrapper">
+                          <input 
+                            type="date" 
+                            className="saas-detail-date-input"
+                            value={form.dueDate ? new Date(form.dueDate).toISOString().split('T')[0] : ''} 
+                            onChange={e => set('dueDate', e.target.value)} 
+                            disabled={!canEdit}
+                            style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '120px', cursor: canEdit ? 'pointer' : 'default', fontWeight: 600 }} 
+                            title="Due Date"
+                          />
+                          <span className={`saas-date-display-overlay${!form.dueDate ? ' saas-date-empty' : ''}`}>
+                            {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'dd/mm/yyyy'}
+                          </span>
+                        </div>
+                        
+                        {form.taskType !== 'calls/meetings' && (
+                          <>
+                            <span className="saas-date-arrow" style={{ color: '#94a3b8', fontSize: '0.8rem' }}>→</span>
 
-                      <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Delivery:</span>
-                      <div className="saas-date-input-wrapper">
-                        <input 
-                          type="date" 
-                          className="saas-detail-date-input"
-                          value={form.deliveredDate ? new Date(form.deliveredDate).toISOString().split('T')[0] : ''} 
-                          onChange={e => set('deliveredDate', e.target.value)} 
-                          disabled={!canEdit}
-                          style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '120px', cursor: canEdit ? 'pointer' : 'default', fontWeight: 600 }} 
-                          title="Delivery Date"
-                        />
-                        <span className={`saas-date-display-overlay${!form.deliveredDate ? ' saas-date-empty' : ''}`}>
-                          {form.deliveredDate ? new Date(form.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'dd/mm/yyyy'}
-                        </span>
+                            <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Delivery:</span>
+                            <div className="saas-date-input-wrapper">
+                              <input 
+                                type="date" 
+                                className="saas-detail-date-input"
+                                value={form.deliveredDate ? new Date(form.deliveredDate).toISOString().split('T')[0] : ''} 
+                                onChange={e => set('deliveredDate', e.target.value)} 
+                                disabled={!canEdit}
+                                style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '120px', cursor: canEdit ? 'pointer' : 'default', fontWeight: 600 }} 
+                                title="Delivery Date"
+                              />
+                              <span className={`saas-date-display-overlay${!form.deliveredDate ? ' saas-date-empty' : ''}`}>
+                                {form.deliveredDate ? new Date(form.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'dd/mm/yyyy'}
+                              </span>
+                            </div>
+                          </>
+                        )}
                       </div>
-                    </div>
-                  </span>
-                </div>
+                    </span>
+                  </div>
+                )}
 
 
                 {/* Row 3: Priority */}
-                <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconPriority /> Priority</span>
-                  <span className="saas-meta-value">
-                    <select value={form.priority} onChange={e => set('priority', e.target.value)} disabled={!canEdit} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
-                      <option value="">Empty</option>
-                      {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                  </span>
-                </div>
+                {form.taskType !== 'calls/meetings' && (
+                  <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconPriority /> Priority</span>
+                    <span className="saas-meta-value">
+                      <select value={form.priority} onChange={e => set('priority', e.target.value)} disabled={!canEdit} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
+                        <option value="">Empty</option>
+                        {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </span>
+                  </div>
+                )}
 
                 {/* Row 3b: Created Date (Mobile Only) */}
                 {createdDateToDisplay && (
@@ -2715,7 +2854,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             )}
 
 
-            {activeTab === 'attachments' && (
+            {activeTab === 'attachments' && form.taskType !== 'calls/meetings' && (
               <div className="saas-attachments-pane animate-fade-in" style={{ padding: '0.25rem 0' }}>
                 
                 {/* Header row with Title and Add Button */}
@@ -3014,7 +3153,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               </div>
             )}
 
-            {activeTab === 'subtasks' && isEdit && (
+            {activeTab === 'subtasks' && isEdit && form.taskType !== 'calls/meetings' && (
               <div className="saas-subtasks-pane animate-fade-in" style={{ padding: '0.25rem 0' }}>
                 <h2 style={{ fontSize: '1.15rem', fontWeight: '700', margin: '0 0 1.5rem 0', color: '#0f172a' }}>
                   Subtasks ({visibleSubtasks.length})
@@ -3601,14 +3740,10 @@ function TaskCard({ task, onDragStart, onClick, onDelete, currentUser, listUsers
             <span className="meta-text">{task.priority}</span>
           </div>
 
-          {/* Tag */}
-          {task.tag && (
-            <div className="card-clickup-meta-item tag" title={`Tag: ${task.tag}`}>
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-                <line x1="7" y1="7" x2="7.01" y2="7"></line>
-              </svg>
-              <span className="meta-text">{task.tag}</span>
+          {/* Project Name */}
+          {task.projectName && (
+            <div className="card-clickup-meta-item tag" title={`Project: ${task.projectName}`}>
+              <span className="meta-text" style={{ maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.projectName}</span>
             </div>
           )}
         </div>
@@ -4032,6 +4167,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   
   // Explicit filters
   const [filterProjectName, setFilterProjectName] = useState('');
+  const [filterType, setFilterType] = useState('');
   const [filterFromDate, setFilterFromDate] = useState('');
   const [filterToDate, setFilterToDate] = useState('');
 
@@ -4283,10 +4419,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       priority: 'Medium',
       title: '',
       description: '',
-      assignees: '',
+      assignees: user?.id || '',
       isBillable: false,
       tag: 'Engineering',
-      taskType: 'Feature'
+      taskType: 'Task'
     });
     setTaskDetailMode(true);
     setDrawerOpen(true);
@@ -4371,13 +4507,35 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const filteredTasks = tasks.filter(t => {
     if (t.status === 'Archived' || t.status === 'Archive') return false;
 
-    // 1. Project Filter
-    if (filterProjectName && t.projectName !== filterProjectName) {
+    // 0. Task Type filter based on subTab
+    const type = t.taskType || 'Task';
+    if (subTab === 'calls') {
+      if (type !== 'calls/meetings') return false;
+      const assigneesList = t.assignees ? t.assignees.split(',').map(a => a.trim().toLowerCase()) : [];
+      const currentUserId = (user?.id || '').trim().toLowerCase();
+      if (!currentUserId || !assigneesList.includes(currentUserId)) return false;
+    } else {
+      if (type === 'calls/meetings') return false;
+    }
+
+    // 1. Type Filter
+    if (filterType) {
+      if (filterType === 'Task') {
+        if (t.parentId || (t.taskType && t.taskType.toLowerCase() === 'bug')) return false;
+      } else if (filterType === 'Sub Task') {
+        if (!t.parentId) return false;
+      } else if (filterType === 'Bug') {
+        if (t.parentId || !t.taskType || t.taskType.toLowerCase() !== 'bug') return false;
+      }
+    }
+
+    // 2. Project Filter
+    if (subTab !== 'calls' && filterProjectName && t.projectName !== filterProjectName) {
       return false;
     }
 
     // 2. Date Filter
-    if (filterFromDate || filterToDate) {
+    if (subTab !== 'calls' && (filterFromDate || filterToDate)) {
       const getLocalDateStr = (dateStr) => {
         if (!dateStr) return null;
         const d = new Date(dateStr);
@@ -4415,7 +4573,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     return assignees.includes(targetId);
   });
 
-  const pageTitle = subTab === 'my' ? '' : 'All Tasks';
+  const pageTitle = subTab === 'my' ? '' : subTab === 'calls' ? 'Calls/Meeting' : 'All Tasks';
 
   if (loading || openingInitialTask) {
     return (
@@ -4465,6 +4623,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
               setSubTab('my');
               setAssigneeFilter(null);
               if (onClearAssigneeFilter) onClearAssigneeFilter();
+              setFilterProjectName('');
+              setFilterType('');
+              setFilterFromDate('');
+              setFilterToDate('');
             }}
             style={{ 
               background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
@@ -4480,6 +4642,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
               setSubTab('all');
               setAssigneeFilter(null);
               if (onClearAssigneeFilter) onClearAssigneeFilter();
+              setFilterProjectName('');
+              setFilterType('');
+              setFilterFromDate('');
+              setFilterToDate('');
             }}
             style={{ 
               background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
@@ -4488,6 +4654,25 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             }}
           >
             All Tasks
+          </button>
+          <button 
+            className={`saas-tab ${subTab === 'calls' ? 'active' : ''}`} 
+            onClick={() => {
+              setSubTab('calls');
+              setAssigneeFilter(null);
+              if (onClearAssigneeFilter) onClearAssigneeFilter();
+              setFilterProjectName('');
+              setFilterType('');
+              setFilterFromDate('');
+              setFilterToDate('');
+            }}
+            style={{ 
+              background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
+              color: subTab === 'calls' ? '#2563eb' : '#64748b',
+              borderBottom: subTab === 'calls' ? '2px solid #2563eb' : '2px solid transparent'
+            }}
+          >
+            Calls/Meeting
           </button>
         </div>
       )}
@@ -4542,83 +4727,125 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         <div className="kanban-header-left">
         </div>
         <div className="kanban-controls">
-          <div className="tasks-filter-row">
-            <div className="filter-group-project">
-              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Projects</label>
-              <select 
-                value={filterProjectName} 
-                onChange={e => setFilterProjectName(e.target.value)}
-                style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
-              >
-                {subTab === 'my' ? (
-                  <>
-                    <option value="">All Projects</option>
-                    {taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                  </>
-                ) : (
-                  <>
-                    <option value="">All Projects</option>
-                    {taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                  </>
-                )}
-              </select>
-            </div>
-            
-            <div className="filter-group-date">
-              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>From</span>
-              <input 
-                type={filterFromDate ? "date" : "text"} 
-                placeholder="Date"
-                value={filterFromDate} 
-                onFocus={(e) => { 
-                  e.target.type = 'date'; 
-                  if (!filterFromDate) {
-                    const today = new Date();
-                    const yyyy = today.getFullYear();
-                    const mm = String(today.getMonth() + 1).padStart(2, '0');
-                    const dd = String(today.getDate()).padStart(2, '0');
-                    setFilterFromDate(`${yyyy}-${mm}-${dd}`);
-                  }
-                }}
-                onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }}
-                onChange={e => setFilterFromDate(e.target.value)}
-                title="From date filter"
-                style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>To</span>
-              <input 
-                type={filterToDate ? "date" : "text"} 
-                placeholder="Date"
-                value={filterToDate} 
-                onFocus={(e) => { 
-                  e.target.type = 'date'; 
-                  if (!filterToDate) {
-                    const today = new Date();
-                    const yyyy = today.getFullYear();
-                    const mm = String(today.getMonth() + 1).padStart(2, '0');
-                    const dd = String(today.getDate()).padStart(2, '0');
-                    setFilterToDate(`${yyyy}-${mm}-${dd}`);
-                  }
-                }}
-                onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }}
-                onChange={e => setFilterToDate(e.target.value)}
-                title="To date filter"
-                style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
-              />
-              {(filterProjectName || filterFromDate || filterToDate) && (
-                <button 
-                  onClick={() => { setFilterProjectName(''); setFilterFromDate(''); setFilterToDate(''); }}
-                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
+          {subTab !== 'calls' && (
+            <div className="tasks-filter-row">
+              <div className="filter-group-type">
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Type</label>
+                <select 
+                  value={filterType} 
+                  onChange={e => setFilterType(e.target.value)}
+                  style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
                 >
-                  Clear
-                </button>
-              )}
+                  <option value="">All Types</option>
+                  <option value="Task">Task</option>
+                  <option value="Sub Task">Sub Task</option>
+                  <option value="Bug">Bug</option>
+                </select>
+              </div>
+
+              <div className="filter-group-project">
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Projects</label>
+                <select 
+                  value={filterProjectName} 
+                  onChange={e => setFilterProjectName(e.target.value)}
+                  style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
+                >
+                  {subTab === 'my' ? (
+                    <>
+                      <option value="">All Projects</option>
+                      {taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                    </>
+                  ) : (
+                    <>
+                      <option value="">All Projects</option>
+                      {taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                    </>
+                  )}
+                </select>
+              </div>
+              
+              <div className="filter-group-date">
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>From</span>
+                <input 
+                  type={filterFromDate ? "date" : "text"} 
+                  placeholder="Date"
+                  value={filterFromDate} 
+                  onFocus={(e) => { 
+                    e.target.type = 'date'; 
+                    if (!filterFromDate) {
+                      const today = new Date();
+                      const yyyy = today.getFullYear();
+                      const mm = String(today.getMonth() + 1).padStart(2, '0');
+                      const dd = String(today.getDate()).padStart(2, '0');
+                      setFilterFromDate(`${yyyy}-${mm}-${dd}`);
+                    }
+                  }}
+                  onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }}
+                  onChange={e => setFilterFromDate(e.target.value)}
+                  title="From date filter"
+                  style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>To</span>
+                <input 
+                  type={filterToDate ? "date" : "text"} 
+                  placeholder="Date"
+                  value={filterToDate} 
+                  onFocus={(e) => { 
+                    e.target.type = 'date'; 
+                    if (!filterToDate) {
+                      const today = new Date();
+                      const yyyy = today.getFullYear();
+                      const mm = String(today.getMonth() + 1).padStart(2, '0');
+                      const dd = String(today.getDate()).padStart(2, '0');
+                      setFilterToDate(`${yyyy}-${mm}-${dd}`);
+                    }
+                  }}
+                  onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }}
+                  onChange={e => setFilterToDate(e.target.value)}
+                  title="To date filter"
+                  style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
+                />
+                {(filterProjectName || filterType || filterFromDate || filterToDate) && (
+                  <button 
+                    onClick={() => { setFilterProjectName(''); setFilterType(''); setFilterFromDate(''); setFilterToDate(''); }}
+                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="view-toggle">
-            <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>List</button>
-            <button className={viewMode === 'kanban' ? 'active' : ''} onClick={() => setViewMode('kanban')}>Kanban</button>
-          </div>
+          )}
+          {subTab !== 'calls' && (
+            <div className="view-toggle">
+              <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>List</button>
+              <button className={viewMode === 'kanban' ? 'active' : ''} onClick={() => setViewMode('kanban')}>Kanban</button>
+            </div>
+          )}
+          {subTab === 'calls' && can('tasks', 'create') && (
+            <button
+              onClick={() => {
+                setDrawerTask({
+                  status: 'To Do',
+                  projectName: filterProjectName || '',
+                  projectId: filterProjectName ? taskProjects.find(p => p.name === filterProjectName)?.id || null : null,
+                  priority: 'Medium',
+                  title: '',
+                  description: '',
+                  assignees: user?.id || '',
+                  isBillable: false,
+                  tag: 'Engineering',
+                  taskType: 'calls/meetings'
+                });
+                setTaskDetailMode(true);
+                setDrawerOpen(true);
+              }}
+              className="calls-add-btn"
+            >
+              <span className="calls-add-btn-desktop">+ Add Calls/Meeting</span>
+              <span className="calls-add-btn-mobile">+ Calls/Meeting</span>
+            </button>
+          )}
 
 
         </div>
@@ -4810,6 +5037,171 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       )}
 
       {viewMode === 'list' && (() => {
+        if (subTab === 'calls') {
+          const sortedCalls = [...filteredTasks].sort((a, b) => {
+            const getProjName = (t) => {
+              const pId = getTaskProjectId(t);
+              if (pId) {
+                const p = taskProjects.find(proj => proj.id === pId);
+                if (p) return p.name || '';
+              }
+              return '';
+            };
+            const nameA = getProjName(a).toLowerCase();
+            const nameB = getProjName(b).toLowerCase();
+            if (nameA < nameB) return -1;
+            if (nameA > nameB) return 1;
+            if (!a.dueDate) return 1;
+            if (!b.dueDate) return -1;
+            return new Date(a.dueDate) - new Date(b.dueDate);
+          });
+          const hasActiveFilter = !!(filterProjectName || filterFromDate || filterToDate || assigneeFilter);
+          
+          return (
+            <>
+              {/* Desktop view */}
+              <div className="cu-list-root all-tasks-list">
+                {sortedCalls.length === 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 2rem', color: '#94a3b8' }}>
+                    <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#cbd5e1" strokeWidth="1.5" style={{ marginBottom: '1rem' }}>
+                      <rect x="3" y="3" width="18" height="18" rx="3"/>
+                      <line x1="8" y1="8" x2="16" y2="8"/>
+                      <line x1="8" y1="12" x2="14" y2="12"/>
+                    </svg>
+                    <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#64748b', marginBottom: '0.25rem' }}>
+                      {hasActiveFilter ? 'No calls/meetings found' : 'No calls/meetings yet'}
+                    </p>
+                    <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: '0.5rem' }}>
+                      {hasActiveFilter ? 'Try adjusting your filters' : 'Create your first call/meeting to get started'}
+                    </p>
+                    {!hasActiveFilter && can('tasks', 'create') && (
+                      <button
+                        onClick={() => {
+                          setDrawerTask({
+                            status: 'To Do',
+                            projectName: filterProjectName || '',
+                            projectId: filterProjectName ? taskProjects.find(p => p.name === filterProjectName)?.id || null : null,
+                            priority: 'Medium',
+                            title: '',
+                            description: '',
+                            assignees: user?.id || '',
+                            isBillable: false,
+                            tag: 'Engineering',
+                            taskType: 'calls/meetings'
+                          });
+                          setTaskDetailMode(true);
+                          setDrawerOpen(true);
+                        }}
+                        className="calls-add-btn"
+                      >
+                        <span className="calls-add-btn-desktop">+ Add Calls/Meeting</span>
+                        <span className="calls-add-btn-mobile">+ Calls/Meeting</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+                {sortedCalls.length > 0 && (
+                  <div className="cu-status-section" style={{ marginBottom: '1rem' }}>
+                    <div className="cu-table-wrapper">
+                      <div className="table-responsive">
+                        <table className="cu-table">
+                          <thead>
+                            <tr className="cu-thead-row">
+                              <th className="cu-th cu-th-name">NAME</th>
+                              <th className="cu-th cu-th-project">PROJECT</th>
+                              <th className="cu-th cu-th-actions"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sortedCalls.map(task => {
+                              return (
+                                <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
+                                  <td className="cu-td cu-td-name">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
+                                      <TaskTitleTooltip text={`${getDisplayId(task)} ${task.title || 'Untitled Task'}`}>
+                                        <span className="cu-task-id-prefix">{getDisplayId(task)}</span>
+                                        <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
+                                      </TaskTitleTooltip>
+                                    </div>
+                                  </td>
+                                  <td className="cu-td cu-td-project">
+                                    {task.projectName ? (
+                                      <span className="cu-project-badge">{task.projectName}</span>
+                                    ) : <span className="cu-empty-cell">-</span>}
+                                  </td>
+                                  <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
+                                    <div className="cu-row-actions">
+                                      {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && ((user?.id && (task.assignees || '').toLowerCase().includes(user.id.toLowerCase())) || ((user?.fullName || user?.name) && (task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))))) && (
+                                        <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task'); }} title="Delete">
+                                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile flat list view */}
+              <div className="cu-mobile-mytasks-flat" style={{ padding: '0.5rem 0' }}>
+                {sortedCalls.length === 0 && (
+                  <div className="cu-flat-empty" style={{ textAlign: 'center', padding: '3rem 1.5rem', color: '#94a3b8', background: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: '500' }}>
+                      {hasActiveFilter ? 'No calls/meetings found' : 'No calls/meetings yet'}
+                    </p>
+                  </div>
+                )}
+                {sortedCalls.length > 0 && sortedCalls.map(task => {
+                  const relDate = formatRelativeDueDate(task.dueDate);
+                  const assignName = (listUsers.find(u => u.id === task.assignees) || {}).fullName || '';
+                  
+                  return (
+                    <div 
+                      key={task.id} 
+                      className="cu-flat-task-row" 
+                      onClick={() => openTaskDetail(task, false)} 
+                      style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        gap: '0.5rem',
+                        padding: '0.85rem 1rem',
+                        borderBottom: '1px solid #f1f5f9',
+                        background: '#ffffff',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0 }}>
+                        <span className="cu-flat-task-title" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', fontSize: '0.88rem' }}>
+                          <span className="cu-task-id-prefix" style={{ color: '#94a3b8', marginRight: '6px', fontWeight: 600 }}>{getDisplayId(task)}</span>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1e293b', fontWeight: 500 }}>
+                            {task.title || 'Untitled Task'}
+                          </span>
+                        </span>
+                      </div>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+                        {task.projectName && (
+                          <span className="cu-project-badge">
+                            {task.projectName}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          );
+        }
+
         if (subTab === 'all') {
           // Group by Task List
           const byList = {};
@@ -4928,7 +5320,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           });
 
           const firstListId = finalProjectGroups[0]?.lists[0]?.id;
-          const hasActiveFilter = !!(filterProjectName || filterFromDate || filterToDate || assigneeFilter);
+          const hasActiveFilter = !!(filterProjectName || filterType || filterFromDate || filterToDate || assigneeFilter);
 
           return (
             <>
@@ -5618,24 +6010,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               />
                                             </div>
                                             <div className="ntib-right">
-                                              <div className="ntib-dropdown-wrapper">
-                                                <span className="ntib-dropdown-trigger">
-                                                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '2px' }}><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
-                                                  {inlineTaskType}
-                                                </span>
-                                                <select 
-                                                  className="ntib-hidden-select" 
-                                                  value={inlineTaskType} 
-                                                  onChange={e => setInlineTaskType(e.target.value)}
-                                                >
-                                                  <option value="Task">Task</option>
-                                                  <option value="Milestone">Milestone</option>
-                                                  <option value="Form Response">Form Response</option>
-                                                  <option value="Meeting Note">Meeting Note</option>
-                                                </select>
-                                              </div>
-                                              
-                                              <span className="ntib-divider"></span>
+
                                               
                                               <div className="ntib-dropdown-wrapper">
                                                 <button type="button" className="ntib-btn-icon" title="Assignee">
@@ -6271,24 +6646,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                     />
                                   </div>
                                   <div className="ntib-right">
-                                    <div className="ntib-dropdown-wrapper">
-                                      <span className="ntib-dropdown-trigger">
-                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '2px' }}><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
-                                        {inlineTaskType}
-                                      </span>
-                                      <select 
-                                        className="ntib-hidden-select" 
-                                        value={inlineTaskType} 
-                                        onChange={e => setInlineTaskType(e.target.value)}
-                                      >
-                                        <option value="Task">Task</option>
-                                        <option value="Milestone">Milestone</option>
-                                        <option value="Form Response">Form Response</option>
-                                        <option value="Meeting Note">Meeting Note</option>
-                                      </select>
-                                    </div>
-                                    
-                                    <span className="ntib-divider"></span>
+
                                     
                                     <div className="ntib-dropdown-wrapper">
                                       <button type="button" className="ntib-btn-icon" title="Assignee">

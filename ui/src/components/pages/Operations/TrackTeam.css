@@ -348,6 +348,7 @@
 .tt-status-pill[data-status="Delivered"],
 .tt-status-pill[data-status="Prod Verified"] { background: #dcfce7; color: #16a34a; }
 .tt-status-pill[data-status="To Do"] { background: #f1f5f9; color: #475569; }
+.tt-status-pill[data-status="Not an issue"] { background: #e2e8f0; color: #64748b; }
 .tt-status-pill[data-status="Overdue"] { background: #fee2e2; color: #dc2626; }
 
 /* Priority text */

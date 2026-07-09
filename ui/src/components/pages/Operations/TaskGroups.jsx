@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../../api/client';
 import { useAlert } from '../../../context/AlertContext';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -11,20 +11,24 @@ const STATUS_HEADER_META = {
   'To Do':         { bg: '#78350f', fg: '#ffffff', border: '1px solid #5c2c06', dotColor: '#78350f', isDone: false },
   'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', isDone: false },
   'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', isDone: false },
+  'Dev Verified':   { bg: '#0891b2', fg: '#ffffff', dotColor: '#a5f3fc', isDone: false },
   'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', isDone: false },
   'Prod Deployed': { bg: '#ea580c', fg: '#ffffff', dotColor: '#fde68a', isDone: false },
   'Prod Verified': { bg: '#0d9488', fg: '#ffffff', dotColor: '#bbf7d0', isDone: false },
   'Delivered':     { bg: '#16a34a', fg: '#ffffff', dotColor: '#99f6e4', isDone: true  },
+  'Not an issue':  { bg: '#64748b', fg: '#ffffff', dotColor: '#cbd5e1', isDone: true  },
 };
 
 const COLUMNS = [
   { id: 'To Do', label: 'To Do' },
   { id: 'In Progress', label: 'In Progress' },
   { id: 'In Testing', label: 'In Testing' },
+  { id: 'Dev Verified', label: 'Dev Verified' },
   { id: 'Re-opened', label: 'Re-opened' },
   { id: 'Prod Deployed', label: 'Prod Deployed' },
   { id: 'Prod Verified', label: 'Prod Verified' },
-  { id: 'Delivered', label: 'Delivered' }
+  { id: 'Delivered', label: 'Delivered' },
+  { id: 'Not an issue', label: 'Not an issue' }
 ];
 
 const PRIORITY_FLAGS = {
@@ -93,6 +97,7 @@ const initials = (name) => {
 export default function TaskGroups({ user, onBack }) {
   const [taskLists, setTaskLists] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [filterProjectId, setFilterProjectId] = useState('');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const searchQuery = '';
@@ -130,13 +135,16 @@ export default function TaskGroups({ user, onBack }) {
   const [deletingTaskId, setDeletingTaskId] = useState(null);
   const [togglingFavoriteId, setTogglingFavoriteId] = useState(null);
   const [expandedStatusSections, setExpandedStatusSections] = useState({});
+  const [favouritesView, setFavouritesView] = useState('list'); // 'list' or 'kanban'
+  const [dragOverListId, setDragOverListId] = useState(null);
+  const dragTaskId = useRef(null);
   const toggleStatusSection = (listId, statusId) => {
     setExpandedStatusSections(prev => {
       const current = prev[listId];
       let defaultActive = null;
       if (current === undefined) {
         const list = taskLists.find(l => l.id === listId);
-        const allTasks = list?.tasks || [];
+        const allTasks = (list?.tasks || []).filter(t => (t.taskType || '').toLowerCase() !== 'calls/meetings');
         defaultActive = COLUMNS.find(c => allTasks.some(t => (t.status || 'To Do') === c.id))?.id || null;
       }
       const active = current !== undefined ? current : defaultActive;
@@ -385,7 +393,7 @@ export default function TaskGroups({ user, onBack }) {
   // Delete Task Group
   // eslint-disable-next-line no-unused-vars
   const handleDeleteGroup = (list) => {
-    const listTasks = list.tasks || [];
+    const listTasks = (list.tasks || []).filter(t => (t.taskType || '').toLowerCase() !== 'calls/meetings');
     if (listTasks.length > 0) {
       alert(`"${list.name}" has ${listTasks.length} task${listTasks.length > 1 ? 's' : ''}. Remove all tasks from this group before deleting it.`, 'warning', 'Cannot Delete');
       return;
@@ -419,7 +427,8 @@ export default function TaskGroups({ user, onBack }) {
       title: '',
       assignees: '',
       priority: 'Medium',
-      dueDate: ''
+      dueDate: '',
+      taskType: 'Task'
     });
     setShowTaskModal(true);
   };
@@ -432,7 +441,7 @@ export default function TaskGroups({ user, onBack }) {
       alert('Task Title is required.', 'warning');
       return;
     }
-    if (!taskForm.assignees) {
+    if (!taskForm.assignees && taskForm.taskType !== 'calls/meetings') {
       alert('Assignee is required.', 'warning');
       return;
     }
@@ -443,10 +452,11 @@ export default function TaskGroups({ user, onBack }) {
         title: taskForm.title.trim(),
         taskListId: targetGroup.id,
         projectId: targetGroup.projectId || null,
-        assignees: taskForm.assignees || null,
+        assignees: taskForm.taskType === 'calls/meetings' ? (user?.id || '') : (taskForm.assignees || null),
         priority: taskForm.priority,
-        dueDate: taskForm.dueDate ? new Date(taskForm.dueDate).toISOString() : null,
-        status: 'To Do'
+        dueDate: taskForm.taskType === 'calls/meetings' ? null : (taskForm.dueDate ? new Date(taskForm.dueDate).toISOString() : null),
+        status: 'To Do',
+        taskType: taskForm.taskType || 'Task'
       });
       toast('Task added successfully!', 'success');
       setShowTaskModal(false);
@@ -458,6 +468,86 @@ export default function TaskGroups({ user, onBack }) {
     } finally {
       setIsCreatingTask(false);
     }
+  };
+
+  // Kanban Drag and Drop Handlers
+  const handleDragStart = (e, taskId) => {
+    dragTaskId.current = taskId;
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, listId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverListId(listId);
+  };
+
+  const handleDragLeave = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverListId(null);
+    }
+  };
+
+  const handleDragEnd = () => {
+    dragTaskId.current = null;
+    setDragOverListId(null);
+  };
+
+  const handleDrop = async (e, targetListId) => {
+    e.preventDefault();
+    const taskId = dragTaskId.current;
+    if (taskId !== null && targetListId) {
+      let taskToUpdate = null;
+      for (const list of taskLists) {
+        const found = (list.tasks || []).find(t => t.id === taskId);
+        if (found) {
+          taskToUpdate = found;
+          break;
+        }
+      }
+
+      if (taskToUpdate && taskToUpdate.taskListId !== targetListId) {
+        // Optimistic UI update
+        setTaskLists(prevLists => {
+          return prevLists.map(list => {
+            let updatedTasks = (list.tasks || []).filter(t => t.id !== taskId);
+            if (list.id === targetListId) {
+              const updatedTask = { ...taskToUpdate, taskListId: targetListId };
+              updatedTasks = [...updatedTasks, updatedTask];
+            }
+            return { ...list, tasks: updatedTasks };
+          });
+        });
+
+        try {
+          const targetList = taskLists.find(l => l.id === targetListId) || {};
+          const payload = {
+            taskListId: targetListId,
+            projectId: targetList.projectId || null,
+            updatedBy: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'
+          };
+          await api.put(`/tasks/${taskId}`, payload);
+          toast('Task Group updated successfully!', 'success');
+          fetchTaskListsOnly();
+        } catch (error) {
+          console.error('Error changing task group via drop:', error);
+          toast('Failed to change task group', 'error');
+          fetchInitialData();
+        }
+      }
+    }
+    dragTaskId.current = null;
+    setDragOverListId(null);
+  };
+
+  const getAvatarColor = (name) => {
+    if (!name) return 'av-blue';
+    const c = name.charCodeAt(0) % 5;
+    if (c === 0) return 'av-red';
+    if (c === 1) return 'av-green';
+    if (c === 2) return 'av-orange';
+    if (c === 3) return 'av-teal';
+    return 'av-blue';
   };
 
   // Delete task inside details drawer / table (move to archive)
@@ -517,18 +607,21 @@ export default function TaskGroups({ user, onBack }) {
 
   const sortedTaskLists = sortTaskGroups(taskLists);
   const visibleTaskLists = sortedTaskLists.filter(canViewTG);
-  const favouriteLists = getFilteredLists(visibleTaskLists.filter(l => l.isFavorite));
-  const allLists = getFilteredLists(visibleTaskLists);
+  const projectFilteredLists = filterProjectId 
+    ? visibleTaskLists.filter(l => l.projectId === filterProjectId)
+    : visibleTaskLists;
+  const favouriteLists = getFilteredLists(projectFilteredLists.filter(l => l.isFavorite));
+  const allLists = getFilteredLists(projectFilteredLists);
 
   if (loading) {
-    return <div className="tg-loading-screen">Loading Task Groups...</div>;
+    return <div className="loading-screen">Loading Task Groups...</div>;
   }
 
   // Common Accordion rendering function
   const renderAccordion = (list, idx) => {
     const isCollapsed = !expandedListIds.includes(list.id);
     const filteredUsersForList = getFilteredUsersForGroup(list);
-    const listTasks = (list.tasks || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive').sort((a, b) => {
+    const listTasks = (list.tasks || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || '').toLowerCase() !== 'calls/meetings').sort((a, b) => {
       const titleA = a.title || '';
       const titleB = b.title || '';
       return titleA.localeCompare(titleB, undefined, { sensitivity: 'base' });
@@ -654,7 +747,7 @@ export default function TaskGroups({ user, onBack }) {
         </div>
 
         {!isCollapsed && hasTasks && (() => {
-          const allTasks = list.tasks || [];
+          const allTasks = (list.tasks || []).filter(t => (t.taskType || '').toLowerCase() !== 'calls/meetings');
           const firstStatusWithTasks = COLUMNS.find(c => allTasks.some(t => (t.status || 'To Do') === c.id))?.id || null;
 
           return (
@@ -1085,6 +1178,179 @@ export default function TaskGroups({ user, onBack }) {
     );
   };
 
+  const renderKanbanBoard = (favouriteLists) => {
+    return (
+      <div className="kanban-board">
+        {favouriteLists.map(list => {
+          const listTasks = (list.tasks || []).filter(t => (t.taskType || '').toLowerCase() !== 'calls/meetings');
+          const isDragOver = dragOverListId === list.id;
+
+          return (
+            <div
+              key={list.id}
+              className={`kanban-col-clickup ${isDragOver ? 'drag-over' : ''}`}
+              onDragOver={e => handleDragOver(e, list.id)}
+              onDrop={e => handleDrop(e, list.id)}
+              onDragLeave={handleDragLeave}
+            >
+              {/* Column Header */}
+              <div className="col-clickup-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+                  <span className="col-clickup-label" style={{ fontWeight: 800, fontSize: '0.85rem', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={list.name}>
+                    {list.name.toUpperCase()}
+                  </span>
+                  <span className="col-clickup-count" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', background: '#e2e8f0', padding: '0.1rem 0.4rem', borderRadius: '10px' }}>
+                    {listTasks.length}
+                  </span>
+                </div>
+                {can('tasks', 'create') && (
+                  <button
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#2563eb',
+                      cursor: 'pointer',
+                      fontSize: '1.25rem',
+                      fontWeight: 'bold',
+                      padding: '0 0.25rem',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    onClick={() => openQuickAddTask(list)}
+                    title="Add Task to Group"
+                  >
+                    +
+                  </button>
+                )}
+              </div>
+
+              {/* Cards Container */}
+              <div className="col-clickup-cards">
+                {listTasks.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94a3b8', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                    No tasks yet.
+                  </div>
+                ) : (
+                  listTasks.map(task => {
+                    const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
+                    const relativeDate = formatRelativeDueDate(task.dueDate);
+                    const statusMeta = STATUS_HEADER_META[task.status] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
+
+                    return (
+                      <div
+                        key={task.id}
+                        id={`task-${task.id}`}
+                        className="task-card-clickup animate-fade-in"
+                        draggable={true}
+                        onDragStart={e => handleDragStart(e, task.id)}
+                        onDragEnd={handleDragEnd}
+                        onClick={() => { setViewingTask(task); setDrawerEditMode(false); setShowTaskViewModal(true); }}
+                        style={{
+                          background: 'white',
+                          border: '1.5px solid #e2e8f0',
+                          borderRadius: '10px',
+                          padding: '0.75rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                        }}
+                      >
+                        {/* Card Header: Task ID & Status */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8' }}>
+                            {getDisplayId(task)}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '0.62rem',
+                              fontWeight: 800,
+                              textTransform: 'uppercase',
+                              color: statusMeta.bg,
+                              background: 'transparent'
+                            }}
+                          >
+                            {task.status}
+                          </span>
+                        </div>
+
+                        {/* Title */}
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#0f172a', marginBottom: '0.5rem', wordBreak: 'break-word', lineHeight: '1.4' }}>
+                          {task.title}
+                        </div>
+
+                        {/* Meta Row: Assignees & Due Date & Priority */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem', flexWrap: 'wrap', gap: '0.25rem' }}>
+                          {/* Assignees */}
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            {assignees.length === 0 ? (
+                              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#f1f5f9', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }} title="Unassigned">
+                                <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', marginLeft: '2px' }}>
+                                {assignees.slice(0, 2).map(a => {
+                                  const uObj = users.find(u => u.id === a);
+                                  const dispName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim() || 'Unknown') : 'Unknown';
+                                  return (
+                                    <div
+                                      key={a}
+                                      className={`card-clickup-avatar ${getAvatarColor(dispName)}`}
+                                      style={{ width: '20px', height: '20px', fontSize: '0.65rem', marginLeft: '-4px', border: '1.5px solid white' }}
+                                      title={dispName}
+                                    >
+                                      {initials(dispName)}
+                                    </div>
+                                  );
+                                })}
+                                {assignees.length > 2 && (
+                                  <div
+                                    className="card-clickup-avatar av-blue"
+                                    style={{ width: '20px', height: '20px', fontSize: '0.65rem', marginLeft: '-4px', border: '1.5px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    title={`${assignees.length - 2} more`}
+                                  >
+                                    +{assignees.length - 2}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Due Date & Priority */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            {relativeDate && (
+                              <span
+                                style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: 600,
+                                  color: task.status === 'Delivered' ? '#10b981' : relativeDate.isOverdue ? '#ef4444' : relativeDate.isToday ? '#f59e0b' : '#64748b',
+                                  background: task.status === 'Delivered' ? '#ecfdf5' : relativeDate.isOverdue ? '#fef2f2' : relativeDate.isToday ? '#fffbeb' : '#f1f5f9',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '2px'
+                                }}
+                                title={task.dueDate ? `Due date: ${new Date(task.dueDate).toLocaleDateString()}` : ''}
+                              >
+                                <svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                {relativeDate.text}
+                              </span>
+                            )}
+                            <PriorityFlag priority={task.priority} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="tg-page-container">
       <div className="tg-header-row" style={{ marginBottom: '1.5rem' }}>
@@ -1097,20 +1363,43 @@ export default function TaskGroups({ user, onBack }) {
         </div>
       </div>
 
-      {/* TABS NAVIGATION */}
-      <div className="tg-tabs-nav" style={{ marginBottom: '1.5rem' }}>
-        <button
-          className={`tg-tab-btn ${activeTab === 'favourites' ? 'active' : ''}`}
-          onClick={() => setActiveTab('favourites')}
-        >
-          Favourites
-        </button>
-        <button
-          className={`tg-tab-btn ${activeTab === 'all' ? 'active' : ''}`}
-          onClick={() => setActiveTab('all')}
-        >
-          All Groups
-        </button>
+      {/* TABS NAVIGATION & VIEW MODE TOGGLE */}
+      <div className="tg-tabs-nav-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div className="tg-tabs-nav" style={{ marginBottom: 0 }}>
+          <button
+            className={`tg-tab-btn ${activeTab === 'favourites' ? 'active' : ''}`}
+            onClick={() => setActiveTab('favourites')}
+          >
+            Favourites
+          </button>
+          <button
+            className={`tg-tab-btn ${activeTab === 'all' ? 'active' : ''}`}
+            onClick={() => setActiveTab('all')}
+          >
+            All Groups
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <div className="tg-filter-group-project" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Projects</label>
+            <select 
+              value={filterProjectId} 
+              onChange={e => setFilterProjectId(e.target.value)}
+              style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
+            >
+              <option value="">All Projects</option>
+              {projects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+
+          {activeTab === 'favourites' && visibleTaskLists.filter(l => l.isFavorite).length > 0 && (
+            <div className="view-toggle">
+              <button className={favouritesView === 'list' ? 'active' : ''} onClick={() => setFavouritesView('list')}>List</button>
+              <button className={favouritesView === 'kanban' ? 'active' : ''} onClick={() => setFavouritesView('kanban')}>Kanban</button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* TAB CONTENT */}
@@ -1120,6 +1409,8 @@ export default function TaskGroups({ user, onBack }) {
             <div className="tg-empty-section-message">
               No favourites added yet. Click the star icon next to any group name to add it here.
             </div>
+          ) : favouritesView === 'kanban' ? (
+            renderKanbanBoard(favouriteLists)
           ) : (
             <div className="cu-list-root">
               {favouriteLists.map((list, idx) => renderAccordion(list, idx))}
@@ -1232,6 +1523,17 @@ export default function TaskGroups({ user, onBack }) {
                         {usr.fullName || `${usr.firstName || ''} ${usr.lastName || ''}`}
                       </option>
                     ))}
+                  </select>
+                </div>
+                <div className="tg-form-field">
+                  <label>Type</label>
+                  <select
+                    value={taskForm.taskType || 'Task'}
+                    onChange={(e) => setTaskForm({ ...taskForm, taskType: e.target.value })}
+                  >
+                    <option value="Task">Task</option>
+                    <option value="Bug">Bug</option>
+                    <option value="calls/meetings">Calls/Meetings</option>
                   </select>
                 </div>
                 <div className="tg-form-field">
