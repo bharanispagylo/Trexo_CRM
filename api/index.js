@@ -67,16 +67,32 @@ async function verifyBrowserToken(req, res, next) {
 }
 
 const app = express();
-const prisma = new PrismaClient();
+
+// ── Prisma singleton (prevents connection pool exhaustion in Vercel serverless) ──
+if (!global._prismaClient) {
+  // Append connection_limit=1 to avoid exceeding Supabase pooler limit on serverless
+  const dbUrl = (process.env.DATABASE_URL || '');
+  const dbUrlWithLimit = dbUrl.includes('connection_limit')
+    ? dbUrl
+    : dbUrl + (dbUrl.includes('?') ? '&' : '?') + 'connection_limit=1';
+  global._prismaClient = new PrismaClient({
+    datasources: { db: { url: dbUrlWithLimit } },
+    log: process.env.VERCEL ? [] : ['warn', 'error'],
+  });
+}
+const prisma = global._prismaClient;
+
 const PORT = process.env.PORT || 5000;
+
 
 // In-memory store for Forgot Password OTP codes
 const otpStore = new Map();
 
 
-// Self-healing database column verification
-prisma.$connect()
-  .then(async () => {
+// Self-healing database column verification — skip on Vercel (runs on every cold start, wastes connections)
+if (!process.env.VERCEL) {
+  prisma.$connect()
+    .then(async () => {
     console.log('[Self-Healing] Database connected, verifying columns...');
 
     // All columns that may be missing from the tasks table due to schema drift
@@ -194,8 +210,9 @@ prisma.$connect()
     } catch (e) {
       console.warn('[Self-Healing] Database clean empty client ID warning:', e.message);
     }
-  })
-  .catch(console.error);
+    })
+    .catch(console.error);
+}
 
 
 
