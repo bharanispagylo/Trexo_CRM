@@ -320,7 +320,18 @@ const getTaskDisplayId = (task) => {
   const no = task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : '');
   const digits = no.replace(/\D/g, '');
   if (!digits) return no;
-  const prefix = task.parentId ? 'S' : 'T';
+  if (task.parentId) {
+    return `S${digits}`;
+  }
+  let prefix = 'T';
+  const type = (task.taskType || '').toLowerCase();
+  if (type === 'bug') {
+    prefix = 'B';
+  } else if (type === 'calls/meetings') {
+    prefix = 'C';
+  } else if (no && /^[A-Za-z]/.test(no) && !no.startsWith('TSK-')) {
+    prefix = no.charAt(0).toUpperCase();
+  }
   return `${prefix}${digits}`;
 };
 
@@ -1287,15 +1298,22 @@ app.post('/api/tasks', async (req, res) => {
         select: { taskNo: true }
       });
       let maxNo = 0;
+      let prefix = 'T';
+      const type = (taskData.taskType || '').toLowerCase();
+      if (type === 'bug') {
+        prefix = 'B';
+      } else if (type === 'calls/meetings') {
+        prefix = 'C';
+      }
       for (const t of allTasks) {
-        if (t.taskNo && !t.taskNo.startsWith('TSK-')) {
+        if (t.taskNo && t.taskNo.toUpperCase().startsWith(prefix)) {
           const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
           if (!isNaN(digits) && digits > maxNo && digits < 50000) {
             maxNo = digits;
           }
         }
       }
-      taskData.taskNo = `T${maxNo + 1}`;
+      taskData.taskNo = `${prefix}${maxNo + 1}`;
     }
 
     const task = await prisma.task.create({
@@ -1539,9 +1557,11 @@ app.get('/api/worklogs', async (req, res) => {
     }
     if (userId && userId !== 'all') where.userId = userId;
     where.isBilled = false;
+    // Exclude calls/meetings tasks
+    where.task = { taskType: { not: 'calls/meetings' } };
     const logs = await prisma.workLog.findMany({
       where,
-      include: { user: true, task: { select: { id: true, title: true, status: true, estimatedHours: true, approvedHours: true, actualHours: true } } },
+      include: { user: true, task: { select: { id: true, title: true, status: true, taskType: true, estimatedHours: true, approvedHours: true, actualHours: true } } },
       orderBy: { logDate: 'desc' }
     });
     res.json(logs);
@@ -1550,6 +1570,7 @@ app.get('/api/worklogs', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 app.delete('/api/worklogs/:logId', async (req, res) => {
   try {
@@ -1626,12 +1647,30 @@ app.post('/api/tasks/:id/comments', async (req, res) => {
     try {
       const task = await prisma.task.findUnique({ where: { id: req.params.id } });
       if (task && task.assignees) {
-        // Exclude the commenter from receiving their own notification (compare by name)
-        const authorNameLower = commentAuthorName.toLowerCase();
+        // Exclude the commenter from receiving their own notification (compare by UUID, name, or email)
         const assignees = task.assignees
           .split(',')
           .map(a => a.trim())
-          .filter(a => a && a.toLowerCase() !== authorNameLower);
+          .filter(a => {
+            if (!a) return false;
+            // Compare as UUID/ID
+            if (comment.authorId && a.toLowerCase() === comment.authorId.toLowerCase()) return false;
+            if (comment.user && comment.user.id && a.toLowerCase() === comment.user.id.toLowerCase()) return false;
+            // Compare as name/email
+            const aLower = a.toLowerCase();
+            if (commentAuthorName && aLower === commentAuthorName.toLowerCase()) return false;
+            if (comment.user) {
+              const firstLower = (comment.user.firstName || '').toLowerCase();
+              const lastLower = (comment.user.lastName || '').toLowerCase();
+              const fullLower = (comment.user.fullName || '').toLowerCase();
+              const emailLower = (comment.user.email || '').toLowerCase();
+              if (firstLower && aLower === firstLower) return false;
+              if (lastLower && aLower === lastLower) return false;
+              if (fullLower && aLower === fullLower) return false;
+              if (emailLower && aLower === emailLower) return false;
+            }
+            return true;
+          });
 
         if (assignees.length > 0) {
           const previewText = comment.text ? comment.text.substring(0, 60) : '(attachment)';
@@ -2169,27 +2208,36 @@ app.get('/api/reports/status-based', async (req, res) => {
     if (period === 'custom') {
       if (!qStart || !qEnd) return res.status(400).json({ error: 'startDate and endDate required for custom period' });
       startDate = new Date(qStart);
+      startDate.setUTCHours(0, 0, 0, 0);
       endDate   = new Date(qEnd);
+      endDate.setUTCHours(23, 59, 59, 999);
     } else {
-      const targetDate = date ? new Date(date) : new Date();
+      let targetDate;
+      if (date) {
+        targetDate = new Date(date);
+      } else {
+        const now = new Date();
+        targetDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+      }
+
       if (period === 'daily') {
         startDate = new Date(targetDate);
-        startDate.setHours(0, 0, 0, 0);
+        startDate.setUTCHours(0, 0, 0, 0);
         endDate = new Date(targetDate);
-        endDate.setHours(23, 59, 59, 999);
+        endDate.setUTCHours(23, 59, 59, 999);
       } else if (period === 'weekly') {
-        const day = targetDate.getDay();
+        const day = targetDate.getUTCDay();
         const diffToMonday = day === 0 ? -6 : 1 - day;
         startDate = new Date(targetDate);
-        startDate.setDate(targetDate.getDate() + diffToMonday);
-        startDate.setHours(0, 0, 0, 0);
+        startDate.setUTCDate(targetDate.getUTCDate() + diffToMonday);
+        startDate.setUTCHours(0, 0, 0, 0);
         endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + 6);
-        endDate.setHours(23, 59, 59, 999);
+        endDate.setUTCDate(startDate.getUTCDate() + 6);
+        endDate.setUTCHours(23, 59, 59, 999);
       } else {
         // monthly
-        startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
-        endDate   = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999);
+        startDate = new Date(Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), 1, 0, 0, 0, 0));
+        endDate   = new Date(Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth() + 1, 0, 23, 59, 59, 999));
       }
     }
 
@@ -2234,6 +2282,7 @@ app.get('/api/reports/status-based', async (req, res) => {
         estimatedHours: t.estimatedHours  || 0,
         dueDate:        t.dueDate,
         priority:       t.priority,
+        taskType:       t.taskType,
       }))
       .sort((a, b) => b.timeSpent - a.timeSpent);
 
@@ -2521,15 +2570,22 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
       select: { taskNo: true }
     });
     let maxNo = 0;
+    let prefix = 'T';
+    const type = (taskType || '').toLowerCase();
+    if (type === 'bug') {
+      prefix = 'B';
+    } else if (type === 'calls/meetings') {
+      prefix = 'C';
+    }
     for (const t of allTasks) {
-      if (t.taskNo && !t.taskNo.startsWith('TSK-')) {
+      if (t.taskNo && t.taskNo.toUpperCase().startsWith(prefix)) {
         const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
         if (!isNaN(digits) && digits > maxNo && digits < 50000) {
           maxNo = digits;
         }
       }
     }
-    const taskNo = `T${maxNo + 1}`;
+    const taskNo = `${prefix}${maxNo + 1}`;
 
     // Resolve project
     let resolvedProjectId = null;
