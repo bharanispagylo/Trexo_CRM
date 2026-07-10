@@ -1179,10 +1179,20 @@ export default function TaskGroups({ user, onBack }) {
   };
 
   const renderKanbanBoard = (favouriteLists) => {
+    const statusOrder = COLUMNS.map(c => c.id);
     return (
       <div className="kanban-board">
         {favouriteLists.map(list => {
-          const listTasks = (list.tasks || []).filter(t => (t.taskType || '').toLowerCase() !== 'calls/meetings');
+          const listTasks = (list.tasks || [])
+            .filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || '').toLowerCase() !== 'calls/meetings')
+            .sort((a, b) => {
+              const idxA = statusOrder.indexOf(a.status || 'To Do');
+              const idxB = statusOrder.indexOf(b.status || 'To Do');
+              const indexA = idxA === -1 ? 99 : idxA;
+              const indexB = idxB === -1 ? 99 : idxB;
+              if (indexA !== indexB) return indexA - indexB;
+              return (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' });
+            });
           const isDragOver = dragOverListId === list.id;
 
           return (
@@ -1510,21 +1520,23 @@ export default function TaskGroups({ user, onBack }) {
                     placeholder="Enter task description..."
                   />
                 </div>
-                <div className="tg-form-field">
-                  <label>Assignee *</label>
-                  <select
-                    required
-                    value={taskForm.assignees}
-                    onChange={(e) => setTaskForm({ ...taskForm, assignees: e.target.value })}
-                  >
-                    <option value="">-- Select Assignee --</option>
-                    {getFilteredUsersForGroup(targetGroup).map((usr) => (
-                      <option key={usr.id} value={usr.id}>
-                        {usr.fullName || `${usr.firstName || ''} ${usr.lastName || ''}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {taskForm.taskType !== 'calls/meetings' && (
+                  <div className="tg-form-field">
+                    <label>Assignee *</label>
+                    <select
+                      required={taskForm.taskType !== 'calls/meetings'}
+                      value={taskForm.assignees}
+                      onChange={(e) => setTaskForm({ ...taskForm, assignees: e.target.value })}
+                    >
+                      <option value="">-- Select Assignee --</option>
+                      {getFilteredUsersForGroup(targetGroup).map((usr) => (
+                        <option key={usr.id} value={usr.id}>
+                          {usr.fullName || `${usr.firstName || ''} ${usr.lastName || ''}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="tg-form-field">
                   <label>Type</label>
                   <select
@@ -1536,26 +1548,30 @@ export default function TaskGroups({ user, onBack }) {
                     <option value="calls/meetings">Calls/Meetings</option>
                   </select>
                 </div>
-                <div className="tg-form-field">
-                  <label>Priority</label>
-                  <select
-                    value={taskForm.priority}
-                    onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })}
-                  >
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                    <option value="Urgent">Urgent</option>
-                  </select>
-                </div>
-                <div className="tg-form-field">
-                  <label>Due Date</label>
-                  <input
-                    type="date"
-                    value={taskForm.dueDate}
-                    onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })}
-                  />
-                </div>
+                {taskForm.taskType !== 'calls/meetings' && (
+                  <>
+                    <div className="tg-form-field">
+                      <label>Priority</label>
+                      <select
+                        value={taskForm.priority}
+                        onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })}
+                      >
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                        <option value="Urgent">Urgent</option>
+                      </select>
+                    </div>
+                    <div className="tg-form-field">
+                      <label>Due Date</label>
+                      <input
+                        type="date"
+                        value={taskForm.dueDate}
+                        onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
               <div className="tg-modal-footer">
                 <button type="button" className="tg-btn-secondary" onClick={() => setShowTaskModal(false)}>

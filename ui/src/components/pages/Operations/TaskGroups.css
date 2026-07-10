@@ -751,6 +751,18 @@
   background: #94a3b8;
 }
 
+/* Custom styled dropdown arrow for Projects filter select */
+.tg-filter-group-project select {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.75rem center !important; /* Spacing between the arrow and right border, moved left */
+  background-size: 0.8rem !important;
+  padding-right: 2.25rem !important; /* Extra padding to prevent text overlay on the arrow */
+}
+
 
 
 
