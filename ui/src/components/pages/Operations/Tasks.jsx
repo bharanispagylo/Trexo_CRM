@@ -2246,7 +2246,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconStatus /> Status</span>
                     <span className="saas-meta-value">
-                      <select value={form.status} onChange={e => { const newSt = e.target.value; const updated = { ...form, status: newSt }; if (newSt === 'Archived' || newSt === 'Archive') { updated.previousStatus = (form.status !== 'Archived' && form.status !== 'Archive') ? form.status : (form.previousStatus || 'To Do'); } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
+                      <select value={form.status} onChange={e => { const newSt = e.target.value; const updated = { ...form, status: newSt }; if (newSt === 'Archived' || newSt === 'Archive') { updated.previousStatus = (form.status !== 'Archived' && form.status !== 'Archive') ? form.status : (form.previousStatus || 'To Do'); } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
                         {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                       </select>
                     </span>
@@ -2259,7 +2259,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     <>
                       <span className="saas-meta-label" style={{ color: errors.assignees ? '#ef4444' : '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconAssignee /> Assignee *</span>
                       <span className="saas-meta-value">
-                        <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (errors.assignees) setErrors(prev => { const { assignees: _, ...rest } = prev; return rest; }); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: errors.assignees ? '1px solid #ef4444' : '1px solid transparent', borderRadius: '4px', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
+                        <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (errors.assignees) setErrors(prev => { const { assignees: _, ...rest } = prev; return rest; }); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: errors.assignees ? '1px solid #ef4444' : '1px solid transparent', borderRadius: '4px', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
                           <option value="">Select Assignee...</option>
                           {finalUsers.map(u => {
                             const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
@@ -2273,7 +2273,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
                   <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconType /> Type</span>
                   <span className="saas-meta-value">
-                    <select value={form.taskType || 'Task'} onChange={e => { const newType = e.target.value; const updated = { ...form, taskType: newType }; if (!isEdit) { updated.taskNo = generateTaskNoForType(newType); if (newType === 'calls/meetings') { updated.assignees = currentUser?.id || ''; } } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
+                    <select value={form.taskType || 'Task'} onChange={e => { const newType = e.target.value; const updated = { ...form, taskType: newType }; if (!isEdit) { updated.taskNo = generateTaskNoForType(newType); if (newType === 'calls/meetings') { updated.assignees = currentUser?.id || ''; } } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
                       <option value="Task">Task</option>
                       <option value="Bug">Bug</option>
                       <option value="calls/meetings">Calls/Meetings</option>
@@ -2335,7 +2335,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconPriority /> Priority</span>
                     <span className="saas-meta-value">
-                      <select value={form.priority} onChange={e => set('priority', e.target.value)} disabled={!canEdit} className="saas-grid-select" style={{ width: '100%', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
+                      <select value={form.priority} onChange={e => set('priority', e.target.value)} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
                         <option value="">Empty</option>
                         {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
@@ -4030,7 +4030,7 @@ function ScheduleColumn({ title, count, tasks, onDragStart, onDrop, onDragOver, 
 // ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
 //  MAIN TASKS COMPONENT
 // ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
-export default function Tasks({ user, initialSelectedTask, onClearInitialTask, onDetailViewChange, initialAssigneeFilter, onClearAssigneeFilter, initialTaskId, onTaskSelect }) {
+export default function Tasks({ user, initialSelectedTask, onClearInitialTask, onDetailViewChange, initialAssigneeFilter, onClearAssigneeFilter, onCancelAssigneeFilter, initialTaskId, onTaskSelect }) {
   const isTeamLeadOrAdmin = user?.role?.toLowerCase() === 'team lead' || user?.role?.toLowerCase() === 'admin';
   const [tasks, setTasks]       = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -4585,28 +4585,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     );
   }
 
-  if (drawerOpen) {
-    return (
-      <TaskDetailView
-        task={drawerTask}
-        tasks={tasks}
-        onRefresh={fetchTasks}
-        onSelectTask={(t) => setDrawerTask(t)}
-        onSave={async (taskData, silent) => {
-          const saved = await handleSaveTask(taskData, silent);
-          if (!silent) {
-            closeDrawer();
-          } else if (saved) {
-            setDrawerTask(saved);
-          }
-        }}
-        onDelete={async (id) => { await handleDeleteTask(id); closeDrawer(); }}
-        onClose={closeDrawer}
-        currentUser={user}
-        initialEditMode={taskDetailMode}
-      />
-    );
-  }
+
 
   return (
     <div className="tasks-3col-layout">
@@ -4711,7 +4690,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             }} 
             onClick={() => { 
               setAssigneeFilter(null); 
-              if (onClearAssigneeFilter) onClearAssigneeFilter(); 
+              if (onCancelAssigneeFilter) {
+                onCancelAssigneeFilter();
+              } else if (onClearAssigneeFilter) {
+                onClearAssigneeFilter();
+              }
             }}
             title="Clear employee filter"
           >

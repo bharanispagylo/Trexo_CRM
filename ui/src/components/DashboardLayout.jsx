@@ -657,6 +657,10 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
           }}
           initialAssigneeFilter={teamMemberAssigneeFilter}
           onClearAssigneeFilter={() => setTeamMemberAssigneeFilter(null)}
+          onCancelAssigneeFilter={() => {
+            setTeamMemberAssigneeFilter(null);
+            setActiveTab('track-team');
+          }}
         />
       );
       case 'task-groups':
