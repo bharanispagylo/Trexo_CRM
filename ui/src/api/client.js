@@ -5,16 +5,30 @@
 
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+const getHeaders = (customHeaders = {}) => {
+  const headers = { ...customHeaders };
+  try {
+    const saved = localStorage.getItem('crm_user');
+    const user = saved ? JSON.parse(saved) : null;
+    if (user && user.id) {
+      headers['x-user-id'] = user.id;
+    }
+  } catch (error) {
+    console.error('Error reading user from localStorage:', error);
+  }
+  return headers;
+};
+
 export const api = {
 
   async get(route) {
     const separator = route.includes('?') ? '&' : '?';
     const res = await fetch(`${BASE_URL}${route}${separator}t=${Date.now()}`, {
-      headers: {
+      headers: getHeaders({
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache',
         'Expires': '0'
-      }
+      })
     });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
@@ -26,7 +40,7 @@ export const api = {
   async post(route, body) {
     const res = await fetch(`${BASE_URL}${route}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     });
     if (!res.ok) {
@@ -40,7 +54,7 @@ export const api = {
   async put(route, body) {
     const res = await fetch(`${BASE_URL}${route}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     });
     if (!res.ok) {
@@ -53,6 +67,7 @@ export const api = {
   async delete(route) {
     const res = await fetch(`${BASE_URL}${route}`, {
       method: 'DELETE',
+      headers: getHeaders()
     });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));

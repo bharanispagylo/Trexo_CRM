@@ -12,9 +12,8 @@ const ACTIONS = [
 
 const REPORT_ACTIONS = [
   { id: 'tasks-report',           label: 'Tasks - Delivery' },
-  { id: 'reports-status-based',   label: 'Tasks - Work Log' },
+  { id: 'reports-status-based',   label: 'Timesheet - Detailed' },
   { id: 'timesheet-overall',      label: 'Timesheet - Summary' },
-  { id: 'timesheet-individual',   label: 'Timesheet - Individual' },
   { id: 'daily-load-all',         label: 'Daily Load - All' },
   { id: 'daily-load-individual',  label: 'Daily Load - Individual' },
 ];

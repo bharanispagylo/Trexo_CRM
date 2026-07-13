@@ -336,7 +336,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       }
       if (Array.isArray(tasks)) {
         for (const t of tasks) {
-          if (t.taskNo && t.taskNo.toUpperCase().startsWith(prefix)) {
+          if (t.taskNo) {
             const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
             if (!isNaN(digits) && digits > maxNo && digits < 50000) {
               maxNo = digits;
@@ -391,7 +391,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         }
         if (Array.isArray(tasks)) {
           for (const t of tasks) {
-            if (t.taskNo && t.taskNo.toUpperCase().startsWith(prefix)) {
+            if (t.taskNo) {
               const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
               if (!isNaN(digits) && digits > maxNo && digits < 50000) {
                 maxNo = digits;
@@ -474,7 +474,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     }
     if (Array.isArray(tasks)) {
       for (const t of tasks) {
-        if (t.taskNo && t.taskNo.toUpperCase().startsWith(prefix)) {
+        if (t.taskNo) {
           const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
           if (!isNaN(digits) && digits > maxNo && digits < 50000) {
             maxNo = digits;
@@ -4805,30 +4805,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
               <button className={viewMode === 'kanban' ? 'active' : ''} onClick={() => setViewMode('kanban')}>Kanban</button>
             </div>
           )}
-          {subTab === 'calls' && can('tasks', 'create') && (
-            <button
-              onClick={() => {
-                setDrawerTask({
-                  status: 'To Do',
-                  projectName: filterProjectName || '',
-                  projectId: filterProjectName ? taskProjects.find(p => p.name === filterProjectName)?.id || null : null,
-                  priority: 'Medium',
-                  title: '',
-                  description: '',
-                  assignees: user?.id || '',
-                  isBillable: false,
-                  tag: 'Engineering',
-                  taskType: 'calls/meetings'
-                });
-                setTaskDetailMode(true);
-                setDrawerOpen(true);
-              }}
-              className="calls-add-btn"
-            >
-              <span className="calls-add-btn-desktop">+ Add Calls/Meeting</span>
-              <span className="calls-add-btn-mobile">+ Calls/Meeting</span>
-            </button>
-          )}
+
 
 
         </div>
@@ -5021,30 +4998,58 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
       {viewMode === 'list' && (() => {
         if (subTab === 'calls') {
-          const sortedCalls = [...filteredTasks].sort((a, b) => {
-            const getProjName = (t) => {
-              const pId = getTaskProjectId(t);
-              if (pId) {
-                const p = taskProjects.find(proj => proj.id === pId);
-                if (p) return p.name || '';
-              }
-              return '';
+          // Group by project
+          const projectGroupsMap = {};
+          
+          taskProjects.forEach(proj => {
+            projectGroupsMap[proj.id] = {
+              id: proj.id,
+              name: proj.name,
+              tasks: []
             };
-            const nameA = getProjName(a).toLowerCase();
-            const nameB = getProjName(b).toLowerCase();
-            if (nameA < nameB) return -1;
-            if (nameA > nameB) return 1;
-            if (!a.dueDate) return 1;
-            if (!b.dueDate) return -1;
-            return new Date(a.dueDate) - new Date(b.dueDate);
           });
+          
+          projectGroupsMap['unassigned_proj'] = {
+            id: 'unassigned_proj',
+            name: 'General / No Project',
+            tasks: []
+          };
+
+          filteredTasks.forEach(task => {
+            const projId = getTaskProjectId(task);
+            if (projId && projectGroupsMap[projId]) {
+              projectGroupsMap[projId].tasks.push(task);
+            } else {
+              projectGroupsMap['unassigned_proj'].tasks.push(task);
+            }
+          });
+
+          let finalProjectGroups = Object.values(projectGroupsMap)
+            .filter(projGroup => projGroup.tasks.length > 0);
+
+          // Sort project groups: alphabetically by project name, with "General / No Project" at the end
+          finalProjectGroups.sort((a, b) => {
+            if (a.id === 'unassigned_proj') return 1;
+            if (b.id === 'unassigned_proj') return -1;
+            return a.name.localeCompare(b.name);
+          });
+
+          // Sort tasks within each project group by due date
+          finalProjectGroups.forEach(projGroup => {
+            projGroup.tasks.sort((a, b) => {
+              if (!a.dueDate) return 1;
+              if (!b.dueDate) return -1;
+              return new Date(a.dueDate) - new Date(b.dueDate);
+            });
+          });
+
           const hasActiveFilter = !!(filterProjectName || filterFromDate || filterToDate || assigneeFilter);
           
           return (
             <>
               {/* Desktop view */}
               <div className="cu-list-root all-tasks-list">
-                {sortedCalls.length === 0 && (
+                {finalProjectGroups.length === 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 2rem', color: '#94a3b8' }}>
                     <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#cbd5e1" strokeWidth="1.5" style={{ marginBottom: '1rem' }}>
                       <rect x="3" y="3" width="18" height="18" rx="3"/>
@@ -5083,20 +5088,88 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                     )}
                   </div>
                 )}
-                {sortedCalls.length > 0 && (
-                  <div className="cu-status-section" style={{ marginBottom: '1rem' }}>
+                {finalProjectGroups.length > 0 && finalProjectGroups.map(projGroup => (
+                  <div key={projGroup.id} className="project-group-container" style={{ marginBottom: '2.5rem' }}>
+                    {/* Project Group Header */}
+                    <div className="project-group-header" style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.65rem 1rem',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      marginBottom: '0.75rem',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#475569" strokeWidth="2.5" style={{ flexShrink: 0 }}>
+                          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        <span style={{
+                          fontWeight: '800',
+                          fontSize: '0.85rem',
+                          color: '#334155',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          {projGroup.name}
+                        </span>
+                        <span style={{
+                          background: '#e2e8f0',
+                          color: '#475569',
+                          padding: '0.1rem 0.45rem',
+                          borderRadius: '12px',
+                          fontSize: '0.7rem',
+                          fontWeight: 700
+                        }}>
+                          {projGroup.tasks.length} {projGroup.tasks.length === 1 ? 'Call/Meeting' : 'Calls/Meetings'}
+                        </span>
+                      </div>
+                      {can('tasks', 'create') && (
+                        <button className="kanban-new-btn" title="Create New Call/Meeting"
+                          style={{ padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem', boxShadow: 'none', width: 'auto', flexShrink: 0 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            let projId = projGroup.id !== 'unassigned_proj' ? projGroup.id : null;
+                            let projName = projGroup.id !== 'unassigned_proj' ? projGroup.name : '';
+                            let clientId = null;
+                            if (projId) {
+                              const p = taskProjects.find(pr => pr.id === projId);
+                              if (p) clientId = p.clientId;
+                            }
+                            setDrawerTask({
+                              status: 'To Do',
+                              projectName: projName,
+                              projectId: projId,
+                              priority: 'Medium',
+                              title: '',
+                              description: '',
+                              assignees: user?.id || '',
+                              isBillable: false,
+                              tag: 'Engineering',
+                              taskType: 'calls/meetings',
+                              clientId
+                            });
+                            setTaskDetailMode(true);
+                            setDrawerOpen(true);
+                          }}>
+                          New
+                        </button>
+                      )}
+                    </div>
+
                     <div className="cu-table-wrapper">
                       <div className="table-responsive">
                         <table className="cu-table">
                           <thead>
                             <tr className="cu-thead-row">
                               <th className="cu-th cu-th-name">NAME</th>
-                              <th className="cu-th cu-th-project">PROJECT</th>
                               <th className="cu-th cu-th-actions"></th>
                             </tr>
                           </thead>
                           <tbody>
-                            {sortedCalls.map(task => {
+                            {projGroup.tasks.map(task => {
                               return (
                                 <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
                                   <td className="cu-td cu-td-name">
@@ -5106,11 +5179,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                         <span className="cu-task-title">{task.title || 'Untitled Task'}</span>
                                       </TaskTitleTooltip>
                                     </div>
-                                  </td>
-                                  <td className="cu-td cu-td-project">
-                                    {task.projectName ? (
-                                      <span className="cu-project-badge">{task.projectName}</span>
-                                    ) : <span className="cu-empty-cell">-</span>}
                                   </td>
                                   <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
                                     <div className="cu-row-actions">
@@ -5129,57 +5197,109 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                       </div>
                     </div>
                   </div>
-                )}
+                ))}
               </div>
 
-              {/* Mobile flat list view */}
-              <div className="cu-mobile-mytasks-flat" style={{ padding: '0.5rem 0' }}>
-                {sortedCalls.length === 0 && (
-                  <div className="cu-flat-empty" style={{ textAlign: 'center', padding: '3rem 1.5rem', color: '#94a3b8', background: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: '500' }}>
+              {/* Mobile view grouped by project and status, matching All Tasks mobile UI */}
+              <div className="cu-mobile-alltasks-list" style={{ padding: '0.5rem 0' }}>
+                {finalProjectGroups.length === 0 && (
+                  <div className="cu-mob-empty-state">
+                    <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#cbd5e1" strokeWidth="1.5" style={{ marginBottom: '0.75rem' }}>
+                      <rect x="3" y="3" width="18" height="18" rx="3"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="14" y2="12"/>
+                    </svg>
+                    <p className="cu-mob-empty-title">
                       {hasActiveFilter ? 'No calls/meetings found' : 'No calls/meetings yet'}
+                    </p>
+                    <p className="cu-mob-empty-sub">
+                      {hasActiveFilter ? 'Try adjusting your filters' : 'Create your first call/meeting to get started'}
                     </p>
                   </div>
                 )}
-                {sortedCalls.length > 0 && sortedCalls.map(task => {
-                  const relDate = formatRelativeDueDate(task.dueDate);
-                  const assignName = (listUsers.find(u => u.id === task.assignees) || {}).fullName || '';
-                  
-                  return (
-                    <div 
-                      key={task.id} 
-                      className="cu-flat-task-row" 
-                      onClick={() => openTaskDetail(task, false)} 
-                      style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        gap: '0.5rem',
-                        padding: '0.85rem 1rem',
-                        borderBottom: '1px solid #f1f5f9',
-                        background: '#ffffff',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0 }}>
-                        <span className="cu-flat-task-title" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', fontSize: '0.88rem' }}>
-                          <span className="cu-task-id-prefix" style={{ color: '#94a3b8', marginRight: '6px', fontWeight: 600 }}>{getDisplayId(task)}</span>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1e293b', fontWeight: 500 }}>
-                            {task.title || 'Untitled Task'}
-                          </span>
-                        </span>
+                {(() => {
+                  let firstKey = finalProjectGroups[0]?.id || null;
+
+                  return finalProjectGroups.map(projGroup => {
+                    const key = projGroup.id;
+                    const isMobCollapsed = expandedMobileStatusKey === '__first__'
+                      ? key !== firstKey
+                      : expandedMobileStatusKey !== key;
+
+                    return (
+                      <div key={projGroup.id} className="cu-mob-proj-section" style={{ background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '0.5rem', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                        <div className="cu-mob-status-group">
+                          <div className="cu-mob-status-header" style={{ background: 'transparent', borderTop: 'none', borderBottom: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => toggleMobileStatusGroup(key)}>
+                              <svg viewBox="0 0 10 6" width="9" height="9" fill="#94a3b8" style={{ transform: isMobCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}><path d="M0 0l5 6 5-6z"/></svg>
+                              <span className="cu-mob-status-pill" style={{ color: '#2563eb', fontWeight: '700', padding: '0', background: 'transparent', border: 'none', fontSize: '0.82rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                                {projGroup.name}
+                              </span>
+                              <span className="cu-mob-status-count" style={{ background: '#f1f5f9', color: '#64748b', padding: '1px 6px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 600 }}>{projGroup.tasks.length}</span>
+                            </div>
+                            {can('tasks', 'create') && (
+                              <button className="cu-mob-add-btn" style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }} onClick={e => {
+                                e.stopPropagation();
+                                let projId = projGroup.id !== 'unassigned_proj' ? projGroup.id : null;
+                                let projName = projGroup.id !== 'unassigned_proj' ? projGroup.name : '';
+                                let clientId = null;
+                                if (projId) {
+                                  const p = taskProjects.find(pr => pr.id === projId);
+                                  if (p) clientId = p.clientId;
+                                }
+                                setDrawerTask({
+                                  status: 'To Do',
+                                  projectName: projName,
+                                  projectId: projId,
+                                  priority: 'Medium',
+                                  title: '',
+                                  description: '',
+                                  assignees: user?.id || '',
+                                  isBillable: false,
+                                  tag: 'Engineering',
+                                  taskType: 'calls/meetings',
+                                  clientId
+                                });
+                                setTaskDetailMode(true);
+                                setDrawerOpen(true);
+                              }}>+ Add</button>
+                            )}
+                          </div>
+                          {!isMobCollapsed && (
+                            <div className="cu-mobile-mytasks-flat" style={{ padding: '0.25rem 0.5rem 0.75rem 0.5rem' }}>
+                              {projGroup.tasks.map(task => {
+                                return (
+                                  <div 
+                                    key={task.id} 
+                                    className="cu-flat-task-row" 
+                                    onClick={() => openTaskDetail(task, false)} 
+                                    style={{ 
+                                      display: 'flex', 
+                                      justifyContent: 'space-between', 
+                                      alignItems: 'center', 
+                                      gap: '0.5rem',
+                                      padding: '0.65rem 0',
+                                      borderBottom: '1px solid #f8fafc',
+                                      background: 'transparent',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0 }}>
+                                      <span className="cu-flat-task-title" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', fontSize: '0.85rem' }}>
+                                        <span className="cu-task-id-prefix" style={{ color: '#94a3b8', marginRight: '6px', fontWeight: 600 }}>{getDisplayId(task)}</span>
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#334155', fontWeight: 500 }}>
+                                          {task.title || 'Untitled Task'}
+                                        </span>
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
-                        {task.projectName && (
-                          <span className="cu-project-badge">
-                            {task.projectName}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
             </>
           );

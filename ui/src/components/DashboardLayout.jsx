@@ -16,7 +16,6 @@ import EditUser from './pages/Administration/EditUser';
 import Reports from './pages/Administration/Reports';
 import ReportsStatusBased from './pages/Administration/ReportsStatusBased';
 import TimesheetOverall from './pages/Administration/TimesheetOverall';
-import TimesheetIndividual from './pages/Administration/TimesheetIndividual';
 import DailyLoadIndividual from './pages/Administration/DailyLoadIndividual';
 import DailyLoadAll from './pages/Administration/DailyLoadAll';
 
@@ -273,7 +272,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   ];
 
   const permittedModules = modulesConfig.filter(m => {
-    if (m.id === 'reports') return canReport('tasks-report') || canReport('reports-status-based') || canReport('timesheet-overall') || canReport('timesheet-individual') || canReport('daily-load-all') || canReport('daily-load-individual');
+    if (m.id === 'reports') return canReport('tasks-report') || canReport('reports-status-based') || canReport('timesheet-overall') || canReport('daily-load-all') || canReport('daily-load-individual');
     return can(m.module, 'view');
   });
   const showMoreButton = permittedModules.length > 3;
@@ -335,7 +334,6 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       } else if (activeTab === 'reports'             && !canReport('tasks-report'))         { setActiveTab('overview');
       } else if (activeTab === 'reports-status-based' && !canReport('reports-status-based')) { setActiveTab('overview');
       } else if (activeTab === 'timesheet-overall'    && !canReport('timesheet-overall'))    { setActiveTab('overview');
-      } else if (activeTab === 'timesheet-individual' && !canReport('timesheet-individual')) { setActiveTab('overview');
       } else if (activeTab === 'daily-load-all'       && !canReport('daily-load-all'))       { setActiveTab('overview');
       } else if (activeTab === 'daily-load-individual' && !canReport('daily-load-individual')) { setActiveTab('overview');
       } else if (activeTab === 'roles' && !can('roles', 'view') && user?.role?.toLowerCase() !== 'admin') {
@@ -409,6 +407,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const [timesheetUserId, setTimesheetUserId] = useState(null);
   const [timesheetInitialFilter, setTimesheetInitialFilter] = useState(null);
   const [timesheetInitialDate, setTimesheetInitialDate] = useState(null);
+
   const searchContainerRef = useRef(null);
 
   useEffect(() => {
@@ -719,20 +718,17 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         return <EditUser userToEdit={userToEdit} onBack={() => setActiveTab('users')} />;
       case 'timesheet-overall':
         if (!canReport('timesheet-overall')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
-        return <TimesheetOverall onUserClick={(userId, initialFilter, initialDate) => { setTimesheetUserId(userId); setTimesheetInitialFilter(initialFilter); setTimesheetInitialDate(initialDate); setActiveTab('timesheet-individual'); }} />;
-      case 'timesheet-individual':
-        if (!canReport('timesheet-individual')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
-        return <TimesheetIndividual user={user} onTaskClick={(taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); }} initialUserId={timesheetUserId} onClearInitialUser={() => setTimesheetUserId(null)} initialFilter={timesheetInitialFilter} onClearInitialFilter={() => setTimesheetInitialFilter(null)} initialDate={timesheetInitialDate} onClearInitialDate={() => setTimesheetInitialDate(null)} />;
+        return <TimesheetOverall onUserClick={(userId, initialFilter, initialDate) => { setTimesheetUserId(userId); setTimesheetInitialFilter(initialFilter); setTimesheetInitialDate(initialDate); setActiveTab('reports-status-based'); }} />;
       case 'daily-load-all':
         if (!canReport('daily-load-all')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
-        return <DailyLoadAll onUserClick={(userId) => { setTimesheetUserId(userId); setActiveTab('daily-load-individual'); }} />;
+        return <DailyLoadAll onUserClick={(userId) => { setActiveTab('daily-load-individual'); }} />;
       case 'daily-load-individual':
         if (!canReport('daily-load-individual')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
         return <DailyLoadIndividual user={user} onTaskClick={(taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); }} />;
 
       case 'reports-status-based':
         if (!canReport('reports-status-based')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
-        return <ReportsStatusBased user={user} onNavigateToTask={(taskData) => {
+        return <ReportsStatusBased user={user} initialUserId={timesheetUserId} onClearInitialUser={() => setTimesheetUserId(null)} initialFilter={timesheetInitialFilter} onClearInitialFilter={() => setTimesheetInitialFilter(null)} initialDate={timesheetInitialDate} onClearInitialDate={() => setTimesheetInitialDate(null)} onNavigateToTask={(taskData) => {
             const displayId = getDisplayId(taskData);
             setSelectedTaskId(displayId);
             setSearchSelectedTask(taskData);
@@ -744,7 +740,6 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
           const reportTabs = [
             { key: 'reports-status-based', action: 'reports-status-based' },
             { key: 'timesheet-overall', action: 'timesheet-overall' },
-            { key: 'timesheet-individual', action: 'timesheet-individual' },
             { key: 'daily-load-all', action: 'daily-load-all' },
             { key: 'daily-load-individual', action: 'daily-load-individual' }
           ];
@@ -834,9 +829,8 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'add-user': return { title: 'Create New User', back: 'Users', id: 'NewUser' };
       case 'edit-user': return { title: 'Edit User Profile', back: 'Users', id: 'EditUser' };
       case 'reports': return { title: 'Tasks - Delivery', back: 'Reports', id: 'Reports' };
-      case 'reports-status-based': return { title: 'Tasks - Work Log', back: 'Reports', id: 'ReportsStatusBased' };
+      case 'reports-status-based': return { title: 'Timesheet - Detailed', back: 'Reports', id: 'ReportsStatusBased' };
       case 'timesheet-overall': return { title: 'Timesheet - Summary', back: 'Reports', id: 'TimesheetOverall' };
-      case 'timesheet-individual': return { title: 'Timesheet - Individual', back: 'Reports', id: 'TimesheetIndividual' };
       case 'daily-load-all': return { title: 'Daily Load - All', back: 'Reports', id: 'DailyLoadAll' };
       case 'daily-load-individual': return { title: 'Daily Load - Individual', back: 'Reports', id: 'DailyLoadIndividual' };
       case 'archive': return { title: 'Archive', back: 'Admin', id: 'Archive' };
@@ -889,8 +883,8 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             {can('projects', 'view') && <NavItem id="projects" label="Projects" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>} />}
             {can('teams', 'view') && <NavItem id="track-team" label="My Team" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>} />}
             {can('estimations', 'view') && <NavItem id="estimations" label="Estimations" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>} />}
-            {(canReport('tasks-report') || canReport('reports-status-based') || canReport('timesheet-overall') || canReport('timesheet-individual') || canReport('daily-load-all') || canReport('daily-load-individual')) && <NavItem id="reports" label="Reports" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>} />}
-            {['reports','reports-status-based','timesheet-overall','timesheet-individual','daily-load-all','daily-load-individual'].includes(activeTab) && (
+            {(canReport('tasks-report') || canReport('reports-status-based') || canReport('timesheet-overall') || canReport('daily-load-all') || canReport('daily-load-individual')) && <NavItem id="reports" label="Reports" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>} />}
+            {['reports','reports-status-based','timesheet-overall','daily-load-all','daily-load-individual'].includes(activeTab) && (
               <div style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {canReport('tasks-report') && (
                   <button className={`nav-item ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => { setActiveTab('reports'); setSidebarOpen(false); }} style={{ fontSize: '0.8rem', paddingLeft: '1rem' }}>
@@ -899,17 +893,12 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
                 )}
                 {canReport('reports-status-based') && (
                   <button className={`nav-item ${activeTab === 'reports-status-based' ? 'active' : ''}`} onClick={() => { setActiveTab('reports-status-based'); setSidebarOpen(false); }} style={{ fontSize: '0.8rem', paddingLeft: '1rem' }}>
-                    <span className="nav-label">Tasks - Work Log</span>
+                    <span className="nav-label">Timesheet - Detailed</span>
                   </button>
                 )}
                 {canReport('timesheet-overall') && (
                   <button className={`nav-item ${activeTab === 'timesheet-overall' ? 'active' : ''}`} onClick={() => { setActiveTab('timesheet-overall'); setSidebarOpen(false); }} style={{ fontSize: '0.8rem', paddingLeft: '1rem' }}>
                     <span className="nav-label">Timesheet - Summary</span>
-                  </button>
-                )}
-                {canReport('timesheet-individual') && (
-                  <button className={`nav-item ${activeTab === 'timesheet-individual' ? 'active' : ''}`} onClick={() => { setActiveTab('timesheet-individual'); setSidebarOpen(false); }} style={{ fontSize: '0.8rem', paddingLeft: '1rem' }}>
-                    <span className="nav-label">Timesheet - Individual</span>
                   </button>
                 )}
                 {canReport('daily-load-all') && (
@@ -985,19 +974,13 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
                 {canReport('reports-status-based') && (
                   <button onClick={() => { navigateToTab('reports-status-based'); setMobileReportsOpen(false); }}
                     style={{ padding: '0.9rem 1.5rem', textAlign: 'left', background: activeTab === 'reports-status-based' ? '#eff6ff' : 'none', border: 'none', borderBottom: '1px solid #f1f5f9', fontWeight: activeTab === 'reports-status-based' ? '700' : '500', color: activeTab === 'reports-status-based' ? '#2563eb' : '#0f172a', cursor: 'pointer', fontSize: '0.95rem' }}>
-                    Tasks - Work Log
+                    Timesheet - Detailed
                   </button>
                 )}
                 {canReport('timesheet-overall') && (
                   <button onClick={() => { navigateToTab('timesheet-overall'); setMobileReportsOpen(false); }}
                     style={{ padding: '0.9rem 1.5rem', textAlign: 'left', background: activeTab === 'timesheet-overall' ? '#eff6ff' : 'none', border: 'none', borderBottom: '1px solid #f1f5f9', fontWeight: activeTab === 'timesheet-overall' ? '700' : '500', color: activeTab === 'timesheet-overall' ? '#2563eb' : '#0f172a', cursor: 'pointer', fontSize: '0.95rem' }}>
                     Timesheet - Summary
-                  </button>
-                )}
-                {canReport('timesheet-individual') && (
-                  <button onClick={() => { navigateToTab('timesheet-individual'); setMobileMoreOpen(false); setMobileReportsOpen(meta => false); }}
-                    style={{ padding: '0.9rem 1.5rem', textAlign: 'left', background: activeTab === 'timesheet-individual' ? '#eff6ff' : 'none', border: 'none', borderBottom: '1px solid #f1f5f9', fontWeight: activeTab === 'timesheet-individual' ? '700' : '500', color: activeTab === 'timesheet-individual' ? '#2563eb' : '#0f172a', cursor: 'pointer', fontSize: '0.95rem' }}>
-                    Timesheet - Individual
                   </button>
                 )}
                 {canReport('daily-load-all') && (

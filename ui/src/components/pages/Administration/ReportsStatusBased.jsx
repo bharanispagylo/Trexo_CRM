@@ -55,20 +55,37 @@ const STATUS_STYLE = {
 
 const STATUSES = ['To Do', 'In Progress', 'To Approved', 'Approved', 'Delivered', 'On Hold', 'In Testing', 'Dev Verified', 'Prod Verified', 'Not an issue'];
 
-export default function ReportsStatusBased({ user, onNavigateToTask }) {
-  const [reportType, setReportType] = useState('daily');
+export default function ReportsStatusBased({ 
+  user, 
+  onNavigateToTask,
+  initialUserId,
+  onClearInitialUser,
+  initialFilter,
+  onClearInitialFilter,
+  initialDate,
+  onClearInitialDate
+}) {
+  const [reportType, setReportType] = useState(initialFilter || 'daily');
 
-  const [selectedDailyDate, setSelectedDailyDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedMonth, setSelectedMonth]         = useState(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear]           = useState(new Date().getFullYear());
-  const [selectedWeekDate, setSelectedWeekDate]   = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDailyDate, setSelectedDailyDate] = useState(
+    initialFilter === 'daily' && initialDate ? initialDate : new Date().toISOString().split('T')[0]
+  );
+  const [selectedMonth, setSelectedMonth]         = useState(
+    initialFilter === 'monthly' && initialDate ? new Date(initialDate + 'T00:00:00').getMonth() + 1 : new Date().getMonth() + 1
+  );
+  const [selectedYear, setSelectedYear]           = useState(
+    initialFilter === 'monthly' && initialDate ? new Date(initialDate + 'T00:00:00').getFullYear() : new Date().getFullYear()
+  );
+  const [selectedWeekDate, setSelectedWeekDate]   = useState(
+    initialFilter === 'weekly' && initialDate ? initialDate : new Date().toISOString().split('T')[0]
+  );
   const [customStartDate, setCustomStartDate]     = useState(
     new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]
   );
   const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   const [selectedProject,  setSelectedProject]  = useState('All Projects');
-  const [selectedAssignee, setSelectedAssignee] = useState('All Assignees');
+  const [selectedAssignee, setSelectedAssignee] = useState(initialUserId || 'All Assignees');
   const [selectedClient,   setSelectedClient]   = useState('All Clients');
   const [selectedStatus,   setSelectedStatus]   = useState('All');
 
@@ -85,10 +102,17 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
   const isTeamLeadOrAdmin = isAdmin || user?.role?.toLowerCase() === 'team lead';
 
   useEffect(() => {
-    if ((worklogLevel === 'Self' || !isTeamLeadOrAdmin) && user?.id) {
+    if (initialUserId && onClearInitialUser) onClearInitialUser();
+    if (initialFilter && onClearInitialFilter) onClearInitialFilter();
+    if (initialDate && onClearInitialDate) onClearInitialDate();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if ((worklogLevel === 'Self' || !isTeamLeadOrAdmin) && user?.id && !initialUserId) {
       setSelectedAssignee(user.id);
     }
-  }, [worklogLevel, isTeamLeadOrAdmin, user?.id]);
+  }, [worklogLevel, isTeamLeadOrAdmin, user?.id, initialUserId]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -556,10 +580,10 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
               </tr>
             </thead>
             <tbody>
-              {displayedTasks.map(task => {
+              {displayedTasks.map((task, idx) => {
                 const st = STATUS_STYLE[task.status] || { bg: '#f1f5f9', color: '#475569' };
                 return (
-                  <tr key={task.id}>
+                  <tr key={`${task.id}_${idx}`}>
                     <td>{getDisplayId(task)}</td>
                     <td className="task-title-cell">
                       <span
@@ -618,7 +642,7 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
 
         {/* Mobile View */}
         <div className="mobile-cards-view">
-          {displayedTasks.map(task => {
+          {displayedTasks.map((task, idx) => {
             const displayId = getDisplayId(task);
             const st = STATUS_STYLE[task.status] || { bg: '#f1f5f9', color: '#475569' };
             const projName = task.projectName || '-';
@@ -635,7 +659,7 @@ export default function ReportsStatusBased({ user, onNavigateToTask }) {
             }
 
             return (
-              <div key={task.id} className="reports-mobile-card">
+              <div key={`${task.id}_${idx}`} className="reports-mobile-card">
                 <div className="reports-mobile-card-header">
                   <span 
                     className="reports-mobile-card-id"
