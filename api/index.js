@@ -127,12 +127,14 @@ if (!process.env.VERCEL) {
     // All columns that may be missing from the task_lists table due to schema drift
     const taskListColumnFixes = [
       'ALTER TABLE task_lists ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN DEFAULT false;',
+      'ALTER TABLE task_lists ADD COLUMN IF NOT EXISTS favorited_by TEXT;',
     ];
 
     for (const sql of taskListColumnFixes) {
       try {
         await prisma.$executeRawUnsafe(sql);
-        console.log('[Self-Healing] TaskList column is_favorite verified/added successfully.');
+        const colName = sql.match(/ADD COLUMN IF NOT EXISTS "?(\w+)"?/i)?.[1];
+        console.log(`[Self-Healing] TaskList column ${colName} verified/added successfully.`);
       } catch (e) {
         console.warn(`[Self-Healing] Warning for: ${sql.substring(0, 60)}...`, e.message);
       }
@@ -1053,6 +1055,7 @@ app.delete('/api/teams/:id', async (req, res) => {
 // 5. Projects
 app.get('/api/projects', async (req, res) => {
   try {
+    const userId = req.headers['x-user-id'];
     const projects = await prisma.project.findMany({
       include: {
         taskLists: {
@@ -1063,10 +1066,17 @@ app.get('/api/projects', async (req, res) => {
       },
       orderBy: { createdAt: 'desc' }
     });
-    // Map sentToId → sentTo so frontend stays compatible
+    // Map sentToId → sentTo so frontend stays compatible, and map isFavorite for taskLists
     const mapped = projects.map(p => ({
       ...p,
-      queries: (p.queries || []).map(q => ({ ...q, sentTo: q.sentToId }))
+      queries: (p.queries || []).map(q => ({ ...q, sentTo: q.sentToId })),
+      taskLists: (p.taskLists || []).map(list => {
+        const favoritedByArr = list.favoritedBy ? list.favoritedBy.split(',').map(id => id.trim()).filter(Boolean) : [];
+        return {
+          ...list,
+          isFavorite: userId ? favoritedByArr.includes(userId) : false
+        };
+      })
     }));
     res.json(mapped);
   } catch (error) {
@@ -1138,15 +1148,22 @@ app.delete('/api/projects/:id', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 // 5a. Task Lists
 app.get('/api/task-lists', async (req, res) => {
   try {
+    const userId = req.headers['x-user-id'];
     const taskLists = await prisma.taskList.findMany({
       include: { tasks: true, project: true },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(taskLists);
+    const mapped = taskLists.map(list => {
+      const favoritedByArr = list.favoritedBy ? list.favoritedBy.split(',').map(id => id.trim()).filter(Boolean) : [];
+      return {
+        ...list,
+        isFavorite: userId ? favoritedByArr.includes(userId) : false
+      };
+    });
+    res.json(mapped);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1182,12 +1199,41 @@ app.delete('/api/task-lists/:id', async (req, res) => {
 
 app.put('/api/task-lists/:id', async (req, res) => {
   try {
-    const { tasks, project, ...rest } = req.body;
+    const userId = req.headers['x-user-id'];
+    const { tasks, project, isFavorite, ...rest } = req.body;
+    let updatedData = { ...rest };
+    
+    if (isFavorite !== undefined && userId) {
+      // Fetch current task list to get favoritedBy
+      const currentList = await prisma.taskList.findUnique({
+        where: { id: req.params.id }
+      });
+      if (currentList) {
+        let favoritedByArr = currentList.favoritedBy ? currentList.favoritedBy.split(',').map(id => id.trim()).filter(Boolean) : [];
+        if (isFavorite) {
+          if (!favoritedByArr.includes(userId)) {
+            favoritedByArr.push(userId);
+          }
+        } else {
+          favoritedByArr = favoritedByArr.filter(id => id !== userId);
+        }
+        updatedData.favoritedBy = favoritedByArr.join(',');
+      }
+    } else if (isFavorite !== undefined) {
+      updatedData.isFavorite = isFavorite;
+    }
+    
     const taskList = await prisma.taskList.update({
       where: { id: req.params.id },
-      data: rest
+      data: updatedData
     });
-    res.json(taskList);
+    
+    // Return with the user's specific favorite status
+    const favoritedByArr = taskList.favoritedBy ? taskList.favoritedBy.split(',').map(id => id.trim()).filter(Boolean) : [];
+    res.json({
+      ...taskList,
+      isFavorite: userId ? favoritedByArr.includes(userId) : (taskList.isFavorite || false)
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1323,7 +1369,7 @@ app.post('/api/tasks', async (req, res) => {
         prefix = 'C';
       }
       for (const t of allTasks) {
-        if (t.taskNo && t.taskNo.toUpperCase().startsWith(prefix)) {
+        if (t.taskNo) {
           const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
           if (!isNaN(digits) && digits > maxNo && digits < 50000) {
             maxNo = digits;
@@ -1561,7 +1607,7 @@ app.put('/api/worklogs/:logId', async (req, res) => {
 
 app.get('/api/worklogs', async (req, res) => {
   try {
-    const { startDate, endDate, userId } = req.query;
+    const { startDate, endDate, userId, includeCalls } = req.query;
     const where = {};
     if (startDate || endDate) {
       where.logDate = {};
@@ -1574,8 +1620,10 @@ app.get('/api/worklogs', async (req, res) => {
     }
     if (userId && userId !== 'all') where.userId = userId;
     where.isBilled = false;
-    // Exclude calls/meetings tasks
-    where.task = { taskType: { not: 'calls/meetings' } };
+    // Exclude calls/meetings tasks unless explicitly requested
+    if (includeCalls !== 'true') {
+      where.task = { taskType: { not: 'calls/meetings' } };
+    }
     const logs = await prisma.workLog.findMany({
       where,
       include: { user: true, task: { select: { id: true, title: true, status: true, taskType: true, estimatedHours: true, approvedHours: true, actualHours: true } } },
@@ -2266,12 +2314,21 @@ app.get('/api/reports/status-based', async (req, res) => {
 
     if (workLogs.length === 0) return res.json([]);
 
-    // ── Step 2: aggregate timeSpent per task ──────────────────────────────────
-    const timeSpentMap = {};
+    // ── Step 2: aggregate timeSpent per (task, user) ──────────────────────────
+    const aggMap = {};
     workLogs.forEach(l => {
-      timeSpentMap[l.taskId] = (timeSpentMap[l.taskId] || 0) + (l.hoursWorked || 0);
+      const key = `${l.taskId}_${l.userId}`;
+      if (!aggMap[key]) {
+        aggMap[key] = {
+          taskId: l.taskId,
+          userId: l.userId,
+          hours: 0
+        };
+      }
+      aggMap[key].hours += Number(l.hoursWorked) || 0;
     });
-    const taskIds = Object.keys(timeSpentMap);
+    const aggEntries = Object.values(aggMap);
+    const taskIds = Array.from(new Set(aggEntries.map(e => e.taskId)));
 
     // ── Step 3: fetch task details with optional filters ──────────────────────
     const taskWhere = { id: { in: taskIds } };
@@ -2285,22 +2342,27 @@ app.get('/api/reports/status-based', async (req, res) => {
     });
 
     // ── Step 4: build result sorted by timeSpent desc ─────────────────────────
-    const result = tasks
-      .map(({ projectRef, ...t }) => ({
-        id:             t.id,
-        taskNo:         t.taskNo,
-        parentId:       t.parentId,
-        title:          t.title,
-        projectName:    projectRef?.name || '',
-        assignees:      t.assignees,
-        status:         t.status,
-        timeSpent:      timeSpentMap[t.id] || 0,
-        billableHours:  t.approvedHours   || 0,
-        estimatedHours: t.estimatedHours  || 0,
-        dueDate:        t.dueDate,
-        priority:       t.priority,
-        taskType:       t.taskType,
-      }))
+    const result = aggEntries
+      .map(entry => {
+        const t = tasks.find(task => task.id === entry.taskId);
+        if (!t) return null; // Filtered out by task filters (project, status, client)
+        return {
+          id:             t.id,
+          taskNo:         t.taskNo,
+          parentId:       t.parentId,
+          title:          t.title,
+          projectName:    t.projectRef?.name || '',
+          assignees:      entry.userId,
+          status:         t.status,
+          timeSpent:      entry.hours,
+          billableHours:  t.approvedHours   || 0,
+          estimatedHours: t.estimatedHours  || 0,
+          dueDate:        t.dueDate,
+          priority:       t.priority,
+          taskType:       t.taskType,
+        };
+      })
+      .filter(Boolean)
       .sort((a, b) => b.timeSpent - a.timeSpent);
 
     res.json(result);
@@ -2595,7 +2657,7 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
       prefix = 'C';
     }
     for (const t of allTasks) {
-      if (t.taskNo && t.taskNo.toUpperCase().startsWith(prefix)) {
+      if (t.taskNo) {
         const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
         if (!isNaN(digits) && digits > maxNo && digits < 50000) {
           maxNo = digits;

@@ -112,7 +112,7 @@ export default function TimesheetOverall({ onUserClick }) {
       setLoading(true);
       try {
         const { startDate, endDate } = getDateRange(filter, selectedDate);
-        const data = await api.get(`/worklogs?startDate=${startDate}&endDate=${endDate}`);
+        const data = await api.get(`/worklogs?startDate=${startDate}&endDate=${endDate}&includeCalls=true`);
         setLogs(data || []);
       } catch (err) {
         console.error(err);
@@ -127,9 +127,25 @@ export default function TimesheetOverall({ onUserClick }) {
   logs.filter(log => !log.isBilled).forEach(log => {
     const key = log.userId || 'unknown';
     const name = log.user?.fullName || `${log.user?.firstName || ''} ${log.user?.lastName || ''}`.trim() || 'Unknown';
-    if (!grouped[key]) grouped[key] = { userId: key, name, taskIds: new Set(), hours: 0 };
-    grouped[key].taskIds.add(log.taskId);
-    grouped[key].hours += Number(log.hoursWorked) || 0;
+    if (!grouped[key]) {
+      grouped[key] = { 
+        userId: key, 
+        name, 
+        taskIds: new Set(), 
+        taskHours: 0,
+        callHours: 0,
+        totalHours: 0
+      };
+    }
+    const isCall = log.task?.taskType === 'calls/meetings';
+    const hours = Number(log.hoursWorked) || 0;
+    if (isCall) {
+      grouped[key].callHours += hours;
+    } else {
+      grouped[key].taskIds.add(log.taskId);
+      grouped[key].taskHours += hours;
+    }
+    grouped[key].totalHours += hours;
   });
   const rows = Object.values(grouped);
 
@@ -137,8 +153,8 @@ export default function TimesheetOverall({ onUserClick }) {
     const label = formatDisplayDate(filter, selectedDate).replace(/\//g, '-').replace(/ /g, '');
     downloadCSV(
       `timesheet-overall-${label}.csv`,
-      ['Assignee', 'Tasks #', 'TIMESPENT HRS'],
-      rows.map(r => [r.name, r.taskIds.size, r.hours.toFixed(1)])
+      ['Assignee', 'Tasks #', 'Task Hrs', 'Call Hrs', 'Total Hrs'],
+      rows.map(r => [r.name, r.taskIds.size, r.taskHours.toFixed(1), r.callHours.toFixed(1), r.totalHours.toFixed(1)])
     );
   };
 
@@ -174,7 +190,7 @@ export default function TimesheetOverall({ onUserClick }) {
           <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '0.75rem 1.5rem' }}>
             <span style={{ fontSize: '0.7rem', color: '#0369a1', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Total Hours</span>
             <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', lineHeight: 1.2 }}>
-              {rows.reduce((sum, r) => sum + r.hours, 0).toFixed(1)}h
+              {rows.reduce((sum, r) => sum + r.totalHours, 0).toFixed(1)}h
             </span>
           </div>
         </div>
@@ -205,7 +221,9 @@ export default function TimesheetOverall({ onUserClick }) {
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                   <th style={{ padding: '0.85rem 1.25rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Assignee</th>
                   <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Tasks #</th>
-                  <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>TIMESPENT HRS</th>
+                  <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Task Hrs</th>
+                  <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Call Hrs</th>
+                  <th style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Total Hrs</th>
                 </tr>
               </thead>
               <tbody>
@@ -219,7 +237,9 @@ export default function TimesheetOverall({ onUserClick }) {
                   >
                     <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.87rem', fontWeight: '600', color: onUserClick && row.userId !== 'unknown' ? '#2563eb' : '#0f172a' }}>{row.name}</td>
                     <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.taskIds.size}</td>
-                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', fontWeight: '700', color: '#2563eb' }}>{row.hours.toFixed(1)}</td>
+                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.taskHours.toFixed(1)}</td>
+                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.callHours.toFixed(1)}</td>
+                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', fontWeight: '700', color: '#2563eb' }}>{row.totalHours.toFixed(1)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -245,7 +265,7 @@ export default function TimesheetOverall({ onUserClick }) {
                 </div>
                 
                 <div className="reports-mobile-card-body">
-                  <div className="reports-mobile-card-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                  <div className="reports-mobile-card-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0.75rem 1rem' }}>
                     <div className="reports-mobile-card-grid-item">
                       <span className="reports-mobile-card-grid-label">Tasks Count</span>
                       <span className="reports-mobile-card-grid-value">
@@ -253,9 +273,21 @@ export default function TimesheetOverall({ onUserClick }) {
                       </span>
                     </div>
                     <div className="reports-mobile-card-grid-item">
-                      <span className="reports-mobile-card-grid-label">Time Spent</span>
-                      <span className="reports-mobile-card-grid-value" style={{ color: '#2563eb' }}>
-                        {row.hours.toFixed(1)}h
+                      <span className="reports-mobile-card-grid-label">Task Hours</span>
+                      <span className="reports-mobile-card-grid-value">
+                        {row.taskHours.toFixed(1)}h
+                      </span>
+                    </div>
+                    <div className="reports-mobile-card-grid-item">
+                      <span className="reports-mobile-card-grid-label">Call Hours</span>
+                      <span className="reports-mobile-card-grid-value">
+                        {row.callHours.toFixed(1)}h
+                      </span>
+                    </div>
+                    <div className="reports-mobile-card-grid-item">
+                      <span className="reports-mobile-card-grid-label">Total Hours</span>
+                      <span className="reports-mobile-card-grid-value" style={{ color: '#2563eb', fontWeight: '700' }}>
+                        {row.totalHours.toFixed(1)}h
                       </span>
                     </div>
                   </div>
