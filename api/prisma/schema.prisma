@@ -160,6 +160,13 @@ model Task {
   createdBy   String?  @map("created_by")
   creatorId   String?  @map("creator_id")
 
+  recurringTemplateId String?   @map("recurring_template_id")
+  recurringTemplate   Task?     @relation("RecurringInstances", fields: [recurringTemplateId], references: [id], onDelete: Cascade)
+  recurringInstances  Task[]    @relation("RecurringInstances")
+  recurrenceFrequency String?   @map("recurrence_frequency")
+  recurrenceDetail    String?   @map("recurrence_detail")
+  nextOccurrence      DateTime? @map("next_occurrence")
+  lastOccurrence      DateTime? @map("last_occurrence")
 
   comments    Comment[]
   estimations Estimation[]

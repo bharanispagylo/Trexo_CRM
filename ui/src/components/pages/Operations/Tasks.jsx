@@ -298,6 +298,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const [parentTask, setParentTask] = useState(null);
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
   const [previewImageName, setPreviewImageName] = useState('');
+  const [weeklyDropdownOpen, setWeeklyDropdownOpen] = useState(false);
 
   const [form, setForm] = useState(() => {
     const defaults = {
@@ -2277,9 +2278,194 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       <option value="Task">Task</option>
                       <option value="Bug">Bug</option>
                       <option value="calls/meetings">Calls/Meetings</option>
+                      <option value="Recurring Task">Recurring Task</option>
                     </select>
                   </span>
                 </div>
+
+                {(form.taskType === 'Recurring Task' || form.recurringTemplateId) && (
+                  <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                      Recurrence
+                    </span>
+                    <span className="saas-meta-value">
+                      <select 
+                        value={form.recurrenceFrequency || ''} 
+                        onChange={e => {
+                          const val = e.target.value || null;
+                          let detail = '';
+                          if (val === 'Weekday') detail = 'Monday';
+                          else if (val === 'Weekly') detail = 'Monday';
+                          else if (val === 'Monthly') detail = '1';
+                          else if (val === 'Yearly') detail = new Date().toISOString().split('T')[0];
+                          const updated = { ...form, recurrenceFrequency: val, recurrenceDetail: detail };
+                          setForm(updated);
+                          setWeeklyDropdownOpen(false);
+                          if (!isEditing) handleInlineSave(updated);
+                        }} 
+                        disabled={!canEdit} 
+                        className="saas-grid-select" 
+                        style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}
+                      >
+                        <option value="">None (One-time)</option>
+                        <option value="Weekday">Week day</option>
+                        <option value="Weekly">Weekly</option>
+                        <option value="Monthly">Monthly</option>
+                        <option value="Yearly">Yearly</option>
+                      </select>
+                    </span>
+                  </div>
+                )}
+
+                {/* Recurrence Detail — "Every" row */}
+                {(form.taskType === 'Recurring Task' || form.recurringTemplateId) && form.recurrenceFrequency && (
+                  <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      Every
+                    </span>
+                    <span className="saas-meta-value">
+
+                      {/* Weekday: single weekday dropdown (Mon-Fri) */}
+                      {form.recurrenceFrequency === 'Weekday' && (
+                        <select
+                          value={form.recurrenceDetail || 'Monday'}
+                          onChange={e => {
+                            const updated = { ...form, recurrenceDetail: e.target.value };
+                            setForm(updated);
+                            if (!isEditing) handleInlineSave(updated);
+                          }}
+                          disabled={!canEdit}
+                          className="saas-grid-select"
+                          style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}
+                        >
+                          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => (
+                            <option key={day} value={day}>{day}</option>
+                          ))}
+                        </select>
+                      )}
+
+                      {/* Weekly: multi-select checkbox dropdown (Mon-Sun) */}
+                      {form.recurrenceFrequency === 'Weekly' && (() => {
+                        const weeklyDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                        const selectedDays = form.recurrenceDetail ? form.recurrenceDetail.split(',').map(s => s.trim()).filter(Boolean) : [];
+                        const handleDayToggle = (day) => {
+                          let newSelected;
+                          if (selectedDays.includes(day)) {
+                            newSelected = selectedDays.filter(d => d !== day);
+                          } else {
+                            newSelected = [...selectedDays, day];
+                          }
+                          newSelected.sort((a, b) => weeklyDays.indexOf(a) - weeklyDays.indexOf(b));
+                          const val = newSelected.join(',');
+                          const updated = { ...form, recurrenceDetail: val };
+                          setForm(updated);
+                          if (!isEditing) handleInlineSave(updated);
+                        };
+                        return (
+                          <div style={{ position: 'relative', display: 'inline-block' }}>
+                            <button
+                              type="button"
+                              onClick={() => setWeeklyDropdownOpen(!weeklyDropdownOpen)}
+                              disabled={!canEdit}
+                              style={{
+                                padding: '0.4rem 0.6rem',
+                                border: '1px solid transparent',
+                                borderRadius: '4px',
+                                background: 'transparent',
+                                cursor: canEdit ? 'pointer' : 'default',
+                                color: '#64748b',
+                                fontWeight: 600,
+                                fontSize: '0.85rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                textAlign: 'left',
+                                minWidth: '120px'
+                              }}
+                            >
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                                {selectedDays.length > 0 ? selectedDays.join(', ') : 'Select Day(s)...'}
+                              </span>
+                              <svg viewBox="0 0 10 6" width="8" height="5" fill="#64748b" style={{ flexShrink: 0 }}><path d="M0 0l5 6 5-6z"/></svg>
+                            </button>
+                            {weeklyDropdownOpen && (
+                              <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                background: '#fff',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '6px',
+                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                                padding: '0.5rem',
+                                zIndex: 50,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.25rem',
+                                minWidth: '160px',
+                                marginTop: '2px'
+                              }}>
+                                {weeklyDays.map(day => (
+                                  <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155', fontSize: '0.85rem', cursor: 'pointer', userSelect: 'none', padding: '0.2rem 0.3rem', borderRadius: '3px' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedDays.includes(day)}
+                                      onChange={() => handleDayToggle(day)}
+                                      disabled={!canEdit}
+                                      style={{ cursor: 'pointer', accentColor: '#2563eb' }}
+                                    />
+                                    <span>{day}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {/* Monthly: dropdown with dates 1-30 + Last Day of Month */}
+                      {form.recurrenceFrequency === 'Monthly' && (
+                        <select
+                          value={form.recurrenceDetail || '1'}
+                          onChange={e => {
+                            const updated = { ...form, recurrenceDetail: e.target.value };
+                            setForm(updated);
+                            if (!isEditing) handleInlineSave(updated);
+                          }}
+                          disabled={!canEdit}
+                          className="saas-grid-select"
+                          style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}
+                        >
+                          {Array.from({ length: 30 }, (_, i) => i + 1).map(d => (
+                            <option key={d} value={String(d)}>{d}</option>
+                          ))}
+                          <option value="Last Day of Month">Last Day of Month</option>
+                        </select>
+                      )}
+
+                      {/* Yearly: date picker for month and day */}
+                      {form.recurrenceFrequency === 'Yearly' && (
+                        <input
+                          type="date"
+                          value={form.recurrenceDetail || ''}
+                          onChange={e => {
+                            const updated = { ...form, recurrenceDetail: e.target.value };
+                            setForm(updated);
+                            if (!isEditing) handleInlineSave(updated);
+                          }}
+                          disabled={!canEdit}
+                          className="saas-detail-date-input"
+                          style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', borderRadius: '4px', background: 'transparent', color: '#64748b', fontWeight: 600 }}
+                        />
+                      )}
+
+                    </span>
+                  </div>
+                )}
 
                 {/* Row 2: Dates (Due Date -> Delivery Date) */}
                 {form.taskType !== 'calls/meetings' && (
@@ -4428,7 +4614,17 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     setDrawerOpen(true);
   };
 
-  const closeDrawer = () => { setDrawerOpen(false); setDrawerTask(null); if (onTaskSelect) onTaskSelect(null); };
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+    setDrawerTask(null);
+    if (onTaskSelect) onTaskSelect(null);
+    if (window.history.state && window.history.state.fromApp) {
+      window.history.back();
+    } else {
+      window.history.pushState(null, '', '/tasks');
+      window.dispatchEvent(new Event('popstate'));
+    }
+  };
 
   const openInlineAdd = (proj, statusId, taskListId = null) => {
     let finalProjId = null;
@@ -4514,8 +4710,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       const assigneesList = t.assignees ? t.assignees.split(',').map(a => a.trim().toLowerCase()) : [];
       const currentUserId = (user?.id || '').trim().toLowerCase();
       if (!currentUserId || !assigneesList.includes(currentUserId)) return false;
+    } else if (subTab === 'recurring') {
+      if (type !== 'Recurring Task') return false;
     } else {
       if (type === 'calls/meetings') return false;
+      if (type === 'Recurring Task') return false; // hide template tasks from normal tabs
     }
 
     // 1. Type Filter
@@ -4530,12 +4729,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     }
 
     // 2. Project Filter
-    if (subTab !== 'calls' && filterProjectName && t.projectName !== filterProjectName) {
+    if (subTab !== 'calls' && subTab !== 'recurring' && filterProjectName && t.projectName !== filterProjectName) {
       return false;
     }
 
     // 2. Date Filter
-    if (subTab !== 'calls' && (filterFromDate || filterToDate)) {
+    if (subTab !== 'calls' && subTab !== 'recurring' && (filterFromDate || filterToDate)) {
       const getLocalDateStr = (dateStr) => {
         if (!dateStr) return null;
         const d = new Date(dateStr);
@@ -4573,7 +4772,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     return assignees.includes(targetId);
   });
 
-  const pageTitle = subTab === 'my' ? '' : subTab === 'calls' ? 'Calls/Meeting' : 'All Tasks';
+  const pageTitle = subTab === 'my' ? '' : subTab === 'calls' ? 'Calls/Meeting' : subTab === 'recurring' ? 'Recurring Tasks' : 'All Tasks';
 
   if (loading || openingInitialTask) {
     return (
@@ -4585,7 +4784,30 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     );
   }
 
-
+  if (drawerOpen && drawerTask) {
+    return (
+      <div className="tasks-3col-layout" style={{ background: '#f8fafc' }}>
+        <TaskDetailView
+          task={drawerTask}
+          tasks={tasks}
+          onRefresh={fetchTasks}
+          onSelectTask={(t) => setDrawerTask(t)}
+          onSave={async (taskData, silent) => {
+            const saved = await handleSaveTask(taskData, silent);
+            if (!silent) {
+              closeDrawer();
+            } else if (saved) {
+              setDrawerTask(saved);
+            }
+          }}
+          onDelete={async (id) => { await handleDeleteTask(id); closeDrawer(); }}
+          onClose={closeDrawer}
+          currentUser={user}
+          initialEditMode={taskDetailMode}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="tasks-3col-layout">
@@ -6413,7 +6635,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                       <span className="cu-section-count">{statusTasks.length}</span>
                     </div>
                     <div className="cu-section-right">
-                      {can('tasks', 'create') && subTab !== 'my' && (
+                      {can('tasks', 'create') && subTab !== 'my' && subTab !== 'recurring' && (
                         <button className="cu-section-add-btn" title={`Add task to ${col.label}`}
                           onClick={() => openInlineAdd('', col.id)}>+</button>
                       )}
@@ -6787,7 +7009,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                               </td>
                             </tr>
                           ) : (
-                            can('tasks', 'create') && subTab !== 'my' && (
+                            can('tasks', 'create') && subTab !== 'my' && subTab !== 'recurring' && (
                               <tr className="cu-add-row" onClick={() => openInlineAdd('', col.id)}>
                                 <td colSpan="4">
                                   <span className="cu-add-icon">+</span>
@@ -6812,30 +7034,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Side Drawer ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
 
       {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Side Drawer ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
-      {drawerOpen && (
-        <div className="task-drawer-overlay" onClick={e => { if (e.target === e.currentTarget) closeDrawer(); }}>
-          <div className="task-drawer-panel">
-            <TaskDetailView
-              task={drawerTask}
-              tasks={tasks}
-              onRefresh={fetchTasks}
-              onSelectTask={(t) => setDrawerTask(t)}
-              onSave={async (taskData, silent) => {
-                const saved = await handleSaveTask(taskData, silent);
-                if (!silent) {
-                  closeDrawer();
-                } else if (saved) {
-                  setDrawerTask(saved);
-                }
-              }}
-              onDelete={async (id) => { await handleDeleteTask(id); closeDrawer(); }}
-              onClose={closeDrawer}
-              currentUser={user}
-              initialEditMode={taskDetailMode}
-            />
-          </div>
-        </div>
-      )}
+
       
       <PromptModal
         isOpen={promptState.isOpen}

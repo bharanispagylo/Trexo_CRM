@@ -143,7 +143,13 @@ async function sendNotificationEmail(to, subject, context, type = 'notification'
     }
   }
 
-  const fromAddress = process.env.EMAIL_FROM || '"Admin" <admin@spagylo.com>';
+  let fromAddress = process.env.EMAIL_FROM || '"Admin" <admin@spagylo.com>';
+  if (context && context.author) {
+    const match = fromAddress.match(/<([^>]+)>/);
+    const rawEmail = match ? match[1] : 'admin@spagylo.com';
+    const displayAuthor = context.author.replace(/"/g, '');
+    fromAddress = `"${displayAuthor}" <${rawEmail}>`;
+  }
 
   const emailParams = {
     Destination: {
