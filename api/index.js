@@ -114,6 +114,11 @@ if (!process.env.VERCEL) {
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS parent_id TEXT;',
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS created_by TEXT;',
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS creator_id TEXT;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS recurring_template_id TEXT;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS recurrence_frequency TEXT;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS recurrence_detail TEXT;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS next_occurrence TIMESTAMP;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS last_occurrence TIMESTAMP;',
     ];
 
     for (const sql of taskColumnFixes) {
@@ -1097,9 +1102,20 @@ app.post('/api/projects', async (req, res) => {
 
     const project = await prisma.project.create({ data });
     if (project.members) {
+      const userIdFromHeader = req.headers['x-user-id'];
+      let creatorName = 'Admin';
+      if (userIdFromHeader) {
+        const userObj = await prisma.user.findUnique({
+          where: { id: userIdFromHeader }
+        });
+        if (userObj) {
+          creatorName = userObj.fullName || `${userObj.firstName || ''} ${userObj.lastName || ''}`.trim() || userObj.email;
+        }
+      }
+
       createNotification(project.members, `New Project: ${project.name}`, `You have been added to the project team.`);
       notifyEmailsByNames(project.members, `New Project: ${project.name}`, {
-        author: 'Admin',
+        author: creatorName,
         action: 'added you to',
         itemTitle: project.name,
         boardName: 'Projects Board',
@@ -1313,9 +1329,21 @@ app.get('/api/tasks/:idOrDisplayId', async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
+    let recurrenceFrequency = task.recurrenceFrequency;
+    if (task.recurringTemplateId) {
+      const template = await prisma.task.findUnique({
+        where: { id: task.recurringTemplateId },
+        select: { recurrenceFrequency: true }
+      });
+      if (template) {
+        recurrenceFrequency = template.recurrenceFrequency;
+      }
+    }
+
     const result = {
       ...task,
-      projectName: task.projectRef?.name || ''
+      projectName: task.projectRef?.name || '',
+      recurrenceFrequency
     };
     res.json(result);
   } catch (error) {
@@ -1347,7 +1375,7 @@ app.post('/api/tasks', async (req, res) => {
 
     
     // Sanitize and convert dates
-    ['dueDate', 'assignedDate', 'deliveredDate'].forEach(key => {
+    ['dueDate', 'assignedDate', 'deliveredDate', 'nextOccurrence', 'lastOccurrence'].forEach(key => {
       if (taskData[key]) {
         const d = new Date(taskData[key]);
         if (!isNaN(d.getTime())) {
@@ -1359,6 +1387,10 @@ app.post('/api/tasks', async (req, res) => {
         delete taskData[key];
       }
     });
+
+    if (taskData.taskType === 'Recurring Task' && taskData.recurrenceFrequency) {
+      taskData.nextOccurrence = getInitialRecurrenceDate(taskData.recurrenceFrequency, taskData.recurrenceDetail, taskData.dueDate || new Date());
+    }
 
     // Sanitize numbers
     ['estimatedHours', 'approvedHours', 'actualHours', 'employeeHours', 'billableAmount'].forEach(key => {
@@ -1406,7 +1438,7 @@ app.post('/api/tasks', async (req, res) => {
       createNotification(task.assignees, `New Task Assigned: ${task.title}`, `You have been assigned to a new task.`);
       const { taskListName, projectName } = await getTaskDetailsForEmail(task);
       notifyEmailsByNames(task.assignees, `New Task Assigned: ${task.title}`, {
-        author: createdByName || 'Admin',
+        author: finalCreatedBy || createdByName || 'Admin',
         action: 'assigned you to',
         itemTitle: task.title,
         boardName: taskListName,
@@ -1455,6 +1487,17 @@ app.put('/api/tasks/:id', async (req, res) => {
     console.log('PUT /api/tasks body:', req.body);
     let { id, createdAt, comments, updatedBy: updatedByName, ...taskData } = req.body;
     
+    const userIdFromHeader = req.headers['x-user-id'];
+    let finalUpdaterName = updatedByName || null;
+    if (userIdFromHeader) {
+      const userObj = await prisma.user.findUnique({
+        where: { id: userIdFromHeader }
+      });
+      if (userObj) {
+        finalUpdaterName = userObj.fullName || `${userObj.firstName || ''} ${userObj.lastName || ''}`.trim() || userObj.email;
+      }
+    }
+    
     // Fetch existing task to compare assignees
     const existingTask = await prisma.task.findUnique({
       where: { id: req.params.id }
@@ -1464,18 +1507,66 @@ app.put('/api/tasks/:id', async (req, res) => {
     }
 
     // Sanitize and convert dates
-    ['dueDate', 'assignedDate', 'deliveredDate'].forEach(key => {
-      if (taskData[key]) {
-        const d = new Date(taskData[key]);
-        if (!isNaN(d.getTime())) {
-          taskData[key] = d;
+    ['dueDate', 'assignedDate', 'deliveredDate', 'nextOccurrence', 'lastOccurrence'].forEach(key => {
+      if (taskData[key] !== undefined) {
+        if (taskData[key]) {
+          const d = new Date(taskData[key]);
+          if (!isNaN(d.getTime())) {
+            taskData[key] = d;
+          } else {
+            taskData[key] = null;
+          }
         } else {
-          taskData[key] = null; // Use null for invalid/empty dates
+          taskData[key] = null;
         }
-      } else {
-        taskData[key] = null;
       }
     });
+
+    // Recurrence frequency and detail delegation logic
+    if (taskData.recurrenceFrequency !== undefined || taskData.recurrenceDetail !== undefined) {
+      const frequencyVal = taskData.recurrenceFrequency !== undefined ? taskData.recurrenceFrequency : existingTask.recurrenceFrequency;
+      const detailVal = taskData.recurrenceDetail !== undefined ? taskData.recurrenceDetail : existingTask.recurrenceDetail;
+
+      if (existingTask.recurringTemplateId) {
+        // Save on the template instead of the instance
+        const updateData = {};
+        if (taskData.recurrenceFrequency !== undefined) {
+          updateData.recurrenceFrequency = taskData.recurrenceFrequency;
+        }
+        if (taskData.recurrenceDetail !== undefined) {
+          updateData.recurrenceDetail = taskData.recurrenceDetail;
+        }
+
+        // Get existing template to see if we need to update nextOccurrence
+        const templateTask = await prisma.task.findUnique({ where: { id: existingTask.recurringTemplateId } });
+        if (templateTask) {
+          const finalFreq = updateData.recurrenceFrequency !== undefined ? updateData.recurrenceFrequency : templateTask.recurrenceFrequency;
+          const finalDetail = updateData.recurrenceDetail !== undefined ? updateData.recurrenceDetail : templateTask.recurrenceDetail;
+          
+          updateData.nextOccurrence = getInitialRecurrenceDate(finalFreq, finalDetail, templateTask.dueDate || new Date());
+        }
+
+        await prisma.task.update({
+          where: { id: existingTask.recurringTemplateId },
+          data: updateData
+        });
+
+        // Remove from current payload so it's not saved at the instance level
+        delete taskData.recurrenceFrequency;
+        delete taskData.recurrenceDetail;
+      } else {
+        // This is the template task. Save it directly.
+        taskData.nextOccurrence = getInitialRecurrenceDate(frequencyVal, detailVal, taskData.dueDate || existingTask.dueDate || new Date());
+      }
+    }
+
+    if (taskData.taskType === 'Recurring Task' && !existingTask.nextOccurrence) {
+      taskData.nextOccurrence = getInitialRecurrenceDate(
+        taskData.recurrenceFrequency || existingTask.recurrenceFrequency,
+        taskData.recurrenceDetail || existingTask.recurrenceDetail,
+        taskData.dueDate || existingTask.dueDate || new Date()
+      );
+    }
 
     // Sanitize numbers
     ['estimatedHours', 'approvedHours', 'actualHours', 'employeeHours', 'billableAmount'].forEach(key => {
@@ -1604,7 +1695,7 @@ app.put('/api/tasks/:id', async (req, res) => {
       createNotification(addedAssigneesStr, notificationTitle, notificationMsg);
       const { taskListName, projectName } = await getTaskDetailsForEmail(task);
       notifyEmailsByNames(addedAssigneesStr, notificationTitle, {
-        author: updatedByName || 'A team member',
+        author: finalUpdaterName || updatedByName || 'Admin',
         action: isReassignment ? 'reassigned you to' : 'assigned you to',
         itemTitle: task.title,
         boardName: taskListName,
@@ -2870,9 +2961,322 @@ const runMigrationIfNecessary = async () => {
   }
 };
 
+const calculateNextRecurrence = (frequency, detail, baseDate) => {
+  if (!frequency) return null;
+  const nextDate = new Date(baseDate);
+  const freq = frequency.toLowerCase();
+  const det = (detail || '').trim();
+
+  switch (freq) {
+    case 'weekday': {
+      const targetDay = {
+        monday: 1,
+        tuesday: 2,
+        wednesday: 3,
+        thursday: 4,
+        friday: 5
+      }[det.toLowerCase()] || 1;
+
+      nextDate.setDate(nextDate.getDate() + 1);
+      for (let i = 0; i < 7; i++) {
+        if (nextDate.getDay() === targetDay) {
+          break;
+        }
+        nextDate.setDate(nextDate.getDate() + 1);
+      }
+      return nextDate;
+    }
+    case 'weekly': {
+      const dayMap = {
+        sunday: 0,
+        monday: 1,
+        tuesday: 2,
+        wednesday: 3,
+        thursday: 4,
+        friday: 5,
+        saturday: 6
+      };
+      const targetDays = det
+        .split(',')
+        .map(d => dayMap[d.trim().toLowerCase()])
+        .filter(d => d !== undefined);
+
+      if (targetDays.length === 0) {
+        nextDate.setDate(nextDate.getDate() + 7);
+        return nextDate;
+      }
+
+      nextDate.setDate(nextDate.getDate() + 1);
+      for (let i = 0; i < 8; i++) {
+        if (targetDays.includes(nextDate.getDay())) {
+          break;
+        }
+        nextDate.setDate(nextDate.getDate() + 1);
+      }
+      return nextDate;
+    }
+    case 'monthly': {
+      if (det.toLowerCase().includes('last')) {
+        const year = nextDate.getFullYear();
+        const month = nextDate.getMonth();
+        return new Date(year, month + 2, 0);
+      } else {
+        const targetDay = parseInt(det, 10) || 1;
+        let targetMonth = (nextDate.getMonth() + 1) % 12;
+        let targetYear = nextDate.getFullYear();
+        if (nextDate.getMonth() === 11) {
+          targetYear += 1;
+        }
+        let next = new Date(targetYear, targetMonth, targetDay);
+        if (next.getMonth() !== targetMonth) {
+          next = new Date(targetYear, targetMonth + 1, 0);
+        }
+        return next;
+      }
+    }
+    case 'yearly': {
+      let targetMonth = nextDate.getMonth();
+      let targetDay = nextDate.getDate();
+
+      if (det.includes('-')) {
+        const parts = det.split('-');
+        if (parts.length === 3) {
+          targetMonth = parseInt(parts[1], 10) - 1;
+          targetDay = parseInt(parts[2], 10);
+        } else if (parts.length === 2) {
+          targetMonth = parseInt(parts[0], 10) - 1;
+          targetDay = parseInt(parts[1], 10);
+        }
+      }
+
+      const nextYear = nextDate.getFullYear() + 1;
+      let next = new Date(nextYear, targetMonth, targetDay);
+      if (next.getMonth() !== targetMonth) {
+        next = new Date(nextYear, targetMonth + 1, 0);
+      }
+      return next;
+    }
+    default:
+      nextDate.setDate(nextDate.getDate() + 1);
+      return nextDate;
+  }
+};
+
+const getInitialRecurrenceDate = (frequency, detail, baseDate) => {
+  if (!frequency) return null;
+  const start = new Date(baseDate);
+  const freq = frequency.toLowerCase();
+  const det = (detail || '').trim();
+
+  switch (freq) {
+    case 'weekday': {
+      const targetDay = {
+        monday: 1,
+        tuesday: 2,
+        wednesday: 3,
+        thursday: 4,
+        friday: 5
+      }[det.toLowerCase()] || 1;
+      
+      for (let i = 0; i < 7; i++) {
+        if (start.getDay() === targetDay) {
+          return start;
+        }
+        start.setDate(start.getDate() + 1);
+      }
+      return start;
+    }
+    case 'weekly': {
+      const dayMap = {
+        sunday: 0,
+        monday: 1,
+        tuesday: 2,
+        wednesday: 3,
+        thursday: 4,
+        friday: 5,
+        saturday: 6
+      };
+      const targetDays = det
+        .split(',')
+        .map(d => dayMap[d.trim().toLowerCase()])
+        .filter(d => d !== undefined);
+
+      if (targetDays.length === 0) {
+        return start;
+      }
+
+      for (let i = 0; i < 8; i++) {
+        if (targetDays.includes(start.getDay())) {
+          return start;
+        }
+        start.setDate(start.getDate() + 1);
+      }
+      return start;
+    }
+    case 'monthly': {
+      if (det.toLowerCase().includes('last')) {
+        const year = start.getFullYear();
+        const month = start.getMonth();
+        const lastDay = new Date(year, month + 1, 0);
+        if (lastDay >= baseDate) {
+          return lastDay;
+        }
+        return new Date(year, month + 2, 0);
+      } else {
+        const targetDay = parseInt(det, 10) || 1;
+        const year = start.getFullYear();
+        const month = start.getMonth();
+        let target = new Date(year, month, targetDay);
+        if (target.getMonth() !== month) {
+          target = new Date(year, month + 1, 0);
+        }
+        if (target >= baseDate) {
+          return target;
+        }
+        let nextMonth = (month + 1) % 12;
+        let nextYear = nextMonth === 0 ? year + 1 : year;
+        let next = new Date(nextYear, nextMonth, targetDay);
+        if (next.getMonth() !== nextMonth) {
+          next = new Date(nextYear, nextMonth + 1, 0);
+        }
+        return next;
+      }
+    }
+    case 'yearly': {
+      let targetMonth = start.getMonth();
+      let targetDay = start.getDate();
+
+      if (det.includes('-')) {
+        const parts = det.split('-');
+        if (parts.length === 3) {
+          targetMonth = parseInt(parts[1], 10) - 1;
+          targetDay = parseInt(parts[2], 10);
+        } else if (parts.length === 2) {
+          targetMonth = parseInt(parts[0], 10) - 1;
+          targetDay = parseInt(parts[1], 10);
+        }
+      }
+
+      const year = start.getFullYear();
+      let target = new Date(year, targetMonth, targetDay);
+      if (target.getMonth() !== targetMonth) {
+        target = new Date(year, targetMonth + 1, 0);
+      }
+      if (target >= baseDate) {
+        return target;
+      }
+      let next = new Date(year + 1, targetMonth, targetDay);
+      if (next.getMonth() !== targetMonth) {
+        next = new Date(year + 1, targetMonth + 1, 0);
+      }
+      return next;
+    }
+    default:
+      return start;
+  }
+};
+
+const checkAndGenerateRecurringTasks = async () => {
+  try {
+    const now = new Date();
+    const templates = await prisma.task.findMany({
+      where: {
+        taskType: 'Recurring Task',
+        recurrenceFrequency: { not: null },
+        nextOccurrence: { lte: now }
+      }
+    });
+
+    for (const template of templates) {
+      const currentNext = new Date(template.nextOccurrence);
+      const nextDate = calculateNextRecurrence(template.recurrenceFrequency, template.recurrenceDetail, currentNext);
+
+      await prisma.task.update({
+        where: { id: template.id },
+        data: {
+          lastOccurrence: currentNext,
+          nextOccurrence: nextDate
+        }
+      });
+
+      // 1. Process parameter placeholders in the title
+      let instanceTitle = template.title;
+      const dayStr = String(currentNext.getDate());
+      const yearStr = String(currentNext.getFullYear());
+      const monthAbbrev = currentNext.toLocaleString('default', { month: 'short' });
+      const monthFull = currentNext.toLocaleString('default', { month: 'long' });
+      const monthNum = String(currentNext.getMonth() + 1).padStart(2, '0');
+
+      instanceTitle = instanceTitle
+        .replace(/{day}/gi, dayStr)
+        .replace(/{date}/gi, dayStr)
+        .replace(/{dd}/gi, dayStr.padStart(2, '0'))
+        .replace(/{month}/g, monthAbbrev)
+        .replace(/{Month}/g, monthFull)
+        .replace(/{mmm}/gi, monthAbbrev)
+        .replace(/{MMMM}/g, monthFull)
+        .replace(/{month_num}/gi, monthNum)
+        .replace(/{mm}/gi, monthNum)
+        .replace(/{year}/gi, yearStr)
+        .replace(/{yyyy}/gi, yearStr)
+        .replace(/{YYYY}/gi, yearStr);
+
+      // Support user's example style like: Maintenance for {Aug} {2026}
+      const shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const longMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      for (let i = 0; i < 12; i++) {
+        instanceTitle = instanceTitle
+          .replace(new RegExp(`{${shortMonths[i]}}`, 'gi'), monthAbbrev)
+          .replace(new RegExp(`{${longMonths[i]}}`, 'gi'), monthFull);
+      }
+      instanceTitle = instanceTitle.replace(/{\d{4}}/g, yearStr);
+
+      // 2. Sequential task number calculation
+      const allTasks = await prisma.task.findMany({ select: { taskNo: true } });
+      let maxNo = 0;
+      for (const t of allTasks) {
+        if (t.taskNo) {
+          const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
+          if (!isNaN(digits) && digits > maxNo && digits < 50000) {
+            maxNo = digits;
+          }
+        }
+      }
+      const taskNo = `T${maxNo + 1}`;
+
+      // 3. Create the instance task
+      const newInstance = await prisma.task.create({
+        data: {
+          taskNo,
+          title: instanceTitle,
+          description: template.description,
+          taskType: 'Task', // Standard task type for the instance
+          projectId: template.projectId,
+          clientId: template.clientId,
+          assignees: template.assignees,
+          dueDate: currentNext,
+          status: 'To Do',
+          priority: template.priority,
+          tag: template.tag,
+          taskListId: template.taskListId,
+          createdBy: template.createdBy,
+          creatorId: template.creatorId,
+          recurringTemplateId: template.id
+        }
+      });
+
+      console.log(`[Recurring Task Scheduler] Generated instance task ${taskNo} (${newInstance.id}): "${instanceTitle}" from template ${template.id}`);
+    }
+  } catch (err) {
+    console.error('[Recurring Task Scheduler] Error checking/generating recurring tasks:', err);
+  }
+};
+
 app.listen(PORT, async () => {
   console.log(`Server is running on http://localhost:${PORT}`);
   await runMigrationIfNecessary();
+  await checkAndGenerateRecurringTasks();
+  setInterval(checkAndGenerateRecurringTasks, 10000); // Check every 10 seconds
 });
 
 module.exports = app;
