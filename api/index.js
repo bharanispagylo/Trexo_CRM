@@ -112,6 +112,8 @@ if (!process.env.VERCEL) {
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS attachments TEXT;',
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS "taskListId" TEXT;',
       'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS parent_id TEXT;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS created_by TEXT;',
+      'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS creator_id TEXT;',
     ];
 
     for (const sql of taskColumnFixes) {
@@ -1326,6 +1328,24 @@ app.post('/api/tasks', async (req, res) => {
     console.log('POST /api/tasks body:', req.body);
     let { id, comments, createdAt, createdBy: createdByName, ...taskData } = req.body;
     
+    // Resolve creator ID and creator name from headers
+    const userIdFromHeader = req.headers['x-user-id'];
+    let finalCreatorId = userIdFromHeader || null;
+    let finalCreatedBy = createdByName || null;
+
+    if (userIdFromHeader) {
+      const userObj = await prisma.user.findUnique({
+        where: { id: userIdFromHeader }
+      });
+      if (userObj) {
+        finalCreatedBy = userObj.fullName || `${userObj.firstName || ''} ${userObj.lastName || ''}`.trim() || userObj.email;
+      }
+    }
+
+    taskData.creatorId = finalCreatorId;
+    taskData.createdBy = finalCreatedBy;
+
+    
     // Sanitize and convert dates
     ['dueDate', 'assignedDate', 'deliveredDate'].forEach(key => {
       if (taskData[key]) {
@@ -1402,6 +1422,34 @@ app.post('/api/tasks', async (req, res) => {
   }
 });
 
+const isUpdaterAssignee = async (task, updaterId) => {
+  if (!updaterId) return false;
+  if (!task.assignees) return false;
+
+  const assigneesList = task.assignees.split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
+  if (assigneesList.includes(updaterId.toLowerCase())) {
+    return true;
+  }
+
+  // Look up updater user details
+  const updater = await prisma.user.findUnique({ where: { id: updaterId } });
+  if (!updater) return false;
+
+  const updaterEmail = (updater.email || '').toLowerCase();
+  const updaterFullName = (updater.fullName || '').toLowerCase();
+  const updaterFirstName = (updater.firstName || '').toLowerCase();
+  const updaterLastName = (updater.lastName || '').toLowerCase();
+
+  for (const assignee of assigneesList) {
+    if (assignee === updaterEmail) return true;
+    if (assignee === updaterFullName) return true;
+    if (assignee === updaterFirstName) return true;
+    if (assignee === updaterLastName) return true;
+  }
+
+  return false;
+};
+
 app.put('/api/tasks/:id', async (req, res) => {
   try {
     console.log('PUT /api/tasks body:', req.body);
@@ -1452,6 +1500,86 @@ app.put('/api/tasks/:id', async (req, res) => {
       where: { id: req.params.id },
       data: taskData
     });
+
+    // Check if status changed to "Delivered" and the updater is one of the assignees
+    const newStatus = taskData.status;
+    const oldStatus = existingTask.status;
+    if (newStatus !== undefined && newStatus === 'Delivered' && oldStatus !== 'Delivered') {
+      try {
+        const updaterId = req.headers['x-user-id'];
+        if (await isUpdaterAssignee(existingTask, updaterId)) {
+          let creatorEmail = null;
+          let creatorName = 'Creator';
+
+          // First try using creatorId
+          if (existingTask.creatorId) {
+            const creatorUser = await prisma.user.findUnique({ where: { id: existingTask.creatorId } });
+            if (creatorUser && creatorUser.email) {
+              creatorEmail = creatorUser.email;
+              creatorName = creatorUser.fullName || `${creatorUser.firstName || ''} ${creatorUser.lastName || ''}`.trim() || creatorUser.email;
+            }
+          }
+
+          // Next try using createdBy
+          if (!creatorEmail && existingTask.createdBy) {
+            const nameOrEmail = existingTask.createdBy.trim();
+            if (nameOrEmail.includes('@')) {
+              creatorEmail = nameOrEmail;
+            } else {
+              const creatorUser = await prisma.user.findFirst({
+                where: {
+                  OR: [
+                    { email: { equals: nameOrEmail, mode: 'insensitive' } },
+                    { fullName: { equals: nameOrEmail, mode: 'insensitive' } },
+                    { firstName: { equals: nameOrEmail, mode: 'insensitive' } },
+                    { lastName: { equals: nameOrEmail, mode: 'insensitive' } }
+                  ]
+                }
+              });
+              if (creatorUser && creatorUser.email) {
+                creatorEmail = creatorUser.email;
+                creatorName = creatorUser.fullName || `${creatorUser.firstName || ''} ${creatorUser.lastName || ''}`.trim() || creatorUser.email;
+              }
+            }
+          }
+
+          if (creatorEmail) {
+            const frontendUrl = process.env.FRONTEND_URL || 'https://crm.spagylo.com';
+            const route = task.id ? `/tasks/${task.id}` : '/tasks';
+            
+            // Resolve updater's name
+            let updaterName = updatedByName;
+            if (!updaterName && updaterId) {
+              const updaterUser = await prisma.user.findUnique({ where: { id: updaterId } });
+              if (updaterUser) {
+                updaterName = updaterUser.fullName || `${updaterUser.firstName || ''} ${updaterUser.lastName || ''}`.trim() || updaterUser.email;
+              }
+            }
+            if (!updaterName) {
+              updaterName = 'An assignee';
+            }
+
+            const { taskListName, projectName } = await getTaskDetailsForEmail(task);
+
+            const userContext = {
+              author: updaterName,
+              action: 'changed status to Delivered for',
+              itemTitle: task.title,
+              boardName: taskListName,
+              projectName: projectName,
+              buttonText: 'View Item',
+              taskId: getTaskDisplayId(task),
+              buttonLink: `${frontendUrl}${route}`
+            };
+
+            await sendNotificationEmail(creatorEmail, `Task Delivered: ${task.title}`, userContext, 'task');
+          }
+        }
+      } catch (err) {
+        console.error('[Delivered Notification Error]', err.message);
+      }
+    }
+
     
     // Determine newly added assignees to avoid spamming existing assignees
     const getAssigneesList = (assigneesStr) => {
