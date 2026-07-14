@@ -157,6 +157,9 @@ model Task {
   taskList    TaskList? @relation(fields: [taskListId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now()) @map("created_at")
   attachments String?
+  createdBy   String?  @map("created_by")
+  creatorId   String?  @map("creator_id")
+
 
   comments    Comment[]
   estimations Estimation[]
