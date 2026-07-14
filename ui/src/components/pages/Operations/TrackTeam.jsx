@@ -98,7 +98,7 @@ export default function TrackTeam({ user, onMemberClick }) {
       return;
     }
     if (!memberForm.designation || !memberForm.designation.trim()) {
-      alert('Designation is required.', 'warning', 'Validation Error');
+      alert('Team is required.', 'warning', 'Validation Error');
       return;
     }
 
@@ -286,7 +286,7 @@ export default function TrackTeam({ user, onMemberClick }) {
                       <option value="">Select Member...</option>
                       {users
                         .filter(u => {
-                          if (u.role && u.role.toLowerCase() === 'admin') {
+                          if (user && (u.id === user.id || (u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase()))) {
                             return false;
                           }
                           const uName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`;
@@ -321,10 +321,10 @@ export default function TrackTeam({ user, onMemberClick }) {
               </div>
 
               <div className="saas-field">
-                <label className="saas-label">Designation *</label>
+                <label className="saas-label">Team *</label>
                 <input 
                   className="saas-input" 
-                  placeholder="e.g. Software Developer" 
+                  placeholder="e.g. Design Team" 
                   value={memberForm.designation} 
                   onChange={e => setMemberForm({...memberForm, designation: e.target.value})} 
                 />
@@ -522,7 +522,7 @@ export default function TrackTeam({ user, onMemberClick }) {
                     <tr>
                       <th>Member</th>
                       <th>Role</th>
-                      <th>Designation</th>
+                      <th>Team</th>
                       <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
@@ -552,7 +552,7 @@ export default function TrackTeam({ user, onMemberClick }) {
                           <td data-label="Role">
                             <span className="role-tag-mini">{m.role || 'Employee'}</span>
                           </td>
-                          <td data-label="Designation">
+                          <td data-label="Team">
                             <span style={{ color: '#475569', fontSize: '0.85rem' }}>{m.designation || '-'}</span>
                           </td>
                           <td data-label="Actions" style={{ textAlign: 'right' }}>
