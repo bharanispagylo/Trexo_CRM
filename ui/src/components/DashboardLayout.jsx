@@ -312,7 +312,8 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
     
     const currentUrl = window.location.pathname;
     if (newUrl !== currentUrl) {
-      window.history.pushState(null, '', newUrl);
+      const stateObj = newUrl.startsWith('/tasks/') && newUrl.length > 7 ? { fromApp: true } : null;
+      window.history.pushState(stateObj, '', newUrl);
     }
     
     // Auto-redirect if they try to access a page they don't have permission for

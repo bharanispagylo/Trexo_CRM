@@ -1248,50 +1248,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             </div>
           </div>
         )}
-        {showTaskViewModal && (
-          <div className="task-drawer-overlay" onClick={e => { if (e.target === e.currentTarget) { setShowTaskViewModal(false); setViewingTask(null); } }}>
-            <div className="task-drawer-panel">
-              <TaskDetailView
-                task={viewingTask ? { projectId: selectedProject.id, projectName: selectedProject.name, clientId: selectedProject.clientId, ...viewingTask } : null}
-                onSelectTask={(parent) => {
-                  setViewingTask(parent);
-                }}
-                onSave={async (taskData, silent) => {
-                  try {
-                    const payload = {
-                      ...taskData,
-                      projectId: selectedProject.id,
-                      projectName: selectedProject.name,
-                      clientId: selectedProject.clientId,
-                      taskListId: viewingTask.taskListId,
-                      updatedBy: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'
-                    };
-                    const savedTask = await api.put(`/tasks/${viewingTask.id}`, payload);
-                    if (!silent) alert('Task updated successfully!', 'success', 'Success');
-                    fetchData(true);
-                    if (!silent) {
-                      setShowTaskViewModal(false);
-                      setViewingTask(null);
-                    } else if (savedTask) {
-                      setViewingTask(savedTask);
-                    }
-                  } catch (err) {
-                    console.error('Error saving task:', err);
-                    alert('Failed to save task: ' + err.message, 'error', 'Error');
-                  }
-                }}
-                onDelete={async (id) => {
-                  await handleDeleteTask(id);
-                  setShowTaskViewModal(false);
-                  setViewingTask(null);
-                }}
-                onClose={() => { setShowTaskViewModal(false); setViewingTask(null); }}
-                currentUser={user}
-                initialEditMode={false}
-              />
-            </div>
-          </div>
-        )}
+
         {/* Top Profile Card */}
         <div className="detail-profile-card">
           <div className="detail-profile-left">
@@ -1833,7 +1790,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                               const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
 
                                               const parentRow = (
-                                                <tr key={task.id} className="cu-row" onClick={() => { setViewingTask(task); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
+                                                <tr key={task.id} className="cu-row" onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
                                                   <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                                       {subTasks.length > 0 && (
@@ -2002,7 +1959,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                   const subRelDate = formatRelativeDueDate(sub.dueDate);
 
                                                   rows.push(
-                                                    <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { setViewingTask(sub); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
+                                                    <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(sub)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
                                                       <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem', paddingLeft: '2.5rem' }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                                           <span className="cu-subtask-indicator" style={{ color: '#94a3b8', marginRight: '4px', fontSize: '1rem', fontWeight: 'bold' }}>↳</span>

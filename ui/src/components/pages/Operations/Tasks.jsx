@@ -4428,7 +4428,17 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     setDrawerOpen(true);
   };
 
-  const closeDrawer = () => { setDrawerOpen(false); setDrawerTask(null); if (onTaskSelect) onTaskSelect(null); };
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+    setDrawerTask(null);
+    if (onTaskSelect) onTaskSelect(null);
+    if (window.history.state && window.history.state.fromApp) {
+      window.history.back();
+    } else {
+      window.history.pushState(null, '', '/tasks');
+      window.dispatchEvent(new Event('popstate'));
+    }
+  };
 
   const openInlineAdd = (proj, statusId, taskListId = null) => {
     let finalProjId = null;
@@ -4585,7 +4595,30 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     );
   }
 
-
+  if (drawerOpen && drawerTask) {
+    return (
+      <div className="tasks-3col-layout" style={{ background: '#f8fafc' }}>
+        <TaskDetailView
+          task={drawerTask}
+          tasks={tasks}
+          onRefresh={fetchTasks}
+          onSelectTask={(t) => setDrawerTask(t)}
+          onSave={async (taskData, silent) => {
+            const saved = await handleSaveTask(taskData, silent);
+            if (!silent) {
+              closeDrawer();
+            } else if (saved) {
+              setDrawerTask(saved);
+            }
+          }}
+          onDelete={async (id) => { await handleDeleteTask(id); closeDrawer(); }}
+          onClose={closeDrawer}
+          currentUser={user}
+          initialEditMode={taskDetailMode}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="tasks-3col-layout">
@@ -6812,30 +6845,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Side Drawer ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
 
       {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Side Drawer ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
-      {drawerOpen && (
-        <div className="task-drawer-overlay" onClick={e => { if (e.target === e.currentTarget) closeDrawer(); }}>
-          <div className="task-drawer-panel">
-            <TaskDetailView
-              task={drawerTask}
-              tasks={tasks}
-              onRefresh={fetchTasks}
-              onSelectTask={(t) => setDrawerTask(t)}
-              onSave={async (taskData, silent) => {
-                const saved = await handleSaveTask(taskData, silent);
-                if (!silent) {
-                  closeDrawer();
-                } else if (saved) {
-                  setDrawerTask(saved);
-                }
-              }}
-              onDelete={async (id) => { await handleDeleteTask(id); closeDrawer(); }}
-              onClose={closeDrawer}
-              currentUser={user}
-              initialEditMode={taskDetailMode}
-            />
-          </div>
-        </div>
-      )}
+
       
       <PromptModal
         isOpen={promptState.isOpen}

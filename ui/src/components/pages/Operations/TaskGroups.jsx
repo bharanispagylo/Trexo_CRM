@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../../api/client';
 import { useAlert } from '../../../context/AlertContext';
 import { usePermissions } from '../../../hooks/usePermissions';
-import { TaskDetailView, TaskTitleTooltip, getDisplayId, formatDDMonDate } from './Tasks';
+import { TaskTitleTooltip, getDisplayId, formatDDMonDate } from './Tasks';
 import './TaskGroups.css';
 import './Tasks.css'; // import to ensure ClickUp styles are available
 
@@ -127,10 +127,7 @@ export default function TaskGroups({ user, onBack }) {
   const [taskForm, setTaskForm] = useState({ title: '', assignees: '', priority: 'Medium', dueDate: '' });
   const [isCreatingTask, setIsCreatingTask] = useState(false);
 
-  // Drawer detail view state
-  const [viewingTask, setViewingTask] = useState(null);
-  const [showTaskViewModal, setShowTaskViewModal] = useState(false);
-  const [drawerEditMode, setDrawerEditMode] = useState(false);
+
   const [activeTab, setActiveTab] = useState('favourites');
   const [deletingTaskId, setDeletingTaskId] = useState(null);
   const [togglingFavoriteId, setTogglingFavoriteId] = useState(null);
@@ -804,7 +801,7 @@ export default function TaskGroups({ user, onBack }) {
                               const relDate = formatRelativeDueDate(task.dueDate);
 
                               const parentRow = (
-                                <tr key={task.id} className="cu-row" onClick={() => { setViewingTask(task); setDrawerEditMode(false); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
+                                <tr key={task.id} className="cu-row" onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
                                   <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                       {subTasks.length > 0 && (
@@ -1044,7 +1041,7 @@ export default function TaskGroups({ user, onBack }) {
                                   const subRelDate = formatRelativeDueDate(sub.dueDate);
 
                                   rows.push(
-                                    <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { setViewingTask(sub); setDrawerEditMode(false); setShowTaskViewModal(true); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
+                                    <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(sub)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
                                       <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem', paddingLeft: '2.5rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                           <span className="cu-subtask-indicator" style={{ color: '#94a3b8', marginRight: '2px', fontSize: '1rem', fontWeight: 'bold' }}>↳</span>
@@ -1254,7 +1251,7 @@ export default function TaskGroups({ user, onBack }) {
                         draggable={true}
                         onDragStart={e => handleDragStart(e, task.id)}
                         onDragEnd={handleDragEnd}
-                        onClick={() => { setViewingTask(task); setDrawerEditMode(false); setShowTaskViewModal(true); }}
+                        onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }}
                         style={{
                           background: 'white',
                           border: '1.5px solid #e2e8f0',
@@ -1596,50 +1593,7 @@ export default function TaskGroups({ user, onBack }) {
         </div>
       )}
 
-      {/* TASK DETAIL SIDE DRAWER OVERLAY */}
-      {showTaskViewModal && viewingTask && (
-        <div className="task-drawer-overlay" onClick={e => { if (e.target === e.currentTarget) { setShowTaskViewModal(false); setViewingTask(null); } }}>
-          <div className="task-drawer-panel">
-            <TaskDetailView
-              task={viewingTask}
-              onSelectTask={(parent) => {
-                setViewingTask(parent);
-              }}
-              onSave={async (taskData, silent) => {
-                try {
-                  const targetList = taskLists.find(l => l.id === viewingTask.taskListId) || {};
-                  const payload = {
-                    ...taskData,
-                    projectId: targetList.projectId || viewingTask.projectId || null,
-                    taskListId: viewingTask.taskListId,
-                    updatedBy: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'
-                  };
-                  const savedTask = await api.put(`/tasks/${viewingTask.id}`, payload);
-                  if (!silent) toast('Task updated successfully!', 'success');
-                  fetchTaskListsOnly();
-                  if (!silent) {
-                    setShowTaskViewModal(false);
-                    setViewingTask(null);
-                  } else if (savedTask) {
-                    setViewingTask(savedTask);
-                  }
-                } catch (err) {
-                  console.error('Error saving task:', err);
-                  alert('Failed to save task: ' + err.message, 'error');
-                }
-              }}
-              onDelete={async (id) => {
-                await handleDeleteTask(id, true);
-                setShowTaskViewModal(false);
-                setViewingTask(null);
-              }}
-              onClose={() => { setShowTaskViewModal(false); setViewingTask(null); }}
-              currentUser={user}
-              initialEditMode={drawerEditMode}
-            />
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

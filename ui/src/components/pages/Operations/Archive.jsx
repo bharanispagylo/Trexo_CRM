@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../../../api/client';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useAlert } from '../../../context/AlertContext';
-import { TaskDetailView, PriorityFlag, TaskTitleTooltip, getDisplayId } from './Tasks';
+import { PriorityFlag, TaskTitleTooltip, getDisplayId } from './Tasks';
 import './Tasks.css';
 import './TaskGroups.css';
 import './Archive.css';
@@ -11,7 +11,6 @@ export default function Archive({ user }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewingTask, setViewingTask] = useState(null);
 
   const { can, getLevel } = usePermissions();
   const { alert, confirm, toast } = useAlert();
@@ -172,7 +171,7 @@ export default function Archive({ user }) {
                           <span 
                             className="cu-task-title" 
                             style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}
-                            onClick={() => setViewingTask(t)}
+                            onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(t)}`); window.dispatchEvent(new Event('popstate')); }}
                           >
                             {t.title || 'Untitled Task'}
                           </span>
@@ -205,7 +204,7 @@ export default function Archive({ user }) {
                     <td className="cell-actions" data-label="ACTIONS">
                       <div style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'flex-end' }}>
                         <button
-                          onClick={() => setViewingTask(t)}
+                          onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(t)}`); window.dispatchEvent(new Event('popstate')); }}
                           style={{ width: '28px', height: '28px', border: 'none', background: 'transparent', color: '#475569', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                           title="View Details"
                         >
@@ -239,22 +238,7 @@ export default function Archive({ user }) {
         </div>
       )}
 
-      {/* Task Details Drawer Modal */}
-      {viewingTask && (
-        <div className="task-drawer-overlay" onClick={e => { if (e.target === e.currentTarget) setViewingTask(null); }}>
-          <div className="task-drawer-panel">
-            <TaskDetailView
-              task={viewingTask}
-              onClose={() => setViewingTask(null)}
-              onSave={async () => {
-                setViewingTask(null);
-                fetchArchivedTasks();
-              }}
-              currentUser={user}
-            />
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
