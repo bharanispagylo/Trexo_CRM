@@ -3044,7 +3044,14 @@ const calculateNextRecurrence = (frequency, detail, baseDate) => {
           targetMonth = parseInt(parts[1], 10) - 1;
           targetDay = parseInt(parts[2], 10);
         } else if (parts.length === 2) {
-          targetMonth = parseInt(parts[0], 10) - 1;
+          const mStr = parts[0].toLowerCase();
+          const monthsShort = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+          const mIdx = monthsShort.indexOf(mStr);
+          if (mIdx !== -1) {
+            targetMonth = mIdx;
+          } else {
+            targetMonth = parseInt(parts[0], 10) - 1;
+          }
           targetDay = parseInt(parts[1], 10);
         }
       }
@@ -3152,7 +3159,14 @@ const getInitialRecurrenceDate = (frequency, detail, baseDate) => {
           targetMonth = parseInt(parts[1], 10) - 1;
           targetDay = parseInt(parts[2], 10);
         } else if (parts.length === 2) {
-          targetMonth = parseInt(parts[0], 10) - 1;
+          const mStr = parts[0].toLowerCase();
+          const monthsShort = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+          const mIdx = monthsShort.indexOf(mStr);
+          if (mIdx !== -1) {
+            targetMonth = mIdx;
+          } else {
+            targetMonth = parseInt(parts[0], 10) - 1;
+          }
           targetDay = parseInt(parts[1], 10);
         }
       }
