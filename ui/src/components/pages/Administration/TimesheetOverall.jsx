@@ -5,6 +5,13 @@ import './Reports.css';
 const TODAY = new Date().toISOString().split('T')[0];
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+const formatWorklogHours = (hoursDecimal) => {
+  const val = parseFloat(hoursDecimal);
+  if (isNaN(val) || val <= 0) return '0 hrs';
+  const rounded = Math.round(val * 100) / 100;
+  return `${rounded} hrs`;
+};
+
 const toLocalISO = (d) => {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -154,7 +161,7 @@ export default function TimesheetOverall({ onUserClick }) {
     downloadCSV(
       `timesheet-overall-${label}.csv`,
       ['Assignee', 'Tasks #', 'Task Hrs', 'Call Hrs', 'Total Hrs'],
-      rows.map(r => [r.name, r.taskIds.size, r.taskHours.toFixed(1), r.callHours.toFixed(1), r.totalHours.toFixed(1)])
+      rows.map(r => [r.name, r.taskIds.size, formatWorklogHours(r.taskHours), formatWorklogHours(r.callHours), formatWorklogHours(r.totalHours)])
     );
   };
 
@@ -190,7 +197,7 @@ export default function TimesheetOverall({ onUserClick }) {
           <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '0.75rem 1.5rem' }}>
             <span style={{ fontSize: '0.7rem', color: '#0369a1', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Total Hours</span>
             <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', lineHeight: 1.2 }}>
-              {rows.reduce((sum, r) => sum + r.totalHours, 0).toFixed(1)}h
+              {formatWorklogHours(rows.reduce((sum, r) => sum + r.totalHours, 0))}
             </span>
           </div>
         </div>
@@ -237,9 +244,9 @@ export default function TimesheetOverall({ onUserClick }) {
                   >
                     <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.87rem', fontWeight: '600', color: onUserClick && row.userId !== 'unknown' ? '#2563eb' : '#0f172a' }}>{row.name}</td>
                     <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.taskIds.size}</td>
-                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.taskHours.toFixed(1)}</td>
-                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{row.callHours.toFixed(1)}</td>
-                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', fontWeight: '700', color: '#2563eb' }}>{row.totalHours.toFixed(1)}</td>
+                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{formatWorklogHours(row.taskHours)}</td>
+                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', color: '#475569' }}>{formatWorklogHours(row.callHours)}</td>
+                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontSize: '0.87rem', fontWeight: '700', color: '#2563eb' }}>{formatWorklogHours(row.totalHours)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -275,19 +282,19 @@ export default function TimesheetOverall({ onUserClick }) {
                     <div className="reports-mobile-card-grid-item">
                       <span className="reports-mobile-card-grid-label">Task Hours</span>
                       <span className="reports-mobile-card-grid-value">
-                        {row.taskHours.toFixed(1)}h
+                        {formatWorklogHours(row.taskHours)}
                       </span>
                     </div>
                     <div className="reports-mobile-card-grid-item">
                       <span className="reports-mobile-card-grid-label">Call Hours</span>
                       <span className="reports-mobile-card-grid-value">
-                        {row.callHours.toFixed(1)}h
+                        {formatWorklogHours(row.callHours)}
                       </span>
                     </div>
                     <div className="reports-mobile-card-grid-item">
                       <span className="reports-mobile-card-grid-label">Total Hours</span>
                       <span className="reports-mobile-card-grid-value" style={{ color: '#2563eb', fontWeight: '700' }}>
-                        {row.totalHours.toFixed(1)}h
+                        {formatWorklogHours(row.totalHours)}
                       </span>
                     </div>
                   </div>

@@ -4,8 +4,10 @@ import './Reports.css';
 import { usePermissions } from '../../../hooks/usePermissions';
 
 const formatDecimal = (hours) => {
-  if (hours === undefined || hours === null) return '0.0';
-  return Number(hours).toFixed(1);
+  const val = parseFloat(hours);
+  if (isNaN(val) || val <= 0) return '0 hrs';
+  const rounded = Math.round(val * 100) / 100;
+  return `${rounded} hrs`;
 };
 
 const getDisplayId = (task) => {
@@ -631,9 +633,9 @@ export default function ReportsStatusBased({
               <tfoot>
                 <tr>
                   <td colSpan="5" className="footer-total-label">Total</td>
-                  <td className="footer-total-hours">{formatDecimal(totalTimeSpent)} hrs</td>
-                  <td className="footer-total-hours">{formatDecimal(totalBillable)} hrs</td>
-                  <td className="footer-total-hours">{formatDecimal(totalEstimated)} hrs</td>
+                  <td className="footer-total-hours">{formatDecimal(totalTimeSpent)}</td>
+                  <td className="footer-total-hours">{formatDecimal(totalBillable)}</td>
+                  <td className="footer-total-hours">{formatDecimal(totalEstimated)}</td>
                 </tr>
               </tfoot>
             )}
@@ -689,19 +691,19 @@ export default function ReportsStatusBased({
                     <div className="reports-mobile-card-grid-item">
                       <span className="reports-mobile-card-grid-label">TimeSpent</span>
                       <span className="reports-mobile-card-grid-value" style={{ color: '#2563eb' }}>
-                        {formatDecimal(task.timeSpent)}h
+                        {formatDecimal(task.timeSpent)}
                       </span>
                     </div>
                     <div className="reports-mobile-card-grid-item">
                       <span className="reports-mobile-card-grid-label">Billable</span>
                       <span className="reports-mobile-card-grid-value">
-                        {formatDecimal(task.billableHours)}h
+                        {formatDecimal(task.billableHours)}
                       </span>
                     </div>
                     <div className="reports-mobile-card-grid-item">
                       <span className="reports-mobile-card-grid-label">Estimated</span>
                       <span className="reports-mobile-card-grid-value">
-                        {formatDecimal(task.estimatedHours)}h
+                        {formatDecimal(task.estimatedHours)}
                       </span>
                     </div>
                   </div>
@@ -720,15 +722,15 @@ export default function ReportsStatusBased({
             <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                 <span style={{ fontWeight: '700', color: '#475569' }}>Total Time Spent:</span>
-                <span style={{ fontWeight: '800', color: '#2563eb' }}>{formatDecimal(totalTimeSpent)} hrs</span>
+                <span style={{ fontWeight: '800', color: '#2563eb' }}>{formatDecimal(totalTimeSpent)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                 <span style={{ fontWeight: '700', color: '#475569' }}>Total Billable:</span>
-                <span style={{ fontWeight: '800', color: '#0f172a' }}>{formatDecimal(totalBillable)} hrs</span>
+                <span style={{ fontWeight: '800', color: '#0f172a' }}>{formatDecimal(totalBillable)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                 <span style={{ fontWeight: '700', color: '#475569' }}>Total Estimated:</span>
-                <span style={{ fontWeight: '800', color: '#0f172a' }}>{formatDecimal(totalEstimated)} hrs</span>
+                <span style={{ fontWeight: '800', color: '#0f172a' }}>{formatDecimal(totalEstimated)}</span>
               </div>
             </div>
           )}

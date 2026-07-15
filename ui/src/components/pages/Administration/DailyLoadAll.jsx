@@ -2,6 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
 import './Reports.css';
 
+const formatWorklogHours = (hoursDecimal) => {
+  const val = parseFloat(hoursDecimal);
+  if (isNaN(val) || val <= 0) return '0 hrs';
+  const rounded = Math.round(val * 100) / 100;
+  return `${rounded} hrs`;
+};
+
 const downloadCSV = (filename, headers, rowsData) => {
   const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const lines = [
@@ -111,7 +118,7 @@ export default function DailyLoadAll({ onUserClick }) {
     downloadCSV(
       `daily-load-all.csv`,
       ['USER NAME', 'TASKS #', 'REMAINING HRS'],
-      reportRows.map(r => [r.userName, r.tasksCount, r.remainingHours.toFixed(1)])
+      reportRows.map(r => [r.userName, r.tasksCount, formatWorklogHours(r.remainingHours)])
     );
   };
 
@@ -160,7 +167,7 @@ export default function DailyLoadAll({ onUserClick }) {
         </div>
         <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '0.75rem 1.5rem', minWidth: '160px' }}>
           <span style={{ fontSize: '0.7rem', color: '#0369a1', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', whiteSpace: 'nowrap' }}>Total Remaining Hrs</span>
-          <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>{totalRemainingHours.toFixed(1)}h</span>
+          <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>{formatWorklogHours(totalRemainingHours)}</span>
         </div>
       </div>
 
@@ -198,7 +205,7 @@ export default function DailyLoadAll({ onUserClick }) {
                       {row.tasksCount}
                     </td>
                     <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '700', color: '#059669', fontSize: '0.9rem' }}>
-                      {row.remainingHours.toFixed(1)}
+                      {formatWorklogHours(row.remainingHours)}
                     </td>
                   </tr>
                 ))}
@@ -231,7 +238,7 @@ export default function DailyLoadAll({ onUserClick }) {
                     <div className="reports-mobile-card-grid-item">
                       <span className="reports-mobile-card-grid-label">Remaining Hrs</span>
                       <span className="reports-mobile-card-grid-value" style={{ color: '#059669' }}>
-                        {row.remainingHours.toFixed(1)}
+                        {formatWorklogHours(row.remainingHours)}
                       </span>
                     </div>
                   </div>

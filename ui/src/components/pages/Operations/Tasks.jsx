@@ -79,6 +79,56 @@ const getStatusString = (statusVal) => {
   return String(statusVal);
 };
 
+const getYearlyMonthAndDay = (detail) => {
+  if (!detail) {
+    const d = new Date();
+    return { month: d.getMonth() + 1, day: d.getDate() };
+  }
+  const parts = detail.split('-');
+  if (parts.length === 3) {
+    return { month: parseInt(parts[1], 10) || 1, day: parseInt(parts[2], 10) || 1 };
+  } else if (parts.length === 2) {
+    const mStr = parts[0].toLowerCase();
+    const monthsShort = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const monthIdx = monthsShort.indexOf(mStr);
+    if (monthIdx !== -1) {
+      return { month: monthIdx + 1, day: parseInt(parts[1], 10) || 1 };
+    }
+    return { month: parseInt(parts[0], 10) || 1, day: parseInt(parts[1], 10) || 1 };
+  }
+  const d = new Date();
+  return { month: d.getMonth() + 1, day: d.getDate() };
+};
+
+const getSelectedDaysDisplay = (days) => {
+  if (!days || days.length === 0) return 'Select Day(s)...';
+  if (days.length === 7) return 'Every Day';
+  
+  const hasMonToFri = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].every(d => days.includes(d));
+  const hasSatSun = ['Saturday', 'Sunday'].every(d => days.includes(d));
+  
+  if (days.length === 5 && hasMonToFri) return 'Weekdays';
+  if (days.length === 2 && hasSatSun) return 'Weekends';
+  
+  const abbrMap = {
+    'Monday': 'Mon',
+    'Tuesday': 'Tue',
+    'Wednesday': 'Wed',
+    'Thursday': 'Thu',
+    'Friday': 'Fri',
+    'Saturday': 'Sat',
+    'Sunday': 'Sun'
+  };
+  return days.map(d => abbrMap[d] || d).join(', ');
+};
+
+export const formatWorklogHours = (hoursDecimal) => {
+  const val = parseFloat(hoursDecimal);
+  if (isNaN(val) || val <= 0) return '0 hrs';
+  const rounded = Math.round(val * 100) / 100;
+  return `${rounded} hrs`;
+};
+
 export const PriorityFlag = ({ priority }) => {
   const meta = PRIORITY_FLAGS[priority] || PRIORITY_FLAGS['Medium'];
   return (
@@ -356,6 +406,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         ...task,
         assignees: task.assignees || defaults.assignees,
         taskType: (task.taskType && task.taskType !== 'Feature') ? task.taskType : defaults.taskType,
+        recurrenceFrequency: task.recurrenceFrequency === 'Weekday' ? '' : (task.recurrenceFrequency || ''),
         status: getStatusString(task.status),
         taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : fallbackNo)
       };
@@ -409,6 +460,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         ...form,
         ...task,
         status: getStatusString(task.status),
+        recurrenceFrequency: task.recurrenceFrequency === 'Weekday' ? '' : (task.recurrenceFrequency || ''),
         taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : fallbackNo),
         approvedHoursStr: task.approvedHours !== undefined && task.approvedHours !== null ? String(task.approvedHours) : '0'
       };
@@ -2289,7 +2341,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
                       Recurrence
                     </span>
-                    <span className="saas-meta-value">
+                    <span className="saas-meta-value" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <select 
                         value={form.recurrenceFrequency || ''} 
                         onChange={e => {
@@ -2309,160 +2361,250 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}
                       >
                         <option value="">None (One-time)</option>
-                        <option value="Weekday">Week day</option>
                         <option value="Weekly">Weekly</option>
                         <option value="Monthly">Monthly</option>
                         <option value="Yearly">Yearly</option>
                       </select>
-                    </span>
-                  </div>
-                )}
 
-                {/* Recurrence Detail — "Every" row */}
-                {(form.taskType === 'Recurring Task' || form.recurringTemplateId) && form.recurrenceFrequency && (
-                  <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      Every
-                    </span>
-                    <span className="saas-meta-value">
+                      {['Weekly', 'Monthly', 'Yearly'].includes(form.recurrenceFrequency) && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginLeft: '1.5rem' }}>
+                          <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                            Every
+                          </span>
 
-                      {/* Weekday: single weekday dropdown (Mon-Fri) */}
-                      {form.recurrenceFrequency === 'Weekday' && (
-                        <select
-                          value={form.recurrenceDetail || 'Monday'}
-                          onChange={e => {
-                            const updated = { ...form, recurrenceDetail: e.target.value };
-                            setForm(updated);
-                            if (!isEditing) handleInlineSave(updated);
-                          }}
-                          disabled={!canEdit}
-                          className="saas-grid-select"
-                          style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}
-                        >
-                          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => (
-                            <option key={day} value={day}>{day}</option>
-                          ))}
-                        </select>
-                      )}
-
-                      {/* Weekly: multi-select checkbox dropdown (Mon-Sun) */}
-                      {form.recurrenceFrequency === 'Weekly' && (() => {
-                        const weeklyDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-                        const selectedDays = form.recurrenceDetail ? form.recurrenceDetail.split(',').map(s => s.trim()).filter(Boolean) : [];
-                        const handleDayToggle = (day) => {
-                          let newSelected;
-                          if (selectedDays.includes(day)) {
-                            newSelected = selectedDays.filter(d => d !== day);
-                          } else {
-                            newSelected = [...selectedDays, day];
-                          }
-                          newSelected.sort((a, b) => weeklyDays.indexOf(a) - weeklyDays.indexOf(b));
-                          const val = newSelected.join(',');
-                          const updated = { ...form, recurrenceDetail: val };
-                          setForm(updated);
-                          if (!isEditing) handleInlineSave(updated);
-                        };
-                        return (
-                          <div style={{ position: 'relative', display: 'inline-block' }}>
-                            <button
-                              type="button"
-                              onClick={() => setWeeklyDropdownOpen(!weeklyDropdownOpen)}
-                              disabled={!canEdit}
-                              style={{
-                                padding: '0.4rem 0.6rem',
-                                border: '1px solid transparent',
-                                borderRadius: '4px',
-                                background: 'transparent',
-                                cursor: canEdit ? 'pointer' : 'default',
-                                color: '#64748b',
-                                fontWeight: 600,
-                                fontSize: '0.85rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.4rem',
-                                textAlign: 'left',
-                                minWidth: '120px'
+                          {/* Weekday: single weekday dropdown (Mon-Fri) */}
+                          {form.recurrenceFrequency === 'Weekday' && (
+                            <select
+                              value={form.recurrenceDetail || 'Monday'}
+                              onChange={e => {
+                                const updated = { ...form, recurrenceDetail: e.target.value };
+                                setForm(updated);
+                                if (!isEditing) handleInlineSave(updated);
                               }}
+                              disabled={!canEdit}
+                              className="saas-grid-select"
+                              style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}
                             >
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
-                                {selectedDays.length > 0 ? selectedDays.join(', ') : 'Select Day(s)...'}
-                              </span>
-                              <svg viewBox="0 0 10 6" width="8" height="5" fill="#64748b" style={{ flexShrink: 0 }}><path d="M0 0l5 6 5-6z"/></svg>
-                            </button>
-                            {weeklyDropdownOpen && (
-                              <div style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: 0,
-                                background: '#fff',
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '6px',
-                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-                                padding: '0.5rem',
-                                zIndex: 50,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.25rem',
-                                minWidth: '160px',
-                                marginTop: '2px'
-                              }}>
-                                {weeklyDays.map(day => (
-                                  <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155', fontSize: '0.85rem', cursor: 'pointer', userSelect: 'none', padding: '0.2rem 0.3rem', borderRadius: '3px' }}
-                                    onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
-                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedDays.includes(day)}
-                                      onChange={() => handleDayToggle(day)}
-                                      disabled={!canEdit}
-                                      style={{ cursor: 'pointer', accentColor: '#2563eb' }}
-                                    />
-                                    <span>{day}</span>
-                                  </label>
-                                ))}
+                              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => (
+                                <option key={day} value={day}>{day}</option>
+                              ))}
+                            </select>
+                          )}
+
+                          {/* Weekly: multi-select checkbox dropdown (Mon-Sun) */}
+                          {form.recurrenceFrequency === 'Weekly' && (() => {
+                            const weeklyDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                            const selectedDays = form.recurrenceDetail ? form.recurrenceDetail.split(',').map(s => s.trim()).filter(Boolean) : [];
+                            const handleDayToggle = (day) => {
+                              let newSelected;
+                              if (selectedDays.includes(day)) {
+                                newSelected = selectedDays.filter(d => d !== day);
+                              } else {
+                                newSelected = [...selectedDays, day];
+                              }
+                              newSelected.sort((a, b) => weeklyDays.indexOf(a) - weeklyDays.indexOf(b));
+                              const val = newSelected.join(',');
+                              const updated = { ...form, recurrenceDetail: val };
+                              setForm(updated);
+                              if (!isEditing) handleInlineSave(updated);
+                            };
+                            return (
+                              <div style={{ position: 'relative', display: 'inline-block' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setWeeklyDropdownOpen(!weeklyDropdownOpen)}
+                                  disabled={!canEdit}
+                                  style={{
+                                    padding: '0.4rem 0.6rem',
+                                    border: '1px solid transparent',
+                                    borderRadius: '4px',
+                                    background: 'transparent',
+                                    cursor: canEdit ? 'pointer' : 'default',
+                                    color: '#64748b',
+                                    fontWeight: 600,
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem',
+                                    textAlign: 'left',
+                                    minWidth: '120px'
+                                  }}
+                                >
+                                  <span>
+                                    {getSelectedDaysDisplay(selectedDays)}
+                                  </span>
+                                  <svg viewBox="0 0 10 6" width="8" height="5" fill="#64748b" style={{ flexShrink: 0 }}><path d="M0 0l5 6 5-6z"/></svg>
+                                </button>
+                                {weeklyDropdownOpen && (
+                                  <div style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: 0,
+                                    background: '#fff',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '6px',
+                                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                                    padding: '0.5rem',
+                                    zIndex: 50,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.25rem',
+                                    minWidth: '160px',
+                                    marginTop: '2px'
+                                  }}>
+                                    {weeklyDays.map(day => (
+                                      <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155', fontSize: '0.85rem', cursor: 'pointer', userSelect: 'none', padding: '0.2rem 0.3rem', borderRadius: '3px' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedDays.includes(day)}
+                                          onChange={() => handleDayToggle(day)}
+                                          disabled={!canEdit}
+                                          style={{ cursor: 'pointer', accentColor: '#2563eb' }}
+                                        />
+                                        <span>{day}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        );
-                      })()}
+                            );
+                          })()}
 
-                      {/* Monthly: dropdown with dates 1-30 + Last Day of Month */}
-                      {form.recurrenceFrequency === 'Monthly' && (
-                        <select
-                          value={form.recurrenceDetail || '1'}
-                          onChange={e => {
-                            const updated = { ...form, recurrenceDetail: e.target.value };
-                            setForm(updated);
-                            if (!isEditing) handleInlineSave(updated);
-                          }}
-                          disabled={!canEdit}
-                          className="saas-grid-select"
-                          style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}
-                        >
-                          {Array.from({ length: 30 }, (_, i) => i + 1).map(d => (
-                            <option key={d} value={String(d)}>{d}</option>
-                          ))}
-                          <option value="Last Day of Month">Last Day of Month</option>
-                        </select>
+                          {/* Monthly: dropdown with dates 1-30 + Last Day of Month */}
+                          {form.recurrenceFrequency === 'Monthly' && (
+                            <select
+                              value={form.recurrenceDetail || '1'}
+                              onChange={e => {
+                                const updated = { ...form, recurrenceDetail: e.target.value };
+                                setForm(updated);
+                                if (!isEditing) handleInlineSave(updated);
+                              }}
+                              disabled={!canEdit}
+                              className="saas-grid-select"
+                              style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}
+                            >
+                              {Array.from({ length: 30 }, (_, i) => i + 1).map(d => (
+                                <option key={d} value={String(d)}>{d}</option>
+                              ))}
+                              <option value="Last Day of Month">Last Day of Month</option>
+                            </select>
+                          )}
+
+                          {/* Yearly: date picker for month and day */}
+                          {form.recurrenceFrequency === 'Yearly' && (() => {
+                            const monthsShort = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+                            
+                            const getDisplayValue = (detail) => {
+                              if (!detail) return 'Select Date...';
+                              const parts = detail.split('-');
+                              if (parts.length === 2) {
+                                const mStr = parts[0].toLowerCase();
+                                const mIdx = monthsShort.indexOf(mStr);
+                                if (mIdx !== -1) {
+                                  return `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1)}-${parts[1]}`;
+                                }
+                              } else if (parts.length === 3) {
+                                const mIdx = parseInt(parts[1], 10) - 1;
+                                const dVal = parseInt(parts[2], 10);
+                                if (mIdx >= 0 && mIdx < 12) {
+                                  const mName = monthsShort[mIdx];
+                                  return `${mName.charAt(0).toUpperCase() + mName.slice(1)}-${dVal}`;
+                                }
+                              }
+                              return detail;
+                            };
+
+                            const convertToMonDd = (dateStr) => {
+                              if (!dateStr) return '';
+                              const parts = dateStr.split('-');
+                              if (parts.length === 3) {
+                                const mIdx = parseInt(parts[1], 10) - 1;
+                                const dVal = parseInt(parts[2], 10);
+                                if (mIdx >= 0 && mIdx < 12) {
+                                  return `${monthsShort[mIdx]}-${dVal}`;
+                                }
+                              }
+                              return dateStr;
+                            };
+
+                            const getDatePickerValue = (detail) => {
+                              if (!detail) return '';
+                              const parts = detail.split('-');
+                              if (parts.length === 3) return detail;
+                              if (parts.length === 2) {
+                                const mStr = parts[0].toLowerCase();
+                                const mIdx = monthsShort.indexOf(mStr);
+                                if (mIdx !== -1) {
+                                  const mm = String(mIdx + 1).padStart(2, '0');
+                                  const dd = String(parseInt(parts[1], 10)).padStart(2, '0');
+                                  const yyyy = new Date().getFullYear();
+                                  return `${yyyy}-${mm}-${dd}`;
+                                }
+                              }
+                              return '';
+                            };
+
+                            const displayVal = getDisplayValue(form.recurrenceDetail);
+                            const pickerVal = getDatePickerValue(form.recurrenceDetail);
+
+                            return (
+                              <div style={{ position: 'relative', display: 'inline-block' }}>
+                                <button
+                                  type="button"
+                                  disabled={!canEdit}
+                                  style={{
+                                    padding: '0.4rem 0.6rem',
+                                    border: '1px solid transparent',
+                                    borderRadius: '4px',
+                                    background: 'transparent',
+                                    cursor: canEdit ? 'pointer' : 'default',
+                                    color: '#64748b',
+                                    fontWeight: 600,
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem',
+                                    textAlign: 'left'
+                                  }}
+                                >
+                                  <span>{displayVal}</span>
+                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: '#64748b', flexShrink: 0 }}>
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                  </svg>
+                                </button>
+                                {canEdit && (
+                                  <input
+                                    type="date"
+                                    value={pickerVal}
+                                    onChange={e => {
+                                      const formatted = convertToMonDd(e.target.value);
+                                      const updated = { ...form, recurrenceDetail: formatted };
+                                      setForm(updated);
+                                      if (!isEditing) handleInlineSave(updated);
+                                    }}
+                                    style={{
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      width: '100%',
+                                      height: '100%',
+                                      opacity: 0,
+                                      cursor: 'pointer',
+                                      zIndex: 10
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
                       )}
-
-                      {/* Yearly: date picker for month and day */}
-                      {form.recurrenceFrequency === 'Yearly' && (
-                        <input
-                          type="date"
-                          value={form.recurrenceDetail || ''}
-                          onChange={e => {
-                            const updated = { ...form, recurrenceDetail: e.target.value };
-                            setForm(updated);
-                            if (!isEditing) handleInlineSave(updated);
-                          }}
-                          disabled={!canEdit}
-                          className="saas-detail-date-input"
-                          style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', borderRadius: '4px', background: 'transparent', color: '#64748b', fontWeight: 600 }}
-                        />
-                      )}
-
                     </span>
                   </div>
                 )}
@@ -2870,7 +3012,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0.75rem 1rem', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', width: 'fit-content', minWidth: '140px', maxWidth: '180px' }}>
                         <span style={{ fontSize: '0.75rem', color: '#0369a1', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total hrs spent</span>
                         <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', marginTop: '0.25rem' }}>
-                          {workLogs.filter(log => !log.isBilled && Number(log.hoursWorked) > 0).reduce((sum, log) => sum + Number(log.hoursWorked), 0)}h
+                          {formatWorklogHours(workLogs.filter(log => !log.isBilled && Number(log.hoursWorked) > 0).reduce((sum, log) => sum + Number(log.hoursWorked), 0))}
                         </span>
                       </div>
                     </div>
@@ -2895,7 +3037,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                 <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
                                   <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{formatDate(log.logDate, log.createdAt)}</td>
                                   <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
-                                  <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{log.hoursWorked}h</td>
+                                  <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{formatWorklogHours(log.hoursWorked)}</td>
                                   <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
                                     <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                                       {canEditWorkLog(log) && (
@@ -3003,7 +3145,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                           <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
                             <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{formatDate(log.logDate, log.createdAt)}</td>
                             <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
-                            <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{log.hoursWorked}h</td>
+                            <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{formatWorklogHours(log.hoursWorked)}</td>
                             <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.description || '-'}</td>
                             <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
                               <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -4772,7 +4914,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     return assignees.includes(targetId);
   });
 
-  const pageTitle = subTab === 'my' ? '' : subTab === 'calls' ? 'Calls/Meeting' : subTab === 'recurring' ? 'Recurring Tasks' : 'All Tasks';
+  const pageTitle = subTab === 'my' ? '' : subTab === 'calls' ? 'Calls/Meeting' : subTab === 'recurring' ? 'Recurring' : 'All Tasks';
 
   if (loading || openingInitialTask) {
     return (
@@ -4874,6 +5016,25 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             }}
           >
             Calls/Meeting
+          </button>
+          <button 
+            className={`saas-tab ${subTab === 'recurring' ? 'active' : ''}`} 
+            onClick={() => {
+              setSubTab('recurring');
+              setAssigneeFilter(null);
+              if (onClearAssigneeFilter) onClearAssigneeFilter();
+              setFilterProjectName('');
+              setFilterType('');
+              setFilterFromDate('');
+              setFilterToDate('');
+            }}
+            style={{ 
+              background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
+              color: subTab === 'recurring' ? '#2563eb' : '#64748b',
+              borderBottom: subTab === 'recurring' ? '2px solid #2563eb' : '2px solid transparent'
+            }}
+          >
+            Recurring
           </button>
         </div>
       )}

@@ -79,6 +79,14 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const [usersKey, setUsersKey] = useState(0);
   const [rolesKey, setRolesKey] = useState(0);
   const [taskGroupsKey, setTaskGroupsKey] = useState(0);
+  const [visitedTabs, setVisitedTabs] = useState([activeTab]);
+  const [dailyLoadUserId, setDailyLoadUserId] = useState(null);
+
+  useEffect(() => {
+    if (!visitedTabs.includes(activeTab)) {
+      setVisitedTabs(prev => [...prev, activeTab]);
+    }
+  }, [activeTab, visitedTabs]);
 
   const modulesConfig = [
     {
@@ -288,6 +296,11 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       setSelectedTaskId(parsed.taskId);
       if (parsed.projectName) setInitialProjectName(parsed.projectName);
       if (parsed.taskId) setInitialTaskId(parsed.taskId);
+      
+      if (!parsed.taskId && parsed.tab !== 'tasks') {
+        setIsTaskDetailOpen(false);
+        setSearchSelectedTask(null);
+      }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -578,196 +591,260 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   if (loading) return <div className="loading-screen">Loading Permissions...</div>;
 
   const renderContent = () => {
-    switch (activeTab) {
-      case 'projects': 
-        if (!can('projects', 'view') && user?.role?.toLowerCase() !== 'admin') {
-          return renderOverview(setActiveTab, (taskData) => {
-            setSearchSelectedTask(taskData);
-            setIsTaskDetailOpen(true);
-            setActiveTab('tasks');
-          });
-        }
-        return (
-        <Projects
-          key={projectsKey}
-          user={user}
-          initialSelectedProject={searchSelectedProject}
-          onClearInitialProject={() => setSearchSelectedProject(null)}
-          onNavigateToTasks={(taskData) => {
-            setSearchSelectedTask(taskData);
-            setIsTaskDetailOpen(true);
-            setActiveTab('tasks');
-          }}
-          initialProjectName={initialProjectName}
-          onProjectSelect={(projectName) => {
-            setSelectedProjectName(projectName);
-            if (!projectName) setInitialProjectName(null);
-          }}
-        />
-      );
-      case 'estimations': 
-        if (!can('estimations', 'view') && user?.role?.toLowerCase() !== 'admin') {
-          return renderOverview(setActiveTab, (taskData) => {
-            setSearchSelectedTask(taskData);
-            setIsTaskDetailOpen(true);
-            setActiveTab('tasks');
-          });
-        }
-        return <Estimations key={estimationsKey} user={user} />;
-      case 'clients': 
-        if (!can('clients', 'view') && user?.role?.toLowerCase() !== 'admin') {
-          return renderOverview(setActiveTab, (taskData) => {
-            setSearchSelectedTask(taskData);
-            setIsTaskDetailOpen(true);
-            setActiveTab('tasks');
-          });
-        }
-        return <Clients key={clientsKey} user={user} />;
-      case 'track-team':
-        if (!can('teams', 'view') && user?.role?.toLowerCase() !== 'admin') {
-          return renderOverview(setActiveTab, (taskData) => {
-            setSearchSelectedTask(taskData);
-            setIsTaskDetailOpen(true);
-            setActiveTab('tasks');
-          });
-        }
-        return <TrackTeam key={trackTeamKey} user={user} onMemberClick={(member) => {
-            setTeamMemberAssigneeFilter(member.id);
-            setActiveTab('tasks');
-          }} />;
-      case 'tasks': 
-        if (!can('tasks', 'view') && user?.role?.toLowerCase() !== 'admin') {
-          return renderOverview(setActiveTab, (taskData) => {
-            setSearchSelectedTask(taskData);
-            setIsTaskDetailOpen(true);
-            setActiveTab('tasks');
-          });
-        }
-        return (
-        <Tasks
-          key={tasksKey}
-          user={user}
-          initialSelectedTask={searchSelectedTask}
-          onClearInitialTask={() => setSearchSelectedTask(null)}
-          onDetailViewChange={(open) => setIsTaskDetailOpen(open)}
-          initialTaskId={initialTaskId}
-          onTaskSelect={(taskId) => {
-            setSelectedTaskId(taskId);
-            if (!taskId) setInitialTaskId(null);
-          }}
-          initialAssigneeFilter={teamMemberAssigneeFilter}
-          onClearAssigneeFilter={() => setTeamMemberAssigneeFilter(null)}
-          onCancelAssigneeFilter={() => {
-            setTeamMemberAssigneeFilter(null);
-            setActiveTab('track-team');
-          }}
-        />
-      );
-      case 'task-groups':
-        if (!can('taskGroups', 'view') && user?.role?.toLowerCase() !== 'admin') {
-          return renderOverview(setActiveTab, (taskData) => {
-            setSearchSelectedTask(taskData);
-            setIsTaskDetailOpen(true);
-            setActiveTab('tasks');
-          });
-        }
-        return <TaskGroups key={taskGroupsKey} user={user} onBack={() => setActiveTab('tasks')} />;
-      case 'archive':
-        if (!can('archive', 'view') && user?.role?.toLowerCase() !== 'admin') {
-          return renderOverview(setActiveTab, (taskData) => {
-            setSearchSelectedTask(taskData);
-            setIsTaskDetailOpen(true);
-            setActiveTab('tasks');
-          });
-        }
-        return <Archive user={user} />;
-      case 'users': 
-        if (!can('users', 'view') && user?.role?.toLowerCase() !== 'admin') {
-          return renderOverview(setActiveTab, (taskData) => {
-            setSearchSelectedTask(taskData);
-            setIsTaskDetailOpen(true);
-            setActiveTab('tasks');
-          });
-        }
-        return <Users key={usersKey} user={user} onAddUser={() => setActiveTab('add-user')} onEditUser={(u) => { setUserToEdit(u); setActiveTab('edit-user'); }} />;
-      case 'roles': 
-        if (!can('roles', 'view') && user?.role?.toLowerCase() !== 'admin') {
-          return renderOverview(setActiveTab, (taskData) => {
-            setSearchSelectedTask(taskData);
-            setIsTaskDetailOpen(true);
-            setActiveTab('tasks');
-          });
-        }
-        return <Roles key={rolesKey} user={user} />;
-      case 'add-user': 
-        if (!can('users', 'create') && user?.role?.toLowerCase() !== 'admin') {
-          return renderOverview(setActiveTab, (taskData) => {
-            setSearchSelectedTask(taskData);
-            setIsTaskDetailOpen(true);
-            setActiveTab('tasks');
-          });
-        }
-        return <AddUser user={user} onBack={() => setActiveTab('users')} />;
-      case 'edit-user': 
-        if (!can('users', 'edit') && user?.role?.toLowerCase() !== 'admin') {
-          return renderOverview(setActiveTab, (taskData) => {
-            setSearchSelectedTask(taskData);
-            setIsTaskDetailOpen(true);
-            setActiveTab('tasks');
-          });
-        }
-        return <EditUser userToEdit={userToEdit} onBack={() => setActiveTab('users')} />;
-      case 'timesheet-overall':
-        if (!canReport('timesheet-overall')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
-        return <TimesheetOverall onUserClick={(userId, initialFilter, initialDate) => { setTimesheetUserId(userId); setTimesheetInitialFilter(initialFilter); setTimesheetInitialDate(initialDate); setActiveTab('reports-status-based'); }} />;
-      case 'daily-load-all':
-        if (!canReport('daily-load-all')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
-        return <DailyLoadAll onUserClick={(userId) => { setActiveTab('daily-load-individual'); }} />;
-      case 'daily-load-individual':
-        if (!canReport('daily-load-individual')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
-        return <DailyLoadIndividual user={user} onTaskClick={(taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); }} />;
-
-      case 'reports-status-based':
-        if (!canReport('reports-status-based')) return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
-        return <ReportsStatusBased user={user} initialUserId={timesheetUserId} onClearInitialUser={() => setTimesheetUserId(null)} initialFilter={timesheetInitialFilter} onClearInitialFilter={() => setTimesheetInitialFilter(null)} initialDate={timesheetInitialDate} onClearInitialDate={() => setTimesheetInitialDate(null)} onNavigateToTask={(taskData) => {
-            const displayId = getDisplayId(taskData);
-            setSelectedTaskId(displayId);
-            setSearchSelectedTask(taskData);
-            setIsTaskDetailOpen(true);
-            setActiveTab('tasks');
-          }} />;
-      case 'reports':
-        if (!canReport('tasks-report')) {
-          const reportTabs = [
-            { key: 'reports-status-based', action: 'reports-status-based' },
-            { key: 'timesheet-overall', action: 'timesheet-overall' },
-            { key: 'daily-load-all', action: 'daily-load-all' },
-            { key: 'daily-load-individual', action: 'daily-load-individual' }
-          ];
-          const firstPermitted = reportTabs.find(rt => canReport(rt.action));
-          if (firstPermitted) {
-            setTimeout(() => setActiveTab(firstPermitted.key), 0);
-            return <div className="loading-screen">Loading Report...</div>;
+    // Helper to render individual tab component
+    const renderTabComponent = (tabId) => {
+      switch (tabId) {
+        case 'projects':
+          if (!can('projects', 'view') && user?.role?.toLowerCase() !== 'admin') {
+            return renderOverview(setActiveTab, (taskData) => {
+              const displayId = getDisplayId(taskData);
+              setSelectedTaskId(displayId);
+              setSearchSelectedTask(taskData);
+              setIsTaskDetailOpen(true);
+              setActiveTab('tasks');
+            });
           }
-          return renderOverview(setActiveTab, (taskData) => { setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
-        }
-        return <Reports user={user} onNavigateToTask={(taskData) => {
-            const displayId = getDisplayId(taskData);
-            setSelectedTaskId(displayId);
-            setSearchSelectedTask(taskData);
-            setIsTaskDetailOpen(true);
-            setActiveTab('tasks');
-          }} />;
-      default: return renderOverview(
-        setActiveTab,
-        (taskData) => {
-          setSearchSelectedTask(taskData);
-          setIsTaskDetailOpen(true);
-          setActiveTab('tasks');
-        }
-      );
+          return (
+            <Projects
+              key={projectsKey}
+              user={user}
+              initialSelectedProject={searchSelectedProject}
+              onClearInitialProject={() => setSearchSelectedProject(null)}
+              onNavigateToTasks={(taskData) => {
+                const displayId = getDisplayId(taskData);
+                setSelectedTaskId(displayId);
+                setSearchSelectedTask(taskData);
+                setIsTaskDetailOpen(true);
+                setActiveTab('tasks');
+              }}
+              initialProjectName={initialProjectName}
+              onProjectSelect={(projectName) => {
+                setSelectedProjectName(projectName);
+                if (!projectName) setInitialProjectName(null);
+              }}
+            />
+          );
+        case 'estimations':
+          if (!can('estimations', 'view') && user?.role?.toLowerCase() !== 'admin') {
+            return renderOverview(setActiveTab, (taskData) => {
+              const displayId = getDisplayId(taskData);
+              setSelectedTaskId(displayId);
+              setSearchSelectedTask(taskData);
+              setIsTaskDetailOpen(true);
+              setActiveTab('tasks');
+            });
+          }
+          return <Estimations key={estimationsKey} user={user} />;
+        case 'clients':
+          if (!can('clients', 'view') && user?.role?.toLowerCase() !== 'admin') {
+            return renderOverview(setActiveTab, (taskData) => {
+              const displayId = getDisplayId(taskData);
+              setSelectedTaskId(displayId);
+              setSearchSelectedTask(taskData);
+              setIsTaskDetailOpen(true);
+              setActiveTab('tasks');
+            });
+          }
+          return <Clients key={clientsKey} user={user} />;
+        case 'track-team':
+          if (!can('teams', 'view') && user?.role?.toLowerCase() !== 'admin') {
+            return renderOverview(setActiveTab, (taskData) => {
+              const displayId = getDisplayId(taskData);
+              setSelectedTaskId(displayId);
+              setSearchSelectedTask(taskData);
+              setIsTaskDetailOpen(true);
+              setActiveTab('tasks');
+            });
+          }
+          return <TrackTeam key={trackTeamKey} user={user} onMemberClick={(member) => {
+              setTeamMemberAssigneeFilter(member.id);
+              setActiveTab('tasks');
+            }} />;
+        case 'tasks':
+          if (!can('tasks', 'view') && user?.role?.toLowerCase() !== 'admin') {
+            return renderOverview(setActiveTab, (taskData) => {
+              const displayId = getDisplayId(taskData);
+              setSelectedTaskId(displayId);
+              setSearchSelectedTask(taskData);
+              setIsTaskDetailOpen(true);
+              setActiveTab('tasks');
+            });
+          }
+          return (
+            <Tasks
+              key={tasksKey}
+              user={user}
+              initialSelectedTask={searchSelectedTask}
+              onClearInitialTask={() => setSearchSelectedTask(null)}
+              onDetailViewChange={(open) => setIsTaskDetailOpen(open)}
+              initialTaskId={initialTaskId}
+              onTaskSelect={(taskId) => {
+                setSelectedTaskId(taskId);
+                if (!taskId) setInitialTaskId(null);
+              }}
+              initialAssigneeFilter={teamMemberAssigneeFilter}
+              onClearAssigneeFilter={() => setTeamMemberAssigneeFilter(null)}
+              onCancelAssigneeFilter={() => {
+                setTeamMemberAssigneeFilter(null);
+                setActiveTab('track-team');
+              }}
+            />
+          );
+        case 'task-groups':
+          if (!can('taskGroups', 'view') && user?.role?.toLowerCase() !== 'admin') {
+            return renderOverview(setActiveTab, (taskData) => {
+              const displayId = getDisplayId(taskData);
+              setSelectedTaskId(displayId);
+              setSearchSelectedTask(taskData);
+              setIsTaskDetailOpen(true);
+              setActiveTab('tasks');
+            });
+          }
+          return <TaskGroups key={taskGroupsKey} user={user} onBack={() => setActiveTab('tasks')} />;
+        case 'archive':
+          if (!can('archive', 'view') && user?.role?.toLowerCase() !== 'admin') {
+            return renderOverview(setActiveTab, (taskData) => {
+              const displayId = getDisplayId(taskData);
+              setSelectedTaskId(displayId);
+              setSearchSelectedTask(taskData);
+              setIsTaskDetailOpen(true);
+              setActiveTab('tasks');
+            });
+          }
+          return <Archive user={user} />;
+        case 'users':
+          if (!can('users', 'view') && user?.role?.toLowerCase() !== 'admin') {
+            return renderOverview(setActiveTab, (taskData) => {
+              const displayId = getDisplayId(taskData);
+              setSelectedTaskId(displayId);
+              setSearchSelectedTask(taskData);
+              setIsTaskDetailOpen(true);
+              setActiveTab('tasks');
+            });
+          }
+          return <Users key={usersKey} user={user} onAddUser={() => setActiveTab('add-user')} onEditUser={(u) => { setUserToEdit(u); setActiveTab('edit-user'); }} />;
+        case 'roles':
+          if (!can('roles', 'view') && user?.role?.toLowerCase() !== 'admin') {
+            return renderOverview(setActiveTab, (taskData) => {
+              const displayId = getDisplayId(taskData);
+              setSelectedTaskId(displayId);
+              setSearchSelectedTask(taskData);
+              setIsTaskDetailOpen(true);
+              setActiveTab('tasks');
+            });
+          }
+          return <Roles key={rolesKey} user={user} />;
+        case 'add-user':
+          if (!can('users', 'create') && user?.role?.toLowerCase() !== 'admin') {
+            return renderOverview(setActiveTab, (taskData) => {
+              const displayId = getDisplayId(taskData);
+              setSelectedTaskId(displayId);
+              setSearchSelectedTask(taskData);
+              setIsTaskDetailOpen(true);
+              setActiveTab('tasks');
+            });
+          }
+          return <AddUser user={user} onBack={() => setActiveTab('users')} />;
+        case 'edit-user':
+          if (!can('users', 'edit') && user?.role?.toLowerCase() !== 'admin') {
+            return renderOverview(setActiveTab, (taskData) => {
+              const displayId = getDisplayId(taskData);
+              setSelectedTaskId(displayId);
+              setSearchSelectedTask(taskData);
+              setIsTaskDetailOpen(true);
+              setActiveTab('tasks');
+            });
+          }
+          return <EditUser userToEdit={userToEdit} onBack={() => setActiveTab('users')} />;
+        case 'timesheet-overall':
+          if (!canReport('timesheet-overall')) return renderOverview(setActiveTab, (taskData) => { const displayId = getDisplayId(taskData); setSelectedTaskId(displayId); setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
+          return <TimesheetOverall onUserClick={(userId, initialFilter, initialDate) => { setTimesheetUserId(userId); setTimesheetInitialFilter(initialFilter); setTimesheetInitialDate(initialDate); setActiveTab('reports-status-based'); }} />;
+        case 'daily-load-all':
+          if (!canReport('daily-load-all')) return renderOverview(setActiveTab, (taskData) => { const displayId = getDisplayId(taskData); setSelectedTaskId(displayId); setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
+          return <DailyLoadAll onUserClick={(userId) => { setDailyLoadUserId(userId); setActiveTab('daily-load-individual'); }} />;
+        case 'daily-load-individual':
+          if (!canReport('daily-load-individual')) return renderOverview(setActiveTab, (taskData) => { const displayId = getDisplayId(taskData); setSelectedTaskId(displayId); setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
+          return <DailyLoadIndividual user={user} initialUserId={dailyLoadUserId} onClearInitialUserId={() => setDailyLoadUserId(null)} onTaskClick={(taskData) => {
+              const displayId = getDisplayId(taskData);
+              setSelectedTaskId(displayId);
+              setSearchSelectedTask(taskData);
+              setIsTaskDetailOpen(true);
+              setActiveTab('tasks');
+            }} />;
+        case 'reports-status-based':
+          if (!canReport('reports-status-based')) return renderOverview(setActiveTab, (taskData) => { const displayId = getDisplayId(taskData); setSelectedTaskId(displayId); setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
+          return <ReportsStatusBased user={user} initialUserId={timesheetUserId} onClearInitialUser={() => setTimesheetUserId(null)} initialFilter={timesheetInitialFilter} onClearInitialFilter={() => setTimesheetInitialFilter(null)} initialDate={timesheetInitialDate} onClearInitialDate={() => setTimesheetInitialDate(null)} onNavigateToTask={(taskData) => {
+              const displayId = getDisplayId(taskData);
+              setSelectedTaskId(displayId);
+              setSearchSelectedTask(taskData);
+              setIsTaskDetailOpen(true);
+              setActiveTab('tasks');
+            }} />;
+        case 'reports':
+          if (!canReport('tasks-report')) {
+            const reportTabs = [
+              { key: 'reports-status-based', action: 'reports-status-based' },
+              { key: 'timesheet-overall', action: 'timesheet-overall' },
+              { key: 'daily-load-all', action: 'daily-load-all' },
+              { key: 'daily-load-individual', action: 'daily-load-individual' }
+            ];
+            const firstPermitted = reportTabs.find(rt => canReport(rt.action));
+            if (firstPermitted) {
+              setTimeout(() => setActiveTab(firstPermitted.key), 0);
+              return <div className="loading-screen">Loading Report...</div>;
+            }
+            return renderOverview(setActiveTab, (taskData) => { const displayId = getDisplayId(taskData); setSelectedTaskId(displayId); setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
+          }
+          return <Reports user={user} onNavigateToTask={(taskData) => {
+              const displayId = getDisplayId(taskData);
+              setSelectedTaskId(displayId);
+              setSearchSelectedTask(taskData);
+              setIsTaskDetailOpen(true);
+              setActiveTab('tasks');
+            }} />;
+        default:
+          return renderOverview(
+            setActiveTab,
+            (taskData) => {
+              const displayId = getDisplayId(taskData);
+              setSelectedTaskId(displayId);
+              setSearchSelectedTask(taskData);
+              setIsTaskDetailOpen(true);
+              setActiveTab('tasks');
+            }
+          );
+      }
+    };
 
-    }
+    // Render all visited tabs wrapper
+    const allTabIds = [
+      'overview', 'projects', 'estimations', 'clients', 'track-team', 'tasks', 'task-groups',
+      'archive', 'users', 'roles', 'add-user', 'edit-user', 'timesheet-overall', 'daily-load-all',
+      'daily-load-individual', 'reports-status-based', 'reports'
+    ];
+
+    // If activeTab is none of the defined ones, treat it as overview/default
+    const currentTabResolved = allTabIds.includes(activeTab) ? activeTab : 'overview';
+
+    return (
+      <>
+        {allTabIds.map((tabId) => {
+          const isVisited = visitedTabs.includes(tabId) || (tabId === 'overview' && visitedTabs.includes(''));
+          if (!isVisited) return null;
+          return (
+            <div
+              key={tabId}
+              style={{
+                display: currentTabResolved === tabId ? 'block' : 'none',
+                height: '100%'
+              }}
+            >
+              {renderTabComponent(tabId)}
+            </div>
+          );
+        })}
+      </>
+    );
   };
 
   const navigateToTab = (id) => {
@@ -796,6 +873,8 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       setUserToEdit(null);
     } else if (id === 'roles') {
       setRolesKey(prev => prev + 1);
+    } else if (id === 'daily-load-individual') {
+      setDailyLoadUserId(null);
     }
     setActiveTab(id);
     setSidebarOpen(false);
