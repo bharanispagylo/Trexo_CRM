@@ -1707,3 +1707,12 @@
   transform: scale(1.15);
 }
 
+.queries-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.queries-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+

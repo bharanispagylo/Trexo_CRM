@@ -246,7 +246,9 @@ export const getDisplayId = (f) => {
   
   let prefix = 'T';
   const type = (f.taskType || '').toLowerCase();
-  if (type === 'bug') {
+  if (type === 'recurring task' || f.recurringTemplateId) {
+    prefix = 'R';
+  } else if (type === 'bug') {
     prefix = 'B';
   } else if (type === 'calls/meetings') {
     prefix = 'C';
@@ -4378,6 +4380,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   };
   const mobileSortBy = 'dueDate';
   const [assigneeFilter, setAssigneeFilter] = useState(initialAssigneeFilter);
+  const [recurringToggle, setRecurringToggle] = useState('my');
+  const [myTasksToggle, setMyTasksToggle] = useState('assigned');
+  const [readRecurringTasks, setReadRecurringTasks] = useState([]);
+
+
 
   useEffect(() => {
     setAssigneeFilter(initialAssigneeFilter);
@@ -4403,6 +4410,35 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   // Side drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTask, setDrawerTask] = useState(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      const readKey = `read_recurring_tasks_${user.id}`;
+      try {
+        const stored = JSON.parse(localStorage.getItem(readKey) || '[]');
+        setReadRecurringTasks(stored);
+      } catch (e) {
+        setReadRecurringTasks([]);
+      }
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (drawerTask && drawerTask.recurringTemplateId && user?.id) {
+      const readKey = `read_recurring_tasks_${user.id}`;
+      try {
+        const stored = JSON.parse(localStorage.getItem(readKey) || '[]');
+        if (!stored.includes(drawerTask.id)) {
+          const updated = [...stored, drawerTask.id];
+          localStorage.setItem(readKey, JSON.stringify(updated));
+          setReadRecurringTasks(updated);
+        }
+      } catch (e) {
+        console.error('Failed to update read recurring tasks in localStorage:', e);
+      }
+    }
+  }, [drawerTask, user?.id]);
+
   const [listUsers, setListUsers] = useState([]);
   const toggleGroup = (key) => {
     setExpandedGroupId(prev => prev === key ? null : key);
@@ -4519,6 +4555,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
   const dragId = useRef(null);
   const { can, getLevel } = usePermissions();
+  const viewLevel = getLevel('tasks', 'view');
+  const editLevel = getLevel('tasks', 'edit');
+  const deleteLevel = getLevel('tasks', 'delete');
+  const hasAllAccess = viewLevel === 'All' || editLevel === 'All' || deleteLevel === 'All' || isTeamLeadOrAdmin;
   const canEditTask = (task) => {
     if (!task) return false;
     if (user?.role?.toLowerCase() === 'admin') return true;
@@ -4853,10 +4893,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       const currentUserId = (user?.id || '').trim().toLowerCase();
       if (!currentUserId || !assigneesList.includes(currentUserId)) return false;
     } else if (subTab === 'recurring') {
-      if (type !== 'Recurring Task') return false;
+      if (type !== 'Recurring Task' && !t.recurringTemplateId) return false;
     } else {
       if (type === 'calls/meetings') return false;
-      if (type === 'Recurring Task') return false; // hide template tasks from normal tabs
+      if (type === 'Recurring Task' || t.recurringTemplateId) return false; // hide recurring templates and task instances from normal tabs
     }
 
     // 1. Type Filter
@@ -4899,22 +4939,33 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     }
 
     // 3. User Permission / SubTab Filter
-    const level = getLevel('tasks', 'view');
-    const editLevel = getLevel('tasks', 'edit');
-    const deleteLevel = getLevel('tasks', 'delete');
-    
-    const hasAllAccess = level === 'All' || editLevel === 'All' || deleteLevel === 'All' || isTeamLeadOrAdmin;
-    
     if (hasAllAccess && subTab === 'all' && !assigneeFilter) return true;
+    if (isTeamLeadOrAdmin && subTab === 'recurring' && recurringToggle === 'all' && !assigneeFilter) return true;
     
     // For 'my' tab, 'Self' level, or specified assigneeFilter:
+    if (subTab === 'my' && myTasksToggle === 'created' && !assigneeFilter) {
+      const currentUserName = (user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || '').trim().toLowerCase();
+      const targetId = (user?.id || '').trim().toLowerCase();
+      return t.creatorId?.toLowerCase() === targetId || (t.createdBy && t.createdBy.toLowerCase() === currentUserName);
+    }
+
     const assignees = t.assignees ? t.assignees.split(',').map(a => a.trim().toLowerCase()) : [];
     const targetId = (assigneeFilter || user?.id || '').trim().toLowerCase();
     
     return assignees.includes(targetId);
   });
 
-  const pageTitle = subTab === 'my' ? '' : subTab === 'calls' ? 'Calls/Meeting' : subTab === 'recurring' ? 'Recurring' : 'All Tasks';
+  const unreadRecurringCount = tasks.filter(t => {
+    if (t.status === 'Archived' || t.status === 'Archive') return false;
+    if (!t.recurringTemplateId) return false;
+    const assigneesList = t.assignees ? t.assignees.split(',').map(a => a.trim().toLowerCase()) : [];
+    const currentUserId = (user?.id || '').trim().toLowerCase();
+    const isAssigned = currentUserId && assigneesList.includes(currentUserId);
+    return isAssigned && !readRecurringTasks.includes(t.id);
+  }).length;
+
+  const pageTitle = subTab === 'my' ? '' : subTab === 'calls' ? 'Calls/Meeting' : subTab === 'recurring' ? `Recurring (${unreadRecurringCount})` : 'All Tasks';
+  const showAssigneeCol = subTab === 'recurring' && isTeamLeadOrAdmin && recurringToggle === 'all';
 
   if (loading || openingInitialTask) {
     return (
@@ -4951,6 +5002,357 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     );
   }
 
+  const renderRecurringTable = (taskList, isTemplateList = false) => {
+    if (taskList.length === 0) {
+      return (
+        <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+          No tasks found.
+        </div>
+      );
+    }
+    return (
+      <div className="cu-table-wrapper" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: '#ffffff' }}>
+        <div className="table-responsive">
+          <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
+            <thead>
+              <tr className="cu-thead-row">
+                <th className="cu-th cu-th-name">NAME</th>
+                <th className="cu-th cu-th-status" style={{ width: '120px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>STATUS</th>
+                {showAssigneeCol && <th className="cu-th cu-th-assignee" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>ASSIGNEE</th>}
+                <th className="cu-th cu-th-project" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>PROJECT</th>
+                {isTemplateList ? (
+                  <th className="cu-th cu-th-frequency" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>FREQUENCY</th>
+                ) : (
+                  <th className="cu-th cu-th-delivery" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>DUE DATE</th>
+                )}
+                <th className="cu-th cu-th-actions" style={{ width: '80px' }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {taskList.flatMap(task => {
+                const subTasks = tasks.filter(t => t.parentId === task.id);
+                const isExpanded = !!expandedSubtaskIds[task.id];
+                const isAddingSubtask = addingSubtaskParentId === task.id;
+                const relDate = formatRelativeDueDate(task.dueDate);
+                const taskGroupName = task.taskListId ? (taskListsData.find(l => l.id === task.taskListId)?.name || '') : '';
+                const meta = STATUS_HEADER_META[task.status || 'To Do'] || { bg: '#64748b', fg: '#ffffff', dotColor: '#94a3b8' };
+
+                const parentRow = (
+                  <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
+                    <td className="cu-td cu-td-name">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
+                        <button
+                          style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', visibility: subTasks.length > 0 ? 'visible' : 'hidden' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSubtaskExpand(task.id);
+                          }}
+                          title={isExpanded ? "Collapse Subtasks" : "Expand Subtasks"}
+                        >
+                          <svg viewBox="0 0 10 6" width="8" height="8" fill="currentColor" style={{ transform: isExpanded ? "none" : "rotate(-90deg)", transition: "transform 0.15s", color: "#64748b" }}><path d="M0 0l5 6 5-6z"/></svg>
+                        </button>
+                        <div className="cu-name-content">
+                          <TaskTitleTooltip text={`${getDisplayId(task)} ${task.title || 'Untitled Task'}`}>
+                            <span className="cu-task-id-prefix">{getDisplayId(task)}</span><span className="cu-task-title">{task.title || 'Untitled Task'}</span>
+                          </TaskTitleTooltip>
+                          {taskGroupName && (
+                            <div className="cu-mobile-task-sub">
+                              <span className="cu-mobile-in-list">In {taskGroupName}</span>
+                            </div>
+                          )}
+                        </div>
+                        {subTasks.length > 0 && (
+                          <span 
+                            style={{ 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: '4px', 
+                              marginLeft: '8px', 
+                              fontSize: '0.7rem', 
+                              fontWeight: '700', 
+                              color: '#2563eb', 
+                              background: '#eff6ff', 
+                              padding: '2px 6px', 
+                              borderRadius: '4px',
+                              border: '1px solid #bfdbfe',
+                              cursor: 'pointer'
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleSubtaskExpand(task.id);
+                            }}
+                            title={`${subTasks.length} Subtasks`}
+                          >
+                            <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                            {subTasks.length}
+                          </span>
+                        )}
+                        <button
+                          className="cu-hover-subtask-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedSubtaskIds(prev => ({ ...prev, [task.id]: true }));
+                            setAddingSubtaskParentId(task.id);
+                            setSubtaskTitle('');
+                            setSubtaskAssignee('');
+                            setSubtaskDueDate('');
+                            setSubtaskPriority('Medium');
+                          }}
+                          title="Add Subtask"
+                        >
+                          <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                    <td className="cu-td" style={{ fontSize: '0.82rem', fontWeight: '600', color: meta.bg }}>
+                      {task.status || 'To Do'}
+                    </td>
+                    {showAssigneeCol && (
+                      <td className="cu-td cu-td-assignee" style={{ textAlign: 'left' }} onClick={e => e.stopPropagation()}>
+                        <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                          <select className="cu-inline-dropdown" value={task.assignees || ''} disabled={!canEditTask(task)} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${task.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                            <option value="">Unassigned</option>
+                            {getFilteredUsersForProject(getTaskProjectId(task), task.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                          </select>
+                        </div>
+                      </td>
+                    )}
+                    <td className="cu-td cu-td-project" style={{ textAlign: 'left' }}>
+                      {task.projectName ? (
+                        <span className="cu-project-badge">{task.projectName}</span>
+                      ) : <span className="cu-empty-cell">-</span>}
+                    </td>
+                    {isTemplateList ? (
+                      <td className="cu-td cu-td-frequency" style={{ textAlign: 'left' }}>
+                        {task.recurrenceFrequency ? (
+                          <span className="cu-project-badge" style={{ textTransform: 'capitalize', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', fontWeight: '600' }}>
+                            {task.recurrenceFrequency}
+                          </span>
+                        ) : <span className="cu-empty-cell">-</span>}
+                      </td>
+                    ) : (
+                      <td className="cu-td cu-td-delivery" style={{ textAlign: 'left' }} onClick={e => e.stopPropagation()}>
+                        <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                          <span className="cu-date-text" style={{ color: task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(task.dueDate)}</span>
+                          <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(task)} onClick={(e) => { e.stopPropagation(); if (canEditTask(task)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }} />
+                        </div>
+                      </td>
+                    )}
+                    <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
+                      <div className="cu-row-actions">
+                        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                          <PriorityFlag priority={task.priority} />
+                          {canEditTask(task) && (
+                            <select
+                              value={task.priority || 'Medium'}
+                              onClick={e => e.stopPropagation()}
+                              onChange={async (e) => {
+                                e.stopPropagation();
+                                const newPriority = e.target.value;
+                                const updated = { ...task, priority: newPriority };
+                                try {
+                                  const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                  await api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName });
+                                  setTasks(ts => ts.map(t => t.id === task.id ? updated : t));
+                                } catch (err) {
+                                  console.error(err);
+                                }
+                              }}
+                              style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                opacity: 0,
+                                cursor: 'pointer',
+                                border: 'none',
+                                outline: 'none'
+                              }}
+                            >
+                              {Object.keys(PRIORITY_FLAGS).map(p => (
+                                <option key={p} value={p}>{p}</option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                        {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && ((user?.id && (task.assignees || '').toLowerCase().includes(user.id.toLowerCase())) || ((user?.fullName || user?.name) && (task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))))) && (
+                          <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task'); }} title="Delete">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+
+                const rows = [parentRow];
+
+                if (isExpanded) {
+                  subTasks.forEach(sub => {
+                    const subRelDate = formatRelativeDueDate(sub.dueDate);
+                    const subMeta = STATUS_HEADER_META[sub.status || 'To Do'] || { bg: '#64748b', fg: '#ffffff', dotColor: '#94a3b8' };
+
+                    rows.push(
+                      <tr key={sub.id} className="cu-row subtask-row" onClick={() => openTaskDetail(sub, false)} style={{ background: '#f8fafc' }}>
+                        <td className="cu-td cu-td-name" style={{ paddingLeft: '2.5rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                            <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
+                            <TaskTitleTooltip text={`${getDisplayId(sub)} ${sub.title || 'Untitled Subtask'}`}>
+                              <span className="cu-task-id-prefix">{getDisplayId(sub)}</span><span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
+                            </TaskTitleTooltip>
+                          </div>
+                        </td>
+                        <td className="cu-td" style={{ fontSize: '0.82rem', fontWeight: '600', color: subMeta.bg }}>
+                          {sub.status || 'To Do'}
+                        </td>
+                        {showAssigneeCol && (
+                          <td className="cu-td cu-td-assignee" style={{ textAlign: 'left' }} onClick={e => e.stopPropagation()}>
+                            <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                              <select className="cu-inline-dropdown" value={sub.assignees || ''} disabled={!canEditTask(sub)} onChange={async (e) => { e.stopPropagation(); const updated = { ...sub, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${sub.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === sub.id ? updated : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                                <option value="">Unassigned</option>
+                                {getFilteredUsersForProject(getTaskProjectId(sub) || getTaskProjectId(task), sub.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                              </select>
+                            </div>
+                          </td>
+                        )}
+                        <td className="cu-td cu-td-project" style={{ textAlign: 'left' }}>
+                          {sub.projectName ? (
+                            <span className="cu-project-badge">{sub.projectName}</span>
+                          ) : <span className="cu-empty-cell">-</span>}
+                        </td>
+                        {isTemplateList ? (
+                          <td className="cu-td cu-td-frequency" style={{ textAlign: 'left' }}>
+                            <span className="cu-empty-cell">-</span>
+                          </td>
+                        ) : (
+                          <td className="cu-td cu-td-delivery" style={{ textAlign: 'left' }} onClick={e => e.stopPropagation()}>
+                            <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                              <span className="cu-date-text" style={{ color: sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(sub.dueDate)}</span>
+                              <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(sub)} onClick={(e) => { e.stopPropagation(); if (canEditTask(sub)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }} />
+                            </div>
+                          </td>
+                        )}
+                        <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
+                          <div className="cu-row-actions">
+                            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                              <PriorityFlag priority={sub.priority} />
+                              {canEditTask(sub) && (
+                                <select
+                                  value={sub.priority || 'Medium'}
+                                  onClick={e => e.stopPropagation()}
+                                  onChange={async (e) => {
+                                    e.stopPropagation();
+                                    const newPriority = e.target.value;
+                                    const updated = { ...sub, priority: newPriority };
+                                    try {
+                                      const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                      await api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName });
+                                      setTasks(ts => ts.map(t => t.id === sub.id ? updated : t));
+                                    } catch (err) {
+                                      console.error(err);
+                                    }
+                                  }}
+                                  style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    opacity: 0,
+                                    cursor: 'pointer',
+                                    border: 'none',
+                                    outline: 'none'
+                                  }}
+                                >
+                                  {Object.keys(PRIORITY_FLAGS).map(p => (
+                                    <option key={p} value={p}>{p}</option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                            {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && ((user?.id && (sub.assignees || '').toLowerCase().includes(user.id.toLowerCase())) || ((user?.fullName || user?.name) && (sub.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))))) && (
+                              <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this subtask?', () => handleDeleteTask(sub.id), 'Delete Subtask'); }} title="Delete">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  });
+                }
+
+                if (isAddingSubtask) {
+                  rows.push(
+                    <tr key={`add-sub-${task.id}`} className="cu-inline-row animate-fade-in" style={{ background: '#f8fafc' }}>
+                      <td colSpan={showAssigneeCol ? 6 : 5} style={{ paddingLeft: '2.5rem' }}>
+                        <div className="new-task-inline-bar" style={{ borderLeft: '2px solid #2563eb', paddingLeft: '8px' }}>
+                          <div className="ntib-left">
+                            <span className="ntib-dotted-circle"></span>
+                            <input
+                              type="text"
+                              placeholder="Subtask Name or type '/' for commands"
+                              value={subtaskTitle}
+                              onChange={e => setSubtaskTitle(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter' && !isSaving) submitSubtask(task); if (e.key === 'Escape') setAddingSubtaskParentId(null); }}
+                              autoFocus
+                              className="ntib-input"
+                            />
+                          </div>
+                          <div className="ntib-right">
+                            <div className="ntib-dropdown-wrapper">
+                              <button type="button" className="ntib-btn-icon" title="Assignee">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                              </button>
+                              <select className="ntib-hidden-select" value={subtaskAssignee} onChange={e => setSubtaskAssignee(e.target.value)}>
+                                <option value="">Assignee</option>
+                                {getFilteredUsersForProject(getTaskProjectId(task)).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                              </select>
+                              {subtaskAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === subtaskAssignee) || {}).fullName || subtaskAssignee)}</span>}
+                            </div>
+                            
+                            <div className="ntib-dropdown-wrapper ntib-hide-mobile">
+                              <button type="button" className="ntib-btn-icon" title="Due Date">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                              </button>
+                              <input type="date" className="ntib-hidden-date" value={subtaskDueDate} onChange={e => setSubtaskDueDate(e.target.value)} />
+                              {subtaskDueDate && <span className="ntib-badge">{new Date(subtaskDueDate).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>}
+                            </div>
+                            
+                            <div className="ntib-dropdown-wrapper ntib-hide-mobile">
+                              <button type="button" className="ntib-btn-icon" title="Priority">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                              </button>
+                              <select className="ntib-hidden-select" value={subtaskPriority} onChange={e => setSubtaskPriority(e.target.value)}>
+                                {PRIORITIES.map(p => <option key={p} value={p}>{p} Priority</option>)}
+                              </select>
+                              {subtaskPriority && <span className="ntib-badge priority-color">{subtaskPriority}</span>}
+                            </div>
+                            
+                            <button type="button" className="ntib-cancel-btn" onClick={() => setAddingSubtaskParentId(null)}>Cancel</button>
+                            <button type="button" className="ntib-save-btn" disabled={isSaving} onClick={() => submitSubtask(task)}>{isSaving ? 'Saving...' : 'Save ↵'}</button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return rows;
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="tasks-3col-layout">
 
@@ -4958,84 +5360,99 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       {/* Ã¢â€¢ÂÃ¢â€¢Â MAIN CONTENT Ã¢â€¢ÂÃ¢â€¢Â */}
       <div className={`tasks-main-content ${viewMode === 'kanban' || viewMode === 'schedule' ? 'kanban-mode-active' : ''}`}>
       <div className={`kanban-root ${viewMode === 'kanban' || viewMode === 'schedule' ? 'kanban-scroll-layout' : ''}`} onDragEnd={handleDragEnd}>
-      {(getLevel('tasks', 'view') === 'All' || getLevel('tasks', 'edit') === 'All' || getLevel('tasks', 'delete') === 'All' || isTeamLeadOrAdmin) && !assigneeFilter && (
-        <div className="saas-tabs" style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '2rem' }}>
-          <button 
-            className={`saas-tab ${subTab === 'my' ? 'active' : ''}`} 
-            onClick={() => {
-              setSubTab('my');
-              setAssigneeFilter(null);
-              if (onClearAssigneeFilter) onClearAssigneeFilter();
-              setFilterProjectName('');
-              setFilterType('');
-              setFilterFromDate('');
-              setFilterToDate('');
-            }}
-            style={{ 
-              background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
-              color: subTab === 'my' ? '#2563eb' : '#64748b',
-              borderBottom: subTab === 'my' ? '2px solid #2563eb' : '2px solid transparent'
-            }}
-          >
-            My Tasks
-          </button>
-          <button 
-            className={`saas-tab ${subTab === 'all' ? 'active' : ''}`} 
-            onClick={() => {
-              setSubTab('all');
-              setAssigneeFilter(null);
-              if (onClearAssigneeFilter) onClearAssigneeFilter();
-              setFilterProjectName('');
-              setFilterType('');
-              setFilterFromDate('');
-              setFilterToDate('');
-            }}
-            style={{ 
-              background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
-              color: subTab === 'all' ? '#2563eb' : '#64748b',
-              borderBottom: subTab === 'all' ? '2px solid #2563eb' : '2px solid transparent'
-            }}
-          >
-            All Tasks
-          </button>
-          <button 
-            className={`saas-tab ${subTab === 'calls' ? 'active' : ''}`} 
-            onClick={() => {
-              setSubTab('calls');
-              setAssigneeFilter(null);
-              if (onClearAssigneeFilter) onClearAssigneeFilter();
-              setFilterProjectName('');
-              setFilterType('');
-              setFilterFromDate('');
-              setFilterToDate('');
-            }}
-            style={{ 
-              background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
-              color: subTab === 'calls' ? '#2563eb' : '#64748b',
-              borderBottom: subTab === 'calls' ? '2px solid #2563eb' : '2px solid transparent'
-            }}
-          >
-            Calls/Meeting
-          </button>
-          <button 
-            className={`saas-tab ${subTab === 'recurring' ? 'active' : ''}`} 
-            onClick={() => {
-              setSubTab('recurring');
-              setAssigneeFilter(null);
-              if (onClearAssigneeFilter) onClearAssigneeFilter();
-              setFilterProjectName('');
-              setFilterType('');
-              setFilterFromDate('');
-              setFilterToDate('');
-            }}
-            style={{ 
-              background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
-              color: subTab === 'recurring' ? '#2563eb' : '#64748b',
-              borderBottom: subTab === 'recurring' ? '2px solid #2563eb' : '2px solid transparent'
-            }}
-          >
-            Recurring
-          </button>
+      {!assigneeFilter && (
+        <div className="saas-tabs" style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '2rem' }}>
+            <button 
+              className={`saas-tab ${subTab === 'my' ? 'active' : ''}`} 
+              onClick={() => {
+                setSubTab('my');
+                setMyTasksToggle('assigned');
+                setAssigneeFilter(null);
+                if (onClearAssigneeFilter) onClearAssigneeFilter();
+                setFilterProjectName('');
+                setFilterType('');
+                setFilterFromDate('');
+                setFilterToDate('');
+              }}
+              style={{ 
+                background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
+                color: subTab === 'my' ? '#2563eb' : '#64748b',
+                borderBottom: subTab === 'my' ? '2px solid #2563eb' : '2px solid transparent'
+              }}
+            >
+              My Tasks
+            </button>
+            {hasAllAccess && (
+              <button 
+                className={`saas-tab ${subTab === 'all' ? 'active' : ''}`} 
+                onClick={() => {
+                  setSubTab('all');
+                  setMyTasksToggle('assigned');
+                  setAssigneeFilter(null);
+                  if (onClearAssigneeFilter) onClearAssigneeFilter();
+                  setFilterProjectName('');
+                  setFilterType('');
+                  setFilterFromDate('');
+                  setFilterToDate('');
+                }}
+                style={{ 
+                  background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
+                  color: subTab === 'all' ? '#2563eb' : '#64748b',
+                  borderBottom: subTab === 'all' ? '2px solid #2563eb' : '2px solid transparent'
+                }}
+              >
+                All Tasks
+              </button>
+            )}
+            <button 
+              className={`saas-tab ${subTab === 'calls' ? 'active' : ''}`} 
+              onClick={() => {
+                setSubTab('calls');
+                setMyTasksToggle('assigned');
+                setAssigneeFilter(null);
+                if (onClearAssigneeFilter) onClearAssigneeFilter();
+                setFilterProjectName('');
+                setFilterType('');
+                setFilterFromDate('');
+                setFilterToDate('');
+              }}
+              style={{ 
+                background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
+                color: subTab === 'calls' ? '#2563eb' : '#64748b',
+                borderBottom: subTab === 'calls' ? '2px solid #2563eb' : '2px solid transparent'
+              }}
+            >
+              Calls/Meeting
+            </button>
+            <button 
+              className={`saas-tab ${subTab === 'recurring' ? 'active' : ''}`} 
+              onClick={() => {
+                setSubTab('recurring');
+                setMyTasksToggle('assigned');
+                setRecurringToggle('my');
+                setAssigneeFilter(null);
+                if (onClearAssigneeFilter) onClearAssigneeFilter();
+                setFilterProjectName('');
+                setFilterType('');
+                setFilterFromDate('');
+                setFilterToDate('');
+              }}
+              style={{ 
+                background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
+                color: subTab === 'recurring' ? '#2563eb' : '#64748b',
+                borderBottom: subTab === 'recurring' ? '2px solid #2563eb' : '2px solid transparent'
+              }}
+            >
+              Recurring ({unreadRecurringCount})
+            </button>
+          </div>
+          {subTab !== 'calls' && (
+            <div className="view-toggle view-toggle-desktop" style={{ marginBottom: '8px' }}>
+              <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>List</button>
+              <button className={viewMode === 'kanban' ? 'active' : ''} onClick={() => setViewMode('kanban')}>Kanban</button>
+            </div>
+          )}
         </div>
       )}
 
@@ -5091,23 +5508,111 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Header ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
       <div className="kanban-header">
         <div className="kanban-header-left">
+          {subTab === 'recurring' && isTeamLeadOrAdmin && (
+            <div className="filter-group-toggle" style={{ display: 'flex', alignItems: 'center' }}>
+              <div className="view-toggle" style={{ display: 'flex', background: 'white', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <button 
+                  className={recurringToggle === 'my' ? 'active' : ''} 
+                  onClick={() => setRecurringToggle('my')}
+                  style={{ 
+                    padding: '0.25rem 0.75rem', 
+                    borderRadius: '6px', 
+                    border: 'none', 
+                    fontWeight: 600, 
+                    fontSize: '0.82rem', 
+                    cursor: 'pointer', 
+                    background: recurringToggle === 'my' ? '#2563eb' : 'transparent', 
+                    color: recurringToggle === 'my' ? 'white' : '#64748b',
+                    boxShadow: recurringToggle === 'my' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  My
+                </button>
+                <button 
+                  className={recurringToggle === 'all' ? 'active' : ''} 
+                  onClick={() => setRecurringToggle('all')}
+                  style={{ 
+                    padding: '0.25rem 0.75rem', 
+                    borderRadius: '6px', 
+                    border: 'none', 
+                    fontWeight: 600, 
+                    fontSize: '0.82rem', 
+                    cursor: 'pointer', 
+                    background: recurringToggle === 'all' ? '#2563eb' : 'transparent', 
+                    color: recurringToggle === 'all' ? 'white' : '#64748b',
+                    boxShadow: recurringToggle === 'all' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  All
+                </button>
+              </div>
+            </div>
+          )}
+          {subTab === 'my' && (
+            <div className="filter-group-toggle" style={{ display: 'flex', alignItems: 'center' }}>
+              <div className="view-toggle" style={{ display: 'flex', background: 'white', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <button 
+                  className={myTasksToggle === 'assigned' ? 'active' : ''} 
+                  onClick={() => setMyTasksToggle('assigned')}
+                  style={{ 
+                    padding: '0.25rem 0.75rem', 
+                    borderRadius: '6px', 
+                    border: 'none', 
+                    fontWeight: 600, 
+                    fontSize: '0.82rem', 
+                    cursor: 'pointer', 
+                    background: myTasksToggle === 'assigned' ? '#2563eb' : 'transparent', 
+                    color: myTasksToggle === 'assigned' ? 'white' : '#64748b',
+                    boxShadow: myTasksToggle === 'assigned' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Assigned to me
+                </button>
+                <button 
+                  className={myTasksToggle === 'created' ? 'active' : ''} 
+                  onClick={() => setMyTasksToggle('created')}
+                  style={{ 
+                    padding: '0.25rem 0.75rem', 
+                    borderRadius: '6px', 
+                    border: 'none', 
+                    fontWeight: 600, 
+                    fontSize: '0.82rem', 
+                    cursor: 'pointer', 
+                    background: myTasksToggle === 'created' ? '#2563eb' : 'transparent', 
+                    color: myTasksToggle === 'created' ? 'white' : '#64748b',
+                    boxShadow: myTasksToggle === 'created' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Created by me
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <div className="kanban-controls">
           {subTab !== 'calls' && (
             <div className="tasks-filter-row">
-              <div className="filter-group-type">
-                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Type</label>
-                <select 
-                  value={filterType} 
-                  onChange={e => setFilterType(e.target.value)}
-                  style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
-                >
-                  <option value="">All Types</option>
-                  <option value="Task">Task</option>
-                  <option value="Sub Task">Sub Task</option>
-                  <option value="Bug">Bug</option>
-                </select>
-              </div>
+              {subTab !== 'recurring' && (
+                <div className="filter-group-type">
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Type</label>
+                  <select 
+                    value={filterType} 
+                    onChange={e => setFilterType(e.target.value)}
+                    style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="">All Types</option>
+                    <option value="Task">Task</option>
+                    <option value="Sub Task">Sub Task</option>
+                    <option value="Bug">Bug</option>
+                  </select>
+                </div>
+              )}
 
               <div className="filter-group-project">
                 <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Projects</label>
@@ -5183,7 +5688,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             </div>
           )}
           {subTab !== 'calls' && (
-            <div className="view-toggle">
+            <div className="view-toggle view-toggle-mobile">
               <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>List</button>
               <button className={viewMode === 'kanban' ? 'active' : ''} onClick={() => setViewMode('kanban')}>Kanban</button>
             </div>
@@ -5380,6 +5885,24 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       )}
 
       {viewMode === 'list' && (() => {
+        if (subTab === 'recurring') {
+          return (
+            <div className="recurring-custom-lists" style={{ display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1rem 0' }}>
+              {/* Heading 1: Tasks */}
+              <div className="recurring-group-section">
+                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>Tasks</h3>
+                {renderRecurringTable(filteredTasks.filter(t => t.taskType !== 'Recurring Task'))}
+              </div>
+
+              {/* Heading 2: Templates */}
+              <div className="recurring-group-section">
+                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>Templates</h3>
+                {renderRecurringTable(filteredTasks.filter(t => t.taskType === 'Recurring Task'), true)}
+              </div>
+            </div>
+          );
+        }
+
         if (subTab === 'calls') {
           // Group by project
           const projectGroupsMap = {};
@@ -6641,6 +7164,25 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                               <span className="cu-flat-task-title" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}><span className="cu-task-id-prefix">{getDisplayId(task)}</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {task.title || 'Untitled Task'}
                               </span></span>
+                              {showAssigneeCol && (() => {
+                                const assigneeId = task.assignees;
+                                const assigneeUser = listUsers.find(u => u.id === assigneeId);
+                                const initialsStr = assigneeUser ? initials(assigneeUser.fullName) : '?';
+                                return (
+                                  <span className="cu-mobile-assignee-badge" style={{
+                                    background: '#e2e8f0',
+                                    color: '#475569',
+                                    padding: '1px 6px',
+                                    borderRadius: '10px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    marginLeft: '6px',
+                                    flexShrink: 0
+                                  }} title={assigneeUser?.fullName || 'Unassigned'}>
+                                    {initialsStr}
+                                  </span>
+                                );
+                              })()}
                               {subTasks.length > 0 && (
                                 <span 
                                   style={{ 
@@ -6699,6 +7241,25 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                   <span className="cu-flat-task-title" style={{ color: '#475569', fontSize: '0.82rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}><span className="cu-task-id-prefix">{getDisplayId(sub)}</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {sub.title || 'Untitled Subtask'}
                                   </span></span>
+                                  {showAssigneeCol && (() => {
+                                    const assigneeId = sub.assignees;
+                                    const assigneeUser = listUsers.find(u => u.id === assigneeId);
+                                    const initialsStr = assigneeUser ? initials(assigneeUser.fullName) : '?';
+                                    return (
+                                      <span className="cu-mobile-assignee-badge" style={{
+                                        background: '#cbd5e1',
+                                        color: '#475569',
+                                        padding: '1px 6px',
+                                        borderRadius: '10px',
+                                        fontSize: '0.65rem',
+                                        fontWeight: 700,
+                                        marginLeft: '6px',
+                                        flexShrink: 0
+                                      }}>
+                                        {initialsStr}
+                                      </span>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                             );
@@ -6772,7 +7333,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             </div>
 
             {/* ── Desktop: status-grouped list (hidden on mobile) ── */}
-            <div className="cu-list-root my-tasks-list">
+            <div className={`cu-list-root my-tasks-list ${subTab === 'recurring' ? 'has-assignee' : ''}`}>
             {COLUMNS.map(col => {
               const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
               const statusTasks = [...(byStatus[col.id] || [])].sort((a, b) => {
@@ -6811,6 +7372,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                         <thead>
                           <tr className="cu-thead-row">
                             <th className="cu-th cu-th-name">NAME</th>
+                            {showAssigneeCol && <th className="cu-th cu-th-assignee">ASSIGNEE</th>}
                             <th className="cu-th cu-th-project">PROJECT</th>
                             <th className="cu-th cu-th-delivery">DUE DATE</th>
                             <th className="cu-th cu-th-actions"></th>
@@ -6914,6 +7476,16 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </button>
                                               </div>
                                             </td>
+                                            {showAssigneeCol && (
+                                              <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
+                                                <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                                                  <select className="cu-inline-dropdown" value={task.assignees || ''} disabled={!canEditTask(task)} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${task.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                                                    <option value="">Unassigned</option>
+                                                    {getFilteredUsersForProject(getTaskProjectId(task), task.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                  </select>
+                                                </div>
+                                              </td>
+                                            )}
                                             <td className="cu-td cu-td-project">
                                               {task.projectName ? (
                                                 <span className="cu-project-badge">{task.projectName}</span>
@@ -6991,6 +7563,16 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                     </TaskTitleTooltip>
                                                   </div>
                                                 </td>
+                                                {showAssigneeCol && (
+                                                  <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
+                                                    <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                                                      <select className="cu-inline-dropdown" value={sub.assignees || ''} disabled={!canEditTask(sub)} onChange={async (e) => { e.stopPropagation(); const updated = { ...sub, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${sub.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === sub.id ? updated : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                                                        <option value="">Unassigned</option>
+                                                        {getFilteredUsersForProject(getTaskProjectId(sub) || getTaskProjectId(task), sub.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                      </select>
+                                                    </div>
+                                                  </td>
+                                                )}
                                                 <td className="cu-td cu-td-project">
                                                   {sub.projectName ? (
                                                     <span className="cu-project-badge">{sub.projectName}</span>
@@ -7055,7 +7637,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                           if (isAddingSubtask) {
                                             rows.push(
                                               <tr key={`add-sub-${task.id}`} className="cu-inline-row animate-fade-in" style={{ background: '#f8fafc' }}>
-                                                <td colSpan="4" style={{ paddingLeft: '2.5rem' }}>
+                                                <td colSpan={showAssigneeCol ? 5 : 4} style={{ paddingLeft: '2.5rem' }}>
                                                   <div className="new-task-inline-bar" style={{ borderLeft: '2px solid #2563eb', paddingLeft: '8px' }}>
                                                     <div className="ntib-left">
                                                       <span className="ntib-dotted-circle"></span>
@@ -7116,7 +7698,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           {/* Inline Add Row */}
                           {isInline ? (
                             <tr className="cu-inline-row animate-fade-in">
-                              <td colSpan="4" style={{ padding: '8px' }}>
+                              <td colSpan={showAssigneeCol ? 5 : 4} style={{ padding: '8px' }}>
                                 <div className="new-task-inline-bar">
                                   <div className="ntib-left">
                                     <span className="ntib-dotted-circle"></span>
@@ -7172,7 +7754,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           ) : (
                             can('tasks', 'create') && subTab !== 'my' && subTab !== 'recurring' && (
                               <tr className="cu-add-row" onClick={() => openInlineAdd('', col.id)}>
-                                <td colSpan="4">
+                                <td colSpan={showAssigneeCol ? 5 : 4}>
                                   <span className="cu-add-icon">+</span>
                                   <span className="cu-add-text">Add Task</span>
                                 </td>

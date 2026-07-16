@@ -391,6 +391,26 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     return `${day}/${month}/${year}, ${hours}:${minutes} ${ampm}`;
   };
 
+  const formatDateOnly = (dateStr) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '-';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const formatQueryId = (queryId, id) => {
+    const qId = queryId || `QRY-${id.slice(-4).toUpperCase()}`;
+    const match = qId.match(/\d+/);
+    if (match) {
+      const num = parseInt(match[0], 10);
+      return `Q${num}`;
+    }
+    return qId;
+  };
+
   const formatDateForInput = (dateStr) => {
     if (!dateStr) return '';
     try {
@@ -817,10 +837,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       alert('Status is required.', 'warning', 'Required');
       return;
     }
-    if (!queryFormFields.description?.trim()) {
-      alert('Description is required.', 'warning', 'Required');
-      return;
-    }
     setIsSaving(true);
     try {
       const payload = {
@@ -994,20 +1010,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             </select>
           </div>
 
-          <div className="saas-field">
-            <label className="saas-label">Solved (Yes/No) *</label>
-            <select
-              className="saas-select"
-              value={queryFormFields.solved ? "true" : "false"}
-              onChange={e => setQueryFormFields({ ...queryFormFields, solved: e.target.value === "true" })}
-            >
-              <option value="false">No</option>
-              <option value="true">Yes</option>
-            </select>
-          </div>
-
           <div className="saas-field" style={{ gridColumn: 'span 2' }}>
-            <label className="saas-label">Description *</label>
+            <label className="saas-label">Description</label>
             <textarea
               className="saas-textarea"
               placeholder="Query details..."
@@ -1054,8 +1058,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             </button>
             <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '800', color: '#0f172a' }}>Query Details</h3>
           </div>
-          <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#a21caf' }}>
-            {viewingQuery.queryId || `QRY-${viewingQuery.id.slice(-4).toUpperCase()}`}
+          <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>
+            {formatQueryId(viewingQuery.queryId, viewingQuery.id)}
           </span>
         </div>
 
@@ -1137,7 +1141,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     const projMembers = [...new Set(rawMembers)];
     
     // Dynamic metrics from actual project data
-    const allProjectTasks = (selectedProject.taskLists || []).reduce((acc, list) => acc.concat(list.tasks || []), []);
+    const allProjectTasks = (selectedProject.taskLists || []).reduce((acc, list) => acc.concat(list.tasks || []), []).filter(t => (t.taskType || 'Task') !== 'Recurring Task' && !t.recurringTemplateId);
     const totalTasksCount = allProjectTasks.length;
     const completedTasksCount = allProjectTasks.filter(t => (t.status || '').toLowerCase() === 'completed').length;
     const inProgressTasksCount = allProjectTasks.filter(t => (t.status || '').toLowerCase() === 'in progress').length;
@@ -1559,7 +1563,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         ? idx !== 0
                         : expandedListId !== list.id;
 
-                      const listTasks = (list.tasks || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive').sort((a, b) => {
+                      const listTasks = (list.tasks || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || 'Task') !== 'Recurring Task' && !t.recurringTemplateId).sort((a, b) => {
                         if (!a.dueDate) return 1;
                         if (!b.dueDate) return -1;
                         return new Date(a.dueDate) - new Date(b.dueDate);
@@ -1733,7 +1737,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         </div>
 
                                 {!isCollapsed && hasTasks && (() => {
-                          const allTasks = list.tasks || [];
+                          const allTasks = (list.tasks || []).filter(t => (t.taskType || 'Task') !== 'Recurring Task' && !t.recurringTemplateId);
                           const firstStatusWithTasks = COLUMNS.find(c => allTasks.some(t => (t.status || 'To Do') === c.id))?.id || null;
                           return (
                           <div className="cu-list-root task-group-sections" style={{ marginTop: '0.5rem', marginBottom: '1.5rem' }}>
@@ -2565,24 +2569,20 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 return (
                   <div className="saas-table-container queries-table-container" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
                     <div style={{ overflowX: 'auto' }}>
-                      <table className="saas-table queries-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '950px' }}>
+                      <table className="saas-table queries-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
                         <thead>
                           <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '100px' }}>Query ID</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '200px' }}>Title</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '250px' }}>Description</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '140px' }}>Sent To</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '120px' }}>Status</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '90px' }}>Solved</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '100px' }}>Priority</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '120px' }}>Created On</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', textAlign: 'center', width: '120px' }}>Action</th>
+                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '400px' }}>Title</th>
+                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '180px' }}>Sent To</th>
+                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '140px' }}>Status</th>
+                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '160px' }}>Created On</th>
+                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', textAlign: 'center', width: '100px' }}>Action</th>
                           </tr>
                         </thead>
                         <tbody>
                           {filteredQueries.length === 0 ? (
                             <tr>
-                              <td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8', fontSize: '0.9rem' }}>
+                              <td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8', fontSize: '0.9rem' }}>
                                 No queries found matching the filters.
                               </td>
                             </tr>
@@ -2602,15 +2602,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                               };
 
                               return (
-                                <tr key={q.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                  <td data-label="Query ID" style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', fontWeight: '700', color: '#a21caf' }}>
-                                    {q.queryId || `QRY-${q.id.slice(-4).toUpperCase()}`}
-                                  </td>
+                                <tr 
+                                  key={q.id} 
+                                  style={{ borderBottom: '1px solid #f1f5f9' }}
+                                  onClick={() => handleOpenEditQueryModal(q)}
+                                >
                                   <td data-label="Title" style={{ padding: '1rem 1.5rem', fontSize: '0.85rem', color: '#0f172a', fontWeight: '600' }}>
+                                    <span className="cu-task-id-prefix" style={{ color: '#94a3b8', fontWeight: '500', marginRight: '6px' }}>{formatQueryId(q.queryId, q.id)}</span>
                                     {q.title}
-                                  </td>
-                                  <td data-label="Description" style={{ padding: '1rem 1.5rem', fontSize: '0.85rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '250px' }} title={q.description}>
-                                    {q.description || '-'}
                                   </td>
                                   <td data-label="Sent To" style={{ padding: '1rem 1.5rem' }}>
                                     {q.sentTo ? (() => {
@@ -2625,68 +2624,41 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                   </td>
                                   <td data-label="Status" style={{ padding: '1rem 1.5rem' }}>
                                     <span style={{
-                                      background: q.status === 'Solved' || q.solved ? '#dcfce7' : q.status === 'In Discussion' ? '#f3e8ff' : '#dbeafe',
-                                      color: q.status === 'Solved' || q.solved ? '#16a34a' : q.status === 'In Discussion' ? '#9333ea' : '#2563eb',
-                                      padding: '0.25rem 0.5rem',
-                                      borderRadius: '6px',
-                                      fontSize: '0.75rem',
+                                      color: q.status === 'Solved' || q.solved ? '#16a34a' : q.status === 'In Discussion' ? '#9333ea' : q.status === 'Closed' ? '#64748b' : '#2563eb',
+                                      fontSize: '0.8rem',
                                       fontWeight: '700'
                                     }}>
                                       {q.status || 'Open'}
                                     </span>
                                   </td>
-                                  <td data-label="Solved" style={{ padding: '1rem 1.5rem' }}>
-                                    <span style={{
-                                      background: q.solved ? '#dcfce7' : '#fee2e2',
-                                      color: q.solved ? '#15803d' : '#b91c1c', 
-                                      padding: '0.2rem 0.5rem', 
-                                      borderRadius: '4px', 
-                                      fontSize: '0.75rem', 
-                                      fontWeight: '700' 
-                                    }}>
-                                      {q.solved ? 'Yes' : 'No'}
-                                    </span>
-                                  </td>
-                                  <td data-label="Priority" style={{ padding: '1rem 1.5rem' }}>
-                                    <span style={{
-                                      color: q.priority === 'High' ? '#ef4444' : q.priority === 'Medium' ? '#ea580c' : '#16a34a',
-                                      fontSize: '0.75rem',
-                                      fontWeight: '700'
-                                    }}>
-                                      {q.priority || 'Medium'}
-                                    </span>
-                                  </td>
                                   <td data-label="Created On" style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', color: '#64748b' }}>
-                                    {formatAttachmentDate(q.createdAt)}
+                                    {formatDateOnly(q.createdAt)}
                                   </td>
-                                  <td data-label="Action" style={{ padding: '1rem 1.5rem', textAlign: 'center' }}>
-                                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                                      {/* View button */}
-                                      <button 
-                                        style={{ background: 'none', border: 'none', color: '#0066FF', cursor: 'pointer', padding: '0.25rem' }} 
-                                        title="View Details"
-                                        onClick={() => setViewingQuery(q)}
+                                  <td data-label="Action" style={{ padding: '1rem 1.5rem', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', alignItems: 'center' }}>
+                                      {/* Priority Flag */}
+                                      <svg 
+                                        viewBox="0 0 24 24" 
+                                        width="16" 
+                                        height="16" 
+                                        fill="currentColor" 
+                                        stroke="currentColor" 
+                                        strokeWidth="2" 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round"
+                                        style={{ color: q.priority === 'High' ? '#ef4444' : q.priority === 'Medium' ? '#ea580c' : '#16a34a', flexShrink: 0 }}
+                                        title={`Priority: ${q.priority || 'Medium'}`}
                                       >
-                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                      </button>
-
-                                      {/* Edit button */}
-                                      {can('projects', 'edit') && (
-                                        <button 
-                                          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }} 
-                                          title="Edit Query"
-                                          onClick={() => handleOpenEditQueryModal(q)}
-                                        >
-                                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                        </button>
-                                      )}
+                                        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                                        <line x1="4" y1="22" x2="4" y2="15"></line>
+                                      </svg>
 
                                       {/* Delete button */}
                                       {can('projects', 'delete') && (
                                         <button 
                                           style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }} 
                                           title="Delete Query"
-                                          onClick={() => handleDeleteQuery(q.id)}
+                                          onClick={(e) => { e.stopPropagation(); handleDeleteQuery(q.id); }}
                                         >
                                           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                         </button>
@@ -2955,12 +2927,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                             </td>
                             <td data-label="Description" style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.description || '-'}</td>
                             <td data-label="Uploaded By" style={{ padding: '0.85rem 1.25rem' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#dbeafe', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: '800' }}>
-                                  {(a.uploadedBy || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2)}
-                                </div>
-                                <span style={{ fontSize: '0.85rem', color: '#334155', fontWeight: '500' }}>{a.uploadedBy}</span>
-                              </div>
+                              <span style={{ fontSize: '0.85rem', color: '#334155', fontWeight: '500' }}>{a.uploadedBy}</span>
                             </td>
                             <td data-label="File Size" style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569', fontWeight: '500' }}>{a.fileSize || '-'}</td>
                             <td data-label="Uploaded On" style={{ padding: '0.85rem 1.25rem', fontSize: '0.85rem', color: '#475569' }}>

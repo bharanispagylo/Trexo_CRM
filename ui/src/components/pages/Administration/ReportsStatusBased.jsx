@@ -21,7 +21,8 @@ const getDisplayId = (task) => {
   
   let prefix = 'T';
   const type = (taskType || '').toLowerCase();
-  if (type === 'bug') prefix = 'B';
+  if (type === 'recurring task' || task.recurringTemplateId) prefix = 'R';
+  else if (type === 'bug') prefix = 'B';
   else if (type === 'calls/meetings') prefix = 'C';
   else if (taskNo && /^[A-Za-z]/.test(taskNo) && !taskNo.startsWith('TSK-')) {
     prefix = taskNo.charAt(0).toUpperCase();
