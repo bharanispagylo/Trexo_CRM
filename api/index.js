@@ -1330,20 +1330,26 @@ app.get('/api/tasks/:idOrDisplayId', async (req, res) => {
     }
 
     let recurrenceFrequency = task.recurrenceFrequency;
+    let recurrenceDetail = task.recurrenceDetail;
+    let taskTypeOverride = task.taskType;
     if (task.recurringTemplateId) {
       const template = await prisma.task.findUnique({
         where: { id: task.recurringTemplateId },
-        select: { recurrenceFrequency: true }
+        select: { recurrenceFrequency: true, recurrenceDetail: true, taskType: true }
       });
       if (template) {
         recurrenceFrequency = template.recurrenceFrequency;
+        recurrenceDetail = template.recurrenceDetail;
+        taskTypeOverride = 'Recurring Task';
       }
     }
 
     const result = {
       ...task,
       projectName: task.projectRef?.name || '',
-      recurrenceFrequency
+      recurrenceFrequency,
+      recurrenceDetail,
+      taskType: taskTypeOverride
     };
     res.json(result);
   } catch (error) {
