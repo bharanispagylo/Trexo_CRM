@@ -2814,6 +2814,10 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
       projectId,
       assignees,           // comma-separated user IDs or names
       priority,
+      taskType,
+      severity,
+      status,
+      tags,
     } = req.body;
 
     if (!comment) return res.status(400).json({ error: 'Comment is required' });
@@ -2823,9 +2827,6 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
     const now = new Date();
 
     // Build structured description
-    const boundsStr = bounds
-      ? `x:${bounds.x}, y:${bounds.y}, ${bounds.width}×${bounds.height}px`
-      : 'N/A';
     const description = [
       `## Bug Report from Browser Extension`,
       ``,
@@ -2840,27 +2841,13 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
       `### Comment`,
       comment,
       ``,
-      `### Element Info`,
-      `- **Tag:** ${elementTag || 'N/A'}`,
-      `- **ID:** ${elementId || 'none'}`,
-      `- **Classes:** ${elementClasses ? elementClasses.join(' ') : 'none'}`,
-      `- **Selector:** \`${elementSelector || 'N/A'}\``,
-      `- **XPath:** \`${elementXPath || 'N/A'}\``,
-      `- **Visible Text:** ${elementText || 'N/A'}`,
-      `- **Bounds:** ${boundsStr}`,
-      ``,
-      `### HTML Snippet`,
-      `\`\`\`html`,
-      elementHTML || 'N/A',
-      `\`\`\``,
-      ``,
       `---`,
       `*Reported via Spagylo Browser Extension*`,
     ].join('\n');
 
-    // Store screenshot in attachments field as JSON
+    // Store screenshot in the pipe-separated string format expected by the frontend
     const attachmentData = screenshot
-      ? JSON.stringify([{ name: 'browser-report-screenshot.jpg', data: screenshot, type: 'browser-report', reportedBy: reporterName, reportedAt: now.toISOString() }])
+      ? `${screenshot}|${reporterName}|${now.toISOString()}|browser-report-screenshot.jpg|${reporter.id || ''}`
       : null;
 
     // Auto-generate task number
@@ -2869,8 +2856,8 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
     });
     let maxNo = 0;
     let prefix = 'T';
-    const type = (taskType || '').toLowerCase();
-    if (type === 'bug') {
+    const type = (taskType || 'Bug').toLowerCase();
+    if (type === 'bug' || type === 'bug report') {
       prefix = 'B';
     } else if (type === 'calls/meetings') {
       prefix = 'C';
@@ -2899,12 +2886,12 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
         title: `Bug: ${comment.substring(0, 80)}${comment.length > 80 ? '...' : ''}`,
         description,
         taskType: 'Bug Report',
-        status: 'To Do',
-        priority: priority || 'Medium',
+        status: status || 'To Do',
+        priority: severity || priority || 'Medium',
         projectId: resolvedProjectId,
         assignees: assignees || reporterName,
         attachments: attachmentData,
-        tag: 'browser-report',
+        tag: tags ? `${tags}, browser-report` : 'browser-report',
         assignedDate: now,
       }
     });
