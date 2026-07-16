@@ -233,6 +233,29 @@ const timeStrToDecimal = (timeStr) => {
   return hours + (minutes / 60);
 };
 
+const splitAttachments = (attachmentsString) => {
+  if (!attachmentsString) return [];
+  const results = [];
+  let current = '';
+  for (let i = 0; i < attachmentsString.length; i++) {
+    const char = attachmentsString[i];
+    if (char === ',') {
+      if (current.endsWith('base64')) {
+        current += char;
+      } else {
+        results.push(current);
+        current = '';
+      }
+    } else {
+      current += char;
+    }
+  }
+  if (current) {
+    results.push(current);
+  }
+  return results;
+};
+
 export const getDisplayId = (f) => {
   if (!f) return '';
   const no = f.taskNo || '';
@@ -403,12 +426,18 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     const fallbackNo = getNextSequentialTaskNoForType(task?.taskType || 'Task');
 
     if (task) {
+      const parentTemplate = task.recurringTemplateId ? (tasks || []).find(t => t.id === task.recurringTemplateId) : null;
       return {
         ...defaults,
         ...task,
         assignees: task.assignees || defaults.assignees,
-        taskType: (task.taskType && task.taskType !== 'Feature') ? task.taskType : defaults.taskType,
-        recurrenceFrequency: task.recurrenceFrequency === 'Weekday' ? '' : (task.recurrenceFrequency || ''),
+        taskType: parentTemplate ? 'Recurring Task' : ((task.taskType && task.taskType !== 'Feature') ? task.taskType : defaults.taskType),
+        recurrenceFrequency: parentTemplate 
+          ? (parentTemplate.recurrenceFrequency === 'Weekday' ? '' : (parentTemplate.recurrenceFrequency || ''))
+          : (task.recurrenceFrequency === 'Weekday' ? '' : (task.recurrenceFrequency || '')),
+        recurrenceDetail: parentTemplate
+          ? (parentTemplate.recurrenceDetail || '')
+          : (task.recurrenceDetail || ''),
         status: getStatusString(task.status),
         taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : fallbackNo)
       };
@@ -458,11 +487,21 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
       const fallbackNo = getNextSequentialTaskNoForType(task.taskType || 'Task');
 
+      const parentTemplate = task.recurringTemplateId
+        ? (Array.isArray(tasks) ? tasks.find(t => t.id === task.recurringTemplateId) : null)
+        : null;
+
       const loadedForm = {
         ...form,
         ...task,
+        taskType: parentTemplate ? 'Recurring Task' : ((task.taskType && task.taskType !== 'Feature') ? task.taskType : 'Task'),
         status: getStatusString(task.status),
-        recurrenceFrequency: task.recurrenceFrequency === 'Weekday' ? '' : (task.recurrenceFrequency || ''),
+        recurrenceFrequency: parentTemplate
+          ? (parentTemplate.recurrenceFrequency === 'Weekday' ? '' : (parentTemplate.recurrenceFrequency || ''))
+          : (task.recurrenceFrequency === 'Weekday' ? '' : (task.recurrenceFrequency || '')),
+        recurrenceDetail: parentTemplate
+          ? (parentTemplate.recurrenceDetail || '')
+          : (task.recurrenceDetail || ''),
         taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : fallbackNo),
         approvedHoursStr: task.approvedHours !== undefined && task.approvedHours !== null ? String(task.approvedHours) : '0'
       };
@@ -746,7 +785,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         );
         const data = await response.json();
         if (data.secure_url) {
-          const current = form.attachments ? form.attachments.split(',') : [];
+          const current = form.attachments ? splitAttachments(form.attachments) : [];
           const uploaderName = currentUser
             ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
             : 'Admin';
@@ -777,7 +816,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     try {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const current = form.attachments ? form.attachments.split(',') : [];
+        const current = form.attachments ? splitAttachments(form.attachments) : [];
         const uploaderName = currentUser
           ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
           : 'Admin';
@@ -875,7 +914,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             await uploadFile(file, (url, name) => insertAttachmentAtCursor(url, name));
           } else {
             const fileName = `pasted-image-${Date.now()}.png`;
-            const current = form.attachments ? form.attachments.split(',') : [];
+            const current = form.attachments ? splitAttachments(form.attachments) : [];
             const uploaderName = currentUser
               ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
               : 'Admin';
@@ -895,7 +934,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         } catch (err) {
           console.warn('Failed to fetch pasted image URL, attaching as link:', err);
           const fileName = `pasted-image-${Date.now()}.png`;
-          const current = form.attachments ? form.attachments.split(',') : [];
+          const current = form.attachments ? splitAttachments(form.attachments) : [];
           const uploaderName = currentUser
             ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
             : 'Admin';
@@ -921,7 +960,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       e.preventDefault();
       const imgUrl = textData.trim();
       const fileName = `pasted-image-${Date.now()}.png`;
-      const current = form.attachments ? form.attachments.split(',') : [];
+      const current = form.attachments ? splitAttachments(form.attachments) : [];
       const uploaderName = currentUser
         ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
         : 'Admin';
@@ -957,8 +996,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       if (!fileName) {
         fileName = match[1];
         url = '';
-        const attachmentsStr = form.attachments || '';
-        const items = attachmentsStr.split(',').filter(Boolean);
+        const items = form.attachments ? splitAttachments(form.attachments).filter(Boolean) : [];
         for (const item of items) {
           const parts = item.split('|');
           const itemUrl = parts[0];
@@ -2269,7 +2307,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 className={`saas-tab-header-btn ${activeTab === 'attachments' ? 'active' : ''}`}
                 onClick={() => setActiveTab('attachments')}
               >
-                Attachments ({form.attachments ? form.attachments.split(',').filter(Boolean).length : 0})
+                Attachments ({form.attachments ? splitAttachments(form.attachments).filter(Boolean).length : 0})
               </button>
             )}
             {isEdit && !task?.parentId && form.taskType !== 'calls/meetings' && (
@@ -2700,16 +2738,16 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 </div>
 
                 {/* Image Previews right below Description */}
-                {form.attachments && form.attachments.split(',').filter(Boolean).some(item => {
+                {form.attachments && splitAttachments(form.attachments).filter(Boolean).some(item => {
                   const meta = getAttachmentMetadata(item);
                   return meta && meta.isImage;
                 }) && (
                   <div style={{ marginTop: '1rem', borderTop: '1px dashed #e2e8f0', paddingTop: '1rem' }}>
                     <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>
-                      Image Previews ({form.attachments.split(',').filter(Boolean).filter(item => getAttachmentMetadata(item)?.isImage).length})
+                      Image Previews ({splitAttachments(form.attachments).filter(Boolean).filter(item => getAttachmentMetadata(item)?.isImage).length})
                     </span>
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                      {form.attachments.split(',').filter(Boolean).map((item, idx) => {
+                      {splitAttachments(form.attachments).filter(Boolean).map((item, idx) => {
                         const meta = getAttachmentMetadata(item, idx);
                         if (!meta || !meta.isImage) return null;
                         return (
@@ -2720,7 +2758,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                 onClick={async (e) => {
                                   e.stopPropagation();
                                   confirm('Are you sure you want to remove this attachment?', async () => {
-                                    const current = form.attachments ? form.attachments.split(',') : [];
+                                    const current = form.attachments ? splitAttachments(form.attachments) : [];
                                     const filtered = current.filter(u => u !== item).join(',');
                                     
                                     set('attachments', filtered);
@@ -3190,7 +3228,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 {/* Header row with Title and Add Button */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', maxWidth: '100%', margin: '0 auto 1.5rem' }}>
                   <h2 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-                    Attachments ({form.attachments ? form.attachments.split(',').filter(Boolean).length : 0})
+                    Attachments ({form.attachments ? splitAttachments(form.attachments).filter(Boolean).length : 0})
                   </h2>
                   <button 
                     type="button" 
@@ -3231,14 +3269,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       </tr>
                     </thead>
                     <tbody>
-                      {!form.attachments || form.attachments.split(',').filter(Boolean).length === 0 ? (
+                      {!form.attachments || splitAttachments(form.attachments).filter(Boolean).length === 0 ? (
                         <tr>
                           <td colSpan="5" style={{ padding: '3rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem' }}>
                             No files attached to this task yet.
                           </td>
                         </tr>
                       ) : (
-                        form.attachments.split(',').filter(Boolean).map((item, index) => {
+                        splitAttachments(form.attachments).filter(Boolean).map((item, index) => {
                           const meta = getAttachmentMetadata(item, index);
                           if (!meta) return null;
                           const url = meta.url;
@@ -3417,7 +3455,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                       type="button" 
                                       onClick={async () => {
                                         confirm('Are you sure you want to remove this attachment?', async () => {
-                                          const current = form.attachments ? form.attachments.split(',') : [];
+                                          const current = form.attachments ? splitAttachments(form.attachments) : [];
                                           const filtered = current.filter(u => u !== item).join(',');
                                           
                                           set('attachments', filtered);
@@ -3463,7 +3501,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 </div>
                   
                   {/* End of list Footer block centered */}
-                  {form.attachments && form.attachments.split(',').filter(Boolean).length > 0 && (
+                  {form.attachments && splitAttachments(form.attachments).filter(Boolean).length > 0 && (
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
