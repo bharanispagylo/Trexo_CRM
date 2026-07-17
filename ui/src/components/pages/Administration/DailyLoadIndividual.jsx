@@ -2,6 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../../api/client';
 import './Reports.css';
 
+const formatWorklogHours = (hoursDecimal) => {
+  const val = parseFloat(hoursDecimal);
+  if (isNaN(val) || val <= 0) return '0 hrs';
+  const rounded = Math.round(val * 100) / 100;
+  return `${rounded} hrs`;
+};
+
 const downloadCSV = (filename, headers, rowsData) => {
   const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const lines = [
@@ -35,15 +42,25 @@ const STATUS_HEADER_META = {
   'To Do': { bg: '#78350f', fg: '#ffffff' },
   'to do': { bg: '#78350f', fg: '#ffffff' },
   'In Progress': { bg: '#2563eb', fg: '#ffffff' },
-  'in progress': { bg: '#2563eb', fg: '#ffffff' }
+  'in progress': { bg: '#2563eb', fg: '#ffffff' },
+  'On Hold': { bg: '#d97706', fg: '#ffffff' },
+  'on hold': { bg: '#d97706', fg: '#ffffff' }
 };
 
-export default function DailyLoadIndividual({ user, onTaskClick }) {
+export default function DailyLoadIndividual({ user, onTaskClick, initialUserId, onClearInitialUserId }) {
   const [users, setUsers] = useState([]);
-  const [selectedUserId, setSelectedUserId] = useState('all');
+  const [selectedUserId, setSelectedUserId] = useState(initialUserId || 'all');
   const [allTasks, setAllTasks] = useState([]);
   const [allWorklogs, setAllWorklogs] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (initialUserId) {
+      setSelectedUserId(initialUserId);
+    } else {
+      setSelectedUserId('all');
+    }
+  }, [initialUserId]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -64,8 +81,6 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
         setUsers(sortedUsers);
         setAllTasks((taskData || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || '').toLowerCase() !== 'calls/meetings'));
         setAllWorklogs(worklogData || []);
-
-        setSelectedUserId('all');
       } catch (err) {
         console.error('Error fetching Daily Load Individual report data:', err);
       } finally {
@@ -141,7 +156,7 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
     downloadCSV(
       `daily-load-individual-${name}.csv`,
       ['TASK', 'STATUS', 'ESTIMATED HRS', 'TIMESPENT HRS', 'REMAINING HRS'],
-      reportRows.map(r => [r.title, r.status, r.estimatedHours.toFixed(1), r.loggedHours.toFixed(1), r.remainingHours.toFixed(1)])
+      reportRows.map(r => [r.title, r.status, formatWorklogHours(r.estimatedHours), formatWorklogHours(r.loggedHours), formatWorklogHours(r.remainingHours)])
     );
   };
 
@@ -185,7 +200,12 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
         <select
           value={selectedUserId}
-          onChange={e => setSelectedUserId(e.target.value)}
+          onChange={e => {
+            setSelectedUserId(e.target.value);
+            if (onClearInitialUserId) {
+              onClearInitialUserId();
+            }
+          }}
           style={{
             padding: '0.45rem 1.6rem 0.45rem 0.75rem',
             border: '1px solid #cbd5e1',
@@ -218,7 +238,7 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
         </div>
         <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '0.75rem 1.5rem', minWidth: '160px' }}>
           <span style={{ fontSize: '0.7rem', color: '#0369a1', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', whiteSpace: 'nowrap' }}>Total Remaining Hrs</span>
-          <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>{totalRemainingHours.toFixed(1)}h</span>
+          <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>{formatWorklogHours(totalRemainingHours)}</span>
         </div>
       </div>
 
@@ -269,13 +289,13 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
                         </span>
                       </td>
                       <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '600', color: '#475569', fontSize: '0.875rem' }}>
-                        {row.estimatedHours.toFixed(1)}
+                        {formatWorklogHours(row.estimatedHours)}
                       </td>
                       <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '600', color: '#475569', fontSize: '0.875rem' }}>
-                        {row.loggedHours.toFixed(1)}
+                        {formatWorklogHours(row.loggedHours)}
                       </td>
                       <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '700', color: '#2563eb', fontSize: '0.9rem' }}>
-                        {row.remainingHours.toFixed(1)}
+                        {formatWorklogHours(row.remainingHours)}
                       </td>
                     </tr>
                   );
@@ -308,19 +328,19 @@ export default function DailyLoadIndividual({ user, onTaskClick }) {
                       <div className="reports-mobile-card-grid-item">
                         <span className="reports-mobile-card-grid-label">Estimated Hrs</span>
                         <span className="reports-mobile-card-grid-value" style={{ color: '#475569' }}>
-                          {row.estimatedHours.toFixed(1)}
+                          {formatWorklogHours(row.estimatedHours)}
                         </span>
                       </div>
                       <div className="reports-mobile-card-grid-item">
                         <span className="reports-mobile-card-grid-label">Timespent Hrs</span>
                         <span className="reports-mobile-card-grid-value" style={{ color: '#475569' }}>
-                          {row.loggedHours.toFixed(1)}
+                          {formatWorklogHours(row.loggedHours)}
                         </span>
                       </div>
                       <div className="reports-mobile-card-grid-item">
                         <span className="reports-mobile-card-grid-label">Remaining Hrs</span>
                         <span className="reports-mobile-card-grid-value" style={{ color: '#2563eb' }}>
-                          {row.remainingHours.toFixed(1)}
+                          {formatWorklogHours(row.remainingHours)}
                         </span>
                       </div>
                     </div>

@@ -156,7 +156,7 @@ model Task {
   taskListId  String?
   taskList    TaskList? @relation(fields: [taskListId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now()) @map("created_at")
-  attachments String?
+  attachments String?  @db.Text
   createdBy   String?  @map("created_by")
   creatorId   String?  @map("creator_id")
 

@@ -344,6 +344,7 @@
   color: #475569;
 }
 .tt-status-pill[data-status="In Progress"] { background: #dbeafe; color: #2563eb; }
+.tt-status-pill[data-status="On Hold"] { background: #fef3c7; color: #d97706; }
 .tt-status-pill[data-status="Completed"],
 .tt-status-pill[data-status="Delivered"],
 .tt-status-pill[data-status="Prod Verified"] { background: #dcfce7; color: #16a34a; }

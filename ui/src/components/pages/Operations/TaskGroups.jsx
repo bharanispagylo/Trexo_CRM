@@ -10,6 +10,7 @@ import './Tasks.css'; // import to ensure ClickUp styles are available
 const STATUS_HEADER_META = {
   'To Do':         { bg: '#78350f', fg: '#ffffff', border: '1px solid #5c2c06', dotColor: '#78350f', isDone: false },
   'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', isDone: false },
+  'On Hold':       { bg: '#d97706', fg: '#ffffff', dotColor: '#fef3c7', isDone: false },
   'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', isDone: false },
   'Dev Verified':   { bg: '#0891b2', fg: '#ffffff', dotColor: '#a5f3fc', isDone: false },
   'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', isDone: false },
@@ -22,6 +23,7 @@ const STATUS_HEADER_META = {
 const COLUMNS = [
   { id: 'To Do', label: 'To Do' },
   { id: 'In Progress', label: 'In Progress' },
+  { id: 'On Hold', label: 'On Hold' },
   { id: 'In Testing', label: 'In Testing' },
   { id: 'Dev Verified', label: 'Dev Verified' },
   { id: 'Re-opened', label: 'Re-opened' },
@@ -129,6 +131,7 @@ export default function TaskGroups({ user, onBack }) {
 
 
   const [activeTab, setActiveTab] = useState('favourites');
+  const [weeklyDropdownOpen, setWeeklyDropdownOpen] = useState(false);
   const [deletingTaskId, setDeletingTaskId] = useState(null);
   const [togglingFavoriteId, setTogglingFavoriteId] = useState(null);
   const [expandedStatusSections, setExpandedStatusSections] = useState({});
@@ -141,7 +144,7 @@ export default function TaskGroups({ user, onBack }) {
       let defaultActive = null;
       if (current === undefined) {
         const list = taskLists.find(l => l.id === listId);
-        const allTasks = (list?.tasks || []).filter(t => (t.taskType || '').toLowerCase() !== 'calls/meetings');
+        const allTasks = (list?.tasks || []).filter(t => (t.taskType || '').toLowerCase() !== 'calls/meetings' && t.taskType !== 'Recurring Task' && !t.recurringTemplateId);
         defaultActive = COLUMNS.find(c => allTasks.some(t => (t.status || 'To Do') === c.id))?.id || null;
       }
       const active = current !== undefined ? current : defaultActive;
@@ -390,7 +393,7 @@ export default function TaskGroups({ user, onBack }) {
   // Delete Task Group
   // eslint-disable-next-line no-unused-vars
   const handleDeleteGroup = (list) => {
-    const listTasks = (list.tasks || []).filter(t => (t.taskType || '').toLowerCase() !== 'calls/meetings');
+    const listTasks = (list.tasks || []).filter(t => (t.taskType || '').toLowerCase() !== 'calls/meetings' && t.taskType !== 'Recurring Task' && !t.recurringTemplateId);
     if (listTasks.length > 0) {
       alert(`"${list.name}" has ${listTasks.length} task${listTasks.length > 1 ? 's' : ''}. Remove all tasks from this group before deleting it.`, 'warning', 'Cannot Delete');
       return;
@@ -417,7 +420,6 @@ export default function TaskGroups({ user, onBack }) {
     setEditingListName(list.name);
   };
 
-  // Open Quick Add Task Modal
   const openQuickAddTask = (list) => {
     setTargetGroup(list);
     setTaskForm({
@@ -425,8 +427,11 @@ export default function TaskGroups({ user, onBack }) {
       assignees: '',
       priority: 'Medium',
       dueDate: '',
-      taskType: 'Task'
+      taskType: 'Task',
+      recurrenceFrequency: '',
+      recurrenceDetail: ''
     });
+    setWeeklyDropdownOpen(false);
     setShowTaskModal(true);
   };
 
@@ -453,7 +458,9 @@ export default function TaskGroups({ user, onBack }) {
         priority: taskForm.priority,
         dueDate: taskForm.taskType === 'calls/meetings' ? null : (taskForm.dueDate ? new Date(taskForm.dueDate).toISOString() : null),
         status: 'To Do',
-        taskType: taskForm.taskType || 'Task'
+        taskType: taskForm.taskType || 'Task',
+        recurrenceFrequency: taskForm.taskType === 'Recurring Task' ? (taskForm.recurrenceFrequency || null) : null,
+        recurrenceDetail: taskForm.taskType === 'Recurring Task' ? (taskForm.recurrenceDetail || null) : null
       });
       toast('Task added successfully!', 'success');
       setShowTaskModal(false);
@@ -618,7 +625,7 @@ export default function TaskGroups({ user, onBack }) {
   const renderAccordion = (list, idx) => {
     const isCollapsed = !expandedListIds.includes(list.id);
     const filteredUsersForList = getFilteredUsersForGroup(list);
-    const listTasks = (list.tasks || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || '').toLowerCase() !== 'calls/meetings').sort((a, b) => {
+    const listTasks = (list.tasks || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || '').toLowerCase() !== 'calls/meetings' && t.taskType !== 'Recurring Task' && !t.recurringTemplateId).sort((a, b) => {
       const titleA = a.title || '';
       const titleB = b.title || '';
       return titleA.localeCompare(titleB, undefined, { sensitivity: 'base' });
@@ -744,7 +751,7 @@ export default function TaskGroups({ user, onBack }) {
         </div>
 
         {!isCollapsed && hasTasks && (() => {
-          const allTasks = (list.tasks || []).filter(t => (t.taskType || '').toLowerCase() !== 'calls/meetings');
+          const allTasks = (list.tasks || []).filter(t => (t.taskType || '').toLowerCase() !== 'calls/meetings' && t.taskType !== 'Recurring Task' && !t.recurringTemplateId);
           const firstStatusWithTasks = COLUMNS.find(c => allTasks.some(t => (t.status || 'To Do') === c.id))?.id || null;
 
           return (
@@ -801,7 +808,7 @@ export default function TaskGroups({ user, onBack }) {
                               const relDate = formatRelativeDueDate(task.dueDate);
 
                               const parentRow = (
-                                <tr key={task.id} className="cu-row" onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
+                                <tr key={task.id} className="cu-row" onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'task-groups' }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
                                   <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                       {subTasks.length > 0 && (
@@ -1041,7 +1048,7 @@ export default function TaskGroups({ user, onBack }) {
                                   const subRelDate = formatRelativeDueDate(sub.dueDate);
 
                                   rows.push(
-                                    <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(sub)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
+                                    <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'task-groups' }, '', `/tasks/${getDisplayId(sub)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
                                       <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem', paddingLeft: '2.5rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                           <span className="cu-subtask-indicator" style={{ color: '#94a3b8', marginRight: '2px', fontSize: '1rem', fontWeight: 'bold' }}>↳</span>
@@ -1181,7 +1188,7 @@ export default function TaskGroups({ user, onBack }) {
       <div className="kanban-board">
         {favouriteLists.map(list => {
           const listTasks = (list.tasks || [])
-            .filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || '').toLowerCase() !== 'calls/meetings')
+            .filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || '').toLowerCase() !== 'calls/meetings' && t.taskType !== 'Recurring Task' && !t.recurringTemplateId)
             .sort((a, b) => {
               const idxA = statusOrder.indexOf(a.status || 'To Do');
               const idxB = statusOrder.indexOf(b.status || 'To Do');
@@ -1251,7 +1258,7 @@ export default function TaskGroups({ user, onBack }) {
                         draggable={true}
                         onDragStart={e => handleDragStart(e, task.id)}
                         onDragEnd={handleDragEnd}
-                        onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }}
+                        onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'task-groups' }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }}
                         style={{
                           background: 'white',
                           border: '1.5px solid #e2e8f0',
@@ -1538,13 +1545,261 @@ export default function TaskGroups({ user, onBack }) {
                   <label>Type</label>
                   <select
                     value={taskForm.taskType || 'Task'}
-                    onChange={(e) => setTaskForm({ ...taskForm, taskType: e.target.value })}
+                    onChange={(e) => {
+                      const type = e.target.value;
+                      let recurrenceFrequency = '';
+                      let recurrenceDetail = '';
+                      if (type === 'Recurring Task') {
+                        recurrenceFrequency = 'Weekly';
+                        recurrenceDetail = 'Monday';
+                      }
+                      setTaskForm({ ...taskForm, taskType: type, recurrenceFrequency, recurrenceDetail });
+                      setWeeklyDropdownOpen(false);
+                    }}
                   >
                     <option value="Task">Task</option>
                     <option value="Bug">Bug</option>
                     <option value="calls/meetings">Calls/Meetings</option>
+                    <option value="Recurring Task">Recurring Task</option>
                   </select>
                 </div>
+                {taskForm.taskType === 'Recurring Task' && (
+                  <>
+                    <div className="tg-form-field">
+                      <label>Recurrence</label>
+                      <select
+                        value={taskForm.recurrenceFrequency || ''}
+                        onChange={(e) => {
+                          const val = e.target.value || '';
+                          let detail = '';
+                          if (val === 'Weekly') detail = 'Monday';
+                          else if (val === 'Monthly') detail = '1';
+                          else if (val === 'Yearly') detail = new Date().toISOString().split('T')[0];
+                          setTaskForm({
+                            ...taskForm,
+                            recurrenceFrequency: val,
+                            recurrenceDetail: detail
+                          });
+                          setWeeklyDropdownOpen(false);
+                        }}
+                      >
+                        <option value="">None (One-time)</option>
+                        <option value="Weekly">Weekly</option>
+                        <option value="Monthly">Monthly</option>
+                        <option value="Yearly">Yearly</option>
+                      </select>
+                    </div>
+
+                    {['Weekly', 'Monthly', 'Yearly'].includes(taskForm.recurrenceFrequency) && (
+                      <div className="tg-form-field">
+                        <label>Every</label>
+                        {taskForm.recurrenceFrequency === 'Weekly' && (() => {
+                          const weeklyDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                          const selectedDays = taskForm.recurrenceDetail ? taskForm.recurrenceDetail.split(',').map(s => s.trim()).filter(Boolean) : [];
+                          const handleDayToggle = (day) => {
+                            let newSelected;
+                            if (selectedDays.includes(day)) {
+                              newSelected = selectedDays.filter(d => d !== day);
+                            } else {
+                              newSelected = [...selectedDays, day];
+                            }
+                            newSelected.sort((a, b) => weeklyDays.indexOf(a) - weeklyDays.indexOf(b));
+                            const val = newSelected.join(',');
+                            setTaskForm({ ...taskForm, recurrenceDetail: val });
+                          };
+                          
+                          const getSelectedDaysDisplay = (days) => {
+                            if (days.length === 0) return 'Select Days...';
+                            if (days.length === 7) return 'Every day';
+                            if (days.length === 5 && days.every(d => ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(d))) return 'Weekdays';
+                            if (days.length === 2 && days.every(d => ['Saturday', 'Sunday'].includes(d))) return 'Weekends';
+                            return days.map(d => d.slice(0, 3)).join(', ');
+                          };
+
+                          return (
+                            <div style={{ position: 'relative', width: '100%' }}>
+                              <button
+                                type="button"
+                                onClick={() => setWeeklyDropdownOpen(!weeklyDropdownOpen)}
+                                style={{
+                                  width: '100%',
+                                  padding: '0.6rem 0.75rem',
+                                  border: '1px solid #cbd5e1',
+                                  borderRadius: '6px',
+                                  background: '#ffffff',
+                                  cursor: 'pointer',
+                                  color: '#334155',
+                                  fontWeight: 500,
+                                  fontSize: '0.875rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: '0.4rem',
+                                  textAlign: 'left'
+                                }}
+                              >
+                                <span>{getSelectedDaysDisplay(selectedDays)}</span>
+                                <svg viewBox="0 0 10 6" width="10" height="6" fill="#64748b" style={{ flexShrink: 0 }}><path d="M0 0l5 6 5-6z"/></svg>
+                              </button>
+                              {weeklyDropdownOpen && (
+                                <div style={{
+                                  position: 'absolute',
+                                  top: '100%',
+                                  left: 0,
+                                  right: 0,
+                                  background: '#ffffff',
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '6px',
+                                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                                  padding: '0.5rem',
+                                  zIndex: 50,
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '0.25rem',
+                                  marginTop: '4px'
+                                }}>
+                                  {weeklyDays.map(day => (
+                                    <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155', fontSize: '0.85rem', cursor: 'pointer', userSelect: 'none', padding: '0.25rem 0.5rem', borderRadius: '4px' }}
+                                      onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedDays.includes(day)}
+                                        onChange={() => handleDayToggle(day)}
+                                        style={{ cursor: 'pointer', accentColor: '#2563eb' }}
+                                      />
+                                      <span>{day}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {taskForm.recurrenceFrequency === 'Monthly' && (
+                          <select
+                            value={taskForm.recurrenceDetail || '1'}
+                            onChange={(e) => setTaskForm({ ...taskForm, recurrenceDetail: e.target.value })}
+                            style={{ width: '100%' }}
+                          >
+                            {Array.from({ length: 30 }, (_, i) => i + 1).map(d => (
+                              <option key={d} value={String(d)}>{d}</option>
+                            ))}
+                            <option value="Last Day of Month">Last Day of Month</option>
+                          </select>
+                        )}
+
+                        {taskForm.recurrenceFrequency === 'Yearly' && (() => {
+                          const monthsShort = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+                          
+                          const getDisplayValue = (detail) => {
+                            if (!detail) return 'Select Date...';
+                            const parts = detail.split('-');
+                            if (parts.length === 2) {
+                              const mStr = parts[0].toLowerCase();
+                              const mIdx = monthsShort.indexOf(mStr);
+                              if (mIdx !== -1) {
+                                return `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1)}-${parts[1]}`;
+                              }
+                            } else if (parts.length === 3) {
+                              const mIdx = parseInt(parts[1], 10) - 1;
+                              const dVal = parseInt(parts[2], 10);
+                              if (mIdx >= 0 && mIdx < 12) {
+                                const mName = monthsShort[mIdx];
+                                return `${mName.charAt(0).toUpperCase() + mName.slice(1)}-${dVal}`;
+                              }
+                            }
+                            return detail;
+                          };
+
+                          const convertToMonDd = (dateStr) => {
+                            if (!dateStr) return '';
+                            const parts = dateStr.split('-');
+                            if (parts.length === 3) {
+                              const mIdx = parseInt(parts[1], 10) - 1;
+                              const dVal = parseInt(parts[2], 10);
+                              if (mIdx >= 0 && mIdx < 12) {
+                                return `${monthsShort[mIdx]}-${dVal}`;
+                              }
+                            }
+                            return dateStr;
+                          };
+
+                          const getDatePickerValue = (detail) => {
+                            if (!detail) return '';
+                            const parts = detail.split('-');
+                            if (parts.length === 3) return detail;
+                            if (parts.length === 2) {
+                              const mStr = parts[0].toLowerCase();
+                              const mIdx = monthsShort.indexOf(mStr);
+                              if (mIdx !== -1) {
+                                const mm = String(mIdx + 1).padStart(2, '0');
+                                const dd = String(parseInt(parts[1], 10)).padStart(2, '0');
+                                const yyyy = new Date().getFullYear();
+                                return `${yyyy}-${mm}-${dd}`;
+                              }
+                            }
+                            return '';
+                          };
+
+                          const displayVal = getDisplayValue(taskForm.recurrenceDetail);
+                          const pickerVal = getDatePickerValue(taskForm.recurrenceDetail);
+
+                          return (
+                            <div style={{ position: 'relative', width: '100%' }}>
+                              <button
+                                type="button"
+                                style={{
+                                  width: '100%',
+                                  padding: '0.6rem 0.75rem',
+                                  border: '1px solid #cbd5e1',
+                                  borderRadius: '6px',
+                                  background: '#ffffff',
+                                  color: '#334155',
+                                  fontWeight: 500,
+                                  fontSize: '0.875rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: '0.4rem',
+                                  textAlign: 'left'
+                                }}
+                              >
+                                <span>{displayVal}</span>
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: '#64748b', flexShrink: 0 }}>
+                                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                              </button>
+                              <input
+                                type="date"
+                                value={pickerVal}
+                                onChange={e => {
+                                  const formatted = convertToMonDd(e.target.value);
+                                  setTaskForm({ ...taskForm, recurrenceDetail: formatted });
+                                }}
+                                style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  opacity: 0,
+                                  cursor: 'pointer',
+                                  zIndex: 10
+                                }}
+                              />
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </>
+                )}
                 {taskForm.taskType !== 'calls/meetings' && (
                   <>
                     <div className="tg-form-field">

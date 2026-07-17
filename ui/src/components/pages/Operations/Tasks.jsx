@@ -31,6 +31,7 @@ function PromptModal({ isOpen, title, onSave, onCancel }) {
 const COLUMNS = [
   { id: 'To Do',         label: 'To Do',         color: 'col-todo' },
   { id: 'In Progress',   label: 'In Progress',   color: 'col-progress' },
+  { id: 'On Hold',       label: 'On Hold',       color: 'col-onhold' },
   { id: 'In Testing',    label: 'In Testing',    color: 'col-testing' },
   { id: 'Dev Verified',  label: 'Dev Verified',  color: 'col-dev-verified' },
   { id: 'Re-opened',     label: 'Re-opened',     color: 'col-reopened' },
@@ -52,6 +53,7 @@ const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 const STATUS_HEADER_META = {
   'To Do':         { bg: '#78350f', fg: '#ffffff', border: '1px solid #5c2c06', dotColor: '#78350f', isDone: false },
   'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', isDone: false },
+  'On Hold':       { bg: '#d97706', fg: '#ffffff', dotColor: '#fef3c7', isDone: false },
   'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', isDone: false },
   'Dev Verified':   { bg: '#0891b2', fg: '#ffffff', dotColor: '#a5f3fc', isDone: false },
   'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', isDone: false },
@@ -77,6 +79,56 @@ const getStatusString = (statusVal) => {
     return statusVal.id || statusVal.label || statusVal.name || statusVal.value || 'To Do';
   }
   return String(statusVal);
+};
+
+const getYearlyMonthAndDay = (detail) => {
+  if (!detail) {
+    const d = new Date();
+    return { month: d.getMonth() + 1, day: d.getDate() };
+  }
+  const parts = detail.split('-');
+  if (parts.length === 3) {
+    return { month: parseInt(parts[1], 10) || 1, day: parseInt(parts[2], 10) || 1 };
+  } else if (parts.length === 2) {
+    const mStr = parts[0].toLowerCase();
+    const monthsShort = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const monthIdx = monthsShort.indexOf(mStr);
+    if (monthIdx !== -1) {
+      return { month: monthIdx + 1, day: parseInt(parts[1], 10) || 1 };
+    }
+    return { month: parseInt(parts[0], 10) || 1, day: parseInt(parts[1], 10) || 1 };
+  }
+  const d = new Date();
+  return { month: d.getMonth() + 1, day: d.getDate() };
+};
+
+const getSelectedDaysDisplay = (days) => {
+  if (!days || days.length === 0) return 'Select Day(s)...';
+  if (days.length === 7) return 'Every Day';
+  
+  const hasMonToFri = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].every(d => days.includes(d));
+  const hasSatSun = ['Saturday', 'Sunday'].every(d => days.includes(d));
+  
+  if (days.length === 5 && hasMonToFri) return 'Weekdays';
+  if (days.length === 2 && hasSatSun) return 'Weekends';
+  
+  const abbrMap = {
+    'Monday': 'Mon',
+    'Tuesday': 'Tue',
+    'Wednesday': 'Wed',
+    'Thursday': 'Thu',
+    'Friday': 'Fri',
+    'Saturday': 'Sat',
+    'Sunday': 'Sun'
+  };
+  return days.map(d => abbrMap[d] || d).join(', ');
+};
+
+export const formatWorklogHours = (hoursDecimal) => {
+  const val = parseFloat(hoursDecimal);
+  if (isNaN(val) || val <= 0) return '0 hrs';
+  const rounded = Math.round(val * 100) / 100;
+  return `${rounded} hrs`;
 };
 
 export const PriorityFlag = ({ priority }) => {
@@ -183,6 +235,29 @@ const timeStrToDecimal = (timeStr) => {
   return hours + (minutes / 60);
 };
 
+const splitAttachments = (attachmentsString) => {
+  if (!attachmentsString) return [];
+  const results = [];
+  let current = '';
+  for (let i = 0; i < attachmentsString.length; i++) {
+    const char = attachmentsString[i];
+    if (char === ',') {
+      if (current.endsWith('base64')) {
+        current += char;
+      } else {
+        results.push(current);
+        current = '';
+      }
+    } else {
+      current += char;
+    }
+  }
+  if (current) {
+    results.push(current);
+  }
+  return results;
+};
+
 export const getDisplayId = (f) => {
   if (!f) return '';
   const no = f.taskNo || '';
@@ -196,7 +271,9 @@ export const getDisplayId = (f) => {
   
   let prefix = 'T';
   const type = (f.taskType || '').toLowerCase();
-  if (type === 'bug') {
+  if (type === 'recurring task' || f.recurringTemplateId) {
+    prefix = 'R';
+  } else if (type === 'bug') {
     prefix = 'B';
   } else if (type === 'calls/meetings') {
     prefix = 'C';
@@ -279,8 +356,12 @@ export function TaskTitleTooltip({ text, children }) {
 export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialEditMode = false, tasks = [], onRefresh, onSelectTask }) {
 
   const isEdit = !!(task && task.id);
-  const [isEditing, setIsEditing] = useState(true); // Always in edit mode
+  const [isEditing, setIsEditing] = useState(initialEditMode);
   const { alert, confirm } = useAlert();
+
+  useEffect(() => {
+    setIsEditing(initialEditMode);
+  }, [initialEditMode, task?.id]);
   
   const [activeTab, setActiveTab] = useState('general');
   const [users, setUsers] = useState([]);
@@ -351,11 +432,18 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     const fallbackNo = getNextSequentialTaskNoForType(task?.taskType || 'Task');
 
     if (task) {
+      const parentTemplate = task.recurringTemplateId ? (tasks || []).find(t => t.id === task.recurringTemplateId) : null;
       return {
         ...defaults,
         ...task,
         assignees: task.assignees || defaults.assignees,
-        taskType: (task.taskType && task.taskType !== 'Feature') ? task.taskType : defaults.taskType,
+        taskType: parentTemplate ? 'Recurring Task' : ((task.taskType && task.taskType !== 'Feature') ? task.taskType : defaults.taskType),
+        recurrenceFrequency: parentTemplate 
+          ? (parentTemplate.recurrenceFrequency === 'Weekday' ? '' : (parentTemplate.recurrenceFrequency || ''))
+          : (task.recurrenceFrequency === 'Weekday' ? '' : (task.recurrenceFrequency || '')),
+        recurrenceDetail: parentTemplate
+          ? (parentTemplate.recurrenceDetail || '')
+          : (task.recurrenceDetail || ''),
         status: getStatusString(task.status),
         taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : fallbackNo)
       };
@@ -405,10 +493,21 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
       const fallbackNo = getNextSequentialTaskNoForType(task.taskType || 'Task');
 
+      const parentTemplate = task.recurringTemplateId
+        ? (Array.isArray(tasks) ? tasks.find(t => t.id === task.recurringTemplateId) : null)
+        : null;
+
       const loadedForm = {
         ...form,
         ...task,
+        taskType: parentTemplate ? 'Recurring Task' : ((task.taskType && task.taskType !== 'Feature') ? task.taskType : 'Task'),
         status: getStatusString(task.status),
+        recurrenceFrequency: parentTemplate
+          ? (parentTemplate.recurrenceFrequency === 'Weekday' ? '' : (parentTemplate.recurrenceFrequency || ''))
+          : (task.recurrenceFrequency === 'Weekday' ? '' : (task.recurrenceFrequency || '')),
+        recurrenceDetail: parentTemplate
+          ? (parentTemplate.recurrenceDetail || '')
+          : (task.recurrenceDetail || ''),
         taskNo: task.taskNo || (task.id ? `TSK-${task.id.substring(0, 6).toUpperCase()}` : fallbackNo),
         approvedHoursStr: task.approvedHours !== undefined && task.approvedHours !== null ? String(task.approvedHours) : '0'
       };
@@ -692,7 +791,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         );
         const data = await response.json();
         if (data.secure_url) {
-          const current = form.attachments ? form.attachments.split(',') : [];
+          const current = form.attachments ? splitAttachments(form.attachments) : [];
           const uploaderName = currentUser
             ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
             : 'Admin';
@@ -723,7 +822,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     try {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const current = form.attachments ? form.attachments.split(',') : [];
+        const current = form.attachments ? splitAttachments(form.attachments) : [];
         const uploaderName = currentUser
           ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
           : 'Admin';
@@ -821,7 +920,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             await uploadFile(file, (url, name) => insertAttachmentAtCursor(url, name));
           } else {
             const fileName = `pasted-image-${Date.now()}.png`;
-            const current = form.attachments ? form.attachments.split(',') : [];
+            const current = form.attachments ? splitAttachments(form.attachments) : [];
             const uploaderName = currentUser
               ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
               : 'Admin';
@@ -841,7 +940,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         } catch (err) {
           console.warn('Failed to fetch pasted image URL, attaching as link:', err);
           const fileName = `pasted-image-${Date.now()}.png`;
-          const current = form.attachments ? form.attachments.split(',') : [];
+          const current = form.attachments ? splitAttachments(form.attachments) : [];
           const uploaderName = currentUser
             ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
             : 'Admin';
@@ -867,7 +966,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       e.preventDefault();
       const imgUrl = textData.trim();
       const fileName = `pasted-image-${Date.now()}.png`;
-      const current = form.attachments ? form.attachments.split(',') : [];
+      const current = form.attachments ? splitAttachments(form.attachments) : [];
       const uploaderName = currentUser
         ? (currentUser.fullName || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name || currentUser.username || currentUser.email || 'Admin')
         : 'Admin';
@@ -884,6 +983,29 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       insertAttachmentAtCursor(imgUrl, fileName);
       return;
     }
+  };
+
+  const renderTextWithLinks = (text) => {
+    if (!text) return '';
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+    return parts.map((part, idx) => {
+      if (urlRegex.test(part)) {
+        return (
+          <a
+            key={idx}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#2563eb', textDecoration: 'underline', wordBreak: 'break-all' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {part}
+          </a>
+        );
+      }
+      return part;
+    });
   };
 
   const renderDescriptionWithPreviews = (text) => {
@@ -903,8 +1025,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       if (!fileName) {
         fileName = match[1];
         url = '';
-        const attachmentsStr = form.attachments || '';
-        const items = attachmentsStr.split(',').filter(Boolean);
+        const items = form.attachments ? splitAttachments(form.attachments).filter(Boolean) : [];
         for (const item of items) {
           const parts = item.split('|');
           const itemUrl = parts[0];
@@ -950,7 +1071,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {parts.map((part, idx) => {
           if (typeof part === 'string') {
-            return <span key={idx} style={{ whiteSpace: 'pre-wrap' }}>{part}</span>;
+            return <span key={idx} style={{ whiteSpace: 'pre-wrap' }}>{renderTextWithLinks(part)}</span>;
           }
           
           if (part.isImage) {
@@ -1184,10 +1305,35 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       if (attachment.url.startsWith('data:image/')) return true;
       return false;
     })();
-    const label = isPdf ? 'PDF' : (isImage ? 'IMG' : 'FILE');
-    const iconColor = isPdf ? '#ef4444' : (isImage ? '#3b82f6' : '#64748b');
-    const iconBg = isPdf ? '#fef2f2' : (isImage ? '#eff6ff' : '#f8fafc');
-    const iconBorder = isPdf ? '#fee2e2' : (isImage ? '#dbeafe' : '#e2e8f0');
+
+    if (isImage) {
+      return (
+        <div style={{ marginTop: '0.5rem', display: 'block' }}>
+          <img 
+            src={attachment.url} 
+            alt={attachment.name}
+            onClick={() => {
+              setPreviewImageUrl(attachment.url);
+              setPreviewImageName(attachment.name);
+            }}
+            style={{ 
+              maxWidth: '300px', 
+              maxHeight: '300px', 
+              borderRadius: '8px', 
+              border: '1px solid #cbd5e1', 
+              cursor: 'pointer',
+              display: 'block',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }} 
+          />
+        </div>
+      );
+    }
+    
+    const label = isPdf ? 'PDF' : 'FILE';
+    const iconColor = isPdf ? '#ef4444' : '#64748b';
+    const iconBg = isPdf ? '#fef2f2' : '#f8fafc';
+    const iconBorder = isPdf ? '#fee2e2' : '#e2e8f0';
     
     return (
       <div style={{
@@ -1217,60 +1363,31 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         }}>
           {label}
         </div>
-        {isImage ? (
-          <button 
-            type="button"
-            onClick={(e) => { 
-              setPreviewImageUrl(attachment.url); 
-              setPreviewImageName(attachment.name); 
-            }}
-            style={{ 
-              fontSize: '0.8rem', 
-              fontWeight: '600', 
-              color: '#2563eb', 
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-              textDecoration: 'none', 
-              textOverflow: 'ellipsis', 
-              overflow: 'hidden', 
-              whiteSpace: 'nowrap',
-              maxWidth: '180px',
-              textAlign: 'left',
-              fontFamily: 'inherit'
-            }}
-            title={attachment.name}
-          >
-            {attachment.name}
-          </button>
-        ) : (
-          <button 
-            type="button"
-            onClick={(e) => { 
-              handleDownloadFile(attachment.url, attachment.name); 
-            }}
-            style={{ 
-              fontSize: '0.8rem', 
-              fontWeight: '600', 
-              color: '#2563eb', 
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-              textDecoration: 'none', 
-              textOverflow: 'ellipsis', 
-              overflow: 'hidden', 
-              whiteSpace: 'nowrap',
-              maxWidth: '180px',
-              textAlign: 'left',
-              fontFamily: 'inherit'
-            }}
-            title={attachment.name}
-          >
-            {attachment.name}
-          </button>
-        )}
+        <button 
+          type="button"
+          onClick={(e) => { 
+            handleDownloadFile(attachment.url, attachment.name); 
+          }}
+          style={{ 
+            fontSize: '0.8rem', 
+            fontWeight: '600', 
+            color: '#2563eb', 
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            textDecoration: 'none', 
+            textOverflow: 'ellipsis', 
+            overflow: 'hidden', 
+            whiteSpace: 'nowrap',
+            maxWidth: '180px',
+            textAlign: 'left',
+            fontFamily: 'inherit'
+          }}
+          title={attachment.name}
+        >
+          {attachment.name}
+        </button>
       </div>
     );
   };
@@ -1900,7 +2017,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         if (part.startsWith('@') && part.length > 1) {
                           return <strong key={idx} style={{ fontWeight: '700' }}>{part}</strong>;
                         }
-                        return part;
+                        return renderTextWithLinks(part);
                       })}
                     </div>
                   );
@@ -2215,7 +2332,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 className={`saas-tab-header-btn ${activeTab === 'attachments' ? 'active' : ''}`}
                 onClick={() => setActiveTab('attachments')}
               >
-                Attachments ({form.attachments ? form.attachments.split(',').filter(Boolean).length : 0})
+                Attachments ({form.attachments ? splitAttachments(form.attachments).filter(Boolean).length : 0})
               </button>
             )}
             {isEdit && !task?.parentId && form.taskType !== 'calls/meetings' && (
@@ -2289,7 +2406,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
                       Recurrence
                     </span>
-                    <span className="saas-meta-value">
+                    <span className="saas-meta-value" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <select 
                         value={form.recurrenceFrequency || ''} 
                         onChange={e => {
@@ -2309,160 +2426,255 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}
                       >
                         <option value="">None (One-time)</option>
-                        <option value="Weekday">Week day</option>
                         <option value="Weekly">Weekly</option>
                         <option value="Monthly">Monthly</option>
                         <option value="Yearly">Yearly</option>
                       </select>
-                    </span>
-                  </div>
-                )}
 
-                {/* Recurrence Detail — "Every" row */}
-                {(form.taskType === 'Recurring Task' || form.recurringTemplateId) && form.recurrenceFrequency && (
-                  <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      Every
-                    </span>
-                    <span className="saas-meta-value">
+                      {['Weekly', 'Monthly', 'Yearly'].includes(form.recurrenceFrequency) && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginLeft: '1.5rem' }}>
+                          <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                            Every
+                          </span>
 
-                      {/* Weekday: single weekday dropdown (Mon-Fri) */}
-                      {form.recurrenceFrequency === 'Weekday' && (
-                        <select
-                          value={form.recurrenceDetail || 'Monday'}
-                          onChange={e => {
-                            const updated = { ...form, recurrenceDetail: e.target.value };
-                            setForm(updated);
-                            if (!isEditing) handleInlineSave(updated);
-                          }}
-                          disabled={!canEdit}
-                          className="saas-grid-select"
-                          style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}
-                        >
-                          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => (
-                            <option key={day} value={day}>{day}</option>
-                          ))}
-                        </select>
-                      )}
-
-                      {/* Weekly: multi-select checkbox dropdown (Mon-Sun) */}
-                      {form.recurrenceFrequency === 'Weekly' && (() => {
-                        const weeklyDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-                        const selectedDays = form.recurrenceDetail ? form.recurrenceDetail.split(',').map(s => s.trim()).filter(Boolean) : [];
-                        const handleDayToggle = (day) => {
-                          let newSelected;
-                          if (selectedDays.includes(day)) {
-                            newSelected = selectedDays.filter(d => d !== day);
-                          } else {
-                            newSelected = [...selectedDays, day];
-                          }
-                          newSelected.sort((a, b) => weeklyDays.indexOf(a) - weeklyDays.indexOf(b));
-                          const val = newSelected.join(',');
-                          const updated = { ...form, recurrenceDetail: val };
-                          setForm(updated);
-                          if (!isEditing) handleInlineSave(updated);
-                        };
-                        return (
-                          <div style={{ position: 'relative', display: 'inline-block' }}>
-                            <button
-                              type="button"
-                              onClick={() => setWeeklyDropdownOpen(!weeklyDropdownOpen)}
-                              disabled={!canEdit}
-                              style={{
-                                padding: '0.4rem 0.6rem',
-                                border: '1px solid transparent',
-                                borderRadius: '4px',
-                                background: 'transparent',
-                                cursor: canEdit ? 'pointer' : 'default',
-                                color: '#64748b',
-                                fontWeight: 600,
-                                fontSize: '0.85rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.4rem',
-                                textAlign: 'left',
-                                minWidth: '120px'
+                          {/* Weekday: single weekday dropdown (Mon-Fri) */}
+                          {form.recurrenceFrequency === 'Weekday' && (
+                            <select
+                              value={form.recurrenceDetail || 'Monday'}
+                              onChange={e => {
+                                const updated = { ...form, recurrenceDetail: e.target.value };
+                                setForm(updated);
+                                if (!isEditing) handleInlineSave(updated);
                               }}
+                              disabled={!canEdit}
+                              className="saas-grid-select"
+                              style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}
                             >
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
-                                {selectedDays.length > 0 ? selectedDays.join(', ') : 'Select Day(s)...'}
-                              </span>
-                              <svg viewBox="0 0 10 6" width="8" height="5" fill="#64748b" style={{ flexShrink: 0 }}><path d="M0 0l5 6 5-6z"/></svg>
-                            </button>
-                            {weeklyDropdownOpen && (
-                              <div style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: 0,
-                                background: '#fff',
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '6px',
-                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-                                padding: '0.5rem',
-                                zIndex: 50,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.25rem',
-                                minWidth: '160px',
-                                marginTop: '2px'
-                              }}>
-                                {weeklyDays.map(day => (
-                                  <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155', fontSize: '0.85rem', cursor: 'pointer', userSelect: 'none', padding: '0.2rem 0.3rem', borderRadius: '3px' }}
-                                    onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
-                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedDays.includes(day)}
-                                      onChange={() => handleDayToggle(day)}
-                                      disabled={!canEdit}
-                                      style={{ cursor: 'pointer', accentColor: '#2563eb' }}
-                                    />
-                                    <span>{day}</span>
-                                  </label>
-                                ))}
+                              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => (
+                                <option key={day} value={day}>{day}</option>
+                              ))}
+                            </select>
+                          )}
+
+                          {/* Weekly: multi-select checkbox dropdown (Mon-Sun) */}
+                          {form.recurrenceFrequency === 'Weekly' && (() => {
+                            const weeklyDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                            const selectedDays = form.recurrenceDetail ? form.recurrenceDetail.split(',').map(s => s.trim()).filter(Boolean) : [];
+                            const handleDayToggle = (day) => {
+                              let newSelected;
+                              if (selectedDays.includes(day)) {
+                                newSelected = selectedDays.filter(d => d !== day);
+                              } else {
+                                newSelected = [...selectedDays, day];
+                              }
+                              newSelected.sort((a, b) => weeklyDays.indexOf(a) - weeklyDays.indexOf(b));
+                              const val = newSelected.join(',');
+                              const updated = { ...form, recurrenceDetail: val };
+                              setForm(updated);
+                              if (!isEditing) handleInlineSave(updated);
+                            };
+                            return (
+                              <div style={{ position: 'relative', display: 'inline-block' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setWeeklyDropdownOpen(!weeklyDropdownOpen)}
+                                  disabled={!canEdit}
+                                  style={{
+                                    padding: '0.4rem 0.6rem',
+                                    border: '1px solid transparent',
+                                    borderRadius: '4px',
+                                    background: 'transparent',
+                                    cursor: canEdit ? 'pointer' : 'default',
+                                    color: '#64748b',
+                                    fontWeight: 600,
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem',
+                                    textAlign: 'left',
+                                    minWidth: '120px'
+                                  }}
+                                >
+                                  <span>
+                                    {getSelectedDaysDisplay(selectedDays)}
+                                  </span>
+                                  <svg viewBox="0 0 10 6" width="8" height="5" fill="#64748b" style={{ flexShrink: 0 }}><path d="M0 0l5 6 5-6z"/></svg>
+                                </button>
+                                {weeklyDropdownOpen && (
+                                  <div style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: 0,
+                                    background: '#fff',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '6px',
+                                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                                    padding: '0.5rem',
+                                    zIndex: 50,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.25rem',
+                                    minWidth: '160px',
+                                    marginTop: '2px'
+                                  }}>
+                                    {weeklyDays.map(day => (
+                                      <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155', fontSize: '0.85rem', cursor: 'pointer', userSelect: 'none', padding: '0.2rem 0.3rem', borderRadius: '3px' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedDays.includes(day)}
+                                          onChange={() => handleDayToggle(day)}
+                                          disabled={!canEdit}
+                                          style={{ cursor: 'pointer', accentColor: '#2563eb' }}
+                                        />
+                                        <span>{day}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        );
-                      })()}
+                            );
+                          })()}
 
-                      {/* Monthly: dropdown with dates 1-30 + Last Day of Month */}
-                      {form.recurrenceFrequency === 'Monthly' && (
-                        <select
-                          value={form.recurrenceDetail || '1'}
-                          onChange={e => {
-                            const updated = { ...form, recurrenceDetail: e.target.value };
-                            setForm(updated);
-                            if (!isEditing) handleInlineSave(updated);
-                          }}
-                          disabled={!canEdit}
-                          className="saas-grid-select"
-                          style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}
-                        >
-                          {Array.from({ length: 30 }, (_, i) => i + 1).map(d => (
-                            <option key={d} value={String(d)}>{d}</option>
-                          ))}
-                          <option value="Last Day of Month">Last Day of Month</option>
-                        </select>
+                          {/* Monthly: dropdown with dates 1-30 + Last Day of Month */}
+                          {form.recurrenceFrequency === 'Monthly' && (
+                            <select
+                              value={form.recurrenceDetail || '1'}
+                              onChange={e => {
+                                const updated = { ...form, recurrenceDetail: e.target.value };
+                                setForm(updated);
+                                if (!isEditing) handleInlineSave(updated);
+                              }}
+                              disabled={!canEdit}
+                              className="saas-grid-select"
+                              style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}
+                            >
+                              {Array.from({ length: 30 }, (_, i) => i + 1).map(d => (
+                                <option key={d} value={String(d)}>{d}</option>
+                              ))}
+                              <option value="Last Day of Month">Last Day of Month</option>
+                            </select>
+                          )}
+
+                          {/* Yearly: date picker for month and day */}
+                          {form.recurrenceFrequency === 'Yearly' && (() => {
+                            const monthsShort = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+                            
+                            const getDisplayValue = (detail) => {
+                              if (!detail) return 'Select Date...';
+                              const parts = detail.split('-');
+                              if (parts.length === 2) {
+                                const mStr = parts[0].toLowerCase();
+                                const mIdx = monthsShort.indexOf(mStr);
+                                if (mIdx !== -1) {
+                                  return `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1)}-${parts[1]}`;
+                                }
+                              } else if (parts.length === 3) {
+                                const mIdx = parseInt(parts[1], 10) - 1;
+                                const dVal = parseInt(parts[2], 10);
+                                if (mIdx >= 0 && mIdx < 12) {
+                                  const mName = monthsShort[mIdx];
+                                  return `${mName.charAt(0).toUpperCase() + mName.slice(1)}-${dVal}`;
+                                }
+                              }
+                              return detail;
+                            };
+
+                            const convertToMonDd = (dateStr) => {
+                              if (!dateStr) return '';
+                              const parts = dateStr.split('-');
+                              if (parts.length === 3) {
+                                const mIdx = parseInt(parts[1], 10) - 1;
+                                const dVal = parseInt(parts[2], 10);
+                                if (mIdx >= 0 && mIdx < 12) {
+                                  return `${monthsShort[mIdx]}-${dVal}`;
+                                }
+                              }
+                              return dateStr;
+                            };
+
+                            const getDatePickerValue = (detail) => {
+                              if (!detail) return '';
+                              const parts = detail.split('-');
+                              if (parts.length === 3) return detail;
+                              if (parts.length === 2) {
+                                const mStr = parts[0].toLowerCase();
+                                const mIdx = monthsShort.indexOf(mStr);
+                                if (mIdx !== -1) {
+                                  const mm = String(mIdx + 1).padStart(2, '0');
+                                  const dd = String(parseInt(parts[1], 10)).padStart(2, '0');
+                                  const yyyy = new Date().getFullYear();
+                                  return `${yyyy}-${mm}-${dd}`;
+                                }
+                              }
+                              return '';
+                            };
+
+                            const displayVal = getDisplayValue(form.recurrenceDetail);
+                            const pickerVal = getDatePickerValue(form.recurrenceDetail);
+
+                            return (
+                              <div style={{ position: 'relative', display: 'inline-block' }}>
+                                <button
+                                  type="button"
+                                  disabled={!canEdit}
+                                  style={{
+                                    padding: '0.4rem 0.6rem',
+                                    border: '1px solid transparent',
+                                    borderRadius: '4px',
+                                    background: 'transparent',
+                                    cursor: canEdit ? 'pointer' : 'default',
+                                    color: '#64748b',
+                                    fontWeight: 600,
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem',
+                                    textAlign: 'left'
+                                  }}
+                                >
+                                  <span>{displayVal}</span>
+                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: '#64748b', flexShrink: 0 }}>
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                  </svg>
+                                </button>
+                                {canEdit && (
+                                  <input
+                                    type="date"
+                                    value={pickerVal}
+                                    onClick={e => {
+                                      try {
+                                        e.target.showPicker();
+                                      } catch (err) {}
+                                    }}
+                                    onChange={e => {
+                                      const formatted = convertToMonDd(e.target.value);
+                                      const updated = { ...form, recurrenceDetail: formatted };
+                                      setForm(updated);
+                                      if (!isEditing) handleInlineSave(updated);
+                                    }}
+                                    style={{
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      width: '100%',
+                                      height: '100%',
+                                      opacity: 0,
+                                      cursor: 'pointer',
+                                      zIndex: 10
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
                       )}
-
-                      {/* Yearly: date picker for month and day */}
-                      {form.recurrenceFrequency === 'Yearly' && (
-                        <input
-                          type="date"
-                          value={form.recurrenceDetail || ''}
-                          onChange={e => {
-                            const updated = { ...form, recurrenceDetail: e.target.value };
-                            setForm(updated);
-                            if (!isEditing) handleInlineSave(updated);
-                          }}
-                          disabled={!canEdit}
-                          className="saas-detail-date-input"
-                          style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', borderRadius: '4px', background: 'transparent', color: '#64748b', fontWeight: 600 }}
-                        />
-                      )}
-
                     </span>
                   </div>
                 )}
@@ -2556,16 +2768,16 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 </div>
 
                 {/* Image Previews right below Description */}
-                {form.attachments && form.attachments.split(',').filter(Boolean).some(item => {
+                {form.attachments && splitAttachments(form.attachments).filter(Boolean).some(item => {
                   const meta = getAttachmentMetadata(item);
                   return meta && meta.isImage;
                 }) && (
                   <div style={{ marginTop: '1rem', borderTop: '1px dashed #e2e8f0', paddingTop: '1rem' }}>
                     <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>
-                      Image Previews ({form.attachments.split(',').filter(Boolean).filter(item => getAttachmentMetadata(item)?.isImage).length})
+                      Image Previews ({splitAttachments(form.attachments).filter(Boolean).filter(item => getAttachmentMetadata(item)?.isImage).length})
                     </span>
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                      {form.attachments.split(',').filter(Boolean).map((item, idx) => {
+                      {splitAttachments(form.attachments).filter(Boolean).map((item, idx) => {
                         const meta = getAttachmentMetadata(item, idx);
                         if (!meta || !meta.isImage) return null;
                         return (
@@ -2576,7 +2788,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                 onClick={async (e) => {
                                   e.stopPropagation();
                                   confirm('Are you sure you want to remove this attachment?', async () => {
-                                    const current = form.attachments ? form.attachments.split(',') : [];
+                                    const current = form.attachments ? splitAttachments(form.attachments) : [];
                                     const filtered = current.filter(u => u !== item).join(',');
                                     
                                     set('attachments', filtered);
@@ -2639,32 +2851,6 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 )}
 
               </div>
-          
-          {isEditing && (
-            <div className="form-actions" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', borderTop: 'none', background: 'transparent', boxShadow: 'none' }}>
-              <button className="saas-btn-nav saas-btn-secondary" onClick={onClose}>
-                Cancel
-              </button>
-              <button 
-                className="saas-btn-nav saas-btn-primary" 
-                onClick={submit}
-                disabled={taskSaving}
-                style={{ 
-                  cursor: taskSaving ? 'not-allowed' : 'pointer',
-                  opacity: taskSaving ? 0.7 : 1
-                }}
-              >
-                {taskSaving ? (
-                  <span>{isEdit ? 'Saving...' : 'Creating...'}</span>
-                ) : (
-                  <>
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    {isEdit ? 'Save' : 'Create Task'}
-                  </>
-                )}
-              </button>
-            </div>
-          )}
           </>
         )}
 
@@ -2870,7 +3056,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0.75rem 1rem', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', width: 'fit-content', minWidth: '140px', maxWidth: '180px' }}>
                         <span style={{ fontSize: '0.75rem', color: '#0369a1', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total hrs spent</span>
                         <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', marginTop: '0.25rem' }}>
-                          {workLogs.filter(log => !log.isBilled && Number(log.hoursWorked) > 0).reduce((sum, log) => sum + Number(log.hoursWorked), 0)}h
+                          {formatWorklogHours(workLogs.filter(log => !log.isBilled && Number(log.hoursWorked) > 0).reduce((sum, log) => sum + Number(log.hoursWorked), 0))}
                         </span>
                       </div>
                     </div>
@@ -2895,7 +3081,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                 <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
                                   <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{formatDate(log.logDate, log.createdAt)}</td>
                                   <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
-                                  <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{log.hoursWorked}h</td>
+                                  <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{formatWorklogHours(log.hoursWorked)}</td>
                                   <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
                                     <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                                       {canEditWorkLog(log) && (
@@ -3003,7 +3189,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                           <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
                             <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{formatDate(log.logDate, log.createdAt)}</td>
                             <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
-                            <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{log.hoursWorked}h</td>
+                            <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{formatWorklogHours(log.hoursWorked)}</td>
                             <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.description || '-'}</td>
                             <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
                               <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -3046,7 +3232,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 {/* Header row with Title and Add Button */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', maxWidth: '100%', margin: '0 auto 1.5rem' }}>
                   <h2 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-                    Attachments ({form.attachments ? form.attachments.split(',').filter(Boolean).length : 0})
+                    Attachments ({form.attachments ? splitAttachments(form.attachments).filter(Boolean).length : 0})
                   </h2>
                   <button 
                     type="button" 
@@ -3087,14 +3273,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       </tr>
                     </thead>
                     <tbody>
-                      {!form.attachments || form.attachments.split(',').filter(Boolean).length === 0 ? (
+                      {!form.attachments || splitAttachments(form.attachments).filter(Boolean).length === 0 ? (
                         <tr>
                           <td colSpan="5" style={{ padding: '3rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem' }}>
                             No files attached to this task yet.
                           </td>
                         </tr>
                       ) : (
-                        form.attachments.split(',').filter(Boolean).map((item, index) => {
+                        splitAttachments(form.attachments).filter(Boolean).map((item, index) => {
                           const meta = getAttachmentMetadata(item, index);
                           if (!meta) return null;
                           const url = meta.url;
@@ -3273,7 +3459,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                       type="button" 
                                       onClick={async () => {
                                         confirm('Are you sure you want to remove this attachment?', async () => {
-                                          const current = form.attachments ? form.attachments.split(',') : [];
+                                          const current = form.attachments ? splitAttachments(form.attachments) : [];
                                           const filtered = current.filter(u => u !== item).join(',');
                                           
                                           set('attachments', filtered);
@@ -3319,7 +3505,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 </div>
                   
                   {/* End of list Footer block centered */}
-                  {form.attachments && form.attachments.split(',').filter(Boolean).length > 0 && (
+                  {form.attachments && splitAttachments(form.attachments).filter(Boolean).length > 0 && (
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -3545,39 +3731,94 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           </div>
 
           <div className="comment-post-input-box">
-            {commentAttachment && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0.4rem 0.75rem',
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                marginBottom: '0.5rem',
-                fontSize: '0.8rem'
-              }} className="animate-fade-in">
-                <span style={{ fontWeight: '600', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '240px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                  {commentAttachment.name}
-                </span>
-                <button 
-                  type="button" 
-                  onClick={() => setCommentAttachment(null)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#ef4444',
-                    fontSize: '1rem',
-                    cursor: 'pointer',
-                    fontWeight: '700',
-                    padding: '0 0.2rem'
-                  }}
-                >
-                  ✔
-                </button>
-              </div>
-            )}
+            {commentAttachment && (() => {
+              const isImage = (() => {
+                const imageExtensions = ['png', 'jpeg', 'jpg', 'gif', 'webp', 'svg', 'bmp'];
+                const ext = commentAttachment.name.split('.').pop()?.toLowerCase();
+                if (imageExtensions.includes(ext)) return true;
+                if (commentAttachment.url.startsWith('data:image/')) return true;
+                return false;
+              })();
+
+              if (isImage) {
+                return (
+                  <div style={{
+                    position: 'relative',
+                    display: 'inline-block',
+                    marginBottom: '0.5rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    overflow: 'hidden'
+                  }} className="animate-fade-in">
+                    <img 
+                      src={commentAttachment.url} 
+                      alt={commentAttachment.name} 
+                      style={{ maxWidth: '120px', maxHeight: '120px', display: 'block' }} 
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setCommentAttachment(null)}
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        background: 'rgba(239, 68, 68, 0.9)',
+                        border: 'none',
+                        color: 'white',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        padding: 0,
+                        lineHeight: 1
+                      }}
+                      title="Remove image"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.4rem 0.75rem',
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  marginBottom: '0.5rem',
+                  fontSize: '0.8rem'
+                }} className="animate-fade-in">
+                  <span style={{ fontWeight: '600', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '240px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                    {commentAttachment.name}
+                  </span>
+                  <button 
+                    type="button" 
+                    onClick={() => setCommentAttachment(null)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#ef4444',
+                      fontSize: '1rem',
+                      cursor: 'pointer',
+                      fontWeight: '700',
+                      padding: '0 0.2rem'
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })()}
             <div className="comment-box-flex-row">
               <div className="comment-input-field-wrapper" style={{ position: 'relative' }}>
                 <textarea 
@@ -4236,6 +4477,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   };
   const mobileSortBy = 'dueDate';
   const [assigneeFilter, setAssigneeFilter] = useState(initialAssigneeFilter);
+  const [recurringToggle, setRecurringToggle] = useState('my');
+  const [myTasksToggle, setMyTasksToggle] = useState('assigned');
+  const [readRecurringTasks, setReadRecurringTasks] = useState([]);
+
+
 
   useEffect(() => {
     setAssigneeFilter(initialAssigneeFilter);
@@ -4261,6 +4507,35 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   // Side drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTask, setDrawerTask] = useState(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      const readKey = `read_recurring_tasks_${user.id}`;
+      try {
+        const stored = JSON.parse(localStorage.getItem(readKey) || '[]');
+        setReadRecurringTasks(stored);
+      } catch (e) {
+        setReadRecurringTasks([]);
+      }
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (drawerTask && drawerTask.recurringTemplateId && user?.id) {
+      const readKey = `read_recurring_tasks_${user.id}`;
+      try {
+        const stored = JSON.parse(localStorage.getItem(readKey) || '[]');
+        if (!stored.includes(drawerTask.id)) {
+          const updated = [...stored, drawerTask.id];
+          localStorage.setItem(readKey, JSON.stringify(updated));
+          setReadRecurringTasks(updated);
+        }
+      } catch (e) {
+        console.error('Failed to update read recurring tasks in localStorage:', e);
+      }
+    }
+  }, [drawerTask, user?.id]);
+
   const [listUsers, setListUsers] = useState([]);
   const toggleGroup = (key) => {
     setExpandedGroupId(prev => prev === key ? null : key);
@@ -4377,6 +4652,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
   const dragId = useRef(null);
   const { can, getLevel } = usePermissions();
+  const viewLevel = getLevel('tasks', 'view');
+  const editLevel = getLevel('tasks', 'edit');
+  const deleteLevel = getLevel('tasks', 'delete');
+  const hasAllAccess = viewLevel === 'All' || editLevel === 'All' || deleteLevel === 'All' || isTeamLeadOrAdmin;
   const canEditTask = (task) => {
     if (!task) return false;
     if (user?.role?.toLowerCase() === 'admin') return true;
@@ -4618,11 +4897,21 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     setDrawerOpen(false);
     setDrawerTask(null);
     if (onTaskSelect) onTaskSelect(null);
-    if (window.history.state && window.history.state.fromApp) {
-      window.history.back();
-    } else {
-      window.history.pushState(null, '', '/tasks');
+    
+    const state = window.history.state;
+    if (state && state.prevTab) {
+      const targetUrl = state.prevTab === 'projects' && state.projectName
+        ? `/projects/${state.projectName.replace(/ /g, '-')}`
+        : `/${state.prevTab}`;
+      window.history.pushState(null, '', targetUrl);
       window.dispatchEvent(new Event('popstate'));
+    } else {
+      if (window.history.state && window.history.state.fromApp) {
+        window.history.back();
+      } else {
+        window.history.pushState(null, '', '/tasks');
+        window.dispatchEvent(new Event('popstate'));
+      }
     }
   };
 
@@ -4711,10 +5000,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       const currentUserId = (user?.id || '').trim().toLowerCase();
       if (!currentUserId || !assigneesList.includes(currentUserId)) return false;
     } else if (subTab === 'recurring') {
-      if (type !== 'Recurring Task') return false;
+      if (type !== 'Recurring Task' && !t.recurringTemplateId) return false;
     } else {
       if (type === 'calls/meetings') return false;
-      if (type === 'Recurring Task') return false; // hide template tasks from normal tabs
+      if (type === 'Recurring Task' || t.recurringTemplateId) return false; // hide recurring templates and task instances from normal tabs
     }
 
     // 1. Type Filter
@@ -4757,22 +5046,33 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     }
 
     // 3. User Permission / SubTab Filter
-    const level = getLevel('tasks', 'view');
-    const editLevel = getLevel('tasks', 'edit');
-    const deleteLevel = getLevel('tasks', 'delete');
-    
-    const hasAllAccess = level === 'All' || editLevel === 'All' || deleteLevel === 'All' || isTeamLeadOrAdmin;
-    
     if (hasAllAccess && subTab === 'all' && !assigneeFilter) return true;
+    if (isTeamLeadOrAdmin && subTab === 'recurring' && recurringToggle === 'all' && !assigneeFilter) return true;
     
     // For 'my' tab, 'Self' level, or specified assigneeFilter:
+    if (subTab === 'my' && myTasksToggle === 'created' && !assigneeFilter) {
+      const currentUserName = (user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || '').trim().toLowerCase();
+      const targetId = (user?.id || '').trim().toLowerCase();
+      return t.creatorId?.toLowerCase() === targetId || (t.createdBy && t.createdBy.toLowerCase() === currentUserName);
+    }
+
     const assignees = t.assignees ? t.assignees.split(',').map(a => a.trim().toLowerCase()) : [];
     const targetId = (assigneeFilter || user?.id || '').trim().toLowerCase();
     
     return assignees.includes(targetId);
   });
 
-  const pageTitle = subTab === 'my' ? '' : subTab === 'calls' ? 'Calls/Meeting' : subTab === 'recurring' ? 'Recurring Tasks' : 'All Tasks';
+  const unreadRecurringCount = tasks.filter(t => {
+    if (t.status === 'Archived' || t.status === 'Archive') return false;
+    if (!t.recurringTemplateId) return false;
+    const assigneesList = t.assignees ? t.assignees.split(',').map(a => a.trim().toLowerCase()) : [];
+    const currentUserId = (user?.id || '').trim().toLowerCase();
+    const isAssigned = currentUserId && assigneesList.includes(currentUserId);
+    return isAssigned && !readRecurringTasks.includes(t.id);
+  }).length;
+
+  const pageTitle = subTab === 'my' ? '' : subTab === 'calls' ? 'Calls/Meeting' : subTab === 'recurring' ? `Recurring (${unreadRecurringCount})` : 'All Tasks';
+  const showAssigneeCol = subTab === 'recurring' && isTeamLeadOrAdmin && recurringToggle === 'all';
 
   if (loading || openingInitialTask) {
     return (
@@ -4809,6 +5109,357 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     );
   }
 
+  const renderRecurringTable = (taskList, isTemplateList = false) => {
+    if (taskList.length === 0) {
+      return (
+        <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+          No tasks found.
+        </div>
+      );
+    }
+    return (
+      <div className="cu-table-wrapper" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: '#ffffff' }}>
+        <div className="table-responsive">
+          <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
+            <thead>
+              <tr className="cu-thead-row">
+                <th className="cu-th cu-th-name">NAME</th>
+                <th className="cu-th cu-th-status" style={{ width: '120px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>STATUS</th>
+                {showAssigneeCol && <th className="cu-th cu-th-assignee" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>ASSIGNEE</th>}
+                <th className="cu-th cu-th-project" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>PROJECT</th>
+                {isTemplateList ? (
+                  <th className="cu-th cu-th-frequency" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>FREQUENCY</th>
+                ) : (
+                  <th className="cu-th cu-th-delivery" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>DUE DATE</th>
+                )}
+                <th className="cu-th cu-th-actions" style={{ width: '80px' }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {taskList.flatMap(task => {
+                const subTasks = tasks.filter(t => t.parentId === task.id);
+                const isExpanded = !!expandedSubtaskIds[task.id];
+                const isAddingSubtask = addingSubtaskParentId === task.id;
+                const relDate = formatRelativeDueDate(task.dueDate);
+                const taskGroupName = task.taskListId ? (taskListsData.find(l => l.id === task.taskListId)?.name || '') : '';
+                const meta = STATUS_HEADER_META[task.status || 'To Do'] || { bg: '#64748b', fg: '#ffffff', dotColor: '#94a3b8' };
+
+                const parentRow = (
+                  <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task, false)}>
+                    <td className="cu-td cu-td-name">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
+                        <button
+                          style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', visibility: subTasks.length > 0 ? 'visible' : 'hidden' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSubtaskExpand(task.id);
+                          }}
+                          title={isExpanded ? "Collapse Subtasks" : "Expand Subtasks"}
+                        >
+                          <svg viewBox="0 0 10 6" width="8" height="8" fill="currentColor" style={{ transform: isExpanded ? "none" : "rotate(-90deg)", transition: "transform 0.15s", color: "#64748b" }}><path d="M0 0l5 6 5-6z"/></svg>
+                        </button>
+                        <div className="cu-name-content">
+                          <TaskTitleTooltip text={`${getDisplayId(task)} ${task.title || 'Untitled Task'}`}>
+                            <span className="cu-task-id-prefix">{getDisplayId(task)}</span><span className="cu-task-title">{task.title || 'Untitled Task'}</span>
+                          </TaskTitleTooltip>
+                          {taskGroupName && (
+                            <div className="cu-mobile-task-sub">
+                              <span className="cu-mobile-in-list">In {taskGroupName}</span>
+                            </div>
+                          )}
+                        </div>
+                        {subTasks.length > 0 && (
+                          <span 
+                            style={{ 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: '4px', 
+                              marginLeft: '8px', 
+                              fontSize: '0.7rem', 
+                              fontWeight: '700', 
+                              color: '#2563eb', 
+                              background: '#eff6ff', 
+                              padding: '2px 6px', 
+                              borderRadius: '4px',
+                              border: '1px solid #bfdbfe',
+                              cursor: 'pointer'
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleSubtaskExpand(task.id);
+                            }}
+                            title={`${subTasks.length} Subtasks`}
+                          >
+                            <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                            {subTasks.length}
+                          </span>
+                        )}
+                        <button
+                          className="cu-hover-subtask-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedSubtaskIds(prev => ({ ...prev, [task.id]: true }));
+                            setAddingSubtaskParentId(task.id);
+                            setSubtaskTitle('');
+                            setSubtaskAssignee('');
+                            setSubtaskDueDate('');
+                            setSubtaskPriority('Medium');
+                          }}
+                          title="Add Subtask"
+                        >
+                          <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                    <td className="cu-td" style={{ fontSize: '0.82rem', fontWeight: '600', color: meta.bg }}>
+                      {task.status || 'To Do'}
+                    </td>
+                    {showAssigneeCol && (
+                      <td className="cu-td cu-td-assignee" style={{ textAlign: 'left' }} onClick={e => e.stopPropagation()}>
+                        <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                          <select className="cu-inline-dropdown" value={task.assignees || ''} disabled={!canEditTask(task)} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${task.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                            <option value="">Unassigned</option>
+                            {getFilteredUsersForProject(getTaskProjectId(task), task.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                          </select>
+                        </div>
+                      </td>
+                    )}
+                    <td className="cu-td cu-td-project" style={{ textAlign: 'left' }}>
+                      {task.projectName ? (
+                        <span className="cu-project-badge">{task.projectName}</span>
+                      ) : <span className="cu-empty-cell">-</span>}
+                    </td>
+                    {isTemplateList ? (
+                      <td className="cu-td cu-td-frequency" style={{ textAlign: 'left' }}>
+                        {task.recurrenceFrequency ? (
+                          <span className="cu-project-badge" style={{ textTransform: 'capitalize', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', fontWeight: '600' }}>
+                            {task.recurrenceFrequency}
+                          </span>
+                        ) : <span className="cu-empty-cell">-</span>}
+                      </td>
+                    ) : (
+                      <td className="cu-td cu-td-delivery" style={{ textAlign: 'left' }} onClick={e => e.stopPropagation()}>
+                        <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                          <span className="cu-date-text" style={{ color: task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(task.dueDate)}</span>
+                          <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(task)} onClick={(e) => { e.stopPropagation(); if (canEditTask(task)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }} />
+                        </div>
+                      </td>
+                    )}
+                    <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
+                      <div className="cu-row-actions">
+                        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                          <PriorityFlag priority={task.priority} />
+                          {canEditTask(task) && (
+                            <select
+                              value={task.priority || 'Medium'}
+                              onClick={e => e.stopPropagation()}
+                              onChange={async (e) => {
+                                e.stopPropagation();
+                                const newPriority = e.target.value;
+                                const updated = { ...task, priority: newPriority };
+                                try {
+                                  const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                  await api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName });
+                                  setTasks(ts => ts.map(t => t.id === task.id ? updated : t));
+                                } catch (err) {
+                                  console.error(err);
+                                }
+                              }}
+                              style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                opacity: 0,
+                                cursor: 'pointer',
+                                border: 'none',
+                                outline: 'none'
+                              }}
+                            >
+                              {Object.keys(PRIORITY_FLAGS).map(p => (
+                                <option key={p} value={p}>{p}</option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                        {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && ((user?.id && (task.assignees || '').toLowerCase().includes(user.id.toLowerCase())) || ((user?.fullName || user?.name) && (task.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))))) && (
+                          <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this task?', () => handleDeleteTask(task.id), 'Delete Task'); }} title="Delete">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+
+                const rows = [parentRow];
+
+                if (isExpanded) {
+                  subTasks.forEach(sub => {
+                    const subRelDate = formatRelativeDueDate(sub.dueDate);
+                    const subMeta = STATUS_HEADER_META[sub.status || 'To Do'] || { bg: '#64748b', fg: '#ffffff', dotColor: '#94a3b8' };
+
+                    rows.push(
+                      <tr key={sub.id} className="cu-row subtask-row" onClick={() => openTaskDetail(sub, false)} style={{ background: '#f8fafc' }}>
+                        <td className="cu-td cu-td-name" style={{ paddingLeft: '2.5rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                            <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
+                            <TaskTitleTooltip text={`${getDisplayId(sub)} ${sub.title || 'Untitled Subtask'}`}>
+                              <span className="cu-task-id-prefix">{getDisplayId(sub)}</span><span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
+                            </TaskTitleTooltip>
+                          </div>
+                        </td>
+                        <td className="cu-td" style={{ fontSize: '0.82rem', fontWeight: '600', color: subMeta.bg }}>
+                          {sub.status || 'To Do'}
+                        </td>
+                        {showAssigneeCol && (
+                          <td className="cu-td cu-td-assignee" style={{ textAlign: 'left' }} onClick={e => e.stopPropagation()}>
+                            <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                              <select className="cu-inline-dropdown" value={sub.assignees || ''} disabled={!canEditTask(sub)} onChange={async (e) => { e.stopPropagation(); const updated = { ...sub, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${sub.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === sub.id ? updated : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                                <option value="">Unassigned</option>
+                                {getFilteredUsersForProject(getTaskProjectId(sub) || getTaskProjectId(task), sub.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                              </select>
+                            </div>
+                          </td>
+                        )}
+                        <td className="cu-td cu-td-project" style={{ textAlign: 'left' }}>
+                          {sub.projectName ? (
+                            <span className="cu-project-badge">{sub.projectName}</span>
+                          ) : <span className="cu-empty-cell">-</span>}
+                        </td>
+                        {isTemplateList ? (
+                          <td className="cu-td cu-td-frequency" style={{ textAlign: 'left' }}>
+                            <span className="cu-empty-cell">-</span>
+                          </td>
+                        ) : (
+                          <td className="cu-td cu-td-delivery" style={{ textAlign: 'left' }} onClick={e => e.stopPropagation()}>
+                            <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                              <span className="cu-date-text" style={{ color: sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(sub.dueDate)}</span>
+                              <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(sub)} onClick={(e) => { e.stopPropagation(); if (canEditTask(sub)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }} />
+                            </div>
+                          </td>
+                        )}
+                        <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
+                          <div className="cu-row-actions">
+                            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                              <PriorityFlag priority={sub.priority} />
+                              {canEditTask(sub) && (
+                                <select
+                                  value={sub.priority || 'Medium'}
+                                  onClick={e => e.stopPropagation()}
+                                  onChange={async (e) => {
+                                    e.stopPropagation();
+                                    const newPriority = e.target.value;
+                                    const updated = { ...sub, priority: newPriority };
+                                    try {
+                                      const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                      await api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName });
+                                      setTasks(ts => ts.map(t => t.id === sub.id ? updated : t));
+                                    } catch (err) {
+                                      console.error(err);
+                                    }
+                                  }}
+                                  style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    opacity: 0,
+                                    cursor: 'pointer',
+                                    border: 'none',
+                                    outline: 'none'
+                                  }}
+                                >
+                                  {Object.keys(PRIORITY_FLAGS).map(p => (
+                                    <option key={p} value={p}>{p}</option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                            {(getLevel('tasks', 'delete') === 'All' || (getLevel('tasks', 'delete') === 'Self' && ((user?.id && (sub.assignees || '').toLowerCase().includes(user.id.toLowerCase())) || ((user?.fullName || user?.name) && (sub.assignees || '').toLowerCase().includes((user?.fullName || user?.name).toLowerCase()))))) && (
+                              <button className="cu-act-btn danger" onClick={(e) => { e.stopPropagation(); showConfirm('Delete this subtask?', () => handleDeleteTask(sub.id), 'Delete Subtask'); }} title="Delete">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  });
+                }
+
+                if (isAddingSubtask) {
+                  rows.push(
+                    <tr key={`add-sub-${task.id}`} className="cu-inline-row animate-fade-in" style={{ background: '#f8fafc' }}>
+                      <td colSpan={showAssigneeCol ? 6 : 5} style={{ paddingLeft: '2.5rem' }}>
+                        <div className="new-task-inline-bar" style={{ borderLeft: '2px solid #2563eb', paddingLeft: '8px' }}>
+                          <div className="ntib-left">
+                            <span className="ntib-dotted-circle"></span>
+                            <input
+                              type="text"
+                              placeholder="Subtask Name or type '/' for commands"
+                              value={subtaskTitle}
+                              onChange={e => setSubtaskTitle(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter' && !isSaving) submitSubtask(task); if (e.key === 'Escape') setAddingSubtaskParentId(null); }}
+                              autoFocus
+                              className="ntib-input"
+                            />
+                          </div>
+                          <div className="ntib-right">
+                            <div className="ntib-dropdown-wrapper">
+                              <button type="button" className="ntib-btn-icon" title="Assignee">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                              </button>
+                              <select className="ntib-hidden-select" value={subtaskAssignee} onChange={e => setSubtaskAssignee(e.target.value)}>
+                                <option value="">Assignee</option>
+                                {getFilteredUsersForProject(getTaskProjectId(task)).map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                              </select>
+                              {subtaskAssignee && <span className="ntib-badge">{initials((listUsers.find(u => u.id === subtaskAssignee) || {}).fullName || subtaskAssignee)}</span>}
+                            </div>
+                            
+                            <div className="ntib-dropdown-wrapper ntib-hide-mobile">
+                              <button type="button" className="ntib-btn-icon" title="Due Date">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                              </button>
+                              <input type="date" className="ntib-hidden-date" value={subtaskDueDate} onChange={e => setSubtaskDueDate(e.target.value)} />
+                              {subtaskDueDate && <span className="ntib-badge">{new Date(subtaskDueDate).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>}
+                            </div>
+                            
+                            <div className="ntib-dropdown-wrapper ntib-hide-mobile">
+                              <button type="button" className="ntib-btn-icon" title="Priority">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                              </button>
+                              <select className="ntib-hidden-select" value={subtaskPriority} onChange={e => setSubtaskPriority(e.target.value)}>
+                                {PRIORITIES.map(p => <option key={p} value={p}>{p} Priority</option>)}
+                              </select>
+                              {subtaskPriority && <span className="ntib-badge priority-color">{subtaskPriority}</span>}
+                            </div>
+                            
+                            <button type="button" className="ntib-cancel-btn" onClick={() => setAddingSubtaskParentId(null)}>Cancel</button>
+                            <button type="button" className="ntib-save-btn" disabled={isSaving} onClick={() => submitSubtask(task)}>{isSaving ? 'Saving...' : 'Save ↵'}</button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return rows;
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="tasks-3col-layout">
 
@@ -4816,65 +5467,99 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       {/* Ã¢â€¢ÂÃ¢â€¢Â MAIN CONTENT Ã¢â€¢ÂÃ¢â€¢Â */}
       <div className={`tasks-main-content ${viewMode === 'kanban' || viewMode === 'schedule' ? 'kanban-mode-active' : ''}`}>
       <div className={`kanban-root ${viewMode === 'kanban' || viewMode === 'schedule' ? 'kanban-scroll-layout' : ''}`} onDragEnd={handleDragEnd}>
-      {(getLevel('tasks', 'view') === 'All' || getLevel('tasks', 'edit') === 'All' || getLevel('tasks', 'delete') === 'All' || isTeamLeadOrAdmin) && !assigneeFilter && (
-        <div className="saas-tabs" style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '2rem' }}>
-          <button 
-            className={`saas-tab ${subTab === 'my' ? 'active' : ''}`} 
-            onClick={() => {
-              setSubTab('my');
-              setAssigneeFilter(null);
-              if (onClearAssigneeFilter) onClearAssigneeFilter();
-              setFilterProjectName('');
-              setFilterType('');
-              setFilterFromDate('');
-              setFilterToDate('');
-            }}
-            style={{ 
-              background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
-              color: subTab === 'my' ? '#2563eb' : '#64748b',
-              borderBottom: subTab === 'my' ? '2px solid #2563eb' : '2px solid transparent'
-            }}
-          >
-            My Tasks
-          </button>
-          <button 
-            className={`saas-tab ${subTab === 'all' ? 'active' : ''}`} 
-            onClick={() => {
-              setSubTab('all');
-              setAssigneeFilter(null);
-              if (onClearAssigneeFilter) onClearAssigneeFilter();
-              setFilterProjectName('');
-              setFilterType('');
-              setFilterFromDate('');
-              setFilterToDate('');
-            }}
-            style={{ 
-              background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
-              color: subTab === 'all' ? '#2563eb' : '#64748b',
-              borderBottom: subTab === 'all' ? '2px solid #2563eb' : '2px solid transparent'
-            }}
-          >
-            All Tasks
-          </button>
-          <button 
-            className={`saas-tab ${subTab === 'calls' ? 'active' : ''}`} 
-            onClick={() => {
-              setSubTab('calls');
-              setAssigneeFilter(null);
-              if (onClearAssigneeFilter) onClearAssigneeFilter();
-              setFilterProjectName('');
-              setFilterType('');
-              setFilterFromDate('');
-              setFilterToDate('');
-            }}
-            style={{ 
-              background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
-              color: subTab === 'calls' ? '#2563eb' : '#64748b',
-              borderBottom: subTab === 'calls' ? '2px solid #2563eb' : '2px solid transparent'
-            }}
-          >
-            Calls/Meeting
-          </button>
+      {!assigneeFilter && (
+        <div className="saas-tabs" style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '2rem' }}>
+            <button 
+              className={`saas-tab ${subTab === 'my' ? 'active' : ''}`} 
+              onClick={() => {
+                setSubTab('my');
+                setMyTasksToggle('assigned');
+                setAssigneeFilter(null);
+                if (onClearAssigneeFilter) onClearAssigneeFilter();
+                setFilterProjectName('');
+                setFilterType('');
+                setFilterFromDate('');
+                setFilterToDate('');
+              }}
+              style={{ 
+                background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
+                color: subTab === 'my' ? '#2563eb' : '#64748b',
+                borderBottom: subTab === 'my' ? '2px solid #2563eb' : '2px solid transparent'
+              }}
+            >
+              My Tasks
+            </button>
+            {hasAllAccess && (
+              <button 
+                className={`saas-tab ${subTab === 'all' ? 'active' : ''}`} 
+                onClick={() => {
+                  setSubTab('all');
+                  setMyTasksToggle('assigned');
+                  setAssigneeFilter(null);
+                  if (onClearAssigneeFilter) onClearAssigneeFilter();
+                  setFilterProjectName('');
+                  setFilterType('');
+                  setFilterFromDate('');
+                  setFilterToDate('');
+                }}
+                style={{ 
+                  background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
+                  color: subTab === 'all' ? '#2563eb' : '#64748b',
+                  borderBottom: subTab === 'all' ? '2px solid #2563eb' : '2px solid transparent'
+                }}
+              >
+                All Tasks
+              </button>
+            )}
+            <button 
+              className={`saas-tab ${subTab === 'calls' ? 'active' : ''}`} 
+              onClick={() => {
+                setSubTab('calls');
+                setMyTasksToggle('assigned');
+                setAssigneeFilter(null);
+                if (onClearAssigneeFilter) onClearAssigneeFilter();
+                setFilterProjectName('');
+                setFilterType('');
+                setFilterFromDate('');
+                setFilterToDate('');
+              }}
+              style={{ 
+                background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
+                color: subTab === 'calls' ? '#2563eb' : '#64748b',
+                borderBottom: subTab === 'calls' ? '2px solid #2563eb' : '2px solid transparent'
+              }}
+            >
+              Calls/Meeting
+            </button>
+            <button 
+              className={`saas-tab ${subTab === 'recurring' ? 'active' : ''}`} 
+              onClick={() => {
+                setSubTab('recurring');
+                setMyTasksToggle('assigned');
+                setRecurringToggle('my');
+                setAssigneeFilter(null);
+                if (onClearAssigneeFilter) onClearAssigneeFilter();
+                setFilterProjectName('');
+                setFilterType('');
+                setFilterFromDate('');
+                setFilterToDate('');
+              }}
+              style={{ 
+                background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
+                color: subTab === 'recurring' ? '#2563eb' : '#64748b',
+                borderBottom: subTab === 'recurring' ? '2px solid #2563eb' : '2px solid transparent'
+              }}
+            >
+              Recurring ({unreadRecurringCount})
+            </button>
+          </div>
+          {subTab !== 'calls' && (
+            <div className="view-toggle view-toggle-desktop" style={{ marginBottom: '8px' }}>
+              <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>List</button>
+              <button className={viewMode === 'kanban' ? 'active' : ''} onClick={() => setViewMode('kanban')}>Kanban</button>
+            </div>
+          )}
         </div>
       )}
 
@@ -4930,23 +5615,111 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Header ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
       <div className="kanban-header">
         <div className="kanban-header-left">
+          {subTab === 'recurring' && isTeamLeadOrAdmin && (
+            <div className="filter-group-toggle" style={{ display: 'flex', alignItems: 'center' }}>
+              <div className="view-toggle" style={{ display: 'flex', background: 'white', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <button 
+                  className={recurringToggle === 'my' ? 'active' : ''} 
+                  onClick={() => setRecurringToggle('my')}
+                  style={{ 
+                    padding: '0.25rem 0.75rem', 
+                    borderRadius: '6px', 
+                    border: 'none', 
+                    fontWeight: 600, 
+                    fontSize: '0.82rem', 
+                    cursor: 'pointer', 
+                    background: recurringToggle === 'my' ? '#2563eb' : 'transparent', 
+                    color: recurringToggle === 'my' ? 'white' : '#64748b',
+                    boxShadow: recurringToggle === 'my' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  My
+                </button>
+                <button 
+                  className={recurringToggle === 'all' ? 'active' : ''} 
+                  onClick={() => setRecurringToggle('all')}
+                  style={{ 
+                    padding: '0.25rem 0.75rem', 
+                    borderRadius: '6px', 
+                    border: 'none', 
+                    fontWeight: 600, 
+                    fontSize: '0.82rem', 
+                    cursor: 'pointer', 
+                    background: recurringToggle === 'all' ? '#2563eb' : 'transparent', 
+                    color: recurringToggle === 'all' ? 'white' : '#64748b',
+                    boxShadow: recurringToggle === 'all' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  All
+                </button>
+              </div>
+            </div>
+          )}
+          {subTab === 'my' && (
+            <div className="filter-group-toggle" style={{ display: 'flex', alignItems: 'center' }}>
+              <div className="view-toggle" style={{ display: 'flex', background: 'white', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <button 
+                  className={myTasksToggle === 'assigned' ? 'active' : ''} 
+                  onClick={() => setMyTasksToggle('assigned')}
+                  style={{ 
+                    padding: '0.25rem 0.75rem', 
+                    borderRadius: '6px', 
+                    border: 'none', 
+                    fontWeight: 600, 
+                    fontSize: '0.82rem', 
+                    cursor: 'pointer', 
+                    background: myTasksToggle === 'assigned' ? '#2563eb' : 'transparent', 
+                    color: myTasksToggle === 'assigned' ? 'white' : '#64748b',
+                    boxShadow: myTasksToggle === 'assigned' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Assigned to me
+                </button>
+                <button 
+                  className={myTasksToggle === 'created' ? 'active' : ''} 
+                  onClick={() => setMyTasksToggle('created')}
+                  style={{ 
+                    padding: '0.25rem 0.75rem', 
+                    borderRadius: '6px', 
+                    border: 'none', 
+                    fontWeight: 600, 
+                    fontSize: '0.82rem', 
+                    cursor: 'pointer', 
+                    background: myTasksToggle === 'created' ? '#2563eb' : 'transparent', 
+                    color: myTasksToggle === 'created' ? 'white' : '#64748b',
+                    boxShadow: myTasksToggle === 'created' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Created by me
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <div className="kanban-controls">
           {subTab !== 'calls' && (
             <div className="tasks-filter-row">
-              <div className="filter-group-type">
-                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Type</label>
-                <select 
-                  value={filterType} 
-                  onChange={e => setFilterType(e.target.value)}
-                  style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
-                >
-                  <option value="">All Types</option>
-                  <option value="Task">Task</option>
-                  <option value="Sub Task">Sub Task</option>
-                  <option value="Bug">Bug</option>
-                </select>
-              </div>
+              {subTab !== 'recurring' && (
+                <div className="filter-group-type">
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Type</label>
+                  <select 
+                    value={filterType} 
+                    onChange={e => setFilterType(e.target.value)}
+                    style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="">All Types</option>
+                    <option value="Task">Task</option>
+                    <option value="Sub Task">Sub Task</option>
+                    <option value="Bug">Bug</option>
+                  </select>
+                </div>
+              )}
 
               <div className="filter-group-project">
                 <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Projects</label>
@@ -5022,7 +5795,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             </div>
           )}
           {subTab !== 'calls' && (
-            <div className="view-toggle">
+            <div className="view-toggle view-toggle-mobile">
               <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>List</button>
               <button className={viewMode === 'kanban' ? 'active' : ''} onClick={() => setViewMode('kanban')}>Kanban</button>
             </div>
@@ -5219,6 +5992,24 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       )}
 
       {viewMode === 'list' && (() => {
+        if (subTab === 'recurring') {
+          return (
+            <div className="recurring-custom-lists" style={{ display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1rem 0' }}>
+              {/* Heading 1: Tasks */}
+              <div className="recurring-group-section">
+                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>Tasks</h3>
+                {renderRecurringTable(filteredTasks.filter(t => t.taskType !== 'Recurring Task'))}
+              </div>
+
+              {/* Heading 2: Templates */}
+              <div className="recurring-group-section">
+                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>Templates</h3>
+                {renderRecurringTable(filteredTasks.filter(t => t.taskType === 'Recurring Task'), true)}
+              </div>
+            </div>
+          );
+        }
+
         if (subTab === 'calls') {
           // Group by project
           const projectGroupsMap = {};
@@ -6480,6 +7271,25 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                               <span className="cu-flat-task-title" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}><span className="cu-task-id-prefix">{getDisplayId(task)}</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {task.title || 'Untitled Task'}
                               </span></span>
+                              {showAssigneeCol && (() => {
+                                const assigneeId = task.assignees;
+                                const assigneeUser = listUsers.find(u => u.id === assigneeId);
+                                const initialsStr = assigneeUser ? initials(assigneeUser.fullName) : '?';
+                                return (
+                                  <span className="cu-mobile-assignee-badge" style={{
+                                    background: '#e2e8f0',
+                                    color: '#475569',
+                                    padding: '1px 6px',
+                                    borderRadius: '10px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    marginLeft: '6px',
+                                    flexShrink: 0
+                                  }} title={assigneeUser?.fullName || 'Unassigned'}>
+                                    {initialsStr}
+                                  </span>
+                                );
+                              })()}
                               {subTasks.length > 0 && (
                                 <span 
                                   style={{ 
@@ -6538,6 +7348,25 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                   <span className="cu-flat-task-title" style={{ color: '#475569', fontSize: '0.82rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}><span className="cu-task-id-prefix">{getDisplayId(sub)}</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {sub.title || 'Untitled Subtask'}
                                   </span></span>
+                                  {showAssigneeCol && (() => {
+                                    const assigneeId = sub.assignees;
+                                    const assigneeUser = listUsers.find(u => u.id === assigneeId);
+                                    const initialsStr = assigneeUser ? initials(assigneeUser.fullName) : '?';
+                                    return (
+                                      <span className="cu-mobile-assignee-badge" style={{
+                                        background: '#cbd5e1',
+                                        color: '#475569',
+                                        padding: '1px 6px',
+                                        borderRadius: '10px',
+                                        fontSize: '0.65rem',
+                                        fontWeight: 700,
+                                        marginLeft: '6px',
+                                        flexShrink: 0
+                                      }}>
+                                        {initialsStr}
+                                      </span>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                             );
@@ -6611,7 +7440,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             </div>
 
             {/* ── Desktop: status-grouped list (hidden on mobile) ── */}
-            <div className="cu-list-root my-tasks-list">
+            <div className={`cu-list-root my-tasks-list ${subTab === 'recurring' ? 'has-assignee' : ''}`}>
             {COLUMNS.map(col => {
               const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
               const statusTasks = [...(byStatus[col.id] || [])].sort((a, b) => {
@@ -6650,6 +7479,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                         <thead>
                           <tr className="cu-thead-row">
                             <th className="cu-th cu-th-name">NAME</th>
+                            {showAssigneeCol && <th className="cu-th cu-th-assignee">ASSIGNEE</th>}
                             <th className="cu-th cu-th-project">PROJECT</th>
                             <th className="cu-th cu-th-delivery">DUE DATE</th>
                             <th className="cu-th cu-th-actions"></th>
@@ -6753,6 +7583,16 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </button>
                                               </div>
                                             </td>
+                                            {showAssigneeCol && (
+                                              <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
+                                                <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                                                  <select className="cu-inline-dropdown" value={task.assignees || ''} disabled={!canEditTask(task)} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${task.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                                                    <option value="">Unassigned</option>
+                                                    {getFilteredUsersForProject(getTaskProjectId(task), task.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                  </select>
+                                                </div>
+                                              </td>
+                                            )}
                                             <td className="cu-td cu-td-project">
                                               {task.projectName ? (
                                                 <span className="cu-project-badge">{task.projectName}</span>
@@ -6830,6 +7670,16 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                     </TaskTitleTooltip>
                                                   </div>
                                                 </td>
+                                                {showAssigneeCol && (
+                                                  <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
+                                                    <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                                                      <select className="cu-inline-dropdown" value={sub.assignees || ''} disabled={!canEditTask(sub)} onChange={async (e) => { e.stopPropagation(); const updated = { ...sub, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${sub.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === sub.id ? updated : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                                                        <option value="">Unassigned</option>
+                                                        {getFilteredUsersForProject(getTaskProjectId(sub) || getTaskProjectId(task), sub.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                      </select>
+                                                    </div>
+                                                  </td>
+                                                )}
                                                 <td className="cu-td cu-td-project">
                                                   {sub.projectName ? (
                                                     <span className="cu-project-badge">{sub.projectName}</span>
@@ -6894,7 +7744,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                           if (isAddingSubtask) {
                                             rows.push(
                                               <tr key={`add-sub-${task.id}`} className="cu-inline-row animate-fade-in" style={{ background: '#f8fafc' }}>
-                                                <td colSpan="4" style={{ paddingLeft: '2.5rem' }}>
+                                                <td colSpan={showAssigneeCol ? 5 : 4} style={{ paddingLeft: '2.5rem' }}>
                                                   <div className="new-task-inline-bar" style={{ borderLeft: '2px solid #2563eb', paddingLeft: '8px' }}>
                                                     <div className="ntib-left">
                                                       <span className="ntib-dotted-circle"></span>
@@ -6955,7 +7805,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           {/* Inline Add Row */}
                           {isInline ? (
                             <tr className="cu-inline-row animate-fade-in">
-                              <td colSpan="4" style={{ padding: '8px' }}>
+                              <td colSpan={showAssigneeCol ? 5 : 4} style={{ padding: '8px' }}>
                                 <div className="new-task-inline-bar">
                                   <div className="ntib-left">
                                     <span className="ntib-dotted-circle"></span>
@@ -7011,7 +7861,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           ) : (
                             can('tasks', 'create') && subTab !== 'my' && subTab !== 'recurring' && (
                               <tr className="cu-add-row" onClick={() => openInlineAdd('', col.id)}>
-                                <td colSpan="4">
+                                <td colSpan={showAssigneeCol ? 5 : 4}>
                                   <span className="cu-add-icon">+</span>
                                   <span className="cu-add-text">Add Task</span>
                                 </td>

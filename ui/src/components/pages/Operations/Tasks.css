@@ -119,6 +119,7 @@
 /* Column theme colors */
 .col-todo          { background: #f8fafc; border-color: #e2e8f0; }
 .col-progress      { background: #eff6ff; border-color: #bfdbfe; }
+.col-onhold        { background: #fffbeb; border-color: #fde68a; }
 .col-testing       { background: #faf5ff; border-color: #e9d5ff; }
 .col-dev-verified  { background: #ecfeff; border-color: #a5f3fc; }
 .col-reopened      { background: #fff1f2; border-color: #fecdd3; }
@@ -3471,6 +3472,12 @@
 .my-tasks-list .cu-th-delivery { width: 10%; text-align: center; }
 .my-tasks-list .cu-th-actions  { width: 10%; }
 
+.my-tasks-list.has-assignee .cu-th-name     { width: 33%; }
+.my-tasks-list.has-assignee .cu-th-assignee { width: 12%; text-align: center; }
+.my-tasks-list.has-assignee .cu-th-project  { width: 10%; }
+.my-tasks-list.has-assignee .cu-th-delivery { width: 10%; text-align: center; }
+.my-tasks-list.has-assignee .cu-th-actions  { width: 10%; }
+
 /* ── Rows ── */
 .cu-row {
   cursor: pointer;
@@ -5869,6 +5876,224 @@
   .calls-add-btn-mobile {
     display: inline;
   }
+  .attachment-table-responsive th,
+  .subtask-table-responsive th,
+  .worklog-table-responsive td,
+  .billed-table-responsive td,
+  .attachment-table-responsive td,
+  .subtask-table-responsive td,
+  .worklog-table-responsive tr,
+  .billed-table-responsive tr,
+  .attachment-table-responsive tr,
+  .subtask-table-responsive tr {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .worklog-table-responsive thead,
+  .billed-table-responsive thead,
+  .attachment-table-responsive thead,
+  .subtask-table-responsive thead {
+    display: none !important;
+  }
+
+  .worklog-table-responsive tr,
+  .billed-table-responsive tr,
+  .attachment-table-responsive tr,
+  .subtask-table-responsive tr {
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 0.75rem !important;
+    margin-bottom: 0.75rem !important;
+    background: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+  }
+
+  .worklog-table-responsive td,
+  .billed-table-responsive td,
+  .attachment-table-responsive td,
+  .subtask-table-responsive td {
+    border: none !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    position: relative !important;
+    padding: 0.5rem 0.5rem 0.5rem 40% !important;
+    text-align: left !important;
+    white-space: normal !important;
+    min-height: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    word-break: break-word !important;
+  }
+
+  .worklog-table-responsive td:last-child,
+  .billed-table-responsive td:last-child,
+  .attachment-table-responsive td:last-child,
+  .subtask-table-responsive td:last-child {
+    border-bottom: none !important;
+  }
+
+  .worklog-table-responsive td:before,
+  .billed-table-responsive td:before,
+  .attachment-table-responsive td:before,
+  .subtask-table-responsive td:before {
+    position: absolute !important;
+    left: 10px !important;
+    width: 35% !important;
+    padding-right: 10px !important;
+    white-space: nowrap !important;
+    font-weight: 700 !important;
+    color: #64748b !important;
+    font-size: 0.72rem !important;
+    text-transform: uppercase !important;
+  }
+
+  /* Specific headers for Worklog */
+  .worklog-table-responsive td:nth-of-type(1):before { content: "Date" !important; }
+  .worklog-table-responsive td:nth-of-type(2):before { content: "User" !important; }
+  .worklog-table-responsive td:nth-of-type(3):before { content: "Timespent" !important; }
+  .worklog-table-responsive td:nth-of-type(4):before { content: "Actions" !important; }
+
+  /* Specific headers for Billed Logs */
+  .billed-table-responsive td:nth-of-type(1):before { content: "Date" !important; }
+  .billed-table-responsive td:nth-of-type(2):before { content: "User" !important; }
+  .billed-table-responsive td:nth-of-type(3):before { content: "Billed Hours" !important; }
+  .billed-table-responsive td:nth-of-type(4):before { content: "Description" !important; }
+  .billed-table-responsive td:nth-of-type(5):before { content: "Actions" !important; }
+
+  /* Specific headers for Attachments */
+  .attachment-table-responsive td:nth-of-type(1):before { content: "File Name" !important; }
+  .attachment-table-responsive td:nth-of-type(2):before { content: "Uploaded By" !important; }
+  .attachment-table-responsive td:nth-of-type(3):before { content: "Uploaded On" !important; }
+  .attachment-table-responsive td:nth-of-type(4):before { content: "File Size" !important; }
+  .attachment-table-responsive td:nth-of-type(5):before { content: "Actions" !important; }
+
+  /* Specific headers for Subtasks */
+  .subtask-table-responsive td:nth-of-type(1):before { content: "Subtask Title" !important; }
+  .subtask-table-responsive td:nth-of-type(2):before { content: "Assignee" !important; }
+  .subtask-table-responsive td:nth-of-type(3):before { content: "Status" !important; }
+  .subtask-table-responsive td:nth-of-type(4):before { content: "Due Date" !important; }
+  .subtask-table-responsive td:nth-of-type(5):before { content: "Priority" !important; }
+  .subtask-table-responsive td:nth-of-type(6):before { content: "Actions" !important; }
+
+  .worklog-table-responsive table,
+  .billed-table-responsive table,
+  .attachment-table-responsive table,
+  .subtask-table-responsive table {
+    min-width: 0 !important;
+  }
 }
 
+@media (max-width: 600px) {
+  .worklog-section-row {
+    flex-direction: column;
+  }
+  .worklog-add-card {
+    max-width: 260px !important;
+    width: 260px !important;
+    flex: none !important;
+    padding: 0.75rem !important;
+  }
+  .worklog-add-card input[type="number"] {
+    max-width: 200px !important;
+    width: 100% !important;
+  }
+  .worklog-add-card .worklog-btn-row button {
+    width: auto !important;
+    padding: 0.45rem 1rem !important;
+    font-size: 0.82rem !important;
+  }
+}
 
+@media (max-width: 768px) {
+  .new-task-inline-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+    padding: 0.5rem !important;
+  }
+  .ntib-left {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+  .ntib-right {
+    width: 100% !important;
+    justify-content: flex-end !important;
+    gap: 0.5rem !important;
+  }
+  .ntib-dropdown-wrapper.ntib-hide-mobile {
+    display: none !important;
+  }
+}
+
+/* Custom created row display behavior */
+.saas-meta-created-row {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .saas-meta-created-row {
+    display: flex !important;
+  }
+}
+
+.calls-add-btn {
+  padding: 0.4rem 1rem;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+.calls-add-btn:hover {
+  background: #1d4ed8;
+}
+.calls-add-btn-mobile {
+  display: none;
+}
+.calls-add-btn-desktop {
+  display: inline;
+}
+
+@media (max-width: 768px) {
+  .calls-add-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+    align-self: flex-start;
+  }
+  .calls-add-btn-desktop {
+    display: none;
+  }
+  .calls-add-btn-mobile {
+    display: inline;
+  }
+}
+.filter-group-date input {
+  width: 120px;
+}
+
+@media (max-width: 768px) {
+  .filter-group-date input {
+    width: 100%;
+  }
+}
+
+.view-toggle-desktop {
+  display: flex;
+}
+.view-toggle-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .view-toggle-desktop {
+    display: none !important;
+  }
+  .view-toggle-mobile {
+    display: flex !important;
+  }
+}

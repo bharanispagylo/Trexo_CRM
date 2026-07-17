@@ -1330,20 +1330,26 @@ app.get('/api/tasks/:idOrDisplayId', async (req, res) => {
     }
 
     let recurrenceFrequency = task.recurrenceFrequency;
+    let recurrenceDetail = task.recurrenceDetail;
+    let taskTypeOverride = task.taskType;
     if (task.recurringTemplateId) {
       const template = await prisma.task.findUnique({
         where: { id: task.recurringTemplateId },
-        select: { recurrenceFrequency: true }
+        select: { recurrenceFrequency: true, recurrenceDetail: true, taskType: true }
       });
       if (template) {
         recurrenceFrequency = template.recurrenceFrequency;
+        recurrenceDetail = template.recurrenceDetail;
+        taskTypeOverride = 'Recurring Task';
       }
     }
 
     const result = {
       ...task,
       projectName: task.projectRef?.name || '',
-      recurrenceFrequency
+      recurrenceFrequency,
+      recurrenceDetail,
+      taskType: taskTypeOverride
     };
     res.json(result);
   } catch (error) {
@@ -2814,6 +2820,10 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
       projectId,
       assignees,           // comma-separated user IDs or names
       priority,
+      taskType,
+      severity,
+      status,
+      tags,
     } = req.body;
 
     if (!comment) return res.status(400).json({ error: 'Comment is required' });
@@ -2823,9 +2833,6 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
     const now = new Date();
 
     // Build structured description
-    const boundsStr = bounds
-      ? `x:${bounds.x}, y:${bounds.y}, ${bounds.width}×${bounds.height}px`
-      : 'N/A';
     const description = [
       `## Bug Report from Browser Extension`,
       ``,
@@ -2840,27 +2847,13 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
       `### Comment`,
       comment,
       ``,
-      `### Element Info`,
-      `- **Tag:** ${elementTag || 'N/A'}`,
-      `- **ID:** ${elementId || 'none'}`,
-      `- **Classes:** ${elementClasses ? elementClasses.join(' ') : 'none'}`,
-      `- **Selector:** \`${elementSelector || 'N/A'}\``,
-      `- **XPath:** \`${elementXPath || 'N/A'}\``,
-      `- **Visible Text:** ${elementText || 'N/A'}`,
-      `- **Bounds:** ${boundsStr}`,
-      ``,
-      `### HTML Snippet`,
-      `\`\`\`html`,
-      elementHTML || 'N/A',
-      `\`\`\``,
-      ``,
       `---`,
       `*Reported via Spagylo Browser Extension*`,
     ].join('\n');
 
-    // Store screenshot in attachments field as JSON
+    // Store screenshot in the pipe-separated string format expected by the frontend
     const attachmentData = screenshot
-      ? JSON.stringify([{ name: 'browser-report-screenshot.jpg', data: screenshot, type: 'browser-report', reportedBy: reporterName, reportedAt: now.toISOString() }])
+      ? `${screenshot}|${reporterName}|${now.toISOString()}|browser-report-screenshot.jpg|${reporter.id || ''}`
       : null;
 
     // Auto-generate task number
@@ -2869,8 +2862,8 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
     });
     let maxNo = 0;
     let prefix = 'T';
-    const type = (taskType || '').toLowerCase();
-    if (type === 'bug') {
+    const type = (taskType || 'Bug').toLowerCase();
+    if (type === 'bug' || type === 'bug report') {
       prefix = 'B';
     } else if (type === 'calls/meetings') {
       prefix = 'C';
@@ -2899,12 +2892,12 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
         title: `Bug: ${comment.substring(0, 80)}${comment.length > 80 ? '...' : ''}`,
         description,
         taskType: 'Bug Report',
-        status: 'To Do',
-        priority: priority || 'Medium',
+        status: status || 'To Do',
+        priority: severity || priority || 'Medium',
         projectId: resolvedProjectId,
         assignees: assignees || reporterName,
         attachments: attachmentData,
-        tag: 'browser-report',
+        tag: tags ? `${tags}, browser-report` : 'browser-report',
         assignedDate: now,
       }
     });
@@ -3044,7 +3037,14 @@ const calculateNextRecurrence = (frequency, detail, baseDate) => {
           targetMonth = parseInt(parts[1], 10) - 1;
           targetDay = parseInt(parts[2], 10);
         } else if (parts.length === 2) {
-          targetMonth = parseInt(parts[0], 10) - 1;
+          const mStr = parts[0].toLowerCase();
+          const monthsShort = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+          const mIdx = monthsShort.indexOf(mStr);
+          if (mIdx !== -1) {
+            targetMonth = mIdx;
+          } else {
+            targetMonth = parseInt(parts[0], 10) - 1;
+          }
           targetDay = parseInt(parts[1], 10);
         }
       }
@@ -3152,7 +3152,14 @@ const getInitialRecurrenceDate = (frequency, detail, baseDate) => {
           targetMonth = parseInt(parts[1], 10) - 1;
           targetDay = parseInt(parts[2], 10);
         } else if (parts.length === 2) {
-          targetMonth = parseInt(parts[0], 10) - 1;
+          const mStr = parts[0].toLowerCase();
+          const monthsShort = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+          const mIdx = monthsShort.indexOf(mStr);
+          if (mIdx !== -1) {
+            targetMonth = mIdx;
+          } else {
+            targetMonth = parseInt(parts[0], 10) - 1;
+          }
           targetDay = parseInt(parts[1], 10);
         }
       }
