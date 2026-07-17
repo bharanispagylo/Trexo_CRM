@@ -49,6 +49,16 @@ export default function Estimations({ user }) {
     fetchData();
   }, []);
 
+  const formatEstimationId = (estimationNo, id) => {
+    const estId = estimationNo || `EST-${id.slice(-4).toUpperCase()}`;
+    const match = estId.match(/\d+/);
+    if (match) {
+      const num = parseInt(match[0], 10);
+      return `E${num}`;
+    }
+    return estId;
+  };
+
   const handleAdd = async () => {
     if (!form.taskName?.trim() || !form.client?.trim() || !form.projectId || form.estimatedHours <= 0) {
       setErrors({
@@ -352,7 +362,6 @@ export default function Estimations({ user }) {
               <table className="estimations-table">
                 <thead>
                   <tr>
-                    <th>Est. ID</th>
                     <th>Task Name</th>
                     <th>Client</th>
                     <th>Project</th>
@@ -364,8 +373,10 @@ export default function Estimations({ user }) {
                 <tbody>
                   {estimations.map(est => (
                     <tr key={est.id}>
-                      <td data-label="Est. ID" style={{ fontWeight: '600', color: '#334155' }}>{est.estimationNo}</td>
                       <td data-label="Task" style={{ fontWeight: '600' }}>
+                        <span className="cu-task-id-prefix" style={{ color: '#94a3b8', fontWeight: '500', marginRight: '6px' }}>
+                          {formatEstimationId(est.estimationNo, est.id)}
+                        </span>
                         <span
                           style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }}
                           onClick={() => setViewingEstimation(est)}
