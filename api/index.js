@@ -2764,7 +2764,14 @@ app.get('/api/browser/projects', verifyBrowserToken, async (req, res) => {
   try {
     const projects = await prisma.project.findMany({
       where: { status: 'Active' },
-      select: { id: true, name: true, projectNo: true },
+      select: {
+        id: true,
+        name: true,
+        projectNo: true,
+        taskLists: {
+          select: { id: true, name: true }
+        }
+      },
       orderBy: { name: 'asc' },
     });
     res.json(projects);
@@ -2823,6 +2830,7 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
       taskType,
       dueDate,
       deliveredDate,
+      taskListId,
       severity,
       status,
       tags,
@@ -2897,6 +2905,7 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
         status: status || 'To Do',
         priority: priority || severity || 'Medium',
         projectId: resolvedProjectId,
+        taskListId: taskListId || null,
         assignees: assignees || reporterName,
         attachments: attachmentData,
         tag: tags ? `${tags}, browser-report` : 'browser-report',
