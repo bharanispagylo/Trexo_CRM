@@ -42,7 +42,9 @@ const STATUS_HEADER_META = {
   'To Do': { bg: '#78350f', fg: '#ffffff' },
   'to do': { bg: '#78350f', fg: '#ffffff' },
   'In Progress': { bg: '#2563eb', fg: '#ffffff' },
-  'in progress': { bg: '#2563eb', fg: '#ffffff' }
+  'in progress': { bg: '#2563eb', fg: '#ffffff' },
+  'On Hold': { bg: '#d97706', fg: '#ffffff' },
+  'on hold': { bg: '#d97706', fg: '#ffffff' }
 };
 
 export default function DailyLoadIndividual({ user, onTaskClick, initialUserId, onClearInitialUserId }) {

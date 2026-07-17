@@ -119,6 +119,7 @@
 /* Column theme colors */
 .col-todo          { background: #f8fafc; border-color: #e2e8f0; }
 .col-progress      { background: #eff6ff; border-color: #bfdbfe; }
+.col-onhold        { background: #fffbeb; border-color: #fde68a; }
 .col-testing       { background: #faf5ff; border-color: #e9d5ff; }
 .col-dev-verified  { background: #ecfeff; border-color: #a5f3fc; }
 .col-reopened      { background: #fff1f2; border-color: #fecdd3; }

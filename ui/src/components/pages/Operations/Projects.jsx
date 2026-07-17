@@ -10,6 +10,7 @@ import { useAlert } from '../../../context/AlertContext';
 const STATUS_HEADER_META = {
   'To Do':         { bg: '#78350f', fg: '#ffffff', border: '1px solid #5c2c06', dotColor: '#78350f', isDone: false },
   'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', isDone: false },
+  'On Hold':       { bg: '#d97706', fg: '#ffffff', dotColor: '#fef3c7', isDone: false },
   'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', isDone: false },
   'Dev Verified':   { bg: '#0891b2', fg: '#ffffff', dotColor: '#a5f3fc', isDone: false },
   'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', isDone: false },
@@ -22,6 +23,7 @@ const STATUS_HEADER_META = {
 const COLUMNS = [
   { id: 'To Do', label: 'To Do' },
   { id: 'In Progress', label: 'In Progress' },
+  { id: 'On Hold', label: 'On Hold' },
   { id: 'In Testing', label: 'In Testing' },
   { id: 'Dev Verified', label: 'Dev Verified' },
   { id: 'Re-opened', label: 'Re-opened' },
@@ -841,6 +843,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     try {
       const payload = {
         ...queryFormFields,
+        solved: queryFormFields.status === 'Solved',
         projectId: selectedProject.id
       };
 
@@ -1001,7 +1004,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <select
               className="saas-select"
               value={queryFormFields.status}
-              onChange={e => setQueryFormFields({ ...queryFormFields, status: e.target.value })}
+              onChange={e => { const val = e.target.value; setQueryFormFields({ ...queryFormFields, status: val, solved: val === 'Solved' }); }}
             >
               <option value="Open">Open</option>
               <option value="In Discussion">In Discussion</option>
@@ -1109,10 +1112,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           <div>
             <div style={labelStyle}>Solved</div>
             <span style={{
-              background: viewingQuery.solved ? '#dcfce7' : '#fee2e2',
-              color: viewingQuery.solved ? '#15803d' : '#b91c1c',
+              background: viewingQuery.status === 'Solved' || viewingQuery.solved ? '#dcfce7' : '#fee2e2',
+              color: viewingQuery.status === 'Solved' || viewingQuery.solved ? '#15803d' : '#b91c1c',
               padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '700', display: 'inline-block'
-            }}>{viewingQuery.solved ? 'Yes' : 'No'}</span>
+            }}>{(viewingQuery.status === 'Solved' || viewingQuery.solved) ? 'Yes' : 'No'}</span>
           </div>
 
           {/* Created On */}
@@ -1794,7 +1797,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                               const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
 
                                               const parentRow = (
-                                                <tr key={task.id} className="cu-row" onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
+                                                <tr key={task.id} className="cu-row" onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'projects', projectName: selectedProject.name }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
                                                   <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                                       {subTasks.length > 0 && (
@@ -1963,7 +1966,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                   const subRelDate = formatRelativeDueDate(sub.dueDate);
 
                                                   rows.push(
-                                                    <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(sub)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
+                                                    <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'projects', projectName: selectedProject.name }, '', `/tasks/${getDisplayId(sub)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
                                                       <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem', paddingLeft: '2.5rem' }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                                           <span className="cu-subtask-indicator" style={{ color: '#94a3b8', marginRight: '4px', fontSize: '1rem', fontWeight: 'bold' }}>↳</span>
@@ -2403,7 +2406,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 const totalQueries = queriesList.length;
                 const openQueries = queriesList.filter(q => q.status === 'Open').length;
                 const inDiscussionQueries = queriesList.filter(q => q.status === 'In Discussion').length;
-                const solvedQueries = queriesList.filter(q => q.solved).length;
+                const solvedQueries = queriesList.filter(q => q.status === 'Solved').length;
                 const closedQueries = queriesList.filter(q => q.status === 'Closed').length;
 
                 return (
@@ -2447,7 +2450,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
                       </div>
                       <div>
-                        <div style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Solved (Yes)</div>
+                        <div style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Solved</div>
                         <div style={{ color: '#0f172a', fontSize: '1.5rem', fontWeight: '800' }}>{solvedQueries}</div>
                       </div>
                     </div>
@@ -2558,9 +2561,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     (q.title || '').toLowerCase().includes(querySearchText.toLowerCase()) ||
                     (q.description || '').toLowerCase().includes(querySearchText.toLowerCase())
                   ) : true;
-                  const matchesStatus = queryStatusFilter === 'All Status' ? true : (
-                    queryStatusFilter === 'Solved' ? q.solved : q.status === queryStatusFilter
-                  );
+                  const matchesStatus = queryStatusFilter === 'All Status' ? true : q.status === queryStatusFilter;
                   const matchesSentTo = querySentToFilter === 'All Sent To' ? true : q.sentTo === querySentToFilter;
                   const matchesPriority = queryPriorityFilter === 'All Priority' ? true : q.priority === queryPriorityFilter;
                   return matchesSearch && matchesStatus && matchesSentTo && matchesPriority;

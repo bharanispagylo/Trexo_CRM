@@ -31,6 +31,7 @@ function PromptModal({ isOpen, title, onSave, onCancel }) {
 const COLUMNS = [
   { id: 'To Do',         label: 'To Do',         color: 'col-todo' },
   { id: 'In Progress',   label: 'In Progress',   color: 'col-progress' },
+  { id: 'On Hold',       label: 'On Hold',       color: 'col-onhold' },
   { id: 'In Testing',    label: 'In Testing',    color: 'col-testing' },
   { id: 'Dev Verified',  label: 'Dev Verified',  color: 'col-dev-verified' },
   { id: 'Re-opened',     label: 'Re-opened',     color: 'col-reopened' },
@@ -52,6 +53,7 @@ const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 const STATUS_HEADER_META = {
   'To Do':         { bg: '#78350f', fg: '#ffffff', border: '1px solid #5c2c06', dotColor: '#78350f', isDone: false },
   'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', isDone: false },
+  'On Hold':       { bg: '#d97706', fg: '#ffffff', dotColor: '#fef3c7', isDone: false },
   'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', isDone: false },
   'Dev Verified':   { bg: '#0891b2', fg: '#ffffff', dotColor: '#a5f3fc', isDone: false },
   'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', isDone: false },
@@ -354,8 +356,12 @@ export function TaskTitleTooltip({ text, children }) {
 export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, initialEditMode = false, tasks = [], onRefresh, onSelectTask }) {
 
   const isEdit = !!(task && task.id);
-  const [isEditing, setIsEditing] = useState(true); // Always in edit mode
+  const [isEditing, setIsEditing] = useState(initialEditMode);
   const { alert, confirm } = useAlert();
+
+  useEffect(() => {
+    setIsEditing(initialEditMode);
+  }, [initialEditMode, task?.id]);
   
   const [activeTab, setActiveTab] = useState('general');
   const [users, setUsers] = useState([]);
@@ -979,6 +985,29 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     }
   };
 
+  const renderTextWithLinks = (text) => {
+    if (!text) return '';
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+    return parts.map((part, idx) => {
+      if (urlRegex.test(part)) {
+        return (
+          <a
+            key={idx}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#2563eb', textDecoration: 'underline', wordBreak: 'break-all' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {part}
+          </a>
+        );
+      }
+      return part;
+    });
+  };
+
   const renderDescriptionWithPreviews = (text) => {
     if (!text) return 'Add description, or write with AI...';
     
@@ -1042,7 +1071,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {parts.map((part, idx) => {
           if (typeof part === 'string') {
-            return <span key={idx} style={{ whiteSpace: 'pre-wrap' }}>{part}</span>;
+            return <span key={idx} style={{ whiteSpace: 'pre-wrap' }}>{renderTextWithLinks(part)}</span>;
           }
           
           if (part.isImage) {
@@ -1276,10 +1305,35 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       if (attachment.url.startsWith('data:image/')) return true;
       return false;
     })();
-    const label = isPdf ? 'PDF' : (isImage ? 'IMG' : 'FILE');
-    const iconColor = isPdf ? '#ef4444' : (isImage ? '#3b82f6' : '#64748b');
-    const iconBg = isPdf ? '#fef2f2' : (isImage ? '#eff6ff' : '#f8fafc');
-    const iconBorder = isPdf ? '#fee2e2' : (isImage ? '#dbeafe' : '#e2e8f0');
+
+    if (isImage) {
+      return (
+        <div style={{ marginTop: '0.5rem', display: 'block' }}>
+          <img 
+            src={attachment.url} 
+            alt={attachment.name}
+            onClick={() => {
+              setPreviewImageUrl(attachment.url);
+              setPreviewImageName(attachment.name);
+            }}
+            style={{ 
+              maxWidth: '300px', 
+              maxHeight: '300px', 
+              borderRadius: '8px', 
+              border: '1px solid #cbd5e1', 
+              cursor: 'pointer',
+              display: 'block',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }} 
+          />
+        </div>
+      );
+    }
+    
+    const label = isPdf ? 'PDF' : 'FILE';
+    const iconColor = isPdf ? '#ef4444' : '#64748b';
+    const iconBg = isPdf ? '#fef2f2' : '#f8fafc';
+    const iconBorder = isPdf ? '#fee2e2' : '#e2e8f0';
     
     return (
       <div style={{
@@ -1309,60 +1363,31 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         }}>
           {label}
         </div>
-        {isImage ? (
-          <button 
-            type="button"
-            onClick={(e) => { 
-              setPreviewImageUrl(attachment.url); 
-              setPreviewImageName(attachment.name); 
-            }}
-            style={{ 
-              fontSize: '0.8rem', 
-              fontWeight: '600', 
-              color: '#2563eb', 
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-              textDecoration: 'none', 
-              textOverflow: 'ellipsis', 
-              overflow: 'hidden', 
-              whiteSpace: 'nowrap',
-              maxWidth: '180px',
-              textAlign: 'left',
-              fontFamily: 'inherit'
-            }}
-            title={attachment.name}
-          >
-            {attachment.name}
-          </button>
-        ) : (
-          <button 
-            type="button"
-            onClick={(e) => { 
-              handleDownloadFile(attachment.url, attachment.name); 
-            }}
-            style={{ 
-              fontSize: '0.8rem', 
-              fontWeight: '600', 
-              color: '#2563eb', 
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-              textDecoration: 'none', 
-              textOverflow: 'ellipsis', 
-              overflow: 'hidden', 
-              whiteSpace: 'nowrap',
-              maxWidth: '180px',
-              textAlign: 'left',
-              fontFamily: 'inherit'
-            }}
-            title={attachment.name}
-          >
-            {attachment.name}
-          </button>
-        )}
+        <button 
+          type="button"
+          onClick={(e) => { 
+            handleDownloadFile(attachment.url, attachment.name); 
+          }}
+          style={{ 
+            fontSize: '0.8rem', 
+            fontWeight: '600', 
+            color: '#2563eb', 
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            textDecoration: 'none', 
+            textOverflow: 'ellipsis', 
+            overflow: 'hidden', 
+            whiteSpace: 'nowrap',
+            maxWidth: '180px',
+            textAlign: 'left',
+            fontFamily: 'inherit'
+          }}
+          title={attachment.name}
+        >
+          {attachment.name}
+        </button>
       </div>
     );
   };
@@ -1992,7 +2017,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         if (part.startsWith('@') && part.length > 1) {
                           return <strong key={idx} style={{ fontWeight: '700' }}>{part}</strong>;
                         }
-                        return part;
+                        return renderTextWithLinks(part);
                       })}
                     </div>
                   );
@@ -2622,6 +2647,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                   <input
                                     type="date"
                                     value={pickerVal}
+                                    onClick={e => {
+                                      try {
+                                        e.target.showPicker();
+                                      } catch (err) {}
+                                    }}
                                     onChange={e => {
                                       const formatted = convertToMonDd(e.target.value);
                                       const updated = { ...form, recurrenceDetail: formatted };
@@ -2821,32 +2851,6 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 )}
 
               </div>
-          
-          {isEditing && (
-            <div className="form-actions" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', borderTop: 'none', background: 'transparent', boxShadow: 'none' }}>
-              <button className="saas-btn-nav saas-btn-secondary" onClick={onClose}>
-                Cancel
-              </button>
-              <button 
-                className="saas-btn-nav saas-btn-primary" 
-                onClick={submit}
-                disabled={taskSaving}
-                style={{ 
-                  cursor: taskSaving ? 'not-allowed' : 'pointer',
-                  opacity: taskSaving ? 0.7 : 1
-                }}
-              >
-                {taskSaving ? (
-                  <span>{isEdit ? 'Saving...' : 'Creating...'}</span>
-                ) : (
-                  <>
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    {isEdit ? 'Save' : 'Create Task'}
-                  </>
-                )}
-              </button>
-            </div>
-          )}
           </>
         )}
 
@@ -3727,39 +3731,94 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           </div>
 
           <div className="comment-post-input-box">
-            {commentAttachment && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0.4rem 0.75rem',
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                marginBottom: '0.5rem',
-                fontSize: '0.8rem'
-              }} className="animate-fade-in">
-                <span style={{ fontWeight: '600', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '240px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                  {commentAttachment.name}
-                </span>
-                <button 
-                  type="button" 
-                  onClick={() => setCommentAttachment(null)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#ef4444',
-                    fontSize: '1rem',
-                    cursor: 'pointer',
-                    fontWeight: '700',
-                    padding: '0 0.2rem'
-                  }}
-                >
-                  ✔
-                </button>
-              </div>
-            )}
+            {commentAttachment && (() => {
+              const isImage = (() => {
+                const imageExtensions = ['png', 'jpeg', 'jpg', 'gif', 'webp', 'svg', 'bmp'];
+                const ext = commentAttachment.name.split('.').pop()?.toLowerCase();
+                if (imageExtensions.includes(ext)) return true;
+                if (commentAttachment.url.startsWith('data:image/')) return true;
+                return false;
+              })();
+
+              if (isImage) {
+                return (
+                  <div style={{
+                    position: 'relative',
+                    display: 'inline-block',
+                    marginBottom: '0.5rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    overflow: 'hidden'
+                  }} className="animate-fade-in">
+                    <img 
+                      src={commentAttachment.url} 
+                      alt={commentAttachment.name} 
+                      style={{ maxWidth: '120px', maxHeight: '120px', display: 'block' }} 
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setCommentAttachment(null)}
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        background: 'rgba(239, 68, 68, 0.9)',
+                        border: 'none',
+                        color: 'white',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        padding: 0,
+                        lineHeight: 1
+                      }}
+                      title="Remove image"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.4rem 0.75rem',
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  marginBottom: '0.5rem',
+                  fontSize: '0.8rem'
+                }} className="animate-fade-in">
+                  <span style={{ fontWeight: '600', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '240px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                    {commentAttachment.name}
+                  </span>
+                  <button 
+                    type="button" 
+                    onClick={() => setCommentAttachment(null)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#ef4444',
+                      fontSize: '1rem',
+                      cursor: 'pointer',
+                      fontWeight: '700',
+                      padding: '0 0.2rem'
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })()}
             <div className="comment-box-flex-row">
               <div className="comment-input-field-wrapper" style={{ position: 'relative' }}>
                 <textarea 
@@ -4838,11 +4897,21 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     setDrawerOpen(false);
     setDrawerTask(null);
     if (onTaskSelect) onTaskSelect(null);
-    if (window.history.state && window.history.state.fromApp) {
-      window.history.back();
-    } else {
-      window.history.pushState(null, '', '/tasks');
+    
+    const state = window.history.state;
+    if (state && state.prevTab) {
+      const targetUrl = state.prevTab === 'projects' && state.projectName
+        ? `/projects/${state.projectName.replace(/ /g, '-')}`
+        : `/${state.prevTab}`;
+      window.history.pushState(null, '', targetUrl);
       window.dispatchEvent(new Event('popstate'));
+    } else {
+      if (window.history.state && window.history.state.fromApp) {
+        window.history.back();
+      } else {
+        window.history.pushState(null, '', '/tasks');
+        window.dispatchEvent(new Event('popstate'));
+      }
     }
   };
 

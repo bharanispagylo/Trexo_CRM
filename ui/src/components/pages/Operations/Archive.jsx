@@ -171,7 +171,7 @@ export default function Archive({ user }) {
                           <span 
                             className="cu-task-title" 
                             style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}
-                            onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(t)}`); window.dispatchEvent(new Event('popstate')); }}
+                            onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'archive' }, '', `/tasks/${getDisplayId(t)}`); window.dispatchEvent(new Event('popstate')); }}
                           >
                             {t.title || 'Untitled Task'}
                           </span>
@@ -186,6 +186,7 @@ export default function Archive({ user }) {
                         const s = (t.previousStatus || 'To Do').toLowerCase().trim();
                         if (s === 'in progress') return '#2563eb';
                         if (s === 'to do') return '#78350f';
+                        if (s === 'on hold') return '#d97706';
                         if (s === 'in testing') return '#7c3aed';
                         if (s === 'dev verified') return '#0891b2';
                         if (s === 're-opened') return '#db2777';
@@ -204,7 +205,7 @@ export default function Archive({ user }) {
                     <td className="cell-actions" data-label="ACTIONS">
                       <div style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'flex-end' }}>
                         <button
-                          onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(t)}`); window.dispatchEvent(new Event('popstate')); }}
+                          onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'archive' }, '', `/tasks/${getDisplayId(t)}`); window.dispatchEvent(new Event('popstate')); }}
                           style={{ width: '28px', height: '28px', border: 'none', background: 'transparent', color: '#475569', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                           title="View Details"
                         >

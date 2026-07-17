@@ -10,6 +10,7 @@ import './Tasks.css'; // import to ensure ClickUp styles are available
 const STATUS_HEADER_META = {
   'To Do':         { bg: '#78350f', fg: '#ffffff', border: '1px solid #5c2c06', dotColor: '#78350f', isDone: false },
   'In Progress':   { bg: '#2563eb', fg: '#ffffff', dotColor: '#bfdbfe', isDone: false },
+  'On Hold':       { bg: '#d97706', fg: '#ffffff', dotColor: '#fef3c7', isDone: false },
   'In Testing':    { bg: '#7c3aed', fg: '#ffffff', dotColor: '#e9d5ff', isDone: false },
   'Dev Verified':   { bg: '#0891b2', fg: '#ffffff', dotColor: '#a5f3fc', isDone: false },
   'Re-opened':     { bg: '#db2777', fg: '#ffffff', dotColor: '#fecdd3', isDone: false },
@@ -22,6 +23,7 @@ const STATUS_HEADER_META = {
 const COLUMNS = [
   { id: 'To Do', label: 'To Do' },
   { id: 'In Progress', label: 'In Progress' },
+  { id: 'On Hold', label: 'On Hold' },
   { id: 'In Testing', label: 'In Testing' },
   { id: 'Dev Verified', label: 'Dev Verified' },
   { id: 'Re-opened', label: 'Re-opened' },
@@ -806,7 +808,7 @@ export default function TaskGroups({ user, onBack }) {
                               const relDate = formatRelativeDueDate(task.dueDate);
 
                               const parentRow = (
-                                <tr key={task.id} className="cu-row" onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
+                                <tr key={task.id} className="cu-row" onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'task-groups' }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
                                   <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                       {subTasks.length > 0 && (
@@ -1046,7 +1048,7 @@ export default function TaskGroups({ user, onBack }) {
                                   const subRelDate = formatRelativeDueDate(sub.dueDate);
 
                                   rows.push(
-                                    <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(sub)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
+                                    <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'task-groups' }, '', `/tasks/${getDisplayId(sub)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
                                       <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem', paddingLeft: '2.5rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                           <span className="cu-subtask-indicator" style={{ color: '#94a3b8', marginRight: '2px', fontSize: '1rem', fontWeight: 'bold' }}>↳</span>
@@ -1256,7 +1258,7 @@ export default function TaskGroups({ user, onBack }) {
                         draggable={true}
                         onDragStart={e => handleDragStart(e, task.id)}
                         onDragEnd={handleDragEnd}
-                        onClick={() => { window.history.pushState({ fromApp: true }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }}
+                        onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'task-groups' }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }}
                         style={{
                           background: 'white',
                           border: '1.5px solid #e2e8f0',
