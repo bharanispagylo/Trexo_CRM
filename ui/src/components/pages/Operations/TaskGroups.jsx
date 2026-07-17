@@ -138,6 +138,8 @@ export default function TaskGroups({ user, onBack }) {
   const [favouritesView, setFavouritesView] = useState('list'); // 'list' or 'kanban'
   const [dragOverListId, setDragOverListId] = useState(null);
   const dragTaskId = useRef(null);
+  const scrollInterval = useRef(null);
+  const autoScrollRef = useRef({ boardEl: null, speed: 0 });
   const toggleStatusSection = (listId, statusId) => {
     setExpandedStatusSections(prev => {
       const current = prev[listId];
@@ -486,6 +488,52 @@ export default function TaskGroups({ user, onBack }) {
     setDragOverListId(listId);
   };
 
+  const stopAutoScroll = () => {
+    if (scrollInterval.current) {
+      clearInterval(scrollInterval.current);
+      scrollInterval.current = null;
+    }
+    autoScrollRef.current.speed = 0;
+  };
+
+  const handleBoardDragOver = (e) => {
+    e.preventDefault();
+    const board = e.currentTarget;
+    autoScrollRef.current.boardEl = board;
+
+    const rect = board.getBoundingClientRect();
+    const x = e.clientX;
+    const threshold = 100; // pixels from edge
+
+    let speed = 0;
+    if (x < rect.left + threshold) {
+      const intensity = (rect.left + threshold - x) / threshold;
+      speed = -15 * Math.min(intensity, 1.5);
+    } else if (x > rect.right - threshold) {
+      const intensity = (x - (rect.right - threshold)) / threshold;
+      speed = 15 * Math.min(intensity, 1.5);
+    }
+
+    autoScrollRef.current.speed = speed;
+
+    if (speed !== 0) {
+      if (!scrollInterval.current) {
+        scrollInterval.current = setInterval(() => {
+          const { boardEl, speed: curSpeed } = autoScrollRef.current;
+          if (boardEl && curSpeed !== 0) {
+            boardEl.scrollLeft += curSpeed;
+          }
+        }, 16);
+      }
+    } else {
+      stopAutoScroll();
+    }
+  };
+
+  const handleBoardDragLeave = () => {
+    stopAutoScroll();
+  };
+
   const handleDragLeave = (e) => {
     if (!e.currentTarget.contains(e.relatedTarget)) {
       setDragOverListId(null);
@@ -495,6 +543,7 @@ export default function TaskGroups({ user, onBack }) {
   const handleDragEnd = () => {
     dragTaskId.current = null;
     setDragOverListId(null);
+    stopAutoScroll();
   };
 
   const handleDrop = async (e, targetListId) => {
@@ -1185,7 +1234,7 @@ export default function TaskGroups({ user, onBack }) {
   const renderKanbanBoard = (favouriteLists) => {
     const statusOrder = COLUMNS.map(c => c.id);
     return (
-      <div className="kanban-board">
+      <div className="kanban-board" onDragOver={handleBoardDragOver} onDragLeave={handleBoardDragLeave}>
         {favouriteLists.map(list => {
           const listTasks = (list.tasks || [])
             .filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || '').toLowerCase() !== 'calls/meetings' && t.taskType !== 'Recurring Task' && !t.recurringTemplateId)
