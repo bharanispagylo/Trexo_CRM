@@ -374,7 +374,7 @@ export default function Estimations({ user }) {
                   {estimations.map(est => (
                     <tr key={est.id}>
                       <td data-label="Task" style={{ fontWeight: '600' }}>
-                        <span className="cu-task-id-prefix" style={{ color: '#94a3b8', fontWeight: '500', marginRight: '6px' }}>
+                        <span className="cu-task-id-prefix" style={{ color: 'rgb(148, 163, 184)', fontWeight: '550', marginRight: '8px' }}>
                           {formatEstimationId(est.estimationNo, est.id)}
                         </span>
                         <span
