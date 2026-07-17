@@ -22,6 +22,18 @@ export default function Estimations({ user }) {
   const [convertModal, setConvertModal] = useState({ isOpen: false, estimation: null });
   const [convertForm, setConvertForm] = useState({ projectId: '', assignees: '', assignedDate: '', dueDate: '', priority: 'Medium', taskListId: '', taskType: 'Feature' });
   const { alert, confirm } = useAlert();
+  const [selectedClientFilter, setSelectedClientFilter] = useState('All Clients');
+
+  const filteredEstimations = estimations.filter(est => {
+    if (selectedClientFilter === 'All Clients') return true;
+    const targetId = est.clientId || est.client_id;
+    const clientObj = clients.find(c => 
+      (targetId && c.id === targetId && targetId !== 'null') ||
+      (est.client && c.name?.toLowerCase() === est.client.toLowerCase()) ||
+      (est.client && c.company?.toLowerCase() === est.client.toLowerCase())
+    );
+    return clientObj && clientObj.id === selectedClientFilter;
+  });
 
   const fetchData = async () => {
     setLoading(true);
@@ -48,6 +60,16 @@ export default function Estimations({ user }) {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const formatEstimationId = (estimationNo, id) => {
+    const estId = estimationNo || `EST-${id.slice(-4).toUpperCase()}`;
+    const match = estId.match(/\d+/);
+    if (match) {
+      const num = parseInt(match[0], 10);
+      return `E${num}`;
+    }
+    return estId;
+  };
 
   const handleAdd = async () => {
     if (!form.taskName?.trim() || !form.client?.trim() || !form.projectId || form.estimatedHours <= 0) {
@@ -278,7 +300,22 @@ export default function Estimations({ user }) {
     <div className="estimations-page">
       <div className="estimations-header">
         <div className="estimations-header-left"></div>
-        <div>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          {!showForm && (
+            <select
+              className="saas-select"
+              value={selectedClientFilter}
+              onChange={e => setSelectedClientFilter(e.target.value)}
+              style={{ width: '220px', height: '40px', fontSize: '0.85rem', padding: '0 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontWeight: '600', color: '#475569' }}
+            >
+              <option value="All Clients">All Clients</option>
+              {clients.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.company || c.name}
+                </option>
+              ))}
+            </select>
+          )}
           {can('estimations', 'create') && (
             <button className="estimations-btn-primary estimations-btn-add" onClick={() => { setForm({ taskName: '', description: '', client: '', clientId: '', projectId: '', estimatedHours: 0 }); setShowForm(true); }}>
               <svg className="estimations-btn-plus-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -339,7 +376,7 @@ export default function Estimations({ user }) {
           </div>
         ) : (
           <div className="estimations-table-container">
-            {estimations.length === 0 ? (
+            {filteredEstimations.length === 0 ? (
               <div className="estimations-empty-state">
                 <div className="estimations-empty-icon">
                   <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
@@ -352,7 +389,6 @@ export default function Estimations({ user }) {
               <table className="estimations-table">
                 <thead>
                   <tr>
-                    <th>Est. ID</th>
                     <th>Task Name</th>
                     <th>Client</th>
                     <th>Project</th>
@@ -362,10 +398,12 @@ export default function Estimations({ user }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {estimations.map(est => (
-                    <tr key={est.id}>
-                      <td data-label="Est. ID" style={{ fontWeight: '600', color: '#334155' }}>{est.estimationNo}</td>
+                  {filteredEstimations.map(est => (
+                    <tr key={est.id} onClick={() => setViewingEstimation(est)} style={{ cursor: 'pointer' }}>
                       <td data-label="Task" style={{ fontWeight: '600' }}>
+                        <span className="cu-task-id-prefix" style={{ color: 'rgb(148, 163, 184)', fontWeight: '550', marginRight: '8px' }}>
+                          {formatEstimationId(est.estimationNo, est.id)}
+                        </span>
                         <span
                           style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }}
                           onClick={() => setViewingEstimation(est)}
@@ -389,7 +427,7 @@ export default function Estimations({ user }) {
                           {est.status || 'Pending'}
                         </span>
                       </td>
-                      <td data-label="Actions" style={{ textAlign: 'right' }}>
+                      <td data-label="Actions" style={{ textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                         <div className="estimations-action-group">
                           {est.status !== 'Converted' && can('tasks', 'create') && (
                             <button className="estimations-action-btn convert" onClick={() => handleConvertClick(est)} title="Convert to Task">

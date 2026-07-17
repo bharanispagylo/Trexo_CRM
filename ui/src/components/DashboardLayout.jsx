@@ -790,7 +790,9 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             ];
             const firstPermitted = reportTabs.find(rt => canReport(rt.action));
             if (firstPermitted) {
-              setTimeout(() => setActiveTab(firstPermitted.key), 0);
+              if (activeTab === 'reports') {
+                setTimeout(() => setActiveTab(firstPermitted.key), 0);
+              }
               return <div className="loading-screen">Loading Report...</div>;
             }
             return renderOverview(setActiveTab, (taskData) => { const displayId = getDisplayId(taskData); setSelectedTaskId(displayId); setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });

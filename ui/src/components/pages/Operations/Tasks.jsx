@@ -4589,10 +4589,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   }, [initialSelectedTask, openingInitialTask]);
 
   // Auto-open task from URL deep-link (e.g. /tasks/taskId)
-  const initialTaskIdHandled = useRef(false);
+  // Tracks the last task ID we fetched so repeated Kanban clicks work correctly
+  const lastHandledTaskId = useRef(null);
   useEffect(() => {
-    if (initialTaskId && !initialTaskIdHandled.current && openingInitialTask) {
-      initialTaskIdHandled.current = true;
+    if (initialTaskId && lastHandledTaskId.current !== initialTaskId && openingInitialTask) {
+      lastHandledTaskId.current = initialTaskId;
       api.get(`/tasks/${initialTaskId}`)
         .then(task => {
           if (task) {
@@ -4651,6 +4652,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const selectedListProj = selectedListId ? taskProjects.find(p => p.id === selectedList?.projectId) : null;
 
   const dragId = useRef(null);
+  const scrollInterval = useRef(null);
+  const autoScrollRef = useRef({ boardEl: null, speed: 0 });
   const { can, getLevel } = usePermissions();
   const viewLevel = getLevel('tasks', 'view');
   const editLevel = getLevel('tasks', 'edit');
@@ -4822,6 +4825,52 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     setDragOver(null);
   };
 
+  const stopAutoScroll = () => {
+    if (scrollInterval.current) {
+      clearInterval(scrollInterval.current);
+      scrollInterval.current = null;
+    }
+    autoScrollRef.current.speed = 0;
+  };
+
+  const handleBoardDragOver = (e) => {
+    e.preventDefault();
+    const board = e.currentTarget;
+    autoScrollRef.current.boardEl = board;
+
+    const rect = board.getBoundingClientRect();
+    const x = e.clientX;
+    const threshold = 100; // pixels from edge
+
+    let speed = 0;
+    if (x < rect.left + threshold) {
+      const intensity = (rect.left + threshold - x) / threshold;
+      speed = -15 * Math.min(intensity, 1.5);
+    } else if (x > rect.right - threshold) {
+      const intensity = (x - (rect.right - threshold)) / threshold;
+      speed = 15 * Math.min(intensity, 1.5);
+    }
+
+    autoScrollRef.current.speed = speed;
+
+    if (speed !== 0) {
+      if (!scrollInterval.current) {
+        scrollInterval.current = setInterval(() => {
+          const { boardEl, speed: curSpeed } = autoScrollRef.current;
+          if (boardEl && curSpeed !== 0) {
+            boardEl.scrollLeft += curSpeed;
+          }
+        }, 16);
+      }
+    } else {
+      stopAutoScroll();
+    }
+  };
+
+  const handleBoardDragLeave = () => {
+    stopAutoScroll();
+  };
+
   const handleDragLeave = (e) => {
     if (!e.currentTarget.contains(e.relatedTarget)) {
       setDragOver(null);
@@ -4831,6 +4880,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const handleDragEnd = () => {
     dragId.current = null;
     setDragOver(null);
+    stopAutoScroll();
     document.querySelectorAll('.task-card').forEach(el => el.classList.remove('dragging'));
   };
 
@@ -5936,7 +5986,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         ];
 
         return (
-          <div className="kanban-board schedule-board">
+          <div className="kanban-board schedule-board" onDragOver={handleBoardDragOver} onDragLeave={handleBoardDragLeave}>
             {scheduleColumns.map(col => (
               <ScheduleColumn
                 key={col.id}
@@ -5963,7 +6013,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
       {/* ── Views ── */}
       {viewMode === 'kanban' && (
-        <div className="kanban-board">
+        <div className="kanban-board" onDragOver={handleBoardDragOver} onDragLeave={handleBoardDragLeave}>
           {COLUMNS.map(col => (
             <KanbanColumn
               key={col.id}
