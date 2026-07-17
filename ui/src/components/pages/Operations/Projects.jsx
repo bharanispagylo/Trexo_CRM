@@ -978,21 +978,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
           <div className="saas-field">
             <label className="saas-label">Sent To</label>
-            <select
-              className="saas-select"
+            <input
+              className="saas-input"
+              placeholder="Enter name or department..."
               value={queryFormFields.sentTo}
               onChange={e => setQueryFormFields({ ...queryFormFields, sentTo: e.target.value })}
-            >
-              <option value="">Unassigned</option>
-              {users.map(u => {
-                const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.name || u.email;
-                return (
-                  <option key={u.id} value={u.id}>
-                    {displayName}
-                  </option>
-                );
-              })}
-            </select>
+            />
           </div>
 
           <div className="saas-field">
