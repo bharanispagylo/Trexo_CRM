@@ -2821,6 +2821,8 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
       assignees,           // comma-separated user IDs or names
       priority,
       taskType,
+      dueDate,
+      deliveredDate,
       severity,
       status,
       tags,
@@ -2891,14 +2893,16 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
         taskNo,
         title: `Bug: ${comment.substring(0, 80)}${comment.length > 80 ? '...' : ''}`,
         description,
-        taskType: 'Bug Report',
+        taskType: taskType || 'Bug',
         status: status || 'To Do',
-        priority: severity || priority || 'Medium',
+        priority: priority || severity || 'Medium',
         projectId: resolvedProjectId,
         assignees: assignees || reporterName,
         attachments: attachmentData,
         tag: tags ? `${tags}, browser-report` : 'browser-report',
         assignedDate: now,
+        dueDate: (dueDate && dueDate.trim()) ? new Date(dueDate) : null,
+        deliveredDate: (deliveredDate && deliveredDate.trim()) ? new Date(deliveredDate) : null,
       }
     });
 
