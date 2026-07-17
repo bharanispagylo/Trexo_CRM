@@ -2769,7 +2769,7 @@ app.get('/api/browser/projects', verifyBrowserToken, async (req, res) => {
         name: true,
         projectNo: true,
         taskLists: {
-          select: { id: true, name: true }
+          select: { id: true, name: true, isFavorite: true }
         }
       },
       orderBy: { name: 'asc' },
@@ -2807,6 +2807,7 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
   try {
     const {
       comment,
+      title,
       url,
       pageTitle,
       screenshot,          // base64 annotated JPEG
@@ -2836,7 +2837,7 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
       tags,
     } = req.body;
 
-    if (!comment) return res.status(400).json({ error: 'Comment is required' });
+    if (!title) return res.status(400).json({ error: 'Title is required' });
 
     const reporter = req.browserUser;
     const reporterName = reporter.fullName || `${reporter.firstName || ''} ${reporter.lastName || ''}`.trim();
@@ -2855,7 +2856,7 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
       `**Timestamp:** ${now.toISOString()}`,
       ``,
       `### Comment`,
-      comment,
+      comment || 'N/A',
       ``,
       `---`,
       `*Reported via Spagylo Browser Extension*`,
@@ -2899,14 +2900,14 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
     const task = await prisma.task.create({
       data: {
         taskNo,
-        title: `Bug: ${comment.substring(0, 80)}${comment.length > 80 ? '...' : ''}`,
+        title: title,
         description,
         taskType: taskType || 'Bug',
         status: status || 'To Do',
         priority: priority || severity || 'Medium',
         projectId: resolvedProjectId,
         taskListId: taskListId || null,
-        assignees: assignees || reporterName,
+        assignees: assignees || reporter.id,
         attachments: attachmentData,
         tag: tags ? `${tags}, browser-report` : 'browser-report',
         assignedDate: now,
