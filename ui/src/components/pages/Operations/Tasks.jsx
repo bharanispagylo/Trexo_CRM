@@ -4589,10 +4589,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   }, [initialSelectedTask, openingInitialTask]);
 
   // Auto-open task from URL deep-link (e.g. /tasks/taskId)
-  const initialTaskIdHandled = useRef(false);
+  // Tracks the last task ID we fetched so repeated Kanban clicks work correctly
+  const lastHandledTaskId = useRef(null);
   useEffect(() => {
-    if (initialTaskId && !initialTaskIdHandled.current && openingInitialTask) {
-      initialTaskIdHandled.current = true;
+    if (initialTaskId && lastHandledTaskId.current !== initialTaskId && openingInitialTask) {
+      lastHandledTaskId.current = initialTaskId;
       api.get(`/tasks/${initialTaskId}`)
         .then(task => {
           if (task) {
