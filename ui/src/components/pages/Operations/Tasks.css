@@ -6097,3 +6097,10 @@
     display: flex !important;
   }
 }
+
+.project-dropdown-item {
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.project-dropdown-item:hover {
+  background-color: #f1f5f9 !important;
+}

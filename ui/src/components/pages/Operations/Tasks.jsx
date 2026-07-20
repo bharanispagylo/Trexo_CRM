@@ -48,6 +48,29 @@ export const STATUS_OPTIONS = [
 
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 
+const STATUS_ORDER_MAP = {
+  'To Do': 0,
+  'In Progress': 1,
+  'On Hold': 2,
+  'In Testing': 3,
+  'Dev Verified': 4,
+  'Re-opened': 5,
+  'Prod Deployed': 6,
+  'Prod Verified': 7,
+  'Delivered': 8,
+  'Not an issue': 9,
+  'Archived': 10
+};
+
+const sortTasksByStatusThenDueDate = (a, b) => {
+  const orderA = STATUS_ORDER_MAP[a.status] !== undefined ? STATUS_ORDER_MAP[a.status] : 99;
+  const orderB = STATUS_ORDER_MAP[b.status] !== undefined ? STATUS_ORDER_MAP[b.status] : 99;
+  if (orderA !== orderB) return orderA - orderB;
+  if (!a.dueDate) return 1;
+  if (!b.dueDate) return -1;
+  return new Date(a.dueDate) - new Date(b.dueDate);
+};
+
 
 
 const STATUS_HEADER_META = {
@@ -242,7 +265,7 @@ const splitAttachments = (attachmentsString) => {
   for (let i = 0; i < attachmentsString.length; i++) {
     const char = attachmentsString[i];
     if (char === ',') {
-      if (current.endsWith('base64')) {
+      if (current.includes('data:') || current.endsWith('base64')) {
         current += char;
       } else {
         results.push(current);
@@ -2301,7 +2324,13 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 {errors.title && <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600, marginTop: '2px', display: 'block' }}>{errors.title}</span>}
               </>
             ) : (
-              <h1 className="saas-detail-title" style={{ fontSize: '1.15rem', fontWeight: '600', margin: 0, lineHeight: '1.4', wordBreak: 'break-word' }}>{form.title || 'Untitled Task'}</h1>
+              <h1 
+                className="saas-detail-title" 
+                style={{ fontSize: '1.15rem', fontWeight: '600', margin: 0, lineHeight: '1.4', wordBreak: 'break-word', cursor: canEdit ? 'text' : 'default' }}
+                onClick={() => canEdit && setIsEditing(true)}
+              >
+                {form.title || 'Untitled Task'}
+              </h1>
             )}
           </div>
 
@@ -2856,9 +2885,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
             {activeTab === 'billing' && currentUser?.role?.toLowerCase() === 'admin' && (
               <div className="saas-billing-pane animate-fade-in" style={{ padding: '0.25rem 0' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: '700', margin: '0 0 2rem 0', color: '#0f172a' }}>
-                  Billing Information
-                </h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 2rem 0' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: '700', margin: 0, color: '#0f172a' }}>
+                    Billing Information
+                  </h2>
+                </div>
                 
                 <div className="billing-fields-container" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                   
@@ -2868,28 +2899,23 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       Estimated Hours
                     </label>
                     <div>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={form.estimatedHoursStr !== undefined ? form.estimatedHoursStr : (form.estimatedHours !== undefined && form.estimatedHours !== null ? String(form.estimatedHours) : '0')}
-                          onChange={e => {
-                            const val = e.target.value;
-                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                              setForm(f => ({
-                                ...f,
-                                estimatedHoursStr: val,
-                                estimatedHours: val === '' || val === '.' ? 0 : parseFloat(val) || 0
-                              }));
-                            }
-                          }}
-                          className="saas-grid-input"
-                          placeholder="e.g. 20"
-                        />
-                      ) : (
-                        <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
-                          {String(form.estimatedHours || 0)}
-                        </span>
-                      )}
+                      <input
+                        type="text"
+                        value={form.estimatedHoursStr !== undefined ? form.estimatedHoursStr : (form.estimatedHours !== undefined && form.estimatedHours !== null ? String(form.estimatedHours) : '0')}
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                            setForm(f => ({
+                              ...f,
+                              estimatedHoursStr: val,
+                              estimatedHours: val === '' || val === '.' ? 0 : parseFloat(val) || 0
+                            }));
+                          }
+                        }}
+                        disabled={!canEdit}
+                        className="saas-grid-input"
+                        placeholder="e.g. 20"
+                      />
                     </div>
                   </div>
 
@@ -2899,24 +2925,24 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       Billable
                     </label>
                     <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: isEditing ? 'pointer' : 'default', fontSize: '0.9rem', fontWeight: '600', color: '#0f172a' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: canEdit ? 'pointer' : 'default', fontSize: '0.9rem', fontWeight: '600', color: '#0f172a' }}>
                         <input 
                           type="radio" 
                           name="isBillable"
                           checked={form.isBillable === true}
-                          onChange={() => isEditing && set('isBillable', true)}
-                          disabled={!isEditing}
-                          style={{ width: '16px', height: '16px', cursor: isEditing ? 'pointer' : 'default', accentColor: '#2563eb' }}
+                          onChange={() => canEdit && set('isBillable', true)}
+                          disabled={!canEdit}
+                          style={{ width: '16px', height: '16px', cursor: canEdit ? 'pointer' : 'default', accentColor: '#2563eb' }}
                         />
                         Yes
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: isEditing ? 'pointer' : 'default', fontSize: '0.9rem', fontWeight: '600', color: '#0f172a' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: canEdit ? 'pointer' : 'default', fontSize: '0.9rem', fontWeight: '600', color: '#0f172a' }}>
                         <input 
                           type="radio" 
                           name="isBillable"
                           checked={form.isBillable === false}
                           onChange={() => {
-                            if (isEditing) {
+                            if (canEdit) {
                               setForm(f => ({
                                 ...f,
                                 isBillable: false,
@@ -2931,8 +2957,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                               });
                             }
                           }}
-                          disabled={!isEditing}
-                          style={{ width: '16px', height: '16px', cursor: isEditing ? 'pointer' : 'default', accentColor: '#2563eb' }}
+                          disabled={!canEdit}
+                          style={{ width: '16px', height: '16px', cursor: canEdit ? 'pointer' : 'default', accentColor: '#2563eb' }}
                         />
                         No
                       </label>
@@ -2941,36 +2967,29 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
                   {form.isBillable && (
                     <>
-
-
                       {/* Billable Hours */}
                       <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
                         <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
                           Billable Hours
                         </label>
                         <div>
-                          {isEditing ? (
-                            <input 
-                              type="text" 
-                              value={form.approvedHoursStr !== undefined ? form.approvedHoursStr : (form.approvedHours !== undefined && form.approvedHours !== null ? String(form.approvedHours) : '0')}
-                              onChange={e => {
-                                const val = e.target.value;
-                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                  setForm(f => ({
-                                    ...f,
-                                    approvedHoursStr: val,
-                                    approvedHours: val === '' || val === '.' ? 0 : parseFloat(val) || 0
-                                  }));
-                                }
-                              }}
-                              className="saas-grid-input"
-                              placeholder="e.g. 40"
-                            />
-                          ) : (
-                            <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
-                              {String(form.approvedHours || 0)}
-                            </span>
-                          )}
+                          <input 
+                            type="text" 
+                            value={form.approvedHoursStr !== undefined ? form.approvedHoursStr : (form.approvedHours !== undefined && form.approvedHours !== null ? String(form.approvedHours) : '0')}
+                            onChange={e => {
+                              const val = e.target.value;
+                              if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                setForm(f => ({
+                                  ...f,
+                                  approvedHoursStr: val,
+                                  approvedHours: val === '' || val === '.' ? 0 : parseFloat(val) || 0
+                                }));
+                              }
+                            }}
+                            disabled={!canEdit}
+                            className="saas-grid-input"
+                            placeholder="e.g. 40"
+                          />
                         </div>
                       </div>
 
@@ -4633,6 +4652,23 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const [filterFromDate, setFilterFromDate] = useState('');
   const [filterToDate, setFilterToDate] = useState('');
 
+  const projectDropdownRef = useRef(null);
+  const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
+  const [projectSearchTerm, setProjectSearchTerm] = useState('');
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (projectDropdownRef.current && !projectDropdownRef.current.contains(event.target)) {
+        setProjectDropdownOpen(false);
+        setProjectSearchTerm('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   useEffect(() => {
     api.get('/projects').then(data => {
       setTaskProjects(data || []);
@@ -5770,28 +5806,140 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                   </select>
                 </div>
               )}
-
-              <div className="filter-group-project">
+              <div className="filter-group-project" ref={projectDropdownRef} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
                 <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Projects</label>
-                <select 
-                  value={filterProjectName} 
-                  onChange={e => setFilterProjectName(e.target.value)}
-                  style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
-                >
-                  {subTab === 'my' ? (
-                    <>
-                      <option value="">All Projects</option>
-                      {taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                    </>
-                  ) : (
-                    <>
-                      <option value="">All Projects</option>
-                      {taskProjects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                    </>
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProjectDropdownOpen(!projectDropdownOpen);
+                      setProjectSearchTerm('');
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.4rem 0.75rem',
+                      borderRadius: '6px',
+                      border: '1px solid #e2e8f0',
+                      fontSize: '0.85rem',
+                      color: '#475569',
+                      background: '#f8fafc',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      minWidth: '150px',
+                      maxWidth: '220px',
+                      textAlign: 'left',
+                      height: '35px',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '0.5rem', flex: 1 }}>
+                      {filterProjectName || 'All Projects'}
+                    </span>
+                    <span style={{ color: '#94a3b8', fontSize: '0.6rem', flexShrink: 0 }}>▼</span>
+                  </button>
+
+                  {projectDropdownOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        zIndex: 9999,
+                        minWidth: '220px',
+                        maxHeight: '260px',
+                        background: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+                        marginTop: '4px',
+                        padding: '4px',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}
+                    >
+                      {/* Search box */}
+                      <div style={{ padding: '4px', borderBottom: '1px solid #f1f5f9', marginBottom: '4px' }}>
+                        <input
+                          type="text"
+                          placeholder="Search project..."
+                          value={projectSearchTerm}
+                          onChange={e => setProjectSearchTerm(e.target.value)}
+                          autoFocus
+                          style={{
+                            width: '100%',
+                            padding: '0.4rem 0.6rem',
+                            borderRadius: '4px',
+                            border: '1px solid #cbd5e1',
+                            fontSize: '0.8rem',
+                            outline: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+
+                      {/* List options */}
+                      <div style={{ overflowY: 'auto', flex: 1 }}>
+                        <div
+                          className="project-dropdown-item"
+                          onClick={() => {
+                            setFilterProjectName('');
+                            setProjectDropdownOpen(false);
+                            setProjectSearchTerm('');
+                          }}
+                          style={{
+                            padding: '0.4rem 0.75rem',
+                            fontSize: '0.85rem',
+                            color: filterProjectName === '' ? '#2563eb' : '#475569',
+                            fontWeight: filterProjectName === '' ? 600 : 'normal',
+                            background: filterProjectName === '' ? '#eff6ff' : 'transparent',
+                            cursor: 'pointer',
+                            borderRadius: '4px'
+                          }}
+                        >
+                          All Projects
+                        </div>
+                        {taskProjects
+                          .slice()
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                          .filter(p => p.name.toLowerCase().includes(projectSearchTerm.toLowerCase()))
+                          .map(p => (
+                            <div
+                              key={p.id}
+                              className="project-dropdown-item"
+                              onClick={() => {
+                                setFilterProjectName(p.name);
+                                setProjectDropdownOpen(false);
+                                setProjectSearchTerm('');
+                              }}
+                              style={{
+                                padding: '0.4rem 0.75rem',
+                                fontSize: '0.85rem',
+                                color: filterProjectName === p.name ? '#2563eb' : '#475569',
+                                fontWeight: filterProjectName === p.name ? 600 : 'normal',
+                                background: filterProjectName === p.name ? '#eff6ff' : 'transparent',
+                                cursor: 'pointer',
+                                borderRadius: '4px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                              title={p.name}
+                            >
+                              {p.name}
+                            </div>
+                          ))}
+                        {taskProjects.filter(p => p.name.toLowerCase().includes(projectSearchTerm.toLowerCase())).length === 0 && (
+                          <div style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center' }}>
+                            No projects found
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
-                </select>
+                </div>
               </div>
-              
               <div className="filter-group-date">
                 <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>From</span>
                 <input 
@@ -6399,11 +6547,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           taskListsData.forEach(list => {
             const listTasks = byList[list.id] || [];
             
-            const sortedTasks = [...listTasks].sort((a, b) => {
-              if (!a.dueDate) return 1;
-              if (!b.dueDate) return -1;
-              return new Date(a.dueDate) - new Date(b.dueDate);
-            });
+            const sortedTasks = [...listTasks].sort(sortTasksByStatusThenDueDate);
             
             const listGroup = {
               id: list.id,
@@ -6426,11 +6570,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             }
           });
           
-          const unassignedTasks = [...(byList['unassigned'] || [])].sort((a, b) => {
-            if (!a.dueDate) return 1;
-            if (!b.dueDate) return -1;
-            return new Date(a.dueDate) - new Date(b.dueDate);
-          });
+          const unassignedTasks = [...(byList['unassigned'] || [])].sort(sortTasksByStatusThenDueDate);
           
           if (unassignedTasks.length > 0) {
             unassignedTasks.forEach(task => {
@@ -6475,13 +6615,16 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             finalProjectGroups = finalProjectGroups.filter(projGroup => projGroup.name === filterProjectName);
           }
 
+          // Sort project groups: alphabetically by project name, with "General / No Project" at the end
+          finalProjectGroups.sort((a, b) => {
+            if (a.id === 'unassigned_proj') return 1;
+            if (b.id === 'unassigned_proj') return -1;
+            return a.name.localeCompare(b.name);
+          });
+
           finalProjectGroups.forEach(projGroup => {
             projGroup.lists.forEach(list => {
-              list.tasks.sort((a, b) => {
-                if (!a.dueDate) return 1;
-                if (!b.dueDate) return -1;
-                return new Date(a.dueDate) - new Date(b.dueDate);
-              });
+              list.tasks.sort(sortTasksByStatusThenDueDate);
             });
           });
 
