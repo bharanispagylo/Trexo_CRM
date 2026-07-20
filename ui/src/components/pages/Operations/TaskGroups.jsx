@@ -100,6 +100,23 @@ export default function TaskGroups({ user, onBack }) {
   const [taskLists, setTaskLists] = useState([]);
   const [projects, setProjects] = useState([]);
   const [filterProjectId, setFilterProjectId] = useState('');
+
+  const projectDropdownRef = useRef(null);
+  const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
+  const [projectSearchTerm, setProjectSearchTerm] = useState('');
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (projectDropdownRef.current && !projectDropdownRef.current.contains(event.target)) {
+        setProjectDropdownOpen(false);
+        setProjectSearchTerm('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const searchQuery = '';
@@ -117,6 +134,16 @@ export default function TaskGroups({ user, onBack }) {
   const [subtaskDueDate, setSubtaskDueDate] = useState('');
   const [subtaskPriority, setSubtaskPriority] = useState('Medium');
   const [inlineSubtaskSaving, setInlineSubtaskSaving] = useState(false);
+
+  // Inline task state
+  const [inlineAdd, setInlineAdd] = useState(null);
+  const [inlineTitle, setInlineTitle] = useState('');
+  const [inlineAssignee, setInlineAssignee] = useState('');
+  const [inlineDueDate, setInlineDueDate] = useState('');
+  const [inlinePriority, setInlinePriority] = useState('Medium');
+  const [inlineTaskType, setInlineTaskType] = useState('Task');
+  const [isSavingInline, setIsSavingInline] = useState(false);
+  const inlineInputRef = useRef(null);
 
   // Task group modal (only for add)
   const [showGroupModal, setShowGroupModal] = useState(false);
@@ -269,6 +296,81 @@ export default function TaskGroups({ user, onBack }) {
       toast('Failed to save subtask', 'error');
     } finally {
       setInlineSubtaskSaving(false);
+    }
+  };
+
+  const openInlineAdd = (listId, statusId) => {
+    const list = taskLists.find(l => l.id === listId);
+    let projId = null;
+    let projName = '';
+    if (list) {
+      projId = list.projectId;
+      const p = projects.find(pr => pr.id === list.projectId);
+      if (p) {
+        projName = p.name;
+      }
+    }
+    setInlineAdd({
+      taskListId: listId,
+      statusId: statusId || 'To Do',
+      projectId: projId,
+      projName: projName
+    });
+    setInlineTitle('');
+    setInlineAssignee('');
+    setInlineDueDate('');
+    setInlinePriority('Medium');
+    setInlineTaskType('Task');
+    setTimeout(() => inlineInputRef.current?.focus(), 50);
+  };
+
+  const closeInlineAdd = () => {
+    setInlineAdd(null);
+    setInlineTitle('');
+    setInlineAssignee('');
+    setInlineDueDate('');
+    setInlinePriority('Medium');
+    setInlineTaskType('Task');
+  };
+
+  const submitInlineAdd = async () => {
+    if (isSavingInline) return;
+    const title = inlineTitle.trim();
+    if (!title) {
+      toast('Task name is required', 'warning');
+      return;
+    }
+    if (!inlineAssignee?.trim()) {
+      toast('Assignee is required', 'warning');
+      return;
+    }
+    const { taskListId, statusId, projectId, projName } = inlineAdd;
+    setIsSavingInline(true);
+    try {
+      await api.post('/tasks', {
+        title,
+        status: statusId,
+        projectName: projName || '',
+        projectId: projectId || null,
+        taskListId: taskListId || null,
+        priority: inlinePriority || 'Medium',
+        assignees: inlineAssignee || '',
+        assignedDate: new Date().toISOString(),
+        dueDate: inlineDueDate ? new Date(inlineDueDate).toISOString() : null,
+        tag: '',
+        taskType: inlineTaskType || 'Task',
+        isBillable: false,
+        description: '',
+        createdBy: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'
+      });
+      toast('Task created successfully!', 'success');
+      fetchTaskListsOnly();
+      closeInlineAdd();
+    } catch (err) {
+      console.error('Inline add failed:', err);
+      toast('Failed to create task: ' + err.message, 'error');
+    } finally {
+      setIsSavingInline(false);
     }
   };
 
@@ -830,8 +932,8 @@ export default function TaskGroups({ user, onBack }) {
                     </div>
                   </div>
 
-                  {/* Task Table if there are tasks in this status and section is not collapsed */}
-                  {!isStatusCollapsed && statusTasks.length > 0 && (
+                  {/* Task Table if section is not collapsed */}
+                  {!isStatusCollapsed && (statusTasks.length > 0 || can('tasks', 'create')) && (
                     <div className="cu-table-wrapper" style={{ overflow: 'hidden', background: 'white', marginTop: '0.5rem', marginLeft: '2rem', marginRight: '1rem' }}>
                       <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
@@ -851,7 +953,7 @@ export default function TaskGroups({ user, onBack }) {
                               return titleA.localeCompare(titleB, undefined, { sensitivity: 'base' });
                             });
 
-                            return sortedMainTasks.flatMap(task => {
+                            const renderedTasks = sortedMainTasks.flatMap(task => {
                               const subTasks = allTasks.filter(t => t.parentId === task.id);
                               const isExpanded = !!expandedSubtasks[task.id];
                               const relDate = formatRelativeDueDate(task.dueDate);
@@ -1216,8 +1318,79 @@ export default function TaskGroups({ user, onBack }) {
 
                               return rows;
                             });
+
+                            const isInline = inlineAdd && inlineAdd.taskListId === list.id && inlineAdd.statusId === col.id;
+
+                            if (isInline) {
+                              renderedTasks.push(
+                                <tr key="inline-add-row" className="cu-inline-row animate-fade-in">
+                                  <td colSpan="4" style={{ padding: '8px' }}>
+                                    <div className="new-task-inline-bar" onClick={e => e.stopPropagation()}>
+                                      <div className="ntib-left">
+                                        <span className="ntib-dotted-circle"></span>
+                                        <input
+                                          ref={inlineInputRef}
+                                          type="text"
+                                          placeholder="Task Name or type '/' for commands"
+                                          value={inlineTitle}
+                                          onChange={e => setInlineTitle(e.target.value)}
+                                          onKeyDown={e => { if (e.key === 'Enter' && !isSavingInline) submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }}
+                                          autoFocus
+                                          className="ntib-input"
+                                        />
+                                      </div>
+                                      <div className="ntib-right">
+                                        
+                                        <div className="ntib-dropdown-wrapper">
+                                          <button type="button" className="ntib-btn-icon" title="Assignee">
+                                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                          </button>
+                                          <select className="ntib-hidden-select" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
+                                            <option value="">Assignee</option>
+                                            {filteredUsersForList.map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                          </select>
+                                          {inlineAssignee && <span className="ntib-badge">{initials((users.find(u => u.id === inlineAssignee) || {}).fullName || inlineAssignee)}</span>}
+                                        </div>
+
+                                        <div className="ntib-dropdown-wrapper">
+                                          <button type="button" className="ntib-btn-icon" title="Due Date">
+                                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                          </button>
+                                          <input type="date" className="ntib-hidden-date" value={inlineDueDate} onChange={e => setInlineDueDate(e.target.value)} />
+                                          {inlineDueDate && <span className="ntib-badge">{new Date(inlineDueDate).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>}
+                                        </div>
+
+                                        <div className="ntib-dropdown-wrapper">
+                                          <button type="button" className="ntib-btn-icon" title="Priority">
+                                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                                          </button>
+                                          <select className="ntib-hidden-select" value={inlinePriority} onChange={e => setInlinePriority(e.target.value)}>
+                                            {Object.keys(PRIORITY_FLAGS).map(p => <option key={p} value={p}>{p} Priority</option>)}
+                                          </select>
+                                          {inlinePriority && <span className="ntib-badge priority-color">{inlinePriority}</span>}
+                                        </div>
+
+                                        <button type="button" className="ntib-cancel-btn" onClick={closeInlineAdd}>Cancel</button>
+                                        <button type="button" className="ntib-save-btn" disabled={isSavingInline} onClick={submitInlineAdd}>{isSavingInline ? 'Saving...' : 'Save ↵'}</button>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            } else if (can('tasks', 'create')) {
+                              renderedTasks.push(
+                                <tr key="add-task-row" className="cu-add-row" onClick={(e) => { e.stopPropagation(); openInlineAdd(list.id, col.id); }}>
+                                  <td colSpan="4">
+                                    <span className="cu-add-icon">+</span>
+                                    <span className="cu-add-text">Add Task</span>
+                                  </td>
+                                </tr>
+                              );
+                            }
+
+                            return renderedTasks;
                           })()}
-                        </tbody>
+                      </tbody>
                       </table>
                     </div>
                   )}
@@ -1444,16 +1617,139 @@ export default function TaskGroups({ user, onBack }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          <div className="tg-filter-group-project" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="tg-filter-group-project" ref={projectDropdownRef} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
             <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Projects</label>
-            <select 
-              value={filterProjectId} 
-              onChange={e => setFilterProjectId(e.target.value)}
-              style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
-            >
-              <option value="">All Projects</option>
-              {projects.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setProjectDropdownOpen(!projectDropdownOpen);
+                  setProjectSearchTerm('');
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.4rem 0.75rem',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0',
+                  fontSize: '0.85rem',
+                  color: '#475569',
+                  background: '#f8fafc',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  minWidth: '150px',
+                  maxWidth: '220px',
+                  textAlign: 'left',
+                  height: '35px',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '0.5rem', flex: 1 }}>
+                  {filterProjectId ? (projects.find(p => p.id === filterProjectId)?.name || 'All Projects') : 'All Projects'}
+                </span>
+                <span style={{ color: '#94a3b8', fontSize: '0.6rem', flexShrink: 0 }}>▼</span>
+              </button>
+
+              {projectDropdownOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    zIndex: 9999,
+                    minWidth: '220px',
+                    maxHeight: '260px',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+                    marginTop: '4px',
+                    padding: '4px',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}
+                >
+                  {/* Search box */}
+                  <div style={{ padding: '4px', borderBottom: '1px solid #f1f5f9', marginBottom: '4px' }}>
+                    <input
+                      type="text"
+                      placeholder="Search project..."
+                      value={projectSearchTerm}
+                      onChange={e => setProjectSearchTerm(e.target.value)}
+                      autoFocus
+                      style={{
+                        width: '100%',
+                        padding: '0.4rem 0.6rem',
+                        borderRadius: '4px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '0.8rem',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  {/* List options */}
+                  <div style={{ overflowY: 'auto', flex: 1 }}>
+                    <div
+                      className="project-dropdown-item"
+                      onClick={() => {
+                        setFilterProjectId('');
+                        setProjectDropdownOpen(false);
+                        setProjectSearchTerm('');
+                      }}
+                      style={{
+                        padding: '0.4rem 0.75rem',
+                        fontSize: '0.85rem',
+                        color: filterProjectId === '' ? '#2563eb' : '#475569',
+                        fontWeight: filterProjectId === '' ? 600 : 'normal',
+                        background: filterProjectId === '' ? '#eff6ff' : 'transparent',
+                        cursor: 'pointer',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      All Projects
+                    </div>
+                    {projects
+                      .slice()
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .filter(p => p.name.toLowerCase().includes(projectSearchTerm.toLowerCase()))
+                      .map(p => (
+                        <div
+                          key={p.id}
+                          className="project-dropdown-item"
+                          onClick={() => {
+                            setFilterProjectId(p.id);
+                            setProjectDropdownOpen(false);
+                            setProjectSearchTerm('');
+                          }}
+                          style={{
+                            padding: '0.4rem 0.75rem',
+                            fontSize: '0.85rem',
+                            color: filterProjectId === p.id ? '#2563eb' : '#475569',
+                            fontWeight: filterProjectId === p.id ? 600 : 'normal',
+                            background: filterProjectId === p.id ? '#eff6ff' : 'transparent',
+                            cursor: 'pointer',
+                            borderRadius: '4px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                          title={p.name}
+                        >
+                          {p.name}
+                        </div>
+                      ))}
+                    {projects.filter(p => p.name.toLowerCase().includes(projectSearchTerm.toLowerCase())).length === 0 && (
+                      <div style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center' }}>
+                        No projects found
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {activeTab === 'favourites' && visibleTaskLists.filter(l => l.isFavorite).length > 0 && (

@@ -774,7 +774,9 @@
   padding-right: 2.25rem !important; /* Extra padding to prevent text overlay on the arrow */
 }
 
-
-
-
-
+.project-dropdown-item {
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.project-dropdown-item:hover {
+  background-color: #f1f5f9 !important;
+}

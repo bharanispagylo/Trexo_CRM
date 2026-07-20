@@ -286,6 +286,38 @@ const notifyAdmins = async (title, message) => {
   } catch (err) {}
 };
 
+const filterBugRecipients = async (recipients, assignees, creatorId) => {
+  if (!assignees || !recipients) return recipients || [];
+  const rawAssignees = (typeof assignees === 'string' ? assignees.split(',') : assignees).map(a => a.trim()).filter(Boolean);
+  if (rawAssignees.length === 0) return recipients;
+
+  try {
+    const assigneeUsers = await prisma.user.findMany({
+      where: {
+        OR: rawAssignees.map(a => ({
+          OR: [
+            { id: a },
+            { fullName: { equals: a, mode: 'insensitive' } },
+            { email: { equals: a, mode: 'insensitive' } }
+          ]
+        }))
+      },
+      select: { id: true }
+    });
+    const assigneeIds = new Set(assigneeUsers.map(u => u.id));
+
+    return recipients.filter(id => {
+      if (!id) return false;
+      if (assigneeIds.has(id) && id !== creatorId) {
+        return false;
+      }
+      return true;
+    });
+  } catch (e) {
+    return recipients;
+  }
+};
+
 const notifyEmailsByNames = async (userIds, subject, message, type) => {
   if (!userIds) return;
   const names = (typeof userIds === 'string' ? userIds.split(',') : userIds).map(u => u.trim()).filter(Boolean);
@@ -430,6 +462,9 @@ app.use((req, res, next) => {
 
 // Request logging middleware
 app.use((req, res, next) => {
+  if (req.url.startsWith('/api/api/')) {
+    req.url = req.url.replace(/^\/api\/api\//, '/api/');
+  }
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
@@ -1440,18 +1475,63 @@ app.post('/api/tasks', async (req, res) => {
     const task = await prisma.task.create({
       data: taskData
     });
-    if (task.assignees) {
-      createNotification(task.assignees, `New Task Assigned: ${task.title}`, `You have been assigned to a new task.`);
-      const { taskListName, projectName } = await getTaskDetailsForEmail(task);
-      notifyEmailsByNames(task.assignees, `New Task Assigned: ${task.title}`, {
-        author: finalCreatedBy || createdByName || 'Admin',
-        action: 'assigned you to',
-        itemTitle: task.title,
-        boardName: taskListName,
-        projectName: projectName,
-        buttonText: 'View Item',
-        taskId: getTaskDisplayId(task)
-      }, 'task');
+    const isBugTask = (task.taskType && (task.taskType.trim().toLowerCase() === 'bug' || task.taskType.trim().toLowerCase() === 'bug report')) || (task.taskNo && task.taskNo.startsWith('B'));
+
+    // Helper: get a flat list of assigned user IDs from a comma-separated string
+    const getAssigneeIds = (assigneesStr) => (assigneesStr || '').split(',').map(s => s.trim()).filter(Boolean);
+    // Helper: check if creator self-assigned (creator ID is in the assignees list)
+    const creatorId = task.creatorId || finalCreatorId || null;
+    const assigneeIds = getAssigneeIds(task.assignees);
+    const isSelfAssigned = creatorId && assigneeIds.includes(creatorId);
+
+    if (isBugTask) {
+      // For Bug tasks, notify Admins and the Creator — but exclude self from inbox if they self-assigned
+      try {
+        const admins = await prisma.user.findMany({ where: { role: { equals: 'Admin', mode: 'insensitive' } } });
+        const adminUserIds = admins.map(a => a.id);
+        // Build assignee recipients — exclude creator if self-assigned
+        const assigneeRecipients = isSelfAssigned
+          ? assigneeIds.filter(id => id !== creatorId)  // don't notify self
+          : assigneeIds;
+        const bugRecipients = [...new Set([...adminUserIds, ...assigneeRecipients])].filter(Boolean);
+
+        if (bugRecipients.length > 0) {
+          createNotification(bugRecipients, `New Bug Report: ${task.title}`, `A new bug report has been created: ${task.title}`);
+          const { taskListName, projectName } = await getTaskDetailsForEmail(task);
+          notifyEmailsByNames(bugRecipients, `New Bug Report: ${task.title}`, {
+            author: finalCreatedBy || createdByName || task.createdBy || 'User',
+            action: 'created bug report',
+            itemTitle: task.title,
+            boardName: taskListName,
+            projectName: projectName,
+            buttonText: 'View Item',
+            taskId: getTaskDisplayId(task)
+          }, 'task');
+        }
+      } catch (notifErr) {
+        console.error('Error sending bug report notifications:', notifErr);
+      }
+    } else if (task.assignees) {
+      // For all other task types (regular, Calls/Meetings, Recurring Task):
+      // Exclude creator from notification if they self-assigned
+      const notifyAssigneeIds = isSelfAssigned
+        ? assigneeIds.filter(id => id !== creatorId)
+        : assigneeIds;
+      const notifyAssignees = notifyAssigneeIds.join(',');
+
+      if (notifyAssignees) {
+        createNotification(notifyAssignees, `New Task Assigned: ${task.title}`, `You have been assigned to a new task.`);
+        const { taskListName, projectName } = await getTaskDetailsForEmail(task);
+        notifyEmailsByNames(notifyAssignees, `New Task Assigned: ${task.title}`, {
+          author: finalCreatedBy || createdByName || 'Admin',
+          action: 'assigned you to',
+          itemTitle: task.title,
+          boardName: taskListName,
+          projectName: projectName,
+          buttonText: 'View Item',
+          taskId: getTaskDisplayId(task)
+        }, 'task');
+      }
     }
     res.json(task);
   } catch (error) {
@@ -2325,23 +2405,37 @@ const syncReportsTable = async () => {
       where: { status: 'Delivered' },
       include: {
         clientRef: true,
-        projectRef: true,
+        projectRef: {
+          include: { clientRef: true }
+        },
       }
     });
 
-    const reportsToInsert = tasks.map(task => ({
-      id: task.id,
-      taskNo: task.taskNo,
-      title: task.title,
-      companyName: task.clientRef ? (task.clientRef.company || task.clientRef.name) : null,
-      projectName: task.projectName || (task.projectRef ? task.projectRef.name : null),
-      projectId: task.projectId,
-      clientId: task.clientId,
-      assignees: task.assignees,
-      billableHours: task.approvedHours || 0.0,
-      alreadyBilled: task.actualHours || 0.0,
-      deliveredDate: task.deliveredDate || task.updatedAt,
-    }));
+    const reportsToInsert = tasks.map(task => {
+      // Resolve clientId: prefer task's own clientId, fall back to project's clientId
+      const resolvedClientId = task.clientId || (task.projectRef ? task.projectRef.clientId : null);
+
+      // Resolve company name: prefer task's own clientRef, fall back to project's clientRef
+      const resolvedClient = task.clientRef || (task.projectRef ? task.projectRef.clientRef : null);
+      const resolvedCompanyName = resolvedClient ? (resolvedClient.company || resolvedClient.name) : null;
+
+      // Resolve project name
+      const resolvedProjectName = task.projectName || (task.projectRef ? task.projectRef.name : null);
+
+      return {
+        id: task.id,
+        taskNo: task.taskNo,
+        title: task.title,
+        companyName: resolvedCompanyName,
+        projectName: resolvedProjectName,
+        projectId: task.projectId,
+        clientId: resolvedClientId,
+        assignees: task.assignees,
+        billableHours: task.approvedHours || 0.0,
+        alreadyBilled: task.actualHours || 0.0,
+        deliveredDate: task.deliveredDate || task.updatedAt,
+      };
+    });
 
     await prisma.$transaction([
       prisma.report.deleteMany(),
@@ -2725,7 +2819,7 @@ app.post('/api/browser/login', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
 
-    const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+    const user = await prisma.user.findFirst({ where: { email: { equals: email.trim(), mode: 'insensitive' } } });
     const isMatch = user ? await verifyPassword(password, user.password) : false;
     if (!user || !isMatch) return res.status(401).json({ error: 'Invalid email or password' });
     if (user.status !== 'Active') return res.status(403).json({ error: 'Account is inactive or pending approval' });
@@ -2762,12 +2856,34 @@ app.get('/api/browser/me', verifyBrowserToken, (req, res) => {
 // GET /api/browser/projects — return active projects for assignee selection
 app.get('/api/browser/projects', verifyBrowserToken, async (req, res) => {
   try {
+    const userId = req.browserUser?.id || null;
     const projects = await prisma.project.findMany({
       where: { status: 'Active' },
-      select: { id: true, name: true, projectNo: true },
+      select: {
+        id: true,
+        name: true,
+        projectNo: true,
+        taskLists: {
+          select: { id: true, name: true, isFavorite: true, favoritedBy: true }
+        }
+      },
       orderBy: { name: 'asc' },
     });
-    res.json(projects);
+    // Compute per-user isFavorite using favoritedBy (same logic as main /api/projects)
+    const mapped = projects.map(p => ({
+      ...p,
+      taskLists: (p.taskLists || []).map(list => {
+        const favoritedByArr = list.favoritedBy
+          ? list.favoritedBy.split(',').map(id => id.trim()).filter(Boolean)
+          : [];
+        return {
+          id: list.id,
+          name: list.name,
+          isFavorite: userId ? favoritedByArr.includes(userId) : false
+        };
+      })
+    }));
+    res.json(mapped);
   } catch (err) {
     console.error('GET /api/browser/projects error:', err);
     res.status(500).json({ error: err.message });
@@ -2800,6 +2916,7 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
   try {
     const {
       comment,
+      title,
       url,
       pageTitle,
       screenshot,          // base64 annotated JPEG
@@ -2821,48 +2938,36 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
       assignees,           // comma-separated user IDs or names
       priority,
       taskType,
+      dueDate,
+      deliveredDate,
+      taskListId,
       severity,
       status,
       tags,
     } = req.body;
 
-    if (!comment) return res.status(400).json({ error: 'Comment is required' });
+    if (!title) return res.status(400).json({ error: 'Title is required' });
 
     const reporter = req.browserUser;
     const reporterName = reporter.fullName || `${reporter.firstName || ''} ${reporter.lastName || ''}`.trim();
     const now = new Date();
 
-    // Build structured description
-    const description = [
-      `## Bug Report from Browser Extension`,
-      ``,
-      `**Reported by:** ${reporterName}`,
-      `**URL:** ${url || 'N/A'}`,
-      `**Page Title:** ${pageTitle || 'N/A'}`,
-      `**Browser:** ${browser || 'N/A'}`,
-      `**Viewport:** ${viewportWidth || 0}×${viewportHeight || 0}`,
-      `**Scroll:** ${scrollX || 0}, ${scrollY || 0}`,
-      `**Timestamp:** ${now.toISOString()}`,
-      ``,
-      `### Comment`,
-      comment,
-      ``,
-      `---`,
-      `*Reported via Spagylo Browser Extension*`,
-    ].join('\n');
+    // User-entered comment/description only (no auto-generated metadata)
+    const description = (comment || '').trim();
 
     // Store screenshot in the pipe-separated string format expected by the frontend
     const attachmentData = screenshot
       ? `${screenshot}|${reporterName}|${now.toISOString()}|browser-report-screenshot.jpg|${reporter.id || ''}`
       : null;
 
-    // Auto-generate task number
+    // Auto-generate task number with B prefix for Bugs
     const allTasks = await prisma.task.findMany({
       select: { taskNo: true }
     });
     let maxNo = 0;
     let prefix = 'T';
-    const type = (taskType || 'Bug').toLowerCase();
+    const finalTaskType = taskType || 'Bug';
+    const type = finalTaskType.toLowerCase();
     if (type === 'bug' || type === 'bug report') {
       prefix = 'B';
     } else if (type === 'calls/meetings') {
@@ -2889,24 +2994,52 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
     const task = await prisma.task.create({
       data: {
         taskNo,
-        title: `Bug: ${comment.substring(0, 80)}${comment.length > 80 ? '...' : ''}`,
+        title: title,
         description,
-        taskType: 'Bug Report',
+        taskType: finalTaskType,
         status: status || 'To Do',
-        priority: severity || priority || 'Medium',
+        priority: priority || severity || 'Medium',
         projectId: resolvedProjectId,
-        assignees: assignees || reporterName,
+        taskListId: taskListId || null,
+        assignees: assignees || reporter.id,
         attachments: attachmentData,
         tag: tags ? `${tags}, browser-report` : 'browser-report',
         assignedDate: now,
+        dueDate: (dueDate && dueDate.trim()) ? new Date(dueDate) : null,
+        deliveredDate: (deliveredDate && deliveredDate.trim()) ? new Date(deliveredDate) : null,
+        creatorId: reporter.id,
+        createdBy: reporterName,
       }
     });
 
-    // Notify admins
-    await notifyAdmins(
-      `New Bug Report: ${task.title}`,
-      `${reporterName} reported a bug via the browser extension. URL: ${url || 'N/A'}`
-    );
+    // Send notification to Admins and the selected assignee (exclude reporter if self-assigned)
+    try {
+      const admins = await prisma.user.findMany({ where: { role: { equals: 'Admin', mode: 'insensitive' } } });
+      const adminUserIds = admins.map(a => a.id);
+      // Resolve assignee IDs from the task; exclude the reporter if they self-assigned
+      const assigneeIdList = (task.assignees || '').split(',').map(s => s.trim()).filter(Boolean);
+      const isReporterSelfAssigned = assigneeIdList.includes(reporter.id);
+      const assigneeRecipients = isReporterSelfAssigned
+        ? assigneeIdList.filter(id => id !== reporter.id)  // don't send inbox notification to self
+        : assigneeIdList;
+      const bugRecipients = [...new Set([...adminUserIds, ...assigneeRecipients])].filter(Boolean);
+
+      if (bugRecipients.length > 0) {
+        await createNotification(bugRecipients, `New Bug Report: ${task.title}`, `${reporterName} reported a bug task: ${task.title}`);
+        const { taskListName, projectName: pName } = await getTaskDetailsForEmail(task);
+        await notifyEmailsByNames(bugRecipients, `New Bug Report: ${task.title}`, {
+          author: reporterName || 'User',
+          action: 'created bug report',
+          itemTitle: task.title,
+          boardName: taskListName,
+          projectName: pName,
+          buttonText: 'View Item',
+          taskId: getTaskDisplayId(task)
+        }, 'task');
+      }
+    } catch (notifErr) {
+      console.error('Error sending bug report notifications:', notifErr);
+    }
 
     console.log(`[Browser Extension] Task ${taskNo} created by ${reporterName} from ${url}`);
     res.status(201).json({
@@ -3281,7 +3414,6 @@ const checkAndGenerateRecurringTasks = async () => {
 
 app.listen(PORT, async () => {
   console.log(`Server is running on http://localhost:${PORT}`);
-  await runMigrationIfNecessary();
   await checkAndGenerateRecurringTasks();
   setInterval(checkAndGenerateRecurringTasks, 10000); // Check every 10 seconds
 });
