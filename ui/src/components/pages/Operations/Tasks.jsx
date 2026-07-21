@@ -3089,10 +3089,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', minWidth: '550px' }}>
                             <thead>
                               <tr style={{ background: '#f8fafc', color: '#64748b', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
-                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Date</th>
-                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>User</th>
-                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Timespent</th>
-                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700' }}>Date</th>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700' }}>User</th>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700' }}>Timespent</th>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textAlign: 'right' }}>Actions</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -3196,11 +3196,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', minWidth: '600px' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', color: '#64748b', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Date</th>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>User</th>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Billed Hours</th>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>Description</th>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700' }}>Date</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700' }}>User</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700' }}>Billed Hours</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700' }}>Description</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textAlign: 'right' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -3284,11 +3284,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                        <th style={{ width: '28%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Name</th>
-                        <th style={{ width: '18%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded By</th>
-                        <th style={{ width: '28%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Uploaded On</th>
-                        <th style={{ width: '11%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>File Size</th>
-                        <th style={{ width: '15%', padding: '0.85rem 0.5rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
+                        <th style={{ width: '28%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>File Name</th>
+                        <th style={{ width: '18%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>Uploaded By</th>
+                        <th style={{ width: '28%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>Uploaded On</th>
+                        <th style={{ width: '11%', padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>File Size</th>
+                        <th style={{ width: '15%', padding: '0.85rem 0.5rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3625,12 +3625,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Subtask Title</th>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Assignee</th>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Status</th>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Due Date</th>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Priority</th>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>Subtask Title</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>Assignee</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>Status</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>Due Date</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>Priority</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', textAlign: 'right' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -3684,7 +3684,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                     background: subMeta.bg,
                                     color: subMeta.fg
                                   }}>
-                                    {(sub.status || 'To Do').toUpperCase()}
+                                    {sub.status || 'To Do'}
                                   </span>
                                 </td>
                                 <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ef4444' : '#475569' }}>
@@ -4211,7 +4211,7 @@ function KanbanColumn({ col, tasks, onDragStart, onDrop, onDragOver, onDragLeave
     >
       <div className="col-clickup-header">
         <div className="col-clickup-badge" style={{ backgroundColor: meta.bg, color: meta.fg, border: meta.border || 'none' }}>
-          <span className="col-clickup-label">{col.label.toUpperCase()}</span>
+          <span className="col-clickup-label">{col.label}</span>
           <span className="col-clickup-count">{tasks.length}</span>
         </div>
         
@@ -4433,7 +4433,7 @@ function ScheduleColumn({ title, count, tasks, onDragStart, onDrop, onDragOver, 
     >
       <div className="col-clickup-header">
         <div className="col-clickup-badge" style={{ backgroundColor: colorMeta.bg, color: colorMeta.fg }}>
-          <span className="col-clickup-label">{title.toUpperCase()}</span>
+          <span className="col-clickup-label">{title}</span>
           <span className="col-clickup-count">{count}</span>
         </div>
         {showAdd && (
@@ -4758,6 +4758,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     const { projName, projId, taskListId, statusId } = inlineAdd;
     setIsSaving(true);
     try {
+      if (inlineAssignee) localStorage.setItem('lastTaskAssignee', inlineAssignee);
       await api.post('/tasks', {
         title,
         status: statusId,
@@ -4929,6 +4930,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         savedTask = await api.put(`/tasks/${taskData.id}`, { ...taskData, updatedBy: updatedByName });
         if (!silent) toast('Task updated successfully!', 'success');
       } else {
+        if (taskData.assignees) localStorage.setItem('lastTaskAssignee', taskData.assignees);
         savedTask = await api.post('/tasks', taskData);
         toast('Task created successfully!', 'success');
       }
@@ -4960,6 +4962,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     }
   };
 
+  const getLastAssignee = (fallback) => {
+    return localStorage.getItem('lastTaskAssignee') || fallback || '';
+  };
+
   const openNewTask = (presetStatus = 'To Do', presetProject = '', presetProjectId = null, presetTaskListId = null, presetClientId = null) => {
     setDrawerTask({
       status: presetStatus,
@@ -4970,7 +4976,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       priority: 'Medium',
       title: '',
       description: '',
-      assignees: user?.id || '',
+      assignees: getLastAssignee(user?.id),
       isBillable: false,
       tag: 'Engineering',
       taskType: 'Task'
@@ -4986,9 +4992,16 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     
     const state = window.history.state;
     if (state && state.prevTab) {
-      const targetUrl = state.prevTab === 'projects' && state.projectName
-        ? `/projects/${state.projectName.replace(/ /g, '-')}`
-        : `/${state.prevTab}`;
+      let targetUrl = `/${state.prevTab}`;
+      if (state.prevTab === 'projects' && state.projectName) {
+        targetUrl = `/projects/${state.projectName.replace(/ /g, '-')}`;
+      } else if (state.prevTab === 'reports-status-based') {
+        targetUrl = '/tasks-worklog';
+      } else if (state.prevTab === 'reports') {
+        targetUrl = '/tasks-delivery';
+      } else if (state.prevTab === 'overview') {
+        targetUrl = '/';
+      }
       window.history.pushState(null, '', targetUrl);
       window.dispatchEvent(new Event('popstate'));
     } else {
@@ -5030,7 +5043,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       taskListId, 
       statusId: statusId || 'To Do' 
     });
-    setInlineTitle(''); setInlineAssignee(''); setInlinePriority('Medium'); setInlineDueDate('');
+    setInlineTitle(''); setInlineAssignee(localStorage.getItem('lastTaskAssignee') || ''); setInlinePriority('Medium'); setInlineDueDate('');
     setTimeout(() => inlineInputRef.current?.focus(), 50);
   };
 
@@ -5209,16 +5222,16 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
             <thead>
               <tr className="cu-thead-row">
-                <th className="cu-th cu-th-name">NAME</th>
-                <th className="cu-th cu-th-status" style={{ width: '120px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>STATUS</th>
-                {showAssigneeCol && <th className="cu-th cu-th-assignee" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>ASSIGNEE</th>}
-                <th className="cu-th cu-th-project" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>PROJECT</th>
+                <th className="cu-th cu-th-name">Name</th>
+                <th className="cu-th cu-th-status" style={{ width: '120px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>Status</th>
+                {showAssigneeCol && <th className="cu-th cu-th-assignee" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Assignee</th>}
+                <th className="cu-th cu-th-project" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Project</th>
                 {isTemplateList ? (
-                  <th className="cu-th cu-th-frequency" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>FREQUENCY</th>
+                  <th className="cu-th cu-th-frequency" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Frequency</th>
                 ) : (
-                  <th className="cu-th cu-th-delivery" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>DUE DATE</th>
+                  <th className="cu-th cu-th-delivery" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Due Date</th>
                 )}
-                <th className="cu-th cu-th-actions" style={{ width: '80px' }}></th>
+                <th className="cu-th cu-th-actions" style={{ width: '80px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -6092,7 +6105,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 priority: 'Medium',
                 title: '',
                 description: '',
-                assignees: '',
+                assignees: getLastAssignee(''),
                 isBillable: false,
                 tag: 'Engineering',
                 taskType: 'Feature',
@@ -6121,7 +6134,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 priority: 'Medium',
                 title: '',
                 description: '',
-                assignees: '',
+                assignees: getLastAssignee(''),
                 isBillable: false,
                 tag: 'Engineering',
                 taskType: 'Feature',
@@ -6283,7 +6296,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                             priority: 'Medium',
                             title: '',
                             description: '',
-                            assignees: user?.id || '',
+                            assignees: getLastAssignee(user?.id),
                             isBillable: false,
                             tag: 'Engineering',
                             taskType: 'calls/meetings'
@@ -6321,7 +6334,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           fontWeight: '800',
                           fontSize: '0.85rem',
                           color: '#334155',
-                          textTransform: 'uppercase',
                           letterSpacing: '0.5px'
                         }}>
                           {projGroup.name}
@@ -6356,7 +6368,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                               priority: 'Medium',
                               title: '',
                               description: '',
-                              assignees: user?.id || '',
+                              assignees: getLastAssignee(user?.id),
                               isBillable: false,
                               tag: 'Engineering',
                               taskType: 'calls/meetings',
@@ -6375,7 +6387,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                         <table className="cu-table">
                           <thead>
                             <tr className="cu-thead-row">
-                              <th className="cu-th cu-th-name">NAME</th>
+                              <th className="cu-th cu-th-name">Name</th>
                               <th className="cu-th cu-th-actions"></th>
                             </tr>
                           </thead>
@@ -6441,7 +6453,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           <div className="cu-mob-status-header" style={{ background: 'transparent', borderTop: 'none', borderBottom: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 0.5rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => toggleMobileStatusGroup(key)}>
                               <svg viewBox="0 0 10 6" width="9" height="9" fill="#94a3b8" style={{ transform: isMobCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}><path d="M0 0l5 6 5-6z"/></svg>
-                              <span className="cu-mob-status-pill" style={{ color: '#2563eb', fontWeight: '700', padding: '0', background: 'transparent', border: 'none', fontSize: '0.82rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                              <span className="cu-mob-status-pill" style={{ color: '#2563eb', fontWeight: '700', padding: '0', background: 'transparent', border: 'none', fontSize: '0.82rem', letterSpacing: '0.5px' }}>
                                 {projGroup.name}
                               </span>
                               <span className="cu-mob-status-count" style={{ background: '#f1f5f9', color: '#64748b', padding: '1px 6px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 600 }}>{projGroup.tasks.length}</span>
@@ -6463,7 +6475,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                   priority: 'Medium',
                                   title: '',
                                   description: '',
-                                  assignees: user?.id || '',
+                                  assignees: getLastAssignee(user?.id),
                                   isBillable: false,
                                   tag: 'Engineering',
                                   taskType: 'calls/meetings',
@@ -6917,7 +6929,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                         fontWeight: '800',
                         fontSize: '0.85rem',
                         color: '#334155',
-                        textTransform: 'uppercase',
                         letterSpacing: '0.5px'
                       }}>
                         {projGroup.name}
@@ -6956,7 +6967,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                 <span className="cu-section-chevron">
                                   <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
                                 </span>
-                                <span style={{ fontWeight: '700', fontSize: '0.82rem', color: '#64748b', marginLeft: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                <span style={{ fontWeight: '700', fontSize: '0.82rem', color: '#64748b', marginLeft: '0.5rem', letterSpacing: '0.5px' }}>
                                   {list.name}
                                 </span>
                                 <span className="cu-section-count" style={{ marginLeft: '0.5rem', background: '#f1f5f9', color: '#64748b', padding: '0.1rem 0.4rem', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600 }}>
@@ -6992,11 +7003,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 <table className="cu-table">
                                   <thead>
                                     <tr className="cu-thead-row">
-                                      <th className="cu-th cu-th-name">NAME</th>
-                                      <th className="cu-th cu-th-assignee">ASSIGNEE</th>
-                                      <th className="cu-th cu-th-list">STATUS</th>
-                                      <th className="cu-th cu-th-delivery">DUE DATE</th>
-                                      <th className="cu-th cu-th-actions"></th>
+                                      <th className="cu-th cu-th-name">Name</th>
+                                      <th className="cu-th cu-th-assignee">Assignee</th>
+                                      <th className="cu-th cu-th-list">Status</th>
+                                      <th className="cu-th cu-th-delivery">Due Date</th>
+                                      <th className="cu-th cu-th-actions">Actions</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -7427,7 +7438,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                         <svg viewBox="0 0 10 6" width="9" height="9" fill="#94a3b8" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s" }}><path d="M0 0l5 6 5-6z"/></svg>
                       </span>
                       <span className="cu-mobile-group-pill" style={{ color: meta.bg, fontWeight: col.id === 'To Do' ? '700' : '600', padding: '0', background: 'transparent', border: 'none' }}>
-                        {col.label.toUpperCase()}
+                        {col.label}
                       </span>
                       <span className="cu-mobile-group-count">{groupTasks.length}</span>
                     </div>
@@ -7651,8 +7662,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                       <span className="cu-section-chevron">
                         <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
                       </span>
-                      <span className="cu-status-pill" style={{ color: meta.bg, fontSize: '0.68rem', fontWeight: '700', textTransform: 'uppercase', padding: '0', background: 'transparent', border: 'none' }}>
-                        {col.label.toUpperCase()}
+                      <span className="cu-status-pill" style={{ color: meta.bg, fontSize: '0.68rem', fontWeight: '700', padding: '0', background: 'transparent', border: 'none' }}>
+                        {col.label}
                       </span>
                       <span className="cu-section-count">{statusTasks.length}</span>
                     </div>
@@ -7671,11 +7682,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 <table className="cu-table">
                         <thead>
                           <tr className="cu-thead-row">
-                            <th className="cu-th cu-th-name">NAME</th>
-                            {showAssigneeCol && <th className="cu-th cu-th-assignee">ASSIGNEE</th>}
-                            <th className="cu-th cu-th-project">PROJECT</th>
-                            <th className="cu-th cu-th-delivery">DUE DATE</th>
-                            <th className="cu-th cu-th-actions"></th>
+                            <th className="cu-th cu-th-name">Name</th>
+                            {showAssigneeCol && <th className="cu-th cu-th-assignee">Assignee</th>}
+                            <th className="cu-th cu-th-project">Project</th>
+                            <th className="cu-th cu-th-delivery">Due Date</th>
+                            <th className="cu-th cu-th-actions">Actions</th>
                           </tr>
                         </thead>
                         <tbody>

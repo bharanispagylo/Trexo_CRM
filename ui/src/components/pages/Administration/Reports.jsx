@@ -161,7 +161,7 @@ export default function Reports({ user, onNavigateToTask }) {
   };
 
   const handleExport = () => {
-    const headers = ['TASK # NO', 'TITLE', 'PROJECT', 'ASSIGNEE', 'TIME SPENT HRS', 'BILLABLE HRS', 'ALREADY BILLED', 'DELIVERED DATE'];
+    const headers = ['Task # No', 'Title', 'Project', 'Assignee', 'Time Spent Hrs', 'Billable Hrs', 'Already Billed', 'Delivered Date'];
     const rows = tasks.map(t => {
       const resolvedProj = t.projectName || (projects.find(p => p.id === t.projectId)?.name) || '-';
       
@@ -376,14 +376,14 @@ export default function Reports({ user, onNavigateToTask }) {
           <table className="reports-table">
             <thead>
               <tr>
-                <th>TASK # NO</th>
-                <th>TITLE</th>
-                <th>PROJECT</th>
-                <th>ASSIGNEE</th>
-                <th>TIME SPENT HRS</th>
-                <th>BILLABLE HRS</th>
-                <th>ALREADY BILLED</th>
-                <th>DELIVERED DATE</th>
+                <th>Task # No</th>
+                <th>Title</th>
+                <th>Project</th>
+                <th>Assignee</th>
+                <th>Time Spent Hrs</th>
+                <th>Billable Hrs</th>
+                <th>Already Billed</th>
+                <th>Delivered Date</th>
               </tr>
             </thead>
             <tbody>

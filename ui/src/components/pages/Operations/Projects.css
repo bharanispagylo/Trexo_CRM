@@ -143,7 +143,7 @@
   font-size: 0.7rem;
   font-weight: 700;
   color: var(--saas-text-muted);
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .saas-input, .saas-select {
@@ -220,7 +220,7 @@
   font-size: 0.7rem;
   font-weight: 700;
   color: var(--saas-text-muted);
-  text-transform: uppercase;
+  text-transform: none;
   border-bottom: 1px solid var(--saas-border);
 }
 
@@ -260,7 +260,7 @@
   border-radius: 999px;
   font-size: 0.7rem;
   font-weight: 700;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .status-pill.active { background: #DCFCE7; color: #15803D; }
@@ -380,7 +380,7 @@
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.08em;
-  text-transform: uppercase;
+  text-transform: none;
   color: #94a3b8;
   padding: 0.85rem 0.9rem 0.5rem;
 }
@@ -1128,7 +1128,7 @@
     width: 100%;
     font-size: 0.65rem;
     font-weight: 700;
-    text-transform: uppercase;
+    text-transform: none;
     letter-spacing: 0.06em;
     color: #94a3b8;
   }
@@ -1574,7 +1574,7 @@
     font-size: 0.7rem;
     font-weight: 700;
     color: #94a3b8;
-    text-transform: uppercase;
+    text-transform: none;
     letter-spacing: 0.05em;
     flex-shrink: 0;
     min-width: 110px;
@@ -1627,7 +1627,7 @@
     font-size: 0.7rem;
     font-weight: 700;
     color: #94a3b8;
-    text-transform: uppercase;
+    text-transform: none;
     letter-spacing: 0.05em;
     flex-shrink: 0;
     min-width: 110px;

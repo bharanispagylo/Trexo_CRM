@@ -40,7 +40,7 @@
   color: #475569;
   font-weight: 700;
   font-size: 0.75rem;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.05em;
 }
 
@@ -229,7 +229,7 @@
     font-size: 0.7rem;
     font-weight: 700;
     color: #94a3b8;
-    text-transform: uppercase;
+    text-transform: none;
     letter-spacing: 0.05em;
     flex-shrink: 0;
     min-width: 95px;
@@ -279,7 +279,7 @@
   font-size: 0.78rem;
   font-weight: 800;
   color: #374151;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.04em;
 }
 
@@ -397,7 +397,7 @@
     font-size: 0.68rem;
     font-weight: 700;
     color: #94a3b8;
-    text-transform: uppercase;
+    text-transform: none;
     letter-spacing: 0.04em;
     flex-shrink: 0;
     min-width: 75px;
@@ -500,7 +500,7 @@
   font-weight: 700;
   font-size: 0.75rem;
   color: #475569;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.025em;
   margin-bottom: 0.25rem;
 }

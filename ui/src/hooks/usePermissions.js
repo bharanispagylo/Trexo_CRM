@@ -66,12 +66,19 @@ export function PermissionProvider({ children, userRole }) {
   // Falls back to full access for Admin only when no permissions have been saved yet.
   const canReport = (pageId) => {
     if (!permissions) return false;
+    if (userRole?.toLowerCase() === 'admin') return true;
+
     const reportPerms = permissions?.reports;
-    if (!reportPerms || reportPerms[pageId] === undefined) {
-      return userRole?.toLowerCase() === 'admin';
+    if (!reportPerms) return false;
+
+    if (reportPerms[pageId] !== undefined) {
+      const level = reportPerms[pageId];
+      return level === 'All' || level === 'Self';
     }
-    const level = reportPerms[pageId];
-    return level === 'All' || level === 'Self';
+
+    // Fallback to general reports view permission
+    const generalView = reportPerms.view;
+    return generalView === 'All' || generalView === 'Self';
   };
 
   const getLevel = (module, action) => {

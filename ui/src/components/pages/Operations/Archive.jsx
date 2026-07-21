@@ -153,18 +153,18 @@ export default function Archive({ user }) {
           <table className="archive-table">
             <thead>
               <tr className="archive-thead-row">
-                <th className="col-task">TASK</th>
-                <th className="col-project">PROJECT</th>
-                <th className="col-status">PREVIOUS STATUS</th>
-                <th className="col-priority">PRIORITY</th>
-                <th className="col-actions">ACTIONS</th>
+                <th className="col-task">Task</th>
+                <th className="col-project">Project</th>
+                <th className="col-status">Previous Status</th>
+                <th className="col-priority">Priority</th>
+                <th className="col-actions">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredTasks.map((t) => {
                 return (
                   <tr key={t.id} className="archive-row">
-                    <td className="cell-task" data-label="TASK">
+                    <td className="cell-task" data-label="Task">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <TaskTitleTooltip text={`${getDisplayId(t)} ${t.title || 'Untitled Task'}`}>
                           <span className="cu-task-id-prefix">{getDisplayId(t)}</span>
@@ -178,10 +178,10 @@ export default function Archive({ user }) {
                         </TaskTitleTooltip>
                       </div>
                     </td>
-                    <td className="cell-project" data-label="PROJECT">
+                    <td className="cell-project" data-label="Project">
                       {t.projectName || '-'}
                     </td>
-                    <td className="cell-status" data-label="PREVIOUS STATUS">
+                    <td className="cell-status" data-label="Previous Status">
                       <span style={{ fontSize: '0.72rem', fontWeight: '700', color: (() => {
                         const s = (t.previousStatus || 'To Do').toLowerCase().trim();
                         if (s === 'in progress') return '#2563eb';
@@ -195,7 +195,7 @@ export default function Archive({ user }) {
                         if (s === 'delivered' || s === 'completed') return '#16a34a';
                         if (s === 'not an issue') return '#64748b';
                         return '#475569';
-                      })(), textTransform: 'uppercase' }}>
+                      })() }}>
                         {t.previousStatus || 'To Do'}
                       </span>
                     </td>

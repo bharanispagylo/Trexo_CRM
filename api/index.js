@@ -2863,8 +2863,17 @@ app.get('/api/browser/projects', verifyBrowserToken, async (req, res) => {
         id: true,
         name: true,
         projectNo: true,
+        members: true,
         taskLists: {
-          select: { id: true, name: true, isFavorite: true, favoritedBy: true }
+          select: {
+            id: true,
+            name: true,
+            isFavorite: true,
+            favoritedBy: true,
+            tasks: {
+              select: { assignees: true }
+            }
+          }
         }
       },
       orderBy: { name: 'asc' },

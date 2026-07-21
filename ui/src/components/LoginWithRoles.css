@@ -174,7 +174,7 @@
 
 .input-group { margin-bottom: 1rem; }
 .input-group-mb-lg { margin-bottom: 1.5rem; }
-.input-label { display: block; font-size: 0.75rem; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+.input-label { display: block; font-size: 0.75rem; font-weight: 600; color: #475569; text-transform: none; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
 .input-field {
   width: 100%;
   background-color: #f8fafc;

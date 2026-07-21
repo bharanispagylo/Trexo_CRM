@@ -26,7 +26,7 @@
   font-size: 0.75rem;
   font-weight: 700;
   color: #475569;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .archive-table th.col-task,
@@ -155,7 +155,7 @@
     font-size: 0.7rem;
     font-weight: 700;
     color: #94a3b8;
-    text-transform: uppercase;
+    text-transform: none;
     letter-spacing: 0.05em;
     flex-shrink: 0;
     min-width: 130px;
