@@ -209,6 +209,80 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
+  // Inline task creation state for Task Groups
+  const [inlineAdd, setInlineAdd] = useState(null); // { taskListId, statusId }
+  const [inlineTitle, setInlineTitle] = useState('');
+  const [inlineAssignee, setInlineAssignee] = useState('');
+  const [inlineDueDate, setInlineDueDate] = useState('');
+  const [inlinePriority, setInlinePriority] = useState('Medium');
+  const [inlineTaskType, setInlineTaskType] = useState('Task');
+  const [isSavingInline, setIsSavingInline] = useState(false);
+  const inlineInputRef = useRef(null);
+
+  const openInlineAdd = (taskListId, statusId = 'To Do') => {
+    setInlineAdd({
+      taskListId,
+      statusId
+    });
+    setInlineTitle('');
+    setInlineAssignee('');
+    setInlineDueDate('');
+    setInlinePriority('Medium');
+    setInlineTaskType('Task');
+    setExpandedStatusSections(prev => ({ ...prev, [taskListId]: statusId }));
+    setTimeout(() => inlineInputRef.current?.focus(), 50);
+  };
+
+  const closeInlineAdd = () => {
+    setInlineAdd(null);
+    setInlineTitle('');
+    setInlineAssignee('');
+    setInlineDueDate('');
+    setInlinePriority('Medium');
+    setInlineTaskType('Task');
+  };
+
+  const submitInlineAdd = async () => {
+    if (isSavingInline) return;
+    const title = inlineTitle.trim();
+    if (!title) {
+      toast('Task name is required', 'warning');
+      return;
+    }
+    if (!inlineAssignee?.trim()) {
+      toast('Assignee is required', 'warning');
+      return;
+    }
+    const { taskListId, statusId } = inlineAdd;
+    setIsSavingInline(true);
+    try {
+      await api.post('/tasks', {
+        title,
+        status: statusId,
+        projectName: selectedProject?.name || '',
+        projectId: selectedProject?.id || null,
+        taskListId: taskListId || null,
+        priority: inlinePriority || 'Medium',
+        assignees: inlineAssignee || '',
+        assignedDate: new Date().toISOString(),
+        dueDate: inlineDueDate ? new Date(inlineDueDate).toISOString() : null,
+        tag: '',
+        taskType: inlineTaskType || 'Task',
+        isBillable: false,
+        description: '',
+        createdBy: user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'
+      });
+      toast('Task created successfully!', 'success');
+      fetchData(true);
+      closeInlineAdd();
+    } catch (err) {
+      console.error('Inline add failed:', err);
+      toast('Failed to create task: ' + (err?.message || 'Unknown error'), 'error');
+    } finally {
+      setIsSavingInline(false);
+    }
+  };
+
   useEffect(() => {
     setCurrentPage(1);
   }, [statusFilter, searchQuery, clientFilter]);
@@ -1577,8 +1651,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         <div key={list.id} className="cu-status-section">
                           {/* Section Header */}
                           <div className="cu-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div className="cu-section-left" style={{ display: 'flex', alignItems: 'center', cursor: hasTasks ? 'pointer' : 'default', flex: 1 }} onClick={() => {
-                              if (hasTasks && editingListId !== list.id) {
+                            <div className="cu-section-left" style={{ display: 'flex', alignItems: 'center', cursor: (hasTasks || can('tasks', 'create')) ? 'pointer' : 'default', flex: 1 }} onClick={() => {
+                              if ((hasTasks || can('tasks', 'create')) && editingListId !== list.id) {
                                 const isFirst = idx === 0;
                                 if (expandedListId === '__first__') {
                                   setExpandedListId(isFirst ? null : list.id);
@@ -1587,8 +1661,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                 }
                               }
                             }}>
-                              <span className="cu-section-chevron" style={{ display: 'flex', alignItems: 'center', visibility: hasTasks ? 'visible' : 'hidden' }}>
-                                <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: (hasTasks && isCollapsed) ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
+                              <span className="cu-section-chevron" style={{ display: 'flex', alignItems: 'center', visibility: (hasTasks || can('tasks', 'create')) ? 'visible' : 'hidden' }}>
+                                <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: ((hasTasks || can('tasks', 'create')) && isCollapsed) ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
                               </span>
                             {editingListId === list.id ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
@@ -1624,7 +1698,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                               </div>
                             ) : (
                               <>
-                                <span className="cu-section-title" style={{ fontWeight: '700', fontSize: '0.8rem', color: '#2563eb', textTransform: 'uppercase' }}>{list.name}</span>
+                                <span className="cu-section-title" style={{ fontWeight: '700', fontSize: '0.8rem', color: '#2563eb' }}>{list.name}</span>
                                 <span className="cu-section-count" style={{ fontSize: '0.75rem', color: '#64748b', background: '#f1f5f9', padding: '0.15rem 0.4rem', borderRadius: '12px', fontWeight: '700' }}>{listTasks.length}</span>
                               </>
                             )}
@@ -1669,21 +1743,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                 title="Add Task to Group"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setSelectedTaskListId(list.id);
-                                  setTaskFormType('create');
-                                  setEditingTask(null);
-                                  setTaskFormFields({
-                                    title: '',
-                                    assignees: '',
-                                    status: 'To Do',
-                                    priority: 'Medium',
-                                    assignedDate: '',
-                                    dueDate: '',
-                                    deliveredDate: '',
-                                    description: '',
-                                    taskType: 'Feature'
-                                  });
-                                  setShowTaskFormModal(true);
+                                  const isFirst = idx === 0;
+                                  if (expandedListId === '__first__' && !isFirst) {
+                                    setExpandedListId(list.id);
+                                  } else if (expandedListId !== list.id && expandedListId !== '__first__') {
+                                    setExpandedListId(list.id);
+                                  }
+                                  openInlineAdd(list.id, 'To Do');
                                 }}
                               >
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -1739,7 +1805,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                           </div>
                         </div>
 
-                                {!isCollapsed && hasTasks && (() => {
+                                {!isCollapsed && (hasTasks || can('tasks', 'create')) && (() => {
                           const allTasks = (list.tasks || []).filter(t => (t.taskType || 'Task') !== 'Recurring Task' && !t.recurringTemplateId);
                           const firstStatusWithTasks = COLUMNS.find(c => allTasks.some(t => (t.status || 'To Do') === c.id))?.id || null;
                           return (
@@ -1762,23 +1828,23 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                           <path d="M0 0l5 6 5-6z"/>
                                         </svg>
                                       </span>
-                                      <span className="cu-status-pill" style={{ color: meta.bg, fontSize: '0.68rem', fontWeight: '700', textTransform: 'uppercase', padding: '0', background: 'transparent', border: 'none' }}>
-                                        {col.label.toUpperCase()}
+                                      <span className="cu-status-pill" style={{ color: meta.bg, fontSize: '0.68rem', fontWeight: '700', padding: '0', background: 'transparent', border: 'none' }}>
+                                        {col.label}
                                       </span>
                                       <span className="cu-section-count" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', background: '#e2e8f0', padding: '0.1rem 0.4rem', borderRadius: '10px' }}>{statusTasks.length}</span>
                                     </div>
                                   </div>
 
-                                  {/* Task Table if there are tasks in this status and section is not collapsed */}
-                                  {!isStatusCollapsed && statusTasks.length > 0 && (
+                                  {/* Task Table if section is not collapsed */}
+                                  {!isStatusCollapsed && (statusTasks.length > 0 || can('tasks', 'create')) && (
                                     <div className="cu-table-wrapper" style={{ overflow: 'hidden', background: 'white', marginTop: '0.5rem', marginLeft: '2rem', marginRight: '1rem' }}>
                                       <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                         <thead>
                                           <tr className="cu-thead-row" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                                            <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '67%', textAlign: 'left' }}>NAME</th>
-                                            <th className="cu-th cu-th-assignee" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%', textAlign: 'center' }}>ASSIGNEE</th>
-                                            <th className="cu-th cu-th-delivery" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '10%', textAlign: 'center' }}>DUE DATE</th>
-                                            <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '8%', textAlign: 'right' }}></th>
+                                            <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '67%', textAlign: 'left' }}>Name</th>
+                                            <th className="cu-th cu-th-assignee" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'center' }}>Assignee</th>
+                                            <th className="cu-th cu-th-delivery" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '10%', textAlign: 'center' }}>Due Date</th>
+                                            <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '8%', textAlign: 'right' }}>Actions</th>
                                           </tr>
                                         </thead>
                                         <tbody>
@@ -1790,7 +1856,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                               return new Date(a.dueDate) - new Date(b.dueDate);
                                             });
 
-                                            return sortedMainTasks.flatMap(task => {
+                                            const renderedTasks = sortedMainTasks.flatMap(task => {
                                               const subTasks = allTasks.filter(t => t.parentId === task.id);
                                               const isExpanded = !!expandedSubtasks[task.id];
                                               const relDate = formatRelativeDueDate(task.dueDate);
@@ -2135,6 +2201,77 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                                               return rows;
                                             });
+
+                                            const isInline = inlineAdd && inlineAdd.taskListId === list.id && inlineAdd.statusId === col.id;
+
+                                            if (isInline) {
+                                              renderedTasks.push(
+                                                <tr key="inline-add-row" className="cu-inline-row animate-fade-in">
+                                                  <td colSpan="4" style={{ padding: '8px' }}>
+                                                    <div className="new-task-inline-bar" onClick={e => e.stopPropagation()}>
+                                                      <div className="ntib-left">
+                                                        <span className="ntib-dotted-circle"></span>
+                                                        <input
+                                                          ref={inlineInputRef}
+                                                          type="text"
+                                                          placeholder="Task Name or type '/' for commands"
+                                                          value={inlineTitle}
+                                                          onChange={e => setInlineTitle(e.target.value)}
+                                                          onKeyDown={e => { if (e.key === 'Enter' && !isSavingInline) submitInlineAdd(); if (e.key === 'Escape') closeInlineAdd(); }}
+                                                          autoFocus
+                                                          className="ntib-input"
+                                                        />
+                                                      </div>
+                                                      <div className="ntib-right">
+                                                        
+                                                        <div className="ntib-dropdown-wrapper">
+                                                          <button type="button" className="ntib-btn-icon" title="Assignee">
+                                                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                                          </button>
+                                                          <select className="ntib-hidden-select" value={inlineAssignee} onChange={e => setInlineAssignee(e.target.value)}>
+                                                            <option value="">Assignee</option>
+                                                            {getFilteredUsersForProject().map(u => { const n = u.fullName || `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                          </select>
+                                                          {inlineAssignee && <span className="ntib-badge">{initials((users.find(u => u.id === inlineAssignee) || {}).fullName || inlineAssignee)}</span>}
+                                                        </div>
+
+                                                        <div className="ntib-dropdown-wrapper">
+                                                          <button type="button" className="ntib-btn-icon" title="Due Date">
+                                                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                          </button>
+                                                          <input type="date" className="ntib-hidden-date" value={inlineDueDate} onChange={e => setInlineDueDate(e.target.value)} />
+                                                          {inlineDueDate && <span className="ntib-badge">{new Date(inlineDueDate).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>}
+                                                        </div>
+
+                                                        <div className="ntib-dropdown-wrapper">
+                                                          <button type="button" className="ntib-btn-icon" title="Priority">
+                                                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                                                          </button>
+                                                          <select className="ntib-hidden-select" value={inlinePriority} onChange={e => setInlinePriority(e.target.value)}>
+                                                            {Object.keys(PRIORITY_FLAGS).map(p => <option key={p} value={p}>{p} Priority</option>)}
+                                                          </select>
+                                                          {inlinePriority && <span className="ntib-badge priority-color">{inlinePriority}</span>}
+                                                        </div>
+
+                                                        <button type="button" className="ntib-cancel-btn" onClick={closeInlineAdd}>Cancel</button>
+                                                        <button type="button" className="ntib-save-btn" disabled={isSavingInline} onClick={submitInlineAdd}>{isSavingInline ? 'Saving...' : 'Save ↵'}</button>
+                                                      </div>
+                                                    </div>
+                                                  </td>
+                                                </tr>
+                                              );
+                                            } else if (can('tasks', 'create')) {
+                                              renderedTasks.push(
+                                                <tr key="add-task-row" className="cu-add-row" onClick={(e) => { e.stopPropagation(); openInlineAdd(list.id, col.id); }}>
+                                                  <td colSpan="4">
+                                                    <span className="cu-add-icon">+</span>
+                                                    <span className="cu-add-text">Add Task</span>
+                                                  </td>
+                                                </tr>
+                                              );
+                                            }
+
+                                            return renderedTasks;
                                           })()}
                                         </tbody>
                                       </table>
@@ -2181,12 +2318,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 <table className="saas-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                      <th style={{ padding: '1rem 1.5rem', width: '60px', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>#</th>
-                      <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Member Name</th>
-                      <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Designation</th>
-                      <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Status</th>
+                      <th style={{ padding: '1rem 1.5rem', width: '60px', fontSize: '0.75rem', fontWeight: '700', color: '#475569' }}>#</th>
+                      <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569' }}>Member Name</th>
+                      <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569' }}>Designation</th>
+                      <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569' }}>Status</th>
                       {can('projects', 'assign') && (
-                        <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Actions</th>
+                        <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '700', color: '#475569' }}>Actions</th>
                       )}
                     </tr>
                   </thead>
@@ -2417,7 +2554,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                       </div>
                       <div>
-                        <div style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Total Queries</div>
+                        <div style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.25rem' }}>Total Queries</div>
                         <div style={{ color: '#0f172a', fontSize: '1.5rem', fontWeight: '800' }}>{totalQueries}</div>
                       </div>
                     </div>
@@ -2428,7 +2565,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>
                       </div>
                       <div>
-                        <div style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Open</div>
+                        <div style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.25rem' }}>Open</div>
                         <div style={{ color: '#0f172a', fontSize: '1.5rem', fontWeight: '800' }}>{openQueries}</div>
                       </div>
                     </div>
@@ -2439,7 +2576,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                       </div>
                       <div>
-                        <div style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.25rem' }}>In Discussion</div>
+                        <div style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.25rem' }}>In Discussion</div>
                         <div style={{ color: '#0f172a', fontSize: '1.5rem', fontWeight: '800' }}>{inDiscussionQueries}</div>
                       </div>
                     </div>
@@ -2450,7 +2587,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
                       </div>
                       <div>
-                        <div style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Solved</div>
+                        <div style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.25rem' }}>Solved</div>
                         <div style={{ color: '#0f172a', fontSize: '1.5rem', fontWeight: '800' }}>{solvedQueries}</div>
                       </div>
                     </div>
@@ -2461,7 +2598,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><polyline points="9 17 9 12 15 12 15 17"></polyline></svg>
                       </div>
                       <div>
-                        <div style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Closed</div>
+                        <div style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.25rem' }}>Closed</div>
                         <div style={{ color: '#0f172a', fontSize: '1.5rem', fontWeight: '800' }}>{closedQueries}</div>
                       </div>
                     </div>
@@ -2573,11 +2710,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       <table className="saas-table queries-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
                         <thead>
                           <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '400px' }}>Title</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '180px' }}>Sent To</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '140px' }}>Status</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '160px' }}>Created On</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', textAlign: 'center', width: '100px' }}>Action</th>
+                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '400px' }}>Title</th>
+                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '180px' }}>Sent To</th>
+                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '140px' }}>Status</th>
+                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '160px' }}>Created On</th>
+                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textAlign: 'center', width: '100px' }}>Action</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -2907,12 +3044,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     <table className="attachments-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Name</th>
-                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Description</th>
-                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Uploaded By</th>
-                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>File Size</th>
-                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Uploaded On</th>
-                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', textAlign: 'center' }}>Actions</th>
+                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569' }}>Name</th>
+                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569' }}>Description</th>
+                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569' }}>Uploaded By</th>
+                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569' }}>File Size</th>
+                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569' }}>Uploaded On</th>
+                          <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textAlign: 'center' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -3209,14 +3346,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <thead>
               <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
 
-                <th style={{ padding: '0.55rem 1rem 0.55rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'uppercase' }}>#</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'uppercase' }}>PROJECT NAME</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'uppercase' }}>STATUS</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'uppercase' }}>ESTIMATED HOURS</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'uppercase' }}>BILLED HOURS</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'uppercase' }}>BILLABLE HOURS</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white', textTransform: 'uppercase' }}>CREATED ON</th>
-                <th style={{ padding: '0.55rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', textAlign: 'center', background: 'white', textTransform: 'uppercase' }}>ACTIONS</th>
+                <th style={{ padding: '0.55rem 1rem 0.55rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white' }}>#</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white' }}>Project Name</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white' }}>Status</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white' }}>Estimated Hours</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white' }}>Billed Hours</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white' }}>Billable Hours</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white' }}>Created On</th>
+                <th style={{ padding: '0.55rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', textAlign: 'center', background: 'white' }}>Actions</th>
               </tr>
             </thead>
             <tbody>

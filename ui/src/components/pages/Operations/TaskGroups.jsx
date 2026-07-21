@@ -317,7 +317,7 @@ export default function TaskGroups({ user, onBack }) {
       projName: projName
     });
     setInlineTitle('');
-    setInlineAssignee('');
+    setInlineAssignee(localStorage.getItem('lastTaskAssignee') || '');
     setInlineDueDate('');
     setInlinePriority('Medium');
     setInlineTaskType('Task');
@@ -347,6 +347,7 @@ export default function TaskGroups({ user, onBack }) {
     const { taskListId, statusId, projectId, projName } = inlineAdd;
     setIsSavingInline(true);
     try {
+      if (inlineAssignee) localStorage.setItem('lastTaskAssignee', inlineAssignee);
       await api.post('/tasks', {
         title,
         status: statusId,
@@ -528,7 +529,7 @@ export default function TaskGroups({ user, onBack }) {
     setTargetGroup(list);
     setTaskForm({
       title: '',
-      assignees: '',
+      assignees: localStorage.getItem('lastTaskAssignee') || '',
       priority: 'Medium',
       dueDate: '',
       taskType: 'Task',
@@ -554,11 +555,13 @@ export default function TaskGroups({ user, onBack }) {
 
     setIsCreatingTask(true);
     try {
+      const assigneesToSave = taskForm.taskType === 'calls/meetings' ? (user?.id || '') : (taskForm.assignees || null);
+      if (assigneesToSave) localStorage.setItem('lastTaskAssignee', assigneesToSave);
       await api.post('/tasks', {
         title: taskForm.title.trim(),
         taskListId: targetGroup.id,
         projectId: targetGroup.projectId || null,
-        assignees: taskForm.taskType === 'calls/meetings' ? (user?.id || '') : (taskForm.assignees || null),
+        assignees: assigneesToSave,
         priority: taskForm.priority,
         dueDate: taskForm.taskType === 'calls/meetings' ? null : (taskForm.dueDate ? new Date(taskForm.dueDate).toISOString() : null),
         status: 'To Do',
@@ -830,7 +833,7 @@ export default function TaskGroups({ user, onBack }) {
               </div>
             ) : (
               <>
-                <span className="cu-section-title" style={{ fontWeight: '700', fontSize: '0.8rem', color: '#2563eb', textTransform: 'uppercase' }}>{list.name}</span>
+                <span className="cu-section-title" style={{ fontWeight: '700', fontSize: '0.8rem', color: '#2563eb' }}>{list.name}</span>
                 {list.project && (
                   <span className="tg-project-badge" style={{ fontSize: '0.7rem' }}>
                     {list.project.name}
@@ -925,8 +928,8 @@ export default function TaskGroups({ user, onBack }) {
                           <path d="M0 0l5 6 5-6z"/>
                         </svg>
                       </span>
-                      <span className="cu-status-pill" style={{ color: meta.bg, fontSize: '0.68rem', fontWeight: '700', textTransform: 'uppercase', padding: '0', background: 'transparent', border: 'none' }}>
-                        {col.label.toUpperCase()}
+                      <span className="cu-status-pill" style={{ color: meta.bg, fontSize: '0.68rem', fontWeight: '700', padding: '0', background: 'transparent', border: 'none' }}>
+                        {col.label}
                       </span>
                       <span className="cu-section-count" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', background: '#e2e8f0', padding: '0.1rem 0.4rem', borderRadius: '10px' }}>{statusTasks.length}</span>
                     </div>
@@ -938,10 +941,10 @@ export default function TaskGroups({ user, onBack }) {
                       <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                           <tr className="cu-thead-row" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                            <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '67%', textAlign: 'left' }}>NAME</th>
-                            <th className="cu-th cu-th-assignee" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%', textAlign: 'center' }}>ASSIGNEE</th>
-                            <th className="cu-th cu-th-delivery" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '10%', textAlign: 'center' }}>DUE DATE</th>
-                            <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '8%', textAlign: 'right' }}></th>
+                            <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '67%', textAlign: 'left' }}>Name</th>
+                            <th className="cu-th cu-th-assignee" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'center' }}>Assignee</th>
+                            <th className="cu-th cu-th-delivery" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '10%', textAlign: 'center' }}>Due Date</th>
+                            <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '8%', textAlign: 'right' }}>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1433,7 +1436,7 @@ export default function TaskGroups({ user, onBack }) {
               <div className="col-clickup-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
                   <span className="col-clickup-label" style={{ fontWeight: 800, fontSize: '0.85rem', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={list.name}>
-                    {list.name.toUpperCase()}
+                    {list.name}
                   </span>
                   <span className="col-clickup-count" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', background: '#e2e8f0', padding: '0.1rem 0.4rem', borderRadius: '10px' }}>
                     {listTasks.length}

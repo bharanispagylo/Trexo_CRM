@@ -572,12 +572,25 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       })
     : [];
 
+  const navigateToTaskDetail = (taskData, sourceTabOverride = null) => {
+    const displayId = getDisplayId(taskData);
+    const sourceTab = sourceTabOverride || activeTab;
+    window.history.pushState(
+      { fromApp: true, prevTab: sourceTab, projectName: sourceTab === 'projects' ? selectedProjectName : null },
+      '',
+      `/tasks/${displayId}`
+    );
+    setSelectedTaskId(displayId);
+    setSearchSelectedTask(taskData);
+    setIsTaskDetailOpen(true);
+    setActiveTab('tasks');
+  };
+
   const handleItemClick = (type, item) => {
     setSearchQuery('');
     setShowSearchResults(false);
     if (type === 'task') {
-      setSearchSelectedTask(item);
-      setActiveTab('tasks');
+      navigateToTaskDetail(item);
     } else if (type === 'project') {
       setSearchSelectedProject(item);
       setActiveTab('projects');
@@ -610,13 +623,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
               user={user}
               initialSelectedProject={searchSelectedProject}
               onClearInitialProject={() => setSearchSelectedProject(null)}
-              onNavigateToTasks={(taskData) => {
-                const displayId = getDisplayId(taskData);
-                setSelectedTaskId(displayId);
-                setSearchSelectedTask(taskData);
-                setIsTaskDetailOpen(true);
-                setActiveTab('tasks');
-              }}
+              onNavigateToTasks={(taskData) => navigateToTaskDetail(taskData, 'projects')}
               initialProjectName={initialProjectName}
               onProjectSelect={(projectName) => {
                 setSelectedProjectName(projectName);
@@ -763,23 +770,11 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
           if (!canReport('daily-load-all')) return renderOverview(setActiveTab, (taskData) => { const displayId = getDisplayId(taskData); setSelectedTaskId(displayId); setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
           return <DailyLoadAll onUserClick={(userId) => { setDailyLoadUserId(userId); setActiveTab('daily-load-individual'); }} />;
         case 'daily-load-individual':
-          if (!canReport('daily-load-individual')) return renderOverview(setActiveTab, (taskData) => { const displayId = getDisplayId(taskData); setSelectedTaskId(displayId); setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
-          return <DailyLoadIndividual user={user} initialUserId={dailyLoadUserId} onClearInitialUserId={() => setDailyLoadUserId(null)} onTaskClick={(taskData) => {
-              const displayId = getDisplayId(taskData);
-              setSelectedTaskId(displayId);
-              setSearchSelectedTask(taskData);
-              setIsTaskDetailOpen(true);
-              setActiveTab('tasks');
-            }} />;
+          if (!canReport('daily-load-individual')) return renderOverview(setActiveTab, (taskData) => navigateToTaskDetail(taskData, 'daily-load-individual'));
+          return <DailyLoadIndividual user={user} initialUserId={dailyLoadUserId} onClearInitialUserId={() => setDailyLoadUserId(null)} onTaskClick={(taskData) => navigateToTaskDetail(taskData, 'daily-load-individual')} />;
         case 'reports-status-based':
-          if (!canReport('reports-status-based')) return renderOverview(setActiveTab, (taskData) => { const displayId = getDisplayId(taskData); setSelectedTaskId(displayId); setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
-          return <ReportsStatusBased user={user} initialUserId={timesheetUserId} onClearInitialUser={() => setTimesheetUserId(null)} initialFilter={timesheetInitialFilter} onClearInitialFilter={() => setTimesheetInitialFilter(null)} initialDate={timesheetInitialDate} onClearInitialDate={() => setTimesheetInitialDate(null)} onNavigateToTask={(taskData) => {
-              const displayId = getDisplayId(taskData);
-              setSelectedTaskId(displayId);
-              setSearchSelectedTask(taskData);
-              setIsTaskDetailOpen(true);
-              setActiveTab('tasks');
-            }} />;
+          if (!canReport('reports-status-based')) return renderOverview(setActiveTab, (taskData) => navigateToTaskDetail(taskData, 'reports-status-based'));
+          return <ReportsStatusBased user={user} initialUserId={timesheetUserId} onClearInitialUser={() => setTimesheetUserId(null)} initialFilter={timesheetInitialFilter} onClearInitialFilter={() => setTimesheetInitialFilter(null)} initialDate={timesheetInitialDate} onClearInitialDate={() => setTimesheetInitialDate(null)} onNavigateToTask={(taskData) => navigateToTaskDetail(taskData, 'reports-status-based')} />;
         case 'reports':
           if (!canReport('tasks-report')) {
             const reportTabs = [
@@ -795,25 +790,13 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
               }
               return <div className="loading-screen">Loading Report...</div>;
             }
-            return renderOverview(setActiveTab, (taskData) => { const displayId = getDisplayId(taskData); setSelectedTaskId(displayId); setSearchSelectedTask(taskData); setIsTaskDetailOpen(true); setActiveTab('tasks'); });
+            return renderOverview(setActiveTab, (taskData) => navigateToTaskDetail(taskData, 'reports'));
           }
-          return <Reports user={user} onNavigateToTask={(taskData) => {
-              const displayId = getDisplayId(taskData);
-              setSelectedTaskId(displayId);
-              setSearchSelectedTask(taskData);
-              setIsTaskDetailOpen(true);
-              setActiveTab('tasks');
-            }} />;
+          return <Reports user={user} onNavigateToTask={(taskData) => navigateToTaskDetail(taskData, 'reports')} />;
         default:
           return renderOverview(
             setActiveTab,
-            (taskData) => {
-              const displayId = getDisplayId(taskData);
-              setSelectedTaskId(displayId);
-              setSearchSelectedTask(taskData);
-              setIsTaskDetailOpen(true);
-              setActiveTab('tasks');
-            }
+            (taskData) => navigateToTaskDetail(taskData, 'overview')
           );
       }
     };
@@ -850,6 +833,12 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   };
 
   const navigateToTab = (id) => {
+    if (id !== 'tasks') {
+      setIsTaskDetailOpen(false);
+      setSearchSelectedTask(null);
+      setInitialTaskId(null);
+      setSelectedTaskId(null);
+    }
     if (id === 'projects') {
       setProjectsKey(prev => prev + 1);
       setSearchSelectedProject(null);

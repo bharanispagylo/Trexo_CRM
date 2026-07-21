@@ -137,7 +137,7 @@
   letter-spacing: 0.05em;
   margin-bottom: 0.6rem;
   padding-left: 0.75rem;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .nav-item {
@@ -500,7 +500,7 @@
   font-size: 0.68rem;
   font-weight: 800;
   color: #94a3b8;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.06em;
   padding: 0.35rem 0.5rem 0.25rem 0.5rem;
   border-bottom: 1px solid #f1f5f9;

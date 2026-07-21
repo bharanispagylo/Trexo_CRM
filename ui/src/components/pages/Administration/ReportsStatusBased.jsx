@@ -105,17 +105,51 @@ export default function ReportsStatusBased({
   const isTeamLeadOrAdmin = isAdmin || user?.role?.toLowerCase() === 'team lead';
 
   useEffect(() => {
-    if (initialUserId && onClearInitialUser) onClearInitialUser();
-    if (initialFilter && onClearInitialFilter) onClearInitialFilter();
-    if (initialDate && onClearInitialDate) onClearInitialDate();
+    if (initialUserId) {
+      setSelectedAssignee(initialUserId);
+    }
+    if (initialFilter) {
+      setReportType(initialFilter);
+    }
+    if (initialDate) {
+      if (initialFilter === 'daily') {
+        setSelectedDailyDate(initialDate);
+      } else if (initialFilter === 'weekly') {
+        setSelectedWeekDate(initialDate);
+      } else if (initialFilter === 'monthly') {
+        const d = new Date(initialDate + 'T00:00:00');
+        if (!isNaN(d.getTime())) {
+          setSelectedMonth(d.getMonth() + 1);
+          setSelectedYear(d.getFullYear());
+        }
+      }
+    }
+    if (initialUserId || initialFilter || initialDate) {
+      if (onClearInitialUser) onClearInitialUser();
+      if (onClearInitialFilter) onClearInitialFilter();
+      if (onClearInitialDate) onClearInitialDate();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialUserId, initialFilter, initialDate]);
 
   useEffect(() => {
     if ((worklogLevel === 'Self' || !isTeamLeadOrAdmin) && user?.id && !initialUserId) {
       setSelectedAssignee(user.id);
     }
   }, [worklogLevel, isTeamLeadOrAdmin, user?.id, initialUserId]);
+
+  useEffect(() => {
+    if (assignees.length > 0 && selectedAssignee && selectedAssignee !== 'All Assignees') {
+      const selLower = selectedAssignee.toLowerCase().trim();
+      const matchedUser = assignees.find(u => 
+        (u.id || '').toLowerCase() === selLower || 
+        (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase().trim() === selLower
+      );
+      if (matchedUser && matchedUser.id !== selectedAssignee) {
+        setSelectedAssignee(matchedUser.id);
+      }
+    }
+  }, [assignees, selectedAssignee]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -171,10 +205,31 @@ export default function ReportsStatusBased({
   useEffect(() => {
     fetchData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportType, selectedDailyDate, selectedMonth, selectedYear, customStartDate, customEndDate, selectedWeekDate]);
+  }, [
+    reportType, 
+    selectedDailyDate, 
+    selectedMonth, 
+    selectedYear, 
+    customStartDate, 
+    customEndDate, 
+    selectedWeekDate,
+    selectedAssignee,
+    selectedProject,
+    selectedClient,
+    selectedStatus
+  ]);
 
   const taskItems = useMemo(() => {
     let filtered = tasks.filter(t => (t.taskType || 'Task').toLowerCase() !== 'calls/meetings');
+    if (selectedAssignee && selectedAssignee !== 'All Assignees') {
+      const target = selectedAssignee.toLowerCase().trim();
+      const uObj = assignees.find(u => (u.id || '').toLowerCase() === target);
+      const uName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`).toLowerCase().trim() : '';
+      filtered = filtered.filter(t => {
+        const taskAss = (t.assignees || '').toLowerCase().trim();
+        return taskAss === target || (uName && taskAss === uName);
+      });
+    }
     if (!isTeamLeadOrAdmin) {
       filtered = filtered.filter(t => {
         const taskAssignees = (t.assignees || '').split(',').map(a => a.trim().toLowerCase());
@@ -184,9 +239,19 @@ export default function ReportsStatusBased({
       });
     }
     return filtered;
-  }, [tasks, isTeamLeadOrAdmin, user]);
+  }, [tasks, selectedAssignee, assignees, isTeamLeadOrAdmin, user]);
+
   const callItems = useMemo(() => {
     let filtered = tasks.filter(t => (t.taskType || 'Task').toLowerCase() === 'calls/meetings');
+    if (selectedAssignee && selectedAssignee !== 'All Assignees') {
+      const target = selectedAssignee.toLowerCase().trim();
+      const uObj = assignees.find(u => (u.id || '').toLowerCase() === target);
+      const uName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`).toLowerCase().trim() : '';
+      filtered = filtered.filter(t => {
+        const taskAss = (t.assignees || '').toLowerCase().trim();
+        return taskAss === target || (uName && taskAss === uName);
+      });
+    }
     if (!isTeamLeadOrAdmin) {
       filtered = filtered.filter(t => {
         const taskAssignees = (t.assignees || '').split(',').map(a => a.trim().toLowerCase());
@@ -196,7 +261,7 @@ export default function ReportsStatusBased({
       });
     }
     return filtered;
-  }, [tasks, isTeamLeadOrAdmin, user]);
+  }, [tasks, selectedAssignee, assignees, isTeamLeadOrAdmin, user]);
   const displayedTasks = useMemo(() => worklogTab === 'calls' ? callItems : taskItems, [worklogTab, callItems, taskItems]);
 
   const kpiCards = useMemo(() => {
@@ -351,7 +416,7 @@ export default function ReportsStatusBased({
 
 
   const handleExport = () => {
-    const headers = ['TASK # NO', 'TITLE', 'STATUS', 'PROJECT', 'ASSIGNEE', 'TIME SPENT HRS', 'BILLABLE HRS', 'ESTIMATED HRS'];
+    const headers = ['Task # No', 'Title', 'Status', 'Project', 'Assignee', 'Time Spent Hrs', 'Billable Hrs', 'Estimated Hrs'];
     const rows = displayedTasks.map(t => {
       let resolvedAssignee = 'Unassigned';
       if (t.assignees) {
@@ -572,14 +637,14 @@ export default function ReportsStatusBased({
           <table className="reports-table">
             <thead>
               <tr>
-                <th>TASK # NO</th>
-                <th>TITLE</th>
-                <th>STATUS</th>
-                <th>PROJECT</th>
-                <th>ASSIGNEE</th>
-                <th>TIME SPENT HRS</th>
-                <th>BILLABLE HRS</th>
-                <th>ESTIMATED HRS</th>
+                <th>Task # No</th>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Project</th>
+                <th>Assignee</th>
+                <th>Time Spent Hrs</th>
+                <th>Billable Hrs</th>
+                <th>Estimated Hrs</th>
               </tr>
             </thead>
             <tbody>

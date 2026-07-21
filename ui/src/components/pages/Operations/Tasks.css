@@ -144,7 +144,7 @@
   font-size: 0.82rem;
   font-weight: 800;
   color: #475569;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.07em;
 }
 
@@ -286,7 +286,7 @@
   color: #64748b;
   font-weight: 700;
   font-size: 0.8rem;
-  text-transform: uppercase;
+  text-transform: none;
 }
 .list-table tr:last-child td {
   border-bottom: none;
@@ -1289,7 +1289,7 @@
   font-size: 0.7rem;
   font-weight: 700;
   color: #94a3b8;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.05em;
 }
 
@@ -2932,7 +2932,7 @@
   letter-spacing: 0.04em;
   padding: 0.5rem 0.75rem;
   border-bottom: 1.5px solid #f1f5f9;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .clickup-table th.th-name { width: 45%; }
@@ -3448,7 +3448,7 @@
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
+  text-transform: none;
   padding: 0.45rem 0.75rem;
   text-align: left;
   background: #fafbfc;
@@ -4058,7 +4058,7 @@
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.08em;
-  text-transform: uppercase;
+  text-transform: none;
   color: #94a3b8;
   padding: 0.85rem 0.9rem 0.5rem;
 }
@@ -5106,7 +5106,7 @@
     letter-spacing: 0.04em;
     padding: 0.22rem 0.65rem;
     border-radius: 5px;
-    text-transform: uppercase;
+    text-transform: none;
   }
 
   .cu-mob-status-count {
@@ -5261,7 +5261,7 @@
     font-weight: 700;
     padding: 0.22rem 0.55rem;
     border-radius: 20px;
-    text-transform: uppercase;
+    text-transform: none;
     letter-spacing: 0.03em;
     white-space: nowrap;
   }
@@ -5295,7 +5295,7 @@
     letter-spacing: 0.04em;
     padding: 0.22rem 0.65rem;
     border-radius: 5px;
-    text-transform: uppercase;
+    text-transform: none;
   }
 
   .cu-mobile-group-count {
@@ -5360,7 +5360,7 @@
     color: #ffffff;
     padding: 0.25rem 0.75rem;
     border-radius: 5px;
-    text-transform: uppercase;
+    text-transform: none;
   }
 
   .cu-mob-status-count {
@@ -5750,7 +5750,7 @@
     font-weight: 700 !important;
     color: #64748b !important;
     font-size: 0.72rem !important;
-    text-transform: uppercase !important;
+    text-transform: none !important;
   }
 
   /* Specific headers for Worklog */
@@ -5945,7 +5945,7 @@
     font-weight: 700 !important;
     color: #64748b !important;
     font-size: 0.72rem !important;
-    text-transform: uppercase !important;
+    text-transform: none !important;
   }
 
   /* Specific headers for Worklog */

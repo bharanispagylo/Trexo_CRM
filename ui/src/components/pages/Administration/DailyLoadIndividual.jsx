@@ -256,11 +256,11 @@ export default function DailyLoadIndividual({ user, onTaskClick, initialUserId, 
             <table className="reports-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '40%' }}>TASK</th>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%' }}>STATUS</th>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%', textAlign: 'right' }}>ESTIMATED HRS</th>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%', textAlign: 'right' }}>TIMESPENT HRS</th>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', width: '15%', textAlign: 'right' }}>REMAINING HRS</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '40%' }}>Task</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '15%' }}>Status</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'right' }}>Estimated Hrs</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'right' }}>Timespent Hrs</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'right' }}>Remaining Hrs</th>
                 </tr>
               </thead>
               <tbody>
@@ -281,11 +281,10 @@ export default function DailyLoadIndividual({ user, onTaskClick, initialUserId, 
                             color: meta.bg,
                             fontSize: '0.7rem',
                             fontWeight: '700',
-                            textTransform: 'uppercase',
                             display: 'inline-block'
                           }}
                         >
-                          {row.status.toUpperCase()}
+                          {row.status}
                         </span>
                       </td>
                       <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '600', color: '#475569', fontSize: '0.875rem' }}>
