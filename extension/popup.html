@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spagylo Bug Capture</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <div class="popup-header">
+    <img src="icons/spagylo-logo.png" class="popup-logo" alt="Logo" />
+    <div class="popup-title">
+      <h1>Spagylo Bug Capture</h1>
+      <p>Report UI bugs directly to CRM</p>
+    </div>
+    <button class="popup-header-settings" id="btn-settings-toggle" title="Settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- ── Login View ── -->
+  <div id="login-view" class="popup-section" style="display:none;">
+    <div class="form-group">
+      <label class="form-label" for="input-email">Email</label>
+      <input
+        class="form-input"
+        id="input-email"
+        type="email"
+        placeholder="your@email.com"
+        autocomplete="email"
+      />
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="input-password">Password</label>
+      <input
+        class="form-input"
+        id="input-password"
+        type="password"
+        placeholder="••••••••"
+        autocomplete="current-password"
+      />
+    </div>
+    <button class="btn btn-primary btn-full" id="btn-login">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+        <polyline points="10 17 15 12 10 7"/>
+        <line x1="15" y1="12" x2="3" y2="12"/>
+      </svg>
+      Sign In
+    </button>
+    <div class="error-msg" id="login-error" style="display:none;"></div>
+  </div>
+
+  <!-- ── Logged-in View ── -->
+  <div id="main-view" class="popup-section" style="display:none;">
+    <!-- User info -->
+    <div class="user-card">
+      <div class="user-avatar" id="user-avatar">U</div>
+      <div class="user-info">
+        <div class="user-name" id="user-name">Loading…</div>
+        <div class="user-role" id="user-role"></div>
+      </div>
+    </div>
+
+    <!-- Comment mode status -->
+    <div class="mode-indicator" id="mode-indicator" style="display:none;">
+      <span class="dot"></span>
+      Comment mode active — click any element
+    </div>
+  </div>
+
+  <!-- ── Settings Panel ── -->
+  <div id="settings-panel" style="display:none;">
+    <h3>Settings</h3>
+
+    <div class="form-group">
+      <label class="form-label">API Server URL</label>
+      <div class="settings-row">
+        <input class="form-input" id="input-api-url" type="url" placeholder="https://crm.spagylo.com" />
+        <button class="btn btn-secondary" id="btn-save-url">Save</button>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button class="btn btn-danger btn-full" id="btn-logout" style="display:none;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Sign Out
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Footer ── -->
+  <div class="popup-footer">
+    <span>Spagylo CRM v1.0</span>
+    <span id="auth-status-indicator" style="color:#94a3b8;">Checking…</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

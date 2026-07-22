@@ -1485,15 +1485,11 @@ app.post('/api/tasks', async (req, res) => {
     const isSelfAssigned = creatorId && assigneeIds.includes(creatorId);
 
     if (isBugTask) {
-      // For Bug tasks, notify Admins and the Creator — but exclude self from inbox if they self-assigned
+      // For Bug tasks, notify assignees (excluding creator if self-assigned or creator)
+      // Other users, including admins, will not receive notifications unless assigned.
       try {
-        const admins = await prisma.user.findMany({ where: { role: { equals: 'Admin', mode: 'insensitive' } } });
-        const adminUserIds = admins.map(a => a.id);
-        // Build assignee recipients — exclude creator if self-assigned
-        const assigneeRecipients = isSelfAssigned
-          ? assigneeIds.filter(id => id !== creatorId)  // don't notify self
-          : assigneeIds;
-        const bugRecipients = [...new Set([...adminUserIds, ...assigneeRecipients])].filter(Boolean);
+        const creatorIdentifiers = [creatorId, finalCreatorId, task.createdBy].filter(Boolean).map(s => s.toLowerCase());
+        const bugRecipients = assigneeIds.filter(id => !creatorIdentifiers.includes(id.toLowerCase()));
 
         if (bugRecipients.length > 0) {
           createNotification(bugRecipients, `New Bug Report: ${task.title}`, `A new bug report has been created: ${task.title}`);
@@ -3021,17 +3017,12 @@ app.post('/api/browser/task', verifyBrowserToken, async (req, res) => {
       }
     });
 
-    // Send notification to Admins and the selected assignee (exclude reporter if self-assigned)
+    // Send notification ONLY to assignees (excluding reporter if self-assigned)
+    // Other users, including admins, will not receive notifications unless assigned.
     try {
-      const admins = await prisma.user.findMany({ where: { role: { equals: 'Admin', mode: 'insensitive' } } });
-      const adminUserIds = admins.map(a => a.id);
-      // Resolve assignee IDs from the task; exclude the reporter if they self-assigned
+      const reporterIdentifiers = [reporter.id, reporterName, reporter.email].filter(Boolean).map(s => s.toLowerCase());
       const assigneeIdList = (task.assignees || '').split(',').map(s => s.trim()).filter(Boolean);
-      const isReporterSelfAssigned = assigneeIdList.includes(reporter.id);
-      const assigneeRecipients = isReporterSelfAssigned
-        ? assigneeIdList.filter(id => id !== reporter.id)  // don't send inbox notification to self
-        : assigneeIdList;
-      const bugRecipients = [...new Set([...adminUserIds, ...assigneeRecipients])].filter(Boolean);
+      const bugRecipients = assigneeIdList.filter(id => !reporterIdentifiers.includes(id.toLowerCase()));
 
       if (bugRecipients.length > 0) {
         await createNotification(bugRecipients, `New Bug Report: ${task.title}`, `${reporterName} reported a bug task: ${task.title}`);
