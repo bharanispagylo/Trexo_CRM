@@ -1335,7 +1335,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
         </header>
 
-        <div className={`saas-page-content${activeTab === 'tasks' ? ' tasks-page-active' : ''}`}>
+        <div className={`saas-content-area saas-page-content${activeTab === 'tasks' ? ' tasks-page-active' : ''}`}>
 
           {renderContent()}
         </div>

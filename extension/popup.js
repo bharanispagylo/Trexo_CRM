@@ -131,7 +131,7 @@ function updateCommentModeUI(active) {
 async function init() {
   // Load saved API URL
   const apiRes = await sendToBackground('GET_API_URL').catch(() => ({}));
-  inputApiUrl.value = (apiRes?.url && !apiRes.url.includes('localhost')) ? apiRes.url : 'https://crm.spagylo.com';
+  inputApiUrl.value = apiRes?.url || 'https://crm.spagylo.com';
 
   // Get active tab
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -259,8 +259,8 @@ btnSettingsToggle.addEventListener('click', () => {
 });
 
 btnSaveUrl.addEventListener('click', async () => {
-  const url = inputApiUrl.value.trim();
-  if (!url) return;
+  const url = inputApiUrl.value.trim() || 'https://crm.spagylo.com';
+  inputApiUrl.value = url;
 
   try {
     await sendToBackground('SAVE_API_URL', { url });

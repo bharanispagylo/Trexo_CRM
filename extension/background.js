@@ -31,10 +31,7 @@ async function setStorage(obj) {
 
 async function getApiUrl() {
   const { [STORAGE_KEY_API_URL]: url } = await getStorage(STORAGE_KEY_API_URL);
-  if (!url || url.includes('localhost')) {
-    return DEFAULT_API_URL;
-  }
-  return url.replace(/\/$/, '');
+  return (url || DEFAULT_API_URL).replace(/\/$/, '');
 }
 
 async function getToken() {

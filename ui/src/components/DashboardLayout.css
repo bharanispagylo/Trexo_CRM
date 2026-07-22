@@ -4,7 +4,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --saas-bg-sidebar: #F6F7F9;
+  --saas-bg-sidebar: #ffffff;
   --saas-bg-main: #f3f4f6;
   --saas-border: #E6E8EB;
   --saas-primary-green: #24B47E;
@@ -19,7 +19,7 @@
   display: flex;
   height: 100vh;
   width: 100vw;
-  background-color: var(--saas-bg-main);
+  background-color: #fff;
   color: var(--saas-text-primary);
   font-family: var(--saas-font-main);
   overflow: hidden;
@@ -30,7 +30,7 @@
 .saas-sidebar-nav {
   width: 240px;
   background-color: var(--saas-bg-sidebar);
-  border-right: 1px solid var(--saas-border);
+  border-right: none;
   display: flex;
   flex-direction: column;
   padding: 1.25rem 0;
@@ -223,13 +223,21 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: var(--saas-bg-main);
+  background-color: #fff !important;
   min-width: 0;
+}
+
+.saas-content-area {
+  flex: 1;
+  min-height: 0;
+  background-color: var(--saas-bg-main);
+  overflow-y: auto;
+  position: relative;
 }
 
 .saas-main-header {
   height: 72px;
-  border-bottom: 1px solid var(--saas-border);
+  border-bottom: none;
   padding: 0 2rem;
   display: flex;
   align-items: center;
@@ -370,6 +378,7 @@
   min-height: 0; /* prevents flex item from overflowing parent, enables scroll */
   overflow-y: auto;
   position: relative;
+  border-radius: 20px;
 }
 
 /* Page Common Styles Override */
@@ -869,8 +878,6 @@
   }
 
   /* Mobile Grid Dashboard Styles */
-  .saas-dashboard-layout,
-  .saas-main-area,
   .saas-page-content {
     background-color: #f3f4f6 !important;
   }
@@ -1485,20 +1492,16 @@
 
 .saas-page-content.tasks-page-active {
   overflow-y: hidden;
+  border-radius: 20px;
 }
 
-/* Ensure all dashboard pages have a mild grey background */
-.saas-dashboard-layout,
-.saas-main-area,
-.saas-page-content,
+/* Ensure inner dashboard content pages have a mild grey background */
 .kanban-root,
 .projects-page,
 .clients-page-container,
 .estimations-page-container,
 .roles-page-container,
-.users-page-container,
-.saas-page-content > div,
-.saas-page-content > div > div {
+.users-page-container {
   background-color: #f3f4f6 !important;
 }
 
