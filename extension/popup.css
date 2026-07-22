@@ -1,0 +1,329 @@
+/* ================================================================
+   Spagylo Bug Reporter — Popup Styles
+   ================================================================ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  width: 340px;
+  min-height: 200px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  color: #0f172a;
+  background: #ffffff;
+  overflow-x: hidden;
+}
+
+/* ── Header ── */
+.popup-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fef2f2;
+}
+
+.popup-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.popup-title {
+  flex: 1;
+}
+
+.popup-title h1 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.popup-title p {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.popup-header-settings {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+  line-height: 1;
+}
+.popup-header-settings:hover { color: #475569; background: #f1f5f9; }
+
+/* ── Sections ── */
+.popup-section {
+  padding: 16px;
+}
+
+.popup-section + .popup-section {
+  border-top: 1px solid #f1f5f9;
+}
+
+/* ── Login form ── */
+.form-group {
+  margin-bottom: 10px;
+}
+
+.form-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.12);
+}
+
+.form-input.error {
+  border-color: #dc2626;
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+
+.btn-full { width: 100%; }
+
+.btn-primary {
+  background: #dc2626;
+  color: white;
+}
+.btn-primary:hover   { background: #b91c1c; }
+.btn-primary:active  { transform: scale(0.98); }
+.btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: #475569;
+}
+.btn-secondary:hover { background: #e2e8f0; }
+
+.btn-danger {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.btn-danger:hover { background: #fecaca; }
+
+.btn-comment-mode {
+  background: #dc2626;
+  color: white;
+  width: 100%;
+  padding: 11px 14px;
+  font-size: 14px;
+}
+.btn-comment-mode:hover  { background: #b91c1c; }
+.btn-comment-mode.active {
+  background: #1e3a8a;
+}
+.btn-comment-mode.active:hover { background: #1e40af; }
+
+/* ── User info card ── */
+.user-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #1f2937;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-role {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: capitalize;
+}
+
+/* ── Mode indicator ── */
+.mode-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #dc2626;
+  margin-bottom: 10px;
+}
+
+.mode-indicator .dot {
+  width: 7px;
+  height: 7px;
+  background: #dc2626;
+  border-radius: 50%;
+  animation: pulse 1.4s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* ── Help tips ── */
+.help-tips {
+  background: #f8fafc;
+  border-radius: 7px;
+  padding: 10px 12px;
+  margin-top: 10px;
+}
+
+.help-tips p {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+.help-tips p:last-child { margin-bottom: 0; }
+
+.help-tips kbd {
+  display: inline-block;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-family: monospace;
+  color: #475569;
+  box-shadow: 0 1px 0 #cbd5e1;
+}
+
+/* ── Settings panel ── */
+#settings-panel {
+  padding: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+#settings-panel h3 {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.settings-row .form-input {
+  flex: 1;
+  font-size: 11px;
+  padding: 6px 8px;
+}
+
+/* ── Error message ── */
+.error-msg {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 10px;
+  margin-top: 8px;
+}
+
+/* ── Loading state ── */
+.loading-dots::after {
+  content: '...';
+  animation: dots 1s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0%, 20%  { content: '.'; }
+  40%      { content: '..'; }
+  60%, 100%{ content: '...'; }
+}
+
+/* ── Footer ── */
+.popup-footer {
+  padding: 8px 16px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.popup-footer span {
+  font-size: 10px;
+  color: #94a3b8;
+}

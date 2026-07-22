@@ -8,4 +8,5 @@ build/
 *.log
 firebase-service-account.json
 .claude/
-extension/
+
+
