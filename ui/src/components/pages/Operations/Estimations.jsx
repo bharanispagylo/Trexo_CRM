@@ -405,7 +405,7 @@ export default function Estimations({ user }) {
                           {formatEstimationId(est.estimationNo, est.id)}
                         </span>
                         <span
-                          style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }}
+                          style={{ color: '#2563eb', cursor: 'pointer' }}
                           onClick={() => setViewingEstimation(est)}
                         >
                           {est.taskName}

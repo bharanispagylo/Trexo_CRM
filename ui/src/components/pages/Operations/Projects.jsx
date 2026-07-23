@@ -1441,14 +1441,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <button
               key={tab.id}
               onClick={() => { setDetailTab(tab.id); setSelectedTaskListId(null); setViewingQuery(null); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none',
-                padding: '0.75rem 0', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer',
-                color: detailTab === tab.id ? '#0f172a' : '#64748b',
-                borderBottom: detailTab === tab.id ? '2px solid #0f172a' : '2px solid transparent',
-                marginBottom: '-1px',
-                transition: 'all 0.2s'
-              }}
+              className={detailTab === tab.id ? 'active' : ''}
             >
               {tab.icon}
               {tab.label}
@@ -3383,8 +3376,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         {startIndex + idx + 1}
                       </td>
                       <td style={{ padding: '0.55rem 1rem' }}>
-                        <button 
-                          style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                        <span 
+                          className="project-name-link"
                           onClick={() => {
                             setSelectedProject(proj);
                             setCurrentView('detail');
@@ -3392,7 +3385,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                           }}
                         >
                           {proj.name}
-                        </button>
+                        </span>
                       </td>
                       <td style={{ padding: '0.55rem 1rem' }}>
                         <span style={{ background: statusBg, color: statusColor, padding: '0.25rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '700' }}>
@@ -3481,8 +3474,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                   <div className="mpr-left">
 
                     <span className="mp-index">#{startIndex + idx + 1}</span>
-                    <button 
-                      style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '700', fontSize: '0.95rem', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                    <span 
                       onClick={() => {
                         setSelectedProject(proj);
                         setCurrentView('detail');
@@ -3491,7 +3483,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       className="mp-name-link"
                     >
                       {proj.name}
-                    </button>
+                    </span>
                   </div>
                   <div className="mpr-right">
                     <span style={{ background: statusBg, color: statusColor, padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase' }}>

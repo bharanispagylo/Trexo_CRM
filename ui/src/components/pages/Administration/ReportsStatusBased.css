@@ -1,6 +1,6 @@
 .rsb-container {
   padding: 1.5rem;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--saas-font-main);
   background: #fafbfc;
   min-height: calc(100vh - 64px);
   color: #334155;

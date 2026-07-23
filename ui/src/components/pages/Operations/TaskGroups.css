@@ -148,16 +148,16 @@
 /* Tabs */
 .tg-tabs-nav {
   display: flex;
-  gap: 1.5rem;
+  gap: 2rem;
   border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 0.25rem;
+  margin-bottom: 1.5rem;
 }
 
 .tg-tab-btn {
   background: none;
   border: none;
-  padding: 0.5rem 0.25rem;
-  font-size: 0.95rem;
+  padding: 0.75rem 0.5rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: #64748b;
   cursor: pointer;
@@ -170,7 +170,7 @@
 }
 
 .tg-tab-btn.active {
-  color: #0066FF;
+  color: black;
 }
 
 .tg-tab-btn.active::after {
@@ -180,7 +180,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: #0066FF;
+  background: black;
   border-radius: 3px;
   animation: tabSlide 0.2s ease-out;
 }
@@ -212,9 +212,9 @@
 }
 
 .tg-table th {
-  padding: 1rem 1.25rem;
+  padding: 0.75rem 1.25rem;
   background: #f8fafc;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #475569;
   text-transform: none;
@@ -223,7 +223,7 @@
 }
 
 .tg-table td {
-  padding: 0.85rem 1.25rem;
+  padding: 0.75rem 1.25rem;
   border-bottom: 1px solid #f1f5f9;
   color: #334155;
   font-weight: 500;

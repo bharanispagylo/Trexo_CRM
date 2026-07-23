@@ -2787,6 +2787,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 <div className="saas-meta-divider" style={{ borderBottom: '1px solid #f1f5f9', margin: '1.5rem 0' }}></div>
 
                 <div style={{ padding: '0.5rem 0' }}>
+                  <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Description</div>
                   {isEditing && canEdit ? (
                     <textarea value={form.description} onChange={e => set('description', e.target.value)} onPaste={handleDescriptionPaste} className="saas-grid-textarea" style={{ minHeight: '120px', width: '100%', maxWidth: '100%', border: 'none', background: '#f8fafc', outline: 'none', fontSize: '0.95rem', padding: '1rem', borderRadius: '8px', boxSizing: 'border-box' }} placeholder="Add description, or write with AI..." />
                   ) : (
@@ -5223,13 +5224,13 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             <thead>
               <tr className="cu-thead-row">
                 <th className="cu-th cu-th-name">Name</th>
-                <th className="cu-th cu-th-status" style={{ width: '120px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>Status</th>
-                {showAssigneeCol && <th className="cu-th cu-th-assignee" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Assignee</th>}
-                <th className="cu-th cu-th-project" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Project</th>
+                <th className="cu-th cu-th-status" style={{ width: '120px' }}>Status</th>
+                {showAssigneeCol && <th className="cu-th cu-th-assignee" style={{ width: '150px', textAlign: 'left' }}>Assignee</th>}
+                <th className="cu-th cu-th-project" style={{ width: '150px', textAlign: 'left' }}>Project</th>
                 {isTemplateList ? (
-                  <th className="cu-th cu-th-frequency" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Frequency</th>
+                  <th className="cu-th cu-th-frequency" style={{ width: '150px', textAlign: 'left' }}>Frequency</th>
                 ) : (
-                  <th className="cu-th cu-th-delivery" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Due Date</th>
+                  <th className="cu-th cu-th-delivery" style={{ width: '150px', textAlign: 'left' }}>Due Date</th>
                 )}
                 <th className="cu-th cu-th-actions" style={{ width: '80px' }}>Actions</th>
               </tr>
@@ -5581,11 +5582,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 setFilterFromDate('');
                 setFilterToDate('');
               }}
-              style={{ 
-                background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
-                color: subTab === 'my' ? '#2563eb' : '#64748b',
-                borderBottom: subTab === 'my' ? '2px solid #2563eb' : '2px solid transparent'
-              }}
             >
               My Tasks
             </button>
@@ -5601,11 +5597,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                   setFilterType('');
                   setFilterFromDate('');
                   setFilterToDate('');
-                }}
-                style={{ 
-                  background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
-                  color: subTab === 'all' ? '#2563eb' : '#64748b',
-                  borderBottom: subTab === 'all' ? '2px solid #2563eb' : '2px solid transparent'
                 }}
               >
                 All Tasks
@@ -5623,11 +5614,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 setFilterFromDate('');
                 setFilterToDate('');
               }}
-              style={{ 
-                background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
-                color: subTab === 'calls' ? '#2563eb' : '#64748b',
-                borderBottom: subTab === 'calls' ? '2px solid #2563eb' : '2px solid transparent'
-              }}
             >
               Calls/Meeting
             </button>
@@ -5643,11 +5629,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 setFilterType('');
                 setFilterFromDate('');
                 setFilterToDate('');
-              }}
-              style={{ 
-                background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
-                color: subTab === 'recurring' ? '#2563eb' : '#64748b',
-                borderBottom: subTab === 'recurring' ? '2px solid #2563eb' : '2px solid transparent'
               }}
             >
               Recurring ({unreadRecurringCount})
@@ -5716,40 +5697,16 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         <div className="kanban-header-left">
           {subTab === 'recurring' && isTeamLeadOrAdmin && (
             <div className="filter-group-toggle" style={{ display: 'flex', alignItems: 'center' }}>
-              <div className="view-toggle" style={{ display: 'flex', background: 'white', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div className="view-toggle">
                 <button 
                   className={recurringToggle === 'my' ? 'active' : ''} 
                   onClick={() => setRecurringToggle('my')}
-                  style={{ 
-                    padding: '0.25rem 0.75rem', 
-                    borderRadius: '6px', 
-                    border: 'none', 
-                    fontWeight: 600, 
-                    fontSize: '0.82rem', 
-                    cursor: 'pointer', 
-                    background: recurringToggle === 'my' ? '#2563eb' : 'transparent', 
-                    color: recurringToggle === 'my' ? 'white' : '#64748b',
-                    boxShadow: recurringToggle === 'my' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
-                    transition: 'all 0.2s'
-                  }}
                 >
                   My
                 </button>
                 <button 
                   className={recurringToggle === 'all' ? 'active' : ''} 
                   onClick={() => setRecurringToggle('all')}
-                  style={{ 
-                    padding: '0.25rem 0.75rem', 
-                    borderRadius: '6px', 
-                    border: 'none', 
-                    fontWeight: 600, 
-                    fontSize: '0.82rem', 
-                    cursor: 'pointer', 
-                    background: recurringToggle === 'all' ? '#2563eb' : 'transparent', 
-                    color: recurringToggle === 'all' ? 'white' : '#64748b',
-                    boxShadow: recurringToggle === 'all' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
-                    transition: 'all 0.2s'
-                  }}
                 >
                   All
                 </button>
@@ -5758,42 +5715,18 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           )}
           {subTab === 'my' && (
             <div className="filter-group-toggle" style={{ display: 'flex', alignItems: 'center' }}>
-              <div className="view-toggle" style={{ display: 'flex', background: 'white', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div className="view-toggle">
                 <button 
                   className={myTasksToggle === 'assigned' ? 'active' : ''} 
                   onClick={() => setMyTasksToggle('assigned')}
-                  style={{ 
-                    padding: '0.25rem 0.75rem', 
-                    borderRadius: '6px', 
-                    border: 'none', 
-                    fontWeight: 600, 
-                    fontSize: '0.82rem', 
-                    cursor: 'pointer', 
-                    background: myTasksToggle === 'assigned' ? '#2563eb' : 'transparent', 
-                    color: myTasksToggle === 'assigned' ? 'white' : '#64748b',
-                    boxShadow: myTasksToggle === 'assigned' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
-                    transition: 'all 0.2s',
-                    whiteSpace: 'nowrap'
-                  }}
+                  style={{ whiteSpace: 'nowrap' }}
                 >
                   Assigned to me
                 </button>
                 <button 
                   className={myTasksToggle === 'created' ? 'active' : ''} 
                   onClick={() => setMyTasksToggle('created')}
-                  style={{ 
-                    padding: '0.25rem 0.75rem', 
-                    borderRadius: '6px', 
-                    border: 'none', 
-                    fontWeight: 600, 
-                    fontSize: '0.82rem', 
-                    cursor: 'pointer', 
-                    background: myTasksToggle === 'created' ? '#2563eb' : 'transparent', 
-                    color: myTasksToggle === 'created' ? 'white' : '#64748b',
-                    boxShadow: myTasksToggle === 'created' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
-                    transition: 'all 0.2s',
-                    whiteSpace: 'nowrap'
-                  }}
+                  style={{ whiteSpace: 'nowrap' }}
                 >
                   Created by me
                 </button>

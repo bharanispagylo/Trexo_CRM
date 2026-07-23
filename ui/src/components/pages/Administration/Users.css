@@ -243,11 +243,11 @@
 
 .users-list-table th {
   background: #f8fafc;
-  padding: 0.6rem 1.25rem;
+  padding: 0.55rem 1rem;
   text-align: left;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  color: #64748b;
+  color: #1e293b;
   text-transform: none;
   letter-spacing: 0.05em;
   border-bottom: 1px solid #f1f5f9;
@@ -258,9 +258,10 @@
 }
 
 .users-list-table td {
-  padding: 0.4rem 1.25rem;
+  padding: 0.55rem 1rem;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
+  font-size: 0.85rem;
 }
 
 .users-list-table td:nth-child(3) {
