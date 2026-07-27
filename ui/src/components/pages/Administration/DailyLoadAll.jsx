@@ -140,7 +140,7 @@ export default function DailyLoadAll({ onUserClick }) {
               border: `1.5px solid ${reportRows.length === 0 ? '#e2e8f0' : '#2563eb'}`,
               borderRadius: '8px',
               fontWeight: '600',
-              fontSize: '0.85rem',
+              fontSize: '12px',
               cursor: reportRows.length === 0 ? 'not-allowed' : 'pointer',
               whiteSpace: 'nowrap'
             }}
@@ -158,15 +158,15 @@ export default function DailyLoadAll({ onUserClick }) {
       {/* Summary KPI cards */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.75rem 1.5rem', minWidth: '120px' }}>
-          <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', whiteSpace: 'nowrap' }}>Users #</span>
+          <span style={{ fontSize: '12px', color: '#475569', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', whiteSpace: 'nowrap' }}>Users #</span>
           <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>{totalUsersCount}</span>
         </div>
         <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '0.75rem 1.5rem', minWidth: '140px' }}>
-          <span style={{ fontSize: '0.7rem', color: '#15803d', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', whiteSpace: 'nowrap' }}>Total Tasks #</span>
+          <span style={{ fontSize: '12px', color: '#15803d', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', whiteSpace: 'nowrap' }}>Total Tasks #</span>
           <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>{totalTasksCount}</span>
         </div>
         <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '0.75rem 1.5rem', minWidth: '160px' }}>
-          <span style={{ fontSize: '0.7rem', color: '#0369a1', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', whiteSpace: 'nowrap' }}>Total Remaining Hrs</span>
+          <span style={{ fontSize: '12px', color: '#0369a1', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', whiteSpace: 'nowrap' }}>Total Remaining Hrs</span>
           <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>{formatWorklogHours(totalRemainingHours)}</span>
         </div>
       </div>
@@ -185,9 +185,9 @@ export default function DailyLoadAll({ onUserClick }) {
             <table className="reports-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '50%' }}>User Name</th>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '25%', textAlign: 'center' }}>Tasks #</th>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '25%', textAlign: 'right' }}>Remaining Hrs</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '600', color: '#475569', width: '50%' }}>User Name</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '600', color: '#475569', width: '25%', textAlign: 'center' }}>Tasks #</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '600', color: '#475569', width: '25%', textAlign: 'right' }}>Remaining Hrs</th>
                 </tr>
               </thead>
               <tbody>
@@ -198,13 +198,13 @@ export default function DailyLoadAll({ onUserClick }) {
                     onClick={() => onUserClick && onUserClick(row.userId)}
                     className="reports-table-row-hover"
                   >
-                    <td style={{ padding: '0.85rem 1.25rem', fontWeight: '600', color: '#2563eb', fontSize: '0.875rem' }}>
+                    <td style={{ padding: '0.85rem 1.25rem', fontWeight: '600', color: '#2563eb', fontSize: '12px' }}>
                       {row.userName}
                     </td>
-                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontWeight: '700', color: '#64748b', fontSize: '0.9rem' }}>
+                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', fontWeight: '600', color: '#64748b', fontSize: '12px' }}>
                       {row.tasksCount}
                     </td>
-                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '700', color: '#059669', fontSize: '0.9rem' }}>
+                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '600', color: '#059669', fontSize: '12px' }}>
                       {formatWorklogHours(row.remainingHours)}
                     </td>
                   </tr>

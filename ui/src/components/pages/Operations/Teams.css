@@ -10,14 +10,16 @@
   margin-bottom: 1.5rem;
 }
 
-.teams-form-inputs {
+.teams-form-inputs
+{
   display: flex;
   gap: 0.75rem;
   margin-bottom: 0.75rem;
   flex-wrap: wrap;
 }
 
-.teams-form-inputs input {
+.teams-form-inputs input 
+{
   flex: 2;
   min-width: 0;
   padding: 0.6rem 0.75rem;
@@ -28,16 +30,19 @@
   outline: none;
 }
 
-.teams-form-inputs input:focus {
+.teams-form-inputs input:focus 
+{
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
-.teams-form-inputs input.members-input {
+.teams-form-inputs input.members-input 
+{
   flex: 0 0 100px;
 }
 
-.teams-form-actions {
+.teams-form-actions 
+{
   display: flex;
   gap: 0.5rem;
 }
@@ -54,7 +59,8 @@
   transition: background 0.15s;
 }
 
-.teams-btn-save:hover {
+.teams-btn-save:hover 
+{
   background: #1d4ed8;
 }
 

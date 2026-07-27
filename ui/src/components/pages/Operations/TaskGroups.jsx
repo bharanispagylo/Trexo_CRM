@@ -833,7 +833,7 @@ export default function TaskGroups({ user, onBack }) {
               </div>
             ) : (
               <>
-                <span className="cu-section-title" style={{ fontWeight: '700', fontSize: '0.8rem', color: '#2563eb' }}>{list.name}</span>
+                <span className="cu-section-title" style={{ fontWeight: 600, fontSize: '12px', color: '#2563eb' }}>{list.name}</span>
                 {list.project && (
                   <span className="tg-project-badge" style={{ fontSize: '0.7rem' }}>
                     {list.project.name}
@@ -941,10 +941,10 @@ export default function TaskGroups({ user, onBack }) {
                       <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                           <tr className="cu-thead-row" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                            <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '67%', textAlign: 'left' }}>Name</th>
-                            <th className="cu-th cu-th-assignee" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'center' }}>Assignee</th>
-                            <th className="cu-th cu-th-delivery" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '10%', textAlign: 'center' }}>Due Date</th>
-                            <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '8%', textAlign: 'right' }}>Actions</th>
+                            <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '67%', textAlign: 'left' }}>Name</th>
+                            <th className="cu-th cu-th-assignee" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '15%', textAlign: 'center' }}>Assignee</th>
+                            <th className="cu-th cu-th-delivery" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '10%', textAlign: 'center' }}>Due Date</th>
+                            <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '8%', textAlign: 'right' }}>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -963,7 +963,7 @@ export default function TaskGroups({ user, onBack }) {
 
                               const parentRow = (
                                 <tr key={task.id} className="cu-row" onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'task-groups' }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
-                                  <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem' }}>
+                                  <td className="cu-td cu-td-name">
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                       {subTasks.length > 0 && (
                                         <button
@@ -979,7 +979,7 @@ export default function TaskGroups({ user, onBack }) {
                                       )}
                                       <TaskTitleTooltip text={`${getDisplayId(task)} ${task.title || 'Untitled Task'}`}>
                                         <span className="cu-task-id-prefix">{getDisplayId(task)}</span>
-                                        <span className="cu-task-title" style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{task.title || 'Untitled Task'}</span>
+                                        <span className="cu-task-title" style={{ fontSize: '12px', fontWeight: 400, color: '#0f172a' }}>{task.title || 'Untitled Task'}</span>
                                       </TaskTitleTooltip>
                                       {subTasks.length > 0 && (
                                         <span 
@@ -1203,12 +1203,12 @@ export default function TaskGroups({ user, onBack }) {
 
                                   rows.push(
                                     <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'task-groups' }, '', `/tasks/${getDisplayId(sub)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
-                                      <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem', paddingLeft: '2.5rem' }}>
+                                      <td className="cu-td cu-td-name">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                           <span className="cu-subtask-indicator" style={{ color: '#94a3b8', marginRight: '2px', fontSize: '1rem', fontWeight: 'bold' }}>↳</span>
                                           <TaskTitleTooltip text={`${getDisplayId(sub)} ${sub.title || 'Untitled Subtask'}`}>
                                             <span className="cu-task-id-prefix">{getDisplayId(sub)}</span>
-                                            <span className="cu-task-title" style={{ fontSize: '0.85rem', color: '#475569' }}>{sub.title || 'Untitled Subtask'}</span>
+                                            <span className="cu-task-title" style={{ fontSize: '12px', fontWeight: 400, color: '#475569' }}>{sub.title || 'Untitled Subtask'}</span>
                                           </TaskTitleTooltip>
                                         </div>
                                       </td>
@@ -1621,7 +1621,7 @@ export default function TaskGroups({ user, onBack }) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           <div className="tg-filter-group-project" ref={projectDropdownRef} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
-            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Projects</label>
+            <label style={{ fontSize: '12px', fontWeight: 400, color: '#64748b', whiteSpace: 'nowrap' }}>Projects</label>
             <div style={{ position: 'relative', display: 'inline-block' }}>
               <button
                 type="button"
@@ -1636,7 +1636,8 @@ export default function TaskGroups({ user, onBack }) {
                   padding: '0.4rem 0.75rem',
                   borderRadius: '6px',
                   border: '1px solid #e2e8f0',
-                  fontSize: '0.85rem',
+                  fontSize: '12px',
+                  fontWeight: 400,
                   color: '#475569',
                   background: '#f8fafc',
                   outline: 'none',
@@ -1686,7 +1687,7 @@ export default function TaskGroups({ user, onBack }) {
                         padding: '0.4rem 0.6rem',
                         borderRadius: '4px',
                         border: '1px solid #cbd5e1',
-                        fontSize: '0.8rem',
+                        fontSize: '12px',
                         outline: 'none',
                         boxSizing: 'border-box'
                       }}
@@ -1704,7 +1705,7 @@ export default function TaskGroups({ user, onBack }) {
                       }}
                       style={{
                         padding: '0.4rem 0.75rem',
-                        fontSize: '0.85rem',
+                        fontSize: '12px',
                         color: filterProjectId === '' ? '#2563eb' : '#475569',
                         fontWeight: filterProjectId === '' ? 600 : 'normal',
                         background: filterProjectId === '' ? '#eff6ff' : 'transparent',
@@ -1729,7 +1730,7 @@ export default function TaskGroups({ user, onBack }) {
                           }}
                           style={{
                             padding: '0.4rem 0.75rem',
-                            fontSize: '0.85rem',
+                            fontSize: '12px',
                             color: filterProjectId === p.id ? '#2563eb' : '#475569',
                             fontWeight: filterProjectId === p.id ? 600 : 'normal',
                             background: filterProjectId === p.id ? '#eff6ff' : 'transparent',

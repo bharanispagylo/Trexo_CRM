@@ -62,8 +62,8 @@
   border: none;
   padding: 0.4rem 0.75rem;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 400;
   color: #64748b;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
@@ -3443,7 +3443,7 @@
 .cu-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
+  font-size: 12px;
   table-layout: fixed;
 }
 
@@ -3451,9 +3451,8 @@
 
 .cu-th {
   color: #94a3b8;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-size: 12px;
+  font-weight: 600;
   text-transform: none;
   padding: 0.75rem 1.25rem;
   text-align: left;
@@ -3518,6 +3517,7 @@
 
 .cu-task-title {
   font-weight: 500;
+  font-size: 12px;
   color: #1e293b;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3582,8 +3582,8 @@
 /* ── Project badge ── */
 .cu-project-badge {
   display: inline-block;
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 400;
   color: #475569;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
@@ -3744,6 +3744,7 @@
   z-index: 2;
   border: none;
   padding: 0;
+  font-size: 12px;
   margin: 0;
   box-sizing: border-box;
 }
@@ -6122,16 +6123,15 @@
 }
 
 .saas-tab {
+  padding: 0.75rem 0;
   background: none;
   border: none;
-  padding: 0.75rem 0.5rem;
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #64748b;
-  cursor: pointer;
   border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  transition: all 0.2s;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--saas-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .saas-tab:hover {

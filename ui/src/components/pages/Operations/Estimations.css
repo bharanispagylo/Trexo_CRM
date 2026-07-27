@@ -61,7 +61,7 @@
   padding: 0.65rem 1.25rem;
   border-radius: 8px;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -224,8 +224,8 @@
 .estimations-table th {
   padding: 0.55rem 1rem;
   background: #f8fafc;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   color: #1e293b;
   text-transform: none;
   letter-spacing: 0.05em;
@@ -379,6 +379,8 @@
     width: auto;
     justify-content: center;
     flex-shrink: 0;
+    font-size:12px;
+    font-weight:600;
   }
 
   .estimations-form-card {

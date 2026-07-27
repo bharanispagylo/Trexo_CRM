@@ -306,7 +306,7 @@ export default function Estimations({ user }) {
               className="saas-select"
               value={selectedClientFilter}
               onChange={e => setSelectedClientFilter(e.target.value)}
-              style={{ width: '220px', height: '40px', fontSize: '0.85rem', padding: '0 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontWeight: '600', color: '#475569' }}
+              style={{ width: '220px', height: '40px', fontSize: '12px', padding: '0 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontWeight: '400', color: '#475569' }}
             >
               <option value="All Clients">All Clients</option>
               {clients.map(c => (
@@ -400,7 +400,7 @@ export default function Estimations({ user }) {
                 <tbody>
                   {filteredEstimations.map(est => (
                     <tr key={est.id} onClick={() => setViewingEstimation(est)} style={{ cursor: 'pointer' }}>
-                      <td data-label="Task" style={{ fontWeight: '600' }}>
+                      <td data-label="Task" style={{ fontWeight: '500',fontSize:'12px' }}>
                         <span className="cu-task-id-prefix" style={{ color: 'rgb(148, 163, 184)', fontWeight: '550', marginRight: '8px' }}>
                           {formatEstimationId(est.estimationNo, est.id)}
                         </span>
@@ -411,7 +411,7 @@ export default function Estimations({ user }) {
                           {est.taskName}
                         </span>
                       </td>
-                      <td data-label="Client">{(() => {
+                      <td data-label="Client" style={{ fontWeight: '400',fontSize:'12px' }}>{(() => {
                         const targetId = est.clientId || est.client_id;
                         const clientObj = clients.find(c => 
                           (targetId && c.id === targetId && targetId !== 'null') ||
@@ -420,9 +420,9 @@ export default function Estimations({ user }) {
                         );
                         return clientObj ? (clientObj.company || clientObj.name) : (est.client || '-');
                       })()}</td>
-                      <td data-label="Project">{est.projectRef?.name || '-'}</td>
-                      <td data-label="Est. Hrs" style={{ fontWeight: '600', color: '#2563eb' }}>{est.estimatedHours} hrs</td>
-                      <td data-label="Status">
+                      <td data-label="Project" style={{ fontWeight: '400',fontSize:'12px' }}>{est.projectRef?.name || '-'}</td>
+                      <td data-label="Est. Hrs" style={{ fontWeight: '400', color: '#2563eb',fontSize:'12px' }}>{est.estimatedHours} hrs</td>
+                      <td data-label="Status" style={{ fontWeight: '400',fontSize:'12px' }}>
                         <span className={`estimations-status-pill ${est.status?.toLowerCase() === 'converted' ? 'converted' : 'pending'}`}>
                           {est.status || 'Pending'}
                         </span>

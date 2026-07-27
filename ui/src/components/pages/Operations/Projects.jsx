@@ -1494,7 +1494,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                   </div>
                   <div className="detail-info-sep">:</div>
                   <div className="detail-info-value">
-                    <span style={{ background: '#dcfce7', color: '#16a34a', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '700' }}>
+                    <span style={{ background: '#dcfce7', color: '#16a34a', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '12px', fontWeight: 400 }}>
                       {selectedProject.status || 'In Progress'}
                     </span>
                   </div>
@@ -1553,8 +1553,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 </div>
               ) : (
                 <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#0f172a' }}>Task Groups</h3>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '1.5rem' }}>
                     {canCreateTG(selectedProject) && (
                       <form 
                         onSubmit={handleAddList}
@@ -1857,7 +1856,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                                               const parentRow = (
                                                 <tr key={task.id} className="cu-row" onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'projects', projectName: selectedProject.name }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
-                                                  <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem' }}>
+                                                  <td className="cu-td cu-td-name">
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                                       {subTasks.length > 0 && (
                                                         <button
@@ -1873,7 +1872,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                       )}
                                                       <TaskTitleTooltip text={`${getDisplayId(task)} ${task.title || 'Untitled Task'}`}>
                                                         <span className="cu-task-id-prefix">{getDisplayId(task)}</span>
-                                                        <span className="cu-task-title" style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>{task.title || 'Untitled Task'}</span>
+                                                        <span className="cu-task-title" style={{ fontSize: '12px', fontWeight: 400, color: '#0f172a' }}>{task.title || 'Untitled Task'}</span>
                                                       </TaskTitleTooltip>
                                                       {subTasks.length > 0 && (
                                                         <span 
@@ -2026,12 +2025,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                                                   rows.push(
                                                     <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'projects', projectName: selectedProject.name }, '', `/tasks/${getDisplayId(sub)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
-                                                      <td className="cu-td cu-td-name" style={{ padding: '0.85rem 1.25rem', paddingLeft: '2.5rem' }}>
+                                                      <td className="cu-td cu-td-name" style={{paddingLeft: '2.5rem' }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                                           <span className="cu-subtask-indicator" style={{ color: '#94a3b8', marginRight: '4px', fontSize: '1rem', fontWeight: 'bold' }}>↳</span>
                                                           <TaskTitleTooltip text={`${getDisplayId(sub)} ${sub.title || 'Untitled Subtask'}`}>
                                                             <span className="cu-task-id-prefix">{getDisplayId(sub)}</span>
-                                                            <span className="cu-task-title" style={{ fontSize: '0.85rem', color: '#475569' }}>{sub.title || 'Untitled Subtask'}</span>
+                                                            <span className="cu-task-title" style={{ fontSize: '12px', fontWeight: 400, color: '#475569' }}>{sub.title || 'Untitled Subtask'}</span>
                                                           </TaskTitleTooltip>
                                                         </div>
                                                       </td>
@@ -2290,8 +2289,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           {detailTab === 'Teams' && (
             <div>
               {/* Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>Team Members</h3>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '1.5rem' }}>
                 {can('projects', 'assign') && (
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
                     <button
@@ -2703,11 +2701,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       <table className="saas-table queries-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
                         <thead>
                           <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '400px' }}>Title</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '180px' }}>Sent To</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '140px' }}>Status</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '160px' }}>Created On</th>
-                            <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textAlign: 'center', width: '100px' }}>Action</th>
+                            <th style={{ padding: '1rem 1.5rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '400px' }}>Title</th>
+                            <th style={{ padding: '1rem 1.5rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '180px' }}>Sent To</th>
+                            <th style={{ padding: '1rem 1.5rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '140px' }}>Status</th>
+                            <th style={{ padding: '1rem 1.5rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '160px' }}>Created On</th>
+                            <th style={{ padding: '1rem 1.5rem', fontSize: '12px', fontWeight: 600, color: '#475569', textAlign: 'center', width: '100px' }}>Action</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -2738,7 +2736,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                   style={{ borderBottom: '1px solid #f1f5f9' }}
                                   onClick={() => handleOpenEditQueryModal(q)}
                                 >
-                                  <td data-label="Title" style={{ padding: '1rem 1.5rem', fontSize: '0.85rem', color: '#0f172a', fontWeight: '600' }}>
+                                  <td data-label="Title" style={{ padding: '1rem 1.5rem', fontSize: '12px', color: '#0f172a', fontWeight: 400 }}>
                                     <span className="cu-task-id-prefix" style={{ color: '#94a3b8', fontWeight: '500', marginRight: '6px' }}>{formatQueryId(q.queryId, q.id)}</span>
                                     {q.title}
                                   </td>
@@ -2747,22 +2745,22 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                       const sentUser = users.find(u => u.id === q.sentTo);
                                       const displayName = sentUser ? (sentUser.fullName || `${sentUser.firstName || ''} ${sentUser.lastName || ''}`.trim() || sentUser.name || sentUser.username || sentUser.email) : q.sentTo;
                                       return (
-                                        <span style={{ fontSize: '0.8rem', fontWeight: '500', color: '#334155' }}>{displayName}</span>
+                                        <span style={{ fontSize: '12px', fontWeight: 400, color: '#334155' }}>{displayName}</span>
                                       );
                                     })() : (
-                                      <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Unassigned</span>
+                                      <span style={{ color: '#94a3b8', fontSize: '12px' }}>Unassigned</span>
                                     )}
                                   </td>
                                   <td data-label="Status" style={{ padding: '1rem 1.5rem' }}>
                                     <span style={{
                                       color: q.status === 'Solved' || q.solved ? '#16a34a' : q.status === 'In Discussion' ? '#9333ea' : q.status === 'Closed' ? '#64748b' : '#2563eb',
-                                      fontSize: '0.8rem',
-                                      fontWeight: '700'
+                                      fontSize: '12px',
+                                      fontWeight: 400
                                     }}>
                                       {q.status || 'Open'}
                                     </span>
                                   </td>
-                                  <td data-label="Created On" style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', color: '#64748b' }}>
+                                  <td data-label="Created On" style={{ padding: '1rem 1.5rem', fontSize: '12px', color: '#64748b' }}>
                                     {formatDateOnly(q.createdAt)}
                                   </td>
                                   <td data-label="Action" style={{ padding: '1rem 1.5rem', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
@@ -2945,18 +2943,18 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     <div className="attach-search-wrap" style={{ position: 'relative' }}>
                       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth="2" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                       <input
-                        className="attach-search-input"
+                        className=""
                         placeholder="Search attachments..."
                         value={attachSearch}
                         onChange={e => setAttachSearch(e.target.value)}
-                        style={{ padding: '0.5rem 0.75rem 0.5rem 2rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', width: '220px', outline: 'none', color: '#334155' }}
+                        style={{ padding: '0.5rem 0.75rem 0.5rem 2rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px',fontWeight:'400', width: '220px', outline: 'none', color: '#334155' }}
                       />
                     </div>
                     <select
                       className="attach-type-select"
                       value={attachTypeFilter}
                       onChange={e => { setAttachTypeFilter(e.target.value); setAttachPage(1); }}
-                      style={{ padding: '0.5rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', color: '#334155', background: 'white', outline: 'none', cursor: 'pointer' }}
+                      style={{ padding: '0.5rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px',fontSize: '12px',fontWeight:'400',color: '#334155', background: 'white', outline: 'none', cursor: 'pointer' }}
                     >
                       <option value="All">All File Types</option>
                       <option value="PDF">PDF</option>
@@ -2973,7 +2971,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       <button
                         className="attach-upload-btn"
                         onClick={() => setShowUploadModal(true)}
-                        style={{ padding: '0.5rem 1rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                        style={{ padding: '0.5rem 1rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                       >
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                         <span className="attach-upload-btn-text">Upload Files</span>
@@ -3261,7 +3259,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         <div style={{ display: 'flex', gap: '1rem' }}>
           <select 
             className="projects-filter-select"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: '600', color: '#334155', cursor: 'pointer', outline: 'none' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', fontWeight: 400, color: '#334155', cursor: 'pointer', outline: 'none' }}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -3272,7 +3270,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <option value="Pending">Pending</option>
           </select>
           {user?.role?.toLowerCase() === 'admin' && (
-          <button className="project-add-btn" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: '600', color: 'white', cursor: 'pointer' }} onClick={() => {
+          <button className="project-add-btn" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', background: '#2563eb', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: 'white', cursor: 'pointer' }} onClick={() => {
             setForm({ name: '', status: 'Active', description: '', client: '', clientId: '', estimatedHours: 0, actualHours: 0, billableHours: 0 });
             setShowForm(true);
           }}>
@@ -3301,8 +3299,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                 padding: '0.5rem 1rem',
                 border: '1px solid #e2e8f0',
                 borderRadius: '8px',
-                fontSize: '0.85rem',
-                fontWeight: '600',
+                fontSize: '12px',
+                fontWeight: 400,
                 color: '#334155',
                 background: 'white',
                 outline: 'none',
@@ -3319,7 +3317,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
               <input 
                 type="text" 
                 placeholder="Search..." 
-                style={{ width: '100%', padding: '0.5rem 0.5rem 0.5rem 2.2rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem', outline: 'none' }} 
+                style={{ width: '100%', padding: '0.5rem 0.5rem 0.5rem 2.2rem', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', outline: 'none' }} 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -3339,14 +3337,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <thead>
               <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
 
-                <th style={{ padding: '0.55rem 1rem 0.55rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white' }}>#</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white' }}>Project Name</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white' }}>Status</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white' }}>Estimated Hours</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white' }}>Billed Hours</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white' }}>Billable Hours</th>
-                <th style={{ padding: '0.55rem 1rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', background: 'white' }}>Created On</th>
-                <th style={{ padding: '0.55rem 1.5rem', fontSize: '0.75rem', fontWeight: '700', color: '#1e293b', textAlign: 'center', background: 'white' }}>Actions</th>
+                <th style={{ padding: '0.55rem 1rem 0.55rem 1.5rem', fontSize: '12px', fontWeight: 600, color: '#1e293b', background: 'white' }}>#</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '12px', fontWeight: 600, color: '#1e293b', background: 'white' }}>Project Name</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '12px', fontWeight: 600, color: '#1e293b', background: 'white' }}>Status</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '12px', fontWeight: 600, color: '#1e293b', background: 'white' }}>Estimated Hours</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '12px', fontWeight: 600, color: '#1e293b', background: 'white' }}>Billed Hours</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '12px', fontWeight: 600, color: '#1e293b', background: 'white' }}>Billable Hours</th>
+                <th style={{ padding: '0.55rem 1rem', fontSize: '12px', fontWeight: 600, color: '#1e293b', background: 'white' }}>Created On</th>
+                <th style={{ padding: '0.55rem 1.5rem', fontSize: '12px', fontWeight: 600, color: '#1e293b', textAlign: 'center', background: 'white' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -3372,12 +3370,13 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                   return (
                     <tr key={proj.id} style={{ borderBottom: '1px solid #f1f5f9', background: 'white' }}>
 
-                      <td style={{ padding: '0.55rem 1rem 0.55rem 1.5rem', fontSize: '0.85rem', color: '#1e293b', fontWeight: '600' }}>
+                      <td style={{ padding: '0.55rem 1rem 0.55rem 1.5rem', fontSize: '12px', color: '#1e293b', fontWeight: 400 }}>
                         {startIndex + idx + 1}
                       </td>
                       <td style={{ padding: '0.55rem 1rem' }}>
                         <span 
                           className="project-name-link"
+                          style={{ color: '#2563eb', fontWeight: 400, fontSize: '12px', cursor: 'pointer', transition: 'color 0.15s' }}
                           onClick={() => {
                             setSelectedProject(proj);
                             setCurrentView('detail');
@@ -3388,52 +3387,24 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         </span>
                       </td>
                       <td style={{ padding: '0.55rem 1rem' }}>
-                        <span style={{ background: statusBg, color: statusColor, padding: '0.25rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '700' }}>
+                        <span style={{ background: statusBg, color: statusColor, padding: '0.25rem 0.6rem', borderRadius: '4px', fontSize: '12px', fontWeight: 400 }}>
                           {displayStatus}
                         </span>
                       </td>
-                      <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
+                      <td style={{ padding: '0.55rem 1rem', fontSize: '12px', color: '#334155', fontWeight: 400 }}>
                         {estHours}
                       </td>
-                      <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
+                      <td style={{ padding: '0.55rem 1rem', fontSize: '12px', color: '#334155', fontWeight: 400 }}>
                         {actHours}
                       </td>
-                      <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
+                      <td style={{ padding: '0.55rem 1rem', fontSize: '12px', color: '#334155', fontWeight: 400 }}>
                         {bilHours}
                       </td>
-                      <td style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#334155' }}>
+                      <td style={{ padding: '0.55rem 1rem', fontSize: '12px', color: '#334155', fontWeight: 400 }}>
                         {createdOn}
                       </td>
                       <td style={{ padding: '0.55rem 1.5rem', textAlign: 'center' }}>
                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                          {/* Edit Button */}
-                          {canEditProject(proj) && (
-                            <button 
-                              style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '0.25rem' }} 
-                              title="Edit Project"
-                              onClick={() => {
-                                setForm({ 
-                                  id: proj.id,
-                                  name: proj.name || '', 
-                                  status: proj.status || 'Active',
-                                  description: proj.description || '',
-                                  client: getClientDisplayName(proj) || '',
-                                  clientId: proj.clientId || '',
-                                  estimatedHours: proj.estimatedHours || 0,
-                                  actualHours: proj.actualHours || 0,
-                                  billableHours: proj.billableHours || 0
-                                });
-                                setShowForm(true);
-                                setTimeout(() => {
-                                  const el = document.querySelector('.saas-page-content');
-                                  if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
-                                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                                }, 50);
-                              }}
-                            >
-                              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                            </button>
-                          )}
                           
                           {/* Delete Button */}
                           {canDeleteProject(proj) && (
@@ -3490,33 +3461,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       {displayStatus}
                     </span>
                     <div className="mpr-actions">
-                      {canEditProject(proj) && (
-                        <button
-                          className="mp-action-btn edit"
-                          title="Edit Project"
-                          onClick={() => {
-                            setForm({
-                              id: proj.id,
-                              name: proj.name || '',
-                              status: proj.status || 'Active',
-                              description: proj.description || '',
-                              client: getClientDisplayName(proj) || '',
-                              clientId: proj.clientId || '',
-                              estimatedHours: proj.estimatedHours || 0,
-                              actualHours: proj.actualHours || 0,
-                              billableHours: proj.billableHours || 0
-                            });
-                            setShowForm(true);
-                            setTimeout(() => {
-                              const el = document.querySelector('.saas-page-content');
-                              if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
-                              window.scrollTo({ top: 0, behavior: 'smooth' });
-                            }, 50);
-                          }}
-                        >
-                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                        </button>
-                      )}
+                      
                       {canDeleteProject(proj) && (
                         <button
                           className="mp-action-btn delete"
