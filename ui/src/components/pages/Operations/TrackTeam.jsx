@@ -491,17 +491,17 @@ export default function TrackTeam({ user, onMemberClick }) {
               {can('teams', 'create') && (
                 <button
                   className="saas-btn-submit team-btn-add"
-                  style={{ background: '#2563eb', color: 'white', border: 'none', padding: '0.5rem 1rem', fontSize: '0.85rem', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ background: '#2563eb', color: 'white', border: 'none', padding: '0.5rem 1rem', fontSize: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}
                   onClick={() => setAddingMember(true)}
                 >
                   <svg className="team-btn-plus-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"></path></svg>
                   <span className="team-btn-text">Add Member</span>
-                  <span className="team-btn-icon" style={{ display: 'none', fontSize: '1.5rem', lineHeight: 1 }}>+</span>
+                  <span className="team-btn-icon" style={{ display: 'none', fontSize: '12px', lineHeight: 1 }}>+</span>
                 </button>
               )}
               <button 
                 className="saas-btn-submit" 
-                style={{ background: 'white', border: '1px solid #cbd5e1', padding: '0.5rem 1rem', fontSize: '0.85rem', color: '#475569', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center' }}
+                style={{ background: 'white', border: '1px solid #cbd5e1', padding: '0.5rem 1rem', fontSize: '12px', color: '#475569', borderRadius: '8px', cursor: 'pointer', fontWeight: '400', display: 'flex', alignItems: 'center' }}
                 onClick={fetchData}
               >
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>

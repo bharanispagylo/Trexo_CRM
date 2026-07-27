@@ -204,7 +204,7 @@ export default function TimesheetOverall({ onUserClick }) {
         <button
           onClick={handleExport}
           disabled={rows.length === 0}
-          style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 1.1rem', background: 'white', color: rows.length === 0 ? '#94a3b8' : '#2563eb', border: `1.5px solid ${rows.length === 0 ? '#e2e8f0' : '#2563eb'}`, borderRadius: '8px', fontWeight: '600', fontSize: '0.85rem', cursor: rows.length === 0 ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
+          style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 1.1rem', background: 'white', color: rows.length === 0 ? '#94a3b8' : '#2563eb', border: `1.5px solid ${rows.length === 0 ? '#e2e8f0' : '#2563eb'}`, borderRadius: '8px', fontWeight: '600', fontSize: '12px', cursor: rows.length === 0 ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
         >
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>

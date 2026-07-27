@@ -164,7 +164,7 @@ export default function DailyLoadIndividual({ user, onTaskClick, initialUserId, 
     <div style={{ padding: '1.5rem' }}>
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '0.75rem' }}>
-        <h2 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0f172a', margin: 0, flex: 1, minWidth: 0 }}>
+        <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', margin: 0, flex: 1, minWidth: 0 }}>
           Daily Load - Individual{selectedUserName ? ` — ${selectedUserName}` : ''}
         </h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexShrink: 0 }}>
@@ -181,7 +181,7 @@ export default function DailyLoadIndividual({ user, onTaskClick, initialUserId, 
               border: `1.5px solid ${reportRows.length === 0 ? '#e2e8f0' : '#2563eb'}`,
               borderRadius: '8px',
               fontWeight: '600',
-              fontSize: '0.85rem',
+              fontSize: '12px',
               cursor: reportRows.length === 0 ? 'not-allowed' : 'pointer',
               whiteSpace: 'nowrap'
             }}
@@ -210,8 +210,8 @@ export default function DailyLoadIndividual({ user, onTaskClick, initialUserId, 
             padding: '0.45rem 1.6rem 0.45rem 0.75rem',
             border: '1px solid #cbd5e1',
             borderRadius: '8px',
-            fontSize: '0.85rem',
-            fontWeight: '500',
+            fontSize: '12px',
+            fontWeight: '400',
             color: '#64748b',
             background: 'white',
             appearance: 'none',
@@ -233,11 +233,11 @@ export default function DailyLoadIndividual({ user, onTaskClick, initialUserId, 
       {/* Summary KPI cards */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '0.75rem 1.5rem', minWidth: '130px' }}>
-          <span style={{ fontSize: '0.7rem', color: '#15803d', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', whiteSpace: 'nowrap' }}>Tasks #</span>
+          <span style={{ fontSize: '12px', color: '#15803d', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', whiteSpace: 'nowrap' }}>Tasks #</span>
           <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>{totalTasksCount}</span>
         </div>
         <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '0.75rem 1.5rem', minWidth: '160px' }}>
-          <span style={{ fontSize: '0.7rem', color: '#0369a1', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', whiteSpace: 'nowrap' }}>Total Remaining Hrs</span>
+          <span style={{ fontSize: '12px', color: '#0369a1', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', whiteSpace: 'nowrap' }}>Total Remaining Hrs</span>
           <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>{formatWorklogHours(totalRemainingHours)}</span>
         </div>
       </div>
@@ -256,11 +256,11 @@ export default function DailyLoadIndividual({ user, onTaskClick, initialUserId, 
             <table className="reports-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '40%' }}>Task</th>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '15%' }}>Status</th>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'right' }}>Estimated Hrs</th>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'right' }}>Timespent Hrs</th>
-                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'right' }}>Remaining Hrs</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '600', color: '#475569', width: '40%' }}>Task</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '600', color: '#475569', width: '15%' }}>Status</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '600', color: '#475569', width: '15%', textAlign: 'right' }}>Estimated Hrs</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '600', color: '#475569', width: '15%', textAlign: 'right' }}>Timespent Hrs</th>
+                  <th style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '600', color: '#475569', width: '15%', textAlign: 'right' }}>Remaining Hrs</th>
                 </tr>
               </thead>
               <tbody>
@@ -272,28 +272,28 @@ export default function DailyLoadIndividual({ user, onTaskClick, initialUserId, 
                       style={{ borderBottom: '1px solid #f1f5f9', cursor: onTaskClick ? 'pointer' : 'default', transition: 'background 0.15s' }}
                       onClick={() => onTaskClick && onTaskClick(row.taskObj)}
                     >
-                      <td style={{ padding: '0.85rem 1.25rem', fontWeight: '600', color: '#0f172a', fontSize: '0.875rem' }}>
+                      <td style={{ padding: '0.85rem 1.25rem', fontWeight: '400', color: '#0f172a', fontSize: '12px' }}>
                         {row.title}
                       </td>
                       <td style={{ padding: '0.85rem 1.25rem' }}>
                         <span
                           style={{
                             color: meta.bg,
-                            fontSize: '0.7rem',
-                            fontWeight: '700',
+                            fontSize: '12px',
+                            fontWeight: '600',
                             display: 'inline-block'
                           }}
                         >
                           {row.status}
                         </span>
                       </td>
-                      <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '600', color: '#475569', fontSize: '0.875rem' }}>
+                      <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '400', color: '#475569', fontSize: '12px' }}>
                         {formatWorklogHours(row.estimatedHours)}
                       </td>
-                      <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '600', color: '#475569', fontSize: '0.875rem' }}>
+                      <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '400', color: '#475569', fontSize: '12px' }}>
                         {formatWorklogHours(row.loggedHours)}
                       </td>
-                      <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '700', color: '#2563eb', fontSize: '0.9rem' }}>
+                      <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: '400', color: '#2563eb', fontSize: '12px' }}>
                         {formatWorklogHours(row.remainingHours)}
                       </td>
                     </tr>

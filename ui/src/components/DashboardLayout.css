@@ -39,34 +39,35 @@
 
 .saas-sidebar-header {
   padding: 0 1rem 1.25rem 1rem;
+  margin-top: -0.5rem;
+  border: none !important;
+  border-bottom: none !important;
+  border-top: none !important;
 }
 
 .saas-brand {
+  margin-top: -4px;
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  margin-bottom: 1.5rem;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
   padding-left: 0.5rem;
+  border: none !important;
+  border-bottom: none !important;
+  border-top: none !important;
 }
 
 .saas-logo {
-  width: 34px;
-  height: 34px;
-  background: var(--saas-text-primary);
-  color: white;
-  border-radius: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 0.85rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 1.8rem;
+  height: 40px;
+  object-fit: contain;
 }
 
 .saas-company {
-  font-weight: 700;
-  font-size: 0.95rem;
+  color: #1a1d23;
   color: var(--saas-text-primary);
+  font-size: 0.90rem;
+  font-weight: 700;
   letter-spacing: -0.01em;
 }
 
@@ -97,7 +98,7 @@
   padding: 0.55rem 0.75rem;
   border-radius: 9px;
   margin: 0 0.5rem 0.5rem 0.5rem;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .saas-sidebar-search input {
@@ -123,11 +124,25 @@
 .saas-nav-groups {
   flex: 1;
   overflow-y: auto;
-  padding: 0 0.6rem;
+  padding: 0 0.8rem;
+  border: none !important;
+  border-top: none !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.saas-nav-groups::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+  background: transparent;
 }
 
 .saas-nav-group {
   margin-bottom: 0;
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
 }
 
 .saas-group-title {
@@ -150,7 +165,8 @@
   background: transparent;
   border: none;
   color: var(--saas-text-secondary);
-  font-size: 0.85rem; /* ~13.5px */
+  font-size: 0.85rem;
+  /* ~13.5px */
   font-weight: 500;
   text-align: left;
   cursor: pointer;
@@ -194,7 +210,9 @@
   border-radius: 6px;
 }
 
-.saas-fav-item:hover { background: #EBECEF; }
+.saas-fav-item:hover {
+  background: #EBECEF;
+}
 
 .saas-fav-dot {
   width: 7px;
@@ -331,7 +349,7 @@
   height: 36px;
   border-radius: 10px;
   overflow: hidden;
-  background: linear-gradient(135deg, #2563eb, #60a5fa);
+  background: #f3f4f6;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -344,7 +362,7 @@
 }
 
 .header-avatar-placeholder {
-  color: white;
+  color: #475569;
   font-weight: 800;
   font-size: 0.9rem;
 }
@@ -375,7 +393,8 @@
 
 .saas-page-content {
   flex: 1;
-  min-height: 0; /* prevents flex item from overflowing parent, enables scroll */
+  min-height: 0;
+  /* prevents flex item from overflowing parent, enables scroll */
   overflow-y: auto;
   position: relative;
   border-radius: 20px;
@@ -402,9 +421,17 @@
 }
 
 /* ── Legacy Cleanups ── */
-.layout-container { display: none; }
-.layout-sidebar { display: none; }
-.layout-main { display: none; }
+.layout-container {
+  display: none;
+}
+
+.layout-sidebar {
+  display: none;
+}
+
+.layout-main {
+  display: none;
+}
 
 
 /* ════════════════════════════════════════════════════════════════
@@ -420,7 +447,7 @@
   border-radius: 10px;
   width: 100%;
   max-width: 380px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
   transition: all 0.15s ease-out;
   margin: 0 1rem;
 }
@@ -428,7 +455,7 @@
 .saas-header-center-search:focus-within {
   background: white;
   border-color: #2563eb;
-  box-shadow: 0 4px 12px rgba(37,99,235,0.08);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
 }
 
 .saas-header-center-search svg {
@@ -459,7 +486,7 @@
   border: 1px solid #e2e8f0;
   padding: 2px 5px;
   border-radius: 4px;
-  box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
   flex-shrink: 0;
   cursor: default;
   user-select: none;
@@ -494,6 +521,7 @@
     opacity: 0;
     transform: translateY(-8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -592,7 +620,8 @@
   background: none;
   border: none;
   color: #64748b;
-  display: none; /* desktop: sidebar always visible, no need for hamburger */
+  display: none;
+  /* desktop: sidebar always visible, no need for hamburger */
   align-items: center;
   justify-content: center;
   padding: 0.4rem;
@@ -786,6 +815,7 @@
    RESPONSIVE DESIGN OVERRIDES (MOBILE & TABLET)
    ════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
+
   /* Off-canvas sidebar */
   .saas-sidebar-nav {
     position: fixed;
@@ -794,13 +824,13 @@
     height: 100vh;
     z-index: 1000;
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 10px 0 25px rgba(0,0,0,0.08);
+    box-shadow: 10px 0 25px rgba(0, 0, 0, 0.08);
   }
-  
+
   .saas-sidebar-nav.open {
     left: 0;
   }
-  
+
   /* Main header adjustments */
   .saas-main-header {
     padding: 0 1rem;
@@ -841,7 +871,8 @@
   }
 
   .saas-user-info {
-    display: none; /* Hide names/emails on narrow screens to save space */
+    display: none;
+    /* Hide names/emails on narrow screens to save space */
   }
 
   .saas-user-avatar {
@@ -945,6 +976,7 @@
 }
 
 @media (max-width: 480px) {
+
   /* Two-row mobile header: [hamburger + title + icons] / [search full-width] */
   .saas-main-header {
     flex-wrap: wrap;
@@ -978,15 +1010,18 @@
     gap: 0.4rem;
     border-radius: 8px;
   }
+
   .saas-header-center-search svg {
     width: 14px;
     height: 14px;
     flex-shrink: 0;
   }
+
   .saas-header-center-search input {
     font-size: 0.82rem;
     width: 100%;
   }
+
   .saas-search-results-overlay {
     width: calc(100vw - 1.5rem);
     left: 0;
@@ -1000,6 +1035,7 @@
     overflow: visible;
     max-width: none;
   }
+
   .saas-breadcrumb-item {
     white-space: nowrap;
     overflow: visible;
@@ -1013,14 +1049,17 @@
   .db-mobile-grid {
     display: none !important;
   }
+
   .db-desktop-panels {
     display: block !important;
   }
+
   .saas-mobile-bottom-nav,
   .saas-mobile-more-drawer,
   .saas-mobile-more-backdrop {
     display: none !important;
   }
+
   .mhd-wrap {
     display: none !important;
   }
@@ -1029,7 +1068,8 @@
 /* ── Mobile Fixed Bottom Tab Bar & More Drawer CSS ── */
 @media (max-width: 768px) {
   .saas-page-content {
-    padding-bottom: 80px; /* offset for fixed bottom tab bar */
+    padding-bottom: 80px;
+    /* offset for fixed bottom tab bar */
   }
 
   .saas-mobile-bottom-nav {
@@ -1098,6 +1138,7 @@
       transform: translateY(20px);
       opacity: 0;
     }
+
     to {
       transform: translateY(0);
       opacity: 1;
@@ -1504,9 +1545,3 @@
 .users-page-container {
   background-color: #f3f4f6 !important;
 }
-
-
-
-
-
-

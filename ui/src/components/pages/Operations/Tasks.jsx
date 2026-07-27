@@ -1027,7 +1027,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           </a>
         );
       }
-      return part;
+      const boldRegex = /(\*\*[^*]+\*\*|__[^*]+__)/g;
+      const subParts = part.split(boldRegex);
+      return subParts.map((subPart, subIdx) => {
+        if ((subPart.startsWith('**') && subPart.endsWith('**')) || (subPart.startsWith('__') && subPart.endsWith('__'))) {
+          return <strong key={subIdx} style={{ fontWeight: '600' }}>{subPart.slice(2, -2)}</strong>;
+        }
+        return subPart;
+      });
     });
   };
 
@@ -2035,7 +2042,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 {cleanText.split('\n').map((line, i) => {
                   const parts = line.split(/(@[a-zA-Z0-9_-]+)/g);
                   return (
-                    <div key={i}>
+                    <div key={i} style={{ minHeight: '1.2em' }}>
                       {parts.map((part, idx) => {
                         if (part.startsWith('@') && part.length > 1) {
                           return <strong key={idx} style={{ fontWeight: '700' }}>{part}</strong>;
@@ -2391,9 +2398,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 {/* Row 1: Status */}
                 {form.taskType !== 'calls/meetings' && (
                   <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconStatus /> Status</span>
+                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '12px', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconStatus /> Status</span>
                     <span className="saas-meta-value">
-                      <select value={form.status} onChange={e => { const newSt = e.target.value; const updated = { ...form, status: newSt }; if (newSt === 'Archived' || newSt === 'Archive') { updated.previousStatus = (form.status !== 'Archived' && form.status !== 'Archive') ? form.status : (form.previousStatus || 'To Do'); } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
+                      <select value={form.status} onChange={e => { const newSt = e.target.value; const updated = { ...form, status: newSt }; if (newSt === 'Archived' || newSt === 'Archive') { updated.previousStatus = (form.status !== 'Archived' && form.status !== 'Archive') ? form.status : (form.previousStatus || 'To Do'); } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontSize: '12px', fontWeight: 400 }}>
                         {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                       </select>
                     </span>
@@ -2404,9 +2411,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 <div className={`saas-meta-row ${form.taskType === 'calls/meetings' ? 'saas-meta-row-2col' : 'saas-meta-row-4col'}`} style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                   {form.taskType !== 'calls/meetings' && (
                     <>
-                      <span className="saas-meta-label" style={{ color: errors.assignees ? '#ef4444' : '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconAssignee /> Assignee *</span>
+                      <span className="saas-meta-label" style={{ color: errors.assignees ? '#ef4444' : '#64748b', fontSize: '12px', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconAssignee /> Assignee *</span>
                       <span className="saas-meta-value">
-                        <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (errors.assignees) setErrors(prev => { const { assignees: _, ...rest } = prev; return rest; }); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: errors.assignees ? '1px solid #ef4444' : '1px solid transparent', borderRadius: '4px', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
+                        <select value={form.assignees || ''} onChange={e => { const updated = { ...form, assignees: e.target.value }; setForm(updated); if (errors.assignees) setErrors(prev => { const { assignees: _, ...rest } = prev; return rest; }); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: errors.assignees ? '1px solid #ef4444' : '1px solid transparent', borderRadius: '4px', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontSize: '12px', fontWeight: 400 }}>
                           <option value="">Select Assignee...</option>
                           {finalUsers.map(u => {
                             const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
@@ -2418,9 +2425,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     </>
                   )}
 
-                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconType /> Type</span>
+                  <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '12px', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconType /> Type</span>
                   <span className="saas-meta-value">
-                    <select value={form.taskType || 'Task'} onChange={e => { const newType = e.target.value; const updated = { ...form, taskType: newType }; if (!isEdit) { updated.taskNo = generateTaskNoForType(newType); if (newType === 'calls/meetings') { updated.assignees = currentUser?.id || ''; } } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
+                    <select value={form.taskType || 'Task'} onChange={e => { const newType = e.target.value; const updated = { ...form, taskType: newType }; if (!isEdit) { updated.taskNo = generateTaskNoForType(newType); if (newType === 'calls/meetings') { updated.assignees = currentUser?.id || ''; } } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontSize: '12px', fontWeight: 400 }}>
                       <option value="Task">Task</option>
                       <option value="Bug">Bug</option>
                       <option value="calls/meetings">Calls/Meetings</option>
@@ -2431,7 +2438,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
                 {(form.taskType === 'Recurring Task' || form.recurringTemplateId) && (
                   <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '12px', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
                       Recurrence
                     </span>
@@ -2452,7 +2459,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         }} 
                         disabled={!canEdit} 
                         className="saas-grid-select" 
-                        style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}
+                        style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontSize: '12px', fontWeight: 400 }}
                       >
                         <option value="">None (One-time)</option>
                         <option value="Weekly">Weekly</option>
@@ -2462,7 +2469,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
                       {['Weekly', 'Monthly', 'Yearly'].includes(form.recurrenceFrequency) && (
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginLeft: '1.5rem' }}>
-                          <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                          <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '12px', fontWeight: 400, whiteSpace: 'nowrap' }}>
                             Every
                           </span>
 
@@ -2515,8 +2522,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                     background: 'transparent',
                                     cursor: canEdit ? 'pointer' : 'default',
                                     color: '#64748b',
-                                    fontWeight: 600,
-                                    fontSize: '0.85rem',
+                                    fontWeight: 400,
+                                    fontSize: '12px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '0.4rem',
@@ -2547,7 +2554,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                     marginTop: '2px'
                                   }}>
                                     {weeklyDays.map(day => (
-                                      <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155', fontSize: '0.85rem', cursor: 'pointer', userSelect: 'none', padding: '0.2rem 0.3rem', borderRadius: '3px' }}
+                                      <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155', fontSize: '12px', cursor: 'pointer', userSelect: 'none', padding: '0.2rem 0.3rem', borderRadius: '3px' }}
                                         onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
                                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                       >
@@ -2578,7 +2585,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                               }}
                               disabled={!canEdit}
                               className="saas-grid-select"
-                              style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}
+                              style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontSize: '12px', fontWeight: 400 }}
                             >
                               {Array.from({ length: 30 }, (_, i) => i + 1).map(d => (
                                 <option key={d} value={String(d)}>{d}</option>
@@ -2656,8 +2663,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                     background: 'transparent',
                                     cursor: canEdit ? 'pointer' : 'default',
                                     color: '#64748b',
-                                    fontWeight: 600,
-                                    fontSize: '0.85rem',
+                                    fontWeight: 400,
+                                    fontSize: '12px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '0.4rem',
@@ -2711,10 +2718,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 {/* Row 2: Dates (Due Date -> Delivery Date) */}
                 {form.taskType !== 'calls/meetings' && (
                   <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Dates</span>
+                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '12px', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconCalendar /> Dates</span>
                     <span className="saas-meta-value">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Due:</span>
+                        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 400 }}>Due:</span>
                         <div className="saas-date-input-wrapper">
                           <input 
                             type="date" 
@@ -2722,7 +2729,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                             value={form.dueDate ? new Date(form.dueDate).toISOString().split('T')[0] : ''} 
                             onChange={e => set('dueDate', e.target.value)} 
                             disabled={!canEdit}
-                            style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '120px', cursor: canEdit ? 'pointer' : 'default', fontWeight: 600 }} 
+                            style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '12px', color: '#64748b', width: '120px', cursor: canEdit ? 'pointer' : 'default', fontWeight: 400 }} 
                             title="Due Date"
                           />
                           <span className={`saas-date-display-overlay${!form.dueDate ? ' saas-date-empty' : ''}`}>
@@ -2732,9 +2739,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         
                         {form.taskType !== 'calls/meetings' && (
                           <>
-                            <span className="saas-date-arrow" style={{ color: '#94a3b8', fontSize: '0.8rem' }}>→</span>
+                            <span className="saas-date-arrow" style={{ color: '#94a3b8', fontSize: '12px' }}>→</span>
 
-                            <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>Delivery:</span>
+                            <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 400 }}>Delivery:</span>
                             <div className="saas-date-input-wrapper">
                               <input 
                                 type="date" 
@@ -2742,7 +2749,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                 value={form.deliveredDate ? new Date(form.deliveredDate).toISOString().split('T')[0] : ''} 
                                 onChange={e => set('deliveredDate', e.target.value)} 
                                 disabled={!canEdit}
-                                style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '0.8rem', color: '#64748b', width: '120px', cursor: canEdit ? 'pointer' : 'default', fontWeight: 600 }} 
+                                style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '12px', color: '#64748b', width: '120px', cursor: canEdit ? 'pointer' : 'default', fontWeight: 400 }} 
                                 title="Delivery Date"
                               />
                               <span className={`saas-date-display-overlay${!form.deliveredDate ? ' saas-date-empty' : ''}`}>
@@ -2760,9 +2767,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 {/* Row 3: Priority */}
                 {form.taskType !== 'calls/meetings' && (
                   <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconPriority /> Priority</span>
+                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '12px', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconPriority /> Priority</span>
                     <span className="saas-meta-value">
-                      <select value={form.priority} onChange={e => set('priority', e.target.value)} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontWeight: 600 }}>
+                      <select value={form.priority} onChange={e => set('priority', e.target.value)} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontSize: '12px', fontWeight: 400 }}>
                         <option value="">Empty</option>
                         {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
@@ -2773,11 +2780,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 {/* Row 3b: Created Date (Mobile Only) */}
                 {createdDateToDisplay && (
                   <div className="saas-meta-row saas-meta-row-2col saas-meta-created-row" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '12px', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <IconCalendar /> Created
                     </span>
                     <span className="saas-meta-value">
-                      <span style={{ padding: '0.4rem 0', display: 'inline-block' }}>
+                      <span style={{ padding: '0.4rem 0', display: 'inline-block', fontSize: '12px', fontWeight: 400 }}>
                         {createdDateToDisplay.replace('Created ', '')}
                       </span>
                     </span>
@@ -2787,6 +2794,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 <div className="saas-meta-divider" style={{ borderBottom: '1px solid #f1f5f9', margin: '1.5rem 0' }}></div>
 
                 <div style={{ padding: '0.5rem 0' }}>
+                  <div style={{ color: '#64748b', fontSize: '12px', fontWeight: 400, marginBottom: '0.5rem' }}>Description</div>
                   {isEditing && canEdit ? (
                     <textarea value={form.description} onChange={e => set('description', e.target.value)} onPaste={handleDescriptionPaste} className="saas-grid-textarea" style={{ minHeight: '120px', width: '100%', maxWidth: '100%', border: 'none', background: '#f8fafc', outline: 'none', fontSize: '0.95rem', padding: '1rem', borderRadius: '8px', boxSizing: 'border-box' }} placeholder="Add description, or write with AI..." />
                   ) : (
@@ -2802,7 +2810,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   return meta && meta.isImage;
                 }) && (
                   <div style={{ marginTop: '1rem', borderTop: '1px dashed #e2e8f0', paddingTop: '1rem' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>
                       Image Previews ({splitAttachments(form.attachments).filter(Boolean).filter(item => getAttachmentMetadata(item)?.isImage).length})
                     </span>
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -2895,7 +2903,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   
                   {/* Estimated Hours */}
                   <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
-                    <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
+                    <label className="billing-label" style={{ fontWeight: 400, color: '#475569', fontSize: '12px' }}>
                       Estimated Hours
                     </label>
                     <div>
@@ -2921,11 +2929,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
                   {/* Billable Row with Radio Buttons */}
                   <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
-                    <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
+                    <label className="billing-label" style={{ fontWeight: 400, color: '#475569', fontSize: '12px' }}>
                       Billable
                     </label>
                     <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: canEdit ? 'pointer' : 'default', fontSize: '0.9rem', fontWeight: '600', color: '#0f172a' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: canEdit ? 'pointer' : 'default', fontSize: '12px', fontWeight: 400, color: '#0f172a' }}>
                         <input 
                           type="radio" 
                           name="isBillable"
@@ -2936,7 +2944,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                         />
                         Yes
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: canEdit ? 'pointer' : 'default', fontSize: '0.9rem', fontWeight: '600', color: '#0f172a' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: canEdit ? 'pointer' : 'default', fontSize: '12px', fontWeight: 400, color: '#0f172a' }}>
                         <input 
                           type="radio" 
                           name="isBillable"
@@ -2969,7 +2977,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     <>
                       {/* Billable Hours */}
                       <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
-                        <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
+                        <label className="billing-label" style={{ fontWeight: 400, color: '#475569', fontSize: '12px' }}>
                           Billable Hours
                         </label>
                         <div>
@@ -2995,11 +3003,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
                       {/* Billed Hours */}
                       <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
-                        <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
+                        <label className="billing-label" style={{ fontWeight: 400, color: '#475569', fontSize: '12px' }}>
                           Already Billed
                         </label>
                         <div>
-                          <span style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: '500' }}>
+                          <span style={{ fontSize: '12px', color: '#0f172a', fontWeight: 400 }}>
                             {String(form.actualHours || 0)}
                           </span>
                         </div>
@@ -3008,13 +3016,13 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
                       {/* Remaining Billable Hours */}
                       <div className="billing-field-row" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', alignItems: 'center' }}>
-                        <label className="billing-label" style={{ fontWeight: '600', color: '#475569', fontSize: '0.9rem' }}>
+                        <label className="billing-label" style={{ fontWeight: 400, color: '#475569', fontSize: '12px' }}>
                           Remaining Billable Hours
                         </label>
                         <div>
                           <span style={{ 
-                            fontSize: '0.92rem', 
-                            fontWeight: '500', 
+                            fontSize: '12px', 
+                            fontWeight: 400, 
                             color: '#0f172a'
                           }}>
                             {String(Math.max(0, (form.approvedHours || 0) - (form.actualHours || 0)))}
@@ -3089,18 +3097,18 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', minWidth: '550px' }}>
                             <thead>
                               <tr style={{ background: '#f8fafc', color: '#64748b', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
-                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700' }}>Date</th>
-                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700' }}>User</th>
-                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700' }}>Timespent</th>
-                                <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textAlign: 'right' }}>Actions</th>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '12px', fontWeight: 600 }}>Date</th>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '12px', fontWeight: 600 }}>User</th>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '12px', fontWeight: 600 }}>Timespent</th>
+                                <th style={{ padding: '0.85rem 1rem', fontSize: '12px', fontWeight: 600, textAlign: 'right' }}>Actions</th>
                               </tr>
                             </thead>
                             <tbody>
                               {workLogs.filter(log => !log.isBilled && Number(log.hoursWorked) > 0).map(log => (
                                 <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
-                                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{formatDate(log.logDate, log.createdAt)}</td>
-                                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
-                                  <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{formatWorklogHours(log.hoursWorked)}</td>
+                                  <td style={{ padding: '0.85rem 1rem', fontSize: '12px', color: '#475569', fontWeight: 400 }}>{formatDate(log.logDate, log.createdAt)}</td>
+                                  <td style={{ padding: '0.85rem 1rem', fontSize: '12px', color: '#475569', fontWeight: 400 }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
+                                  <td style={{ padding: '0.85rem 1rem', fontWeight: 400, color: '#0f172a', fontSize: '12px' }}>{formatWorklogHours(log.hoursWorked)}</td>
                                   <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
                                     <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                                       {canEditWorkLog(log) && (
@@ -3196,20 +3204,20 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', minWidth: '600px' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', color: '#64748b', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700' }}>Date</th>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700' }}>User</th>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700' }}>Billed Hours</th>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700' }}>Description</th>
-                          <th style={{ padding: '0.85rem 1rem', fontSize: '0.7rem', fontWeight: '700', textAlign: 'right' }}>Actions</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '12px', fontWeight: 600 }}>Date</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '12px', fontWeight: 600 }}>User</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '12px', fontWeight: 600 }}>Billed Hours</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '12px', fontWeight: 600 }}>Description</th>
+                          <th style={{ padding: '0.85rem 1rem', fontSize: '12px', fontWeight: 600, textAlign: 'right' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {workLogs.filter(log => log.isBilled).map(log => (
                           <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
-                            <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{formatDate(log.logDate, log.createdAt)}</td>
-                            <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
-                            <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>{formatWorklogHours(log.hoursWorked)}</td>
-                            <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#475569' }}>{log.description || '-'}</td>
+                            <td style={{ padding: '0.85rem 1rem', fontSize: '12px', color: '#475569', fontWeight: 400 }}>{formatDate(log.logDate, log.createdAt)}</td>
+                            <td style={{ padding: '0.85rem 1rem', fontSize: '12px', color: '#475569', fontWeight: 400 }}>{log.user?.fullName || log.user?.firstName || 'Unknown'}</td>
+                            <td style={{ padding: '0.85rem 1rem', fontWeight: 400, color: '#0f172a', fontSize: '12px' }}>{formatWorklogHours(log.hoursWorked)}</td>
+                            <td style={{ padding: '0.85rem 1rem', fontSize: '12px', color: '#475569', fontWeight: 400 }}>{log.description || '-'}</td>
                             <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
                               <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                                 {canEdit && (
@@ -5223,13 +5231,13 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             <thead>
               <tr className="cu-thead-row">
                 <th className="cu-th cu-th-name">Name</th>
-                <th className="cu-th cu-th-status" style={{ width: '120px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>Status</th>
-                {showAssigneeCol && <th className="cu-th cu-th-assignee" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Assignee</th>}
-                <th className="cu-th cu-th-project" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Project</th>
+                <th className="cu-th cu-th-status" style={{ width: '120px' }}>Status</th>
+                {showAssigneeCol && <th className="cu-th cu-th-assignee" style={{ width: '150px', textAlign: 'left' }}>Assignee</th>}
+                <th className="cu-th cu-th-project" style={{ width: '150px', textAlign: 'left' }}>Project</th>
                 {isTemplateList ? (
-                  <th className="cu-th cu-th-frequency" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Frequency</th>
+                  <th className="cu-th cu-th-frequency" style={{ width: '150px', textAlign: 'left' }}>Frequency</th>
                 ) : (
-                  <th className="cu-th cu-th-delivery" style={{ width: '150px', padding: '1rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Due Date</th>
+                  <th className="cu-th cu-th-delivery" style={{ width: '150px', textAlign: 'left' }}>Due Date</th>
                 )}
                 <th className="cu-th cu-th-actions" style={{ width: '80px' }}>Actions</th>
               </tr>
@@ -5409,11 +5417,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                             <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
                             <TaskTitleTooltip text={`${getDisplayId(sub)} ${sub.title || 'Untitled Subtask'}`}>
-                              <span className="cu-task-id-prefix">{getDisplayId(sub)}</span><span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
+                              <span className="cu-task-id-prefix">{getDisplayId(sub)}</span><span className="cu-task-title" style={{ color: '#475569', fontSize: '12px', fontWeight: 400 }}>{sub.title || 'Untitled Subtask'}</span>
                             </TaskTitleTooltip>
                           </div>
                         </td>
-                        <td className="cu-td" style={{ fontSize: '0.82rem', fontWeight: '600', color: subMeta.bg }}>
+                        <td className="cu-td" style={{ fontSize: '12px', fontWeight: 400, color: subMeta.bg }}>
                           {sub.status || 'To Do'}
                         </td>
                         {showAssigneeCol && (
@@ -5581,11 +5589,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 setFilterFromDate('');
                 setFilterToDate('');
               }}
-              style={{ 
-                background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
-                color: subTab === 'my' ? '#2563eb' : '#64748b',
-                borderBottom: subTab === 'my' ? '2px solid #2563eb' : '2px solid transparent'
-              }}
             >
               My Tasks
             </button>
@@ -5601,11 +5604,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                   setFilterType('');
                   setFilterFromDate('');
                   setFilterToDate('');
-                }}
-                style={{ 
-                  background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
-                  color: subTab === 'all' ? '#2563eb' : '#64748b',
-                  borderBottom: subTab === 'all' ? '2px solid #2563eb' : '2px solid transparent'
                 }}
               >
                 All Tasks
@@ -5623,11 +5621,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 setFilterFromDate('');
                 setFilterToDate('');
               }}
-              style={{ 
-                background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
-                color: subTab === 'calls' ? '#2563eb' : '#64748b',
-                borderBottom: subTab === 'calls' ? '2px solid #2563eb' : '2px solid transparent'
-              }}
             >
               Calls/Meeting
             </button>
@@ -5643,11 +5636,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 setFilterType('');
                 setFilterFromDate('');
                 setFilterToDate('');
-              }}
-              style={{ 
-                background: 'none', border: 'none', padding: '0.75rem 0', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem',
-                color: subTab === 'recurring' ? '#2563eb' : '#64748b',
-                borderBottom: subTab === 'recurring' ? '2px solid #2563eb' : '2px solid transparent'
               }}
             >
               Recurring ({unreadRecurringCount})
@@ -5716,40 +5704,16 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
         <div className="kanban-header-left">
           {subTab === 'recurring' && isTeamLeadOrAdmin && (
             <div className="filter-group-toggle" style={{ display: 'flex', alignItems: 'center' }}>
-              <div className="view-toggle" style={{ display: 'flex', background: 'white', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div className="view-toggle">
                 <button 
                   className={recurringToggle === 'my' ? 'active' : ''} 
                   onClick={() => setRecurringToggle('my')}
-                  style={{ 
-                    padding: '0.25rem 0.75rem', 
-                    borderRadius: '6px', 
-                    border: 'none', 
-                    fontWeight: 600, 
-                    fontSize: '0.82rem', 
-                    cursor: 'pointer', 
-                    background: recurringToggle === 'my' ? '#2563eb' : 'transparent', 
-                    color: recurringToggle === 'my' ? 'white' : '#64748b',
-                    boxShadow: recurringToggle === 'my' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
-                    transition: 'all 0.2s'
-                  }}
                 >
                   My
                 </button>
                 <button 
                   className={recurringToggle === 'all' ? 'active' : ''} 
                   onClick={() => setRecurringToggle('all')}
-                  style={{ 
-                    padding: '0.25rem 0.75rem', 
-                    borderRadius: '6px', 
-                    border: 'none', 
-                    fontWeight: 600, 
-                    fontSize: '0.82rem', 
-                    cursor: 'pointer', 
-                    background: recurringToggle === 'all' ? '#2563eb' : 'transparent', 
-                    color: recurringToggle === 'all' ? 'white' : '#64748b',
-                    boxShadow: recurringToggle === 'all' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
-                    transition: 'all 0.2s'
-                  }}
                 >
                   All
                 </button>
@@ -5758,42 +5722,18 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           )}
           {subTab === 'my' && (
             <div className="filter-group-toggle" style={{ display: 'flex', alignItems: 'center' }}>
-              <div className="view-toggle" style={{ display: 'flex', background: 'white', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div className="view-toggle">
                 <button 
                   className={myTasksToggle === 'assigned' ? 'active' : ''} 
                   onClick={() => setMyTasksToggle('assigned')}
-                  style={{ 
-                    padding: '0.25rem 0.75rem', 
-                    borderRadius: '6px', 
-                    border: 'none', 
-                    fontWeight: 600, 
-                    fontSize: '0.82rem', 
-                    cursor: 'pointer', 
-                    background: myTasksToggle === 'assigned' ? '#2563eb' : 'transparent', 
-                    color: myTasksToggle === 'assigned' ? 'white' : '#64748b',
-                    boxShadow: myTasksToggle === 'assigned' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
-                    transition: 'all 0.2s',
-                    whiteSpace: 'nowrap'
-                  }}
+                  style={{ whiteSpace: 'nowrap' }}
                 >
                   Assigned to me
                 </button>
                 <button 
                   className={myTasksToggle === 'created' ? 'active' : ''} 
                   onClick={() => setMyTasksToggle('created')}
-                  style={{ 
-                    padding: '0.25rem 0.75rem', 
-                    borderRadius: '6px', 
-                    border: 'none', 
-                    fontWeight: 600, 
-                    fontSize: '0.82rem', 
-                    cursor: 'pointer', 
-                    background: myTasksToggle === 'created' ? '#2563eb' : 'transparent', 
-                    color: myTasksToggle === 'created' ? 'white' : '#64748b',
-                    boxShadow: myTasksToggle === 'created' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
-                    transition: 'all 0.2s',
-                    whiteSpace: 'nowrap'
-                  }}
+                  style={{ whiteSpace: 'nowrap' }}
                 >
                   Created by me
                 </button>
@@ -5806,11 +5746,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             <div className="tasks-filter-row">
               {subTab !== 'recurring' && (
                 <div className="filter-group-type">
-                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Type</label>
+                  <label style={{ fontSize: '12px', fontWeight: 400, color: '#64748b', whiteSpace: 'nowrap' }}>Type</label>
                   <select 
                     value={filterType} 
                     onChange={e => setFilterType(e.target.value)}
-                    style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
+                    style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px', fontWeight: 400, color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
                   >
                     <option value="">All Types</option>
                     <option value="Task">Task</option>
@@ -5820,7 +5760,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 </div>
               )}
               <div className="filter-group-project" ref={projectDropdownRef} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>Projects</label>
+                <label style={{ fontSize: '12px', fontWeight: 400, color: '#64748b', whiteSpace: 'nowrap' }}>Projects</label>
                 <div style={{ position: 'relative', display: 'inline-block' }}>
                   <button
                     type="button"
@@ -5835,7 +5775,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                       padding: '0.4rem 0.75rem',
                       borderRadius: '6px',
                       border: '1px solid #e2e8f0',
-                      fontSize: '0.85rem',
+                      fontSize: '12px',
+                      fontWeight: 400,
                       color: '#475569',
                       background: '#f8fafc',
                       outline: 'none',
@@ -5954,7 +5895,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                 </div>
               </div>
               <div className="filter-group-date">
-                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>From</span>
+                <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b', whiteSpace: 'nowrap' }}>From</span>
                 <input 
                   type={filterFromDate ? "date" : "text"} 
                   placeholder="Date"
@@ -5972,9 +5913,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                   onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }}
                   onChange={e => setFilterFromDate(e.target.value)}
                   title="From date filter"
-                  style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
+                  style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px', fontWeight: 400, color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
                 />
-                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>To</span>
+                <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b', whiteSpace: 'nowrap' }}>To</span>
                 <input 
                   type={filterToDate ? "date" : "text"} 
                   placeholder="Date"
@@ -5992,7 +5933,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                   onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }}
                   onChange={e => setFilterToDate(e.target.value)}
                   title="To date filter"
-                  style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
+                  style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px', fontWeight: 400, color: '#475569', background: '#f8fafc', outline: 'none', cursor: 'pointer' }}
                 />
                 {(filterProjectName || filterType || filterFromDate || filterToDate) && (
                   <button 
@@ -6208,13 +6149,13 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
             <div className="recurring-custom-lists" style={{ display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1rem 0' }}>
               {/* Heading 1: Tasks */}
               <div className="recurring-group-section">
-                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>Tasks</h3>
+                <h3 style={{ margin: '0px 0px 1rem', fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>Tasks</h3>
                 {renderRecurringTable(filteredTasks.filter(t => t.taskType !== 'Recurring Task'))}
               </div>
 
               {/* Heading 2: Templates */}
               <div className="recurring-group-section">
-                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>Templates</h3>
+                <h3 style={{ margin: '0px 0px 1rem', fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>Templates</h3>
                 {renderRecurringTable(filteredTasks.filter(t => t.taskType === 'Recurring Task'), true)}
               </div>
             </div>
@@ -6331,8 +6272,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                         </svg>
                         <span style={{
-                          fontWeight: '800',
-                          fontSize: '0.85rem',
+                          fontWeight: 600,
+                          fontSize: '12px',
                           color: '#334155',
                           letterSpacing: '0.5px'
                         }}>
@@ -6342,9 +6283,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                           background: '#e2e8f0',
                           color: '#475569',
                           padding: '0.1rem 0.45rem',
-                          borderRadius: '12px',
-                          fontSize: '0.7rem',
-                          fontWeight: 700
+                          borderRadius: '5px',
+                          fontSize: '12px',
+                          fontWeight: 400
                         }}>
                           {projGroup.tasks.length} {projGroup.tasks.length === 1 ? 'Call/Meeting' : 'Calls/Meetings'}
                         </span>
@@ -6926,8 +6867,8 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                       </svg>
                       <span style={{
-                        fontWeight: '800',
-                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        fontSize: '12px',
                         color: '#334155',
                         letterSpacing: '0.5px'
                       }}>
@@ -6937,9 +6878,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                         background: '#e2e8f0',
                         color: '#475569',
                         padding: '0.1rem 0.45rem',
-                        borderRadius: '12px',
-                        fontSize: '0.7rem',
-                        fontWeight: 700
+                        borderRadius: '5px',
+                        fontSize: '12px',
+                        fontWeight: 400
                       }}>
                         {projGroup.lists.reduce((sum, l) => sum + l.tasks.length, 0)} Tasks
                       </span>
@@ -6967,10 +6908,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                 <span className="cu-section-chevron">
                                   <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}><path d="M0 0l5 6 5-6z"/></svg>
                                 </span>
-                                <span style={{ fontWeight: '700', fontSize: '0.82rem', color: '#64748b', marginLeft: '0.5rem', letterSpacing: '0.5px' }}>
+                                <span style={{ fontWeight: 600, fontSize: '12px', color: '#64748b', marginLeft: '0.5rem' }}>
                                   {list.name}
                                 </span>
-                                <span className="cu-section-count" style={{ marginLeft: '0.5rem', background: '#f1f5f9', color: '#64748b', padding: '0.1rem 0.4rem', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600 }}>
+                                <span className="cu-section-count" style={{ marginLeft: '0.5rem', background: '#e2e8f0', color: '#475569', padding: '0.1rem 0.45rem', borderRadius: '5px', fontSize: '12px', fontWeight: 400 }}>
                                   {list.tasks.length}
                                 </span>
                               </div>
@@ -7102,7 +7043,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                             </td>
                                             <td className="cu-td cu-td-list" onClick={e => e.stopPropagation()}>
                                               <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
-                                                <select className="cu-inline-dropdown" value={task.status || 'To Do'} disabled={!canEditTask(task)} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (task.status !== 'Archived' && task.status !== 'Archive') ? task.status : (task.previousStatus || 'To Do'); } else if (newStatus === 'Delivered' && !task.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${task.id}`, updateData); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: meta.dotColor, fontWeight: 'bold', cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                                                <select className="cu-inline-dropdown" value={task.status || 'To Do'} disabled={!canEditTask(task)} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (task.status !== 'Archived' && task.status !== 'Archive') ? task.status : (task.previousStatus || 'To Do'); } else if (newStatus === 'Delivered' && !task.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${task.id}`, updateData); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: meta.dotColor, fontSize: '12px', fontWeight: 600, padding: '0px', background: 'transparent', border: 'none', cursor: canEditTask(task) ? 'pointer' : 'default' }}>
                                                   {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                                                 </select>
                                               </div>
@@ -7175,7 +7116,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                                     <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
                                                     <TaskTitleTooltip text={`${getDisplayId(sub)} ${sub.title || 'Untitled Subtask'}`}>
-                                                      <span className="cu-task-id-prefix">{getDisplayId(sub)}</span><span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
+                                                      <span className="cu-task-id-prefix">{getDisplayId(sub)}</span><span className="cu-task-title" style={{ color: '#475569', fontSize: '12px', fontWeight: 400 }}>{sub.title || 'Untitled Subtask'}</span>
                                                     </TaskTitleTooltip>
                                                   </div>
                                                 </td>
@@ -7189,7 +7130,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </td>
                                                 <td className="cu-td cu-td-list" onClick={e => e.stopPropagation()}>
                                                   <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
-                                                    <select className="cu-inline-dropdown" value={sub.status || 'To Do'} disabled={!canEditTask(sub)} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (sub.status !== 'Archived' && sub.status !== 'Archive') ? sub.status : (sub.previousStatus || 'To Do'); } else if (newStatus === 'Delivered' && !sub.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${sub.id}`, updateData); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: subMeta.dotColor, fontWeight: 'bold', cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                                                    <select className="cu-inline-dropdown" value={sub.status || 'To Do'} disabled={!canEditTask(sub)} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (sub.status !== 'Archived' && sub.status !== 'Archive') ? sub.status : (sub.previousStatus || 'To Do'); } else if (newStatus === 'Delivered' && !sub.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${sub.id}`, updateData); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: subMeta.dotColor, fontSize: '12px', fontWeight: 600, padding: '0px', background: 'transparent', border: 'none', cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
                                                       {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                                                     </select>
                                                   </div>
@@ -7870,7 +7811,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                                     <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 'bold', userSelect: 'none' }}>└</span>
                                                     <TaskTitleTooltip text={`${getDisplayId(sub)} ${sub.title || 'Untitled Subtask'}`}>
-                                                      <span className="cu-task-id-prefix">{getDisplayId(sub)}</span><span className="cu-task-title" style={{ color: '#475569', fontSize: '0.82rem', fontWeight: '500' }}>{sub.title || 'Untitled Subtask'}</span>
+                                                      <span className="cu-task-id-prefix">{getDisplayId(sub)}</span><span className="cu-task-title" style={{ color: '#475569', fontSize: '12px', fontWeight: 400 }}>{sub.title || 'Untitled Subtask'}</span>
                                                     </TaskTitleTooltip>
                                                   </div>
                                                 </td>

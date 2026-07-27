@@ -22,10 +22,10 @@
 }
 
 .archive-table th {
-  padding: 0.45rem 0.75rem;
+  padding: 0.55rem 1rem;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #475569;
+  color: #1e293b;
   text-transform: none;
 }
 
@@ -37,20 +37,20 @@
 .archive-table th.col-project,
 .archive-table td.cell-project {
   width: 20%;
-  padding: 0.45rem 0.75rem;
+  padding: 0.55rem 1rem;
 }
 
 .archive-table th.col-status,
 .archive-table td.cell-status {
   width: 15%;
-  padding: 0.45rem 0.75rem;
+  padding: 0.55rem 1rem;
   text-align: center;
 }
 
 .archive-table th.col-priority,
 .archive-table td.cell-priority {
   width: 10%;
-  padding: 0.45rem 0.75rem;
+  padding: 0.55rem 1rem;
   text-align: center;
 }
 
@@ -58,7 +58,7 @@
 .archive-table td.cell-actions {
   width: 15%;
   min-width: 120px;
-  padding: 0.45rem 0.75rem;
+  padding: 0.55rem 1rem;
   text-align: right;
 }
 
@@ -72,12 +72,13 @@
 }
 
 .archive-table td {
-  padding: 0.45rem 0.75rem;
+  padding: 0.55rem 1rem;
   vertical-align: middle;
+  font-size: 0.85rem;
 }
 
 .archive-table td.cell-task {
-  padding: 0.45rem 0.75rem;
+  padding: 0.55rem 1rem;
 }
 
 .archive-table td.cell-project {

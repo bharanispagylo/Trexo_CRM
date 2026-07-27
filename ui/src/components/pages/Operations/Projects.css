@@ -26,7 +26,7 @@
   border: none;
   border-bottom: 2px solid transparent;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 12px;
   color: var(--saas-text-muted);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -140,8 +140,8 @@
 }
 
 .saas-label {
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 400;
   color: var(--saas-text-muted);
   text-transform: none;
 }
@@ -149,11 +149,12 @@
 .saas-input, .saas-select {
   width: 100%;
   max-width: 320px;
-  padding: 0.7rem 1rem;
-  border-radius: 9px;
-  border: 1px solid var(--saas-border);
-  font-size: 0.9rem;
-  font-weight: 500;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-size: 12px;
+  font-weight: 400;
+  outline: none;
   background: white;
 }
 
@@ -215,24 +216,38 @@
 }
 
 .saas-table th {
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1.25rem;
   background: var(--saas-bg-sidebar);
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--saas-text-muted);
   text-transform: none;
   border-bottom: 1px solid var(--saas-border);
 }
 
 .saas-table td {
-  padding: 1.25rem 1.5rem;
+  padding: 0.75rem 1.25rem;
   border-bottom: 1px solid #F1F5F9;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .project-name-cell {
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 400;
   color: var(--saas-text-primary);
+}
+
+.project-name-link {
+  color: #2563eb;
+  font-weight: 400;
+  font-size: 12px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.project-name-link:hover {
+  text-decoration: underline;
 }
 
 .members-stack {
@@ -625,8 +640,29 @@
   display: flex;
   gap: 2rem;
   border-bottom: 1px solid #e2e8f0;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   padding: 0 0.5rem;
+}
+
+.detail-nav-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  padding: 0.75rem 0.5rem;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  color: #64748b;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.2s;
+}
+
+.detail-nav-tabs button.active {
+  color: #0f172a;
+  border-bottom-color: #0f172a;
 }
 
 .detail-tab-content {
@@ -652,8 +688,8 @@
   align-items: center;
   gap: 0.5rem;
   color: #475569;
-  font-weight: 600;
-  font-size: 0.85rem;
+  font-weight: 400;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
@@ -665,13 +701,13 @@
 
 .detail-info-value {
   color: #0f172a;
-  font-weight: 700;
-  font-size: 0.9rem;
+  font-weight: 400;
+  font-size: 12px;
 }
 
 .detail-info-value.desc {
-  font-weight: 500;
-  font-size: 0.85rem;
+  font-weight: 400;
+  font-size: 12px;
   max-width: 600px;
   line-height: 1.6;
 }
@@ -729,11 +765,11 @@
 .queries-filter-select {
   width: auto;
   min-width: 120px;
-  padding: 0.4rem 0.75rem;
+  padding: 0.75rem 1rem;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 0.82rem;
-  font-weight: 500;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 400;
   color: #334155;
   background: white;
   outline: none;
@@ -763,8 +799,8 @@
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   background: white;
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 400;
   color: #475569;
   cursor: pointer;
   white-space: nowrap;
@@ -794,7 +830,7 @@
   border-radius: 6px;
   padding: 0.4rem 1.1rem;
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -810,8 +846,8 @@
   border-radius: 6px;
   padding: 0.4rem 0.85rem;
   color: #475569;
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 400;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -830,11 +866,11 @@
 
 /* Desktop: show text, hide icon for Add Task Group button */
 .add-taskgroup-btn-icon { display: none; }
-.add-taskgroup-btn-text { display: inline; }
+.add-taskgroup-btn-text { display: inline; font-size: 12px;font-weight: 600;}
 
 /* Desktop: show text, hide icon for Add/Create Member buttons */
 .add-team-member-btn-icon { display: none; }
-.add-team-member-btn-text { display: inline; }
+.add-team-member-btn-text { display: inline;font-size: 12px;font-weight: 600 }
 .create-team-member-btn-icon { display: none; }
 .create-team-member-btn-text { display: inline; }
 
@@ -1126,15 +1162,16 @@
 
   .detail-info-label {
     width: 100%;
-    font-size: 0.65rem;
-    font-weight: 700;
+    font-size: 12px;
+    font-weight: 400;
     text-transform: none;
     letter-spacing: 0.06em;
     color: #94a3b8;
   }
 
   .detail-info-value {
-    font-size: 0.92rem;
+    font-size: 12px;
+    font-weight: 400;
     padding-left: 0.25rem;
   }
 
@@ -1175,7 +1212,8 @@
     max-width: 100% !important;
     width: 100% !important;
     min-width: 0 !important;
-    font-size: 0.78rem !important;
+    font-size: 12px !important;
+    font-weight:400;
     padding: 0.55rem 0.65rem !important;
   }
 
@@ -1222,6 +1260,8 @@
 
   .saas-input, .saas-select {
     max-width: 100% !important;
+    font-size: 12px;
+    font-weight: 400;
   }
 
   .saas-table-container {
@@ -1693,13 +1733,15 @@
   .attach-search-input {
     width: 100% !important;
     box-sizing: border-box !important;
-    font-size: 0.82rem !important;
+    font-size: 12px !important;
+    font-weight:400;
   }
 
   .attach-type-select {
     flex: 1;
     min-width: 0;
-    font-size: 0.82rem !important;
+    font-size: 12px !important;
+    font-weight:400;
   }
 }
 
