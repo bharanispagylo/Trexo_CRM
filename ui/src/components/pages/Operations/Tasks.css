@@ -2768,6 +2768,11 @@
   margin-left: 0;
 }
 
+/* Override font-size for assignee avatars inside project tasks table actions column */
+.cu-td-actions .card-clickup-avatar {
+  font-size: 12px !important;
+}
+
 .card-clickup-avatar-empty {
   width: 24px;
   height: 24px;
@@ -3466,11 +3471,15 @@
 
 /* All Tasks List View Column Widths */
 .all-tasks-list .cu-th-name     { width: 50%; }
-.all-tasks-list .cu-th-project  { width: 10%; }
-.all-tasks-list .cu-th-assignee { width: 12%; text-align: center; }
-.all-tasks-list .cu-th-list     { width: 8%; }
-.all-tasks-list .cu-th-delivery { width: 8%; text-align: center; }
-.all-tasks-list .cu-th-actions  { width: 5%; }
+.all-tasks-list .cu-th-project  { width: 15%; }
+.all-tasks-list .cu-th-assignee { width: 15%; text-align: center; }
+.all-tasks-list .cu-th-list     { width: 15%; }
+.all-tasks-list .cu-th-delivery { width: 10%; text-align: center; }
+.all-tasks-list .cu-th-actions  { width: 10%; }
+
+.all-tasks-list .cu-table-wrapper {
+  overflow-x: hidden !important;
+}
 
 /* My Tasks List View Column Widths */
 .my-tasks-list .cu-th-name     { width: 45%; }

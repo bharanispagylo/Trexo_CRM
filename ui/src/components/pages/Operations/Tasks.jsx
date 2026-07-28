@@ -906,6 +906,82 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     }, 50);
   };
 
+  // --- Rich Text (HTML) to Markdown converter for paste support ---
+  const convertHtmlToMarkdown = (html) => {
+    if (!html) return '';
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const processNode = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent;
+      }
+      let childrenText = '';
+      node.childNodes.forEach(child => {
+        childrenText += processNode(child);
+      });
+      const tag = node.nodeName.toLowerCase();
+      switch (tag) {
+        case 'b':
+        case 'strong':
+          return childrenText.trim() ? `**${childrenText.trim()}**` : '';
+        case 'i':
+        case 'em':
+          return childrenText.trim() ? `*${childrenText.trim()}*` : '';
+        case 'u':
+          return childrenText.trim() ? `__${childrenText.trim()}__` : '';
+        case 'p':
+        case 'div':
+          return `\n${childrenText}\n`;
+        case 'br':
+          return '\n';
+        case 'li':
+          return `\n- ${childrenText.trim()}`;
+        case 'ul':
+        case 'ol':
+          return `\n${childrenText}\n`;
+        case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6':
+          return childrenText.trim() ? `\n**${childrenText.trim()}**\n` : '';
+        case 'a': {
+          const href = node.getAttribute('href');
+          if (href && childrenText.trim()) {
+            return `${childrenText.trim()} (${href})`;
+          }
+          return childrenText;
+        }
+        default:
+          return childrenText;
+      }
+    };
+    let markdown = processNode(doc.body);
+    markdown = markdown.replace(/\n{3,}/g, '\n\n').trim();
+    return markdown;
+  };
+
+  const hasRichHtmlTags = (htmlData) => {
+    if (!htmlData) return false;
+    return /<(b|strong|i|em|u|p|ul|ol|li|h[1-6]|br|div|a)\b/i.test(htmlData);
+  };
+
+  const handleRichTextPaste = (e, htmlData, setTextFn) => {
+    const markdown = convertHtmlToMarkdown(htmlData);
+    if (!markdown) return false;
+    e.preventDefault();
+    const el = e.target;
+    const start = el.selectionStart || 0;
+    const end = el.selectionEnd || 0;
+    const val = el.value || '';
+    const before = val.substring(0, start);
+    const after = val.substring(end);
+    const newText = before + markdown + after;
+    setTextFn(newText);
+    setTimeout(() => {
+      el.focus();
+      const newCursorPos = start + markdown.length;
+      el.setSelectionRange(newCursorPos, newCursorPos);
+    }, 50);
+    return true;
+  };
+
   const handleDescriptionPaste = async (e) => {
     const clipboardData = e.clipboardData;
     if (!clipboardData || !clipboardData.items) return;
@@ -982,6 +1058,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         }
         return;
       }
+      // Rich text formatting (no image) — convert HTML to markdown
+      if (hasRichHtmlTags(htmlData)) {
+        const handled = handleRichTextPaste(e, htmlData, (val) => set('description', val));
+        if (handled) return;
+      }
     }
 
     const textData = clipboardData.getData('text/plain');
@@ -1027,13 +1108,27 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           </a>
         );
       }
-      const boldRegex = /(\*\*[^*]+\*\*|__[^*]+__)/g;
-      const subParts = part.split(boldRegex);
+      // Parse markdown: **bold**, __underline__, then *italic*
+      const boldUnderlineRegex = /(\*\*[^*]+\*\*|__[^_]+__)/g;
+      const subParts = part.split(boldUnderlineRegex);
       return subParts.map((subPart, subIdx) => {
-        if ((subPart.startsWith('**') && subPart.endsWith('**')) || (subPart.startsWith('__') && subPart.endsWith('__'))) {
+        if (!subPart) return null;
+        if (subPart.startsWith('**') && subPart.endsWith('**')) {
           return <strong key={subIdx} style={{ fontWeight: '600' }}>{subPart.slice(2, -2)}</strong>;
         }
-        return subPart;
+        if (subPart.startsWith('__') && subPart.endsWith('__')) {
+          return <span key={subIdx} style={{ textDecoration: 'underline' }}>{subPart.slice(2, -2)}</span>;
+        }
+        // Second pass: parse *italic* in remaining plain text
+        const italicRegex = /(\*[^*]+\*)/g;
+        const italicParts = subPart.split(italicRegex);
+        return italicParts.map((ip, ipIdx) => {
+          if (!ip) return null;
+          if (ip.startsWith('*') && ip.endsWith('*') && ip.length > 2) {
+            return <em key={`${subIdx}-${ipIdx}`}>{ip.slice(1, -1)}</em>;
+          }
+          return ip;
+        });
       });
     });
   };
@@ -1295,6 +1390,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           setTimeout(() => commentTextareaRef.current?.focus(), 50);
         }
         return;
+      }
+      // Rich text formatting (no image) — convert HTML to markdown
+      if (hasRichHtmlTags(htmlData)) {
+        const handled = handleRichTextPaste(e, htmlData, (val) => setNewComment(val));
+        if (handled) return;
       }
     }
 
@@ -1990,6 +2090,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                       handleSaveEditComment(c.id, c.text);
                     }
                   }}
+                  onPaste={e => {
+                    const clipboardData = e.clipboardData;
+                    if (!clipboardData) return;
+                    const htmlData = clipboardData.getData('text/html');
+                    if (htmlData && hasRichHtmlTags(htmlData)) {
+                      handleRichTextPaste(e, htmlData, (val) => setEditingCommentText(val));
+                    }
+                  }}
                 />
                 <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
                   <button
@@ -2144,6 +2252,14 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             value={replyText} 
             onChange={e => setReplyText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleAddComment(c.id, replyText); }}
+            onPaste={e => {
+              const clipboardData = e.clipboardData;
+              if (!clipboardData) return;
+              const htmlData = clipboardData.getData('text/html');
+              if (htmlData && hasRichHtmlTags(htmlData)) {
+                handleRichTextPaste(e, htmlData, (val) => setReplyText(val));
+              }
+            }}
             autoFocus
             className="reply-inline-input"
             style={{ flex: 1 }}
