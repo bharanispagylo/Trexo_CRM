@@ -941,10 +941,10 @@ export default function TaskGroups({ user, onBack }) {
                       <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                           <tr className="cu-thead-row" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                            <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '67%', textAlign: 'left' }}>Name</th>
-                            <th className="cu-th cu-th-assignee" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '15%', textAlign: 'center' }}>Assignee</th>
-                            <th className="cu-th cu-th-delivery" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '10%', textAlign: 'center' }}>Due Date</th>
-                            <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '8%', textAlign: 'right' }}>Actions</th>
+                            <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '50%', textAlign: 'left' }}>Name</th>
+                            <th className="cu-th cu-th-assignee" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '20%', textAlign: 'center' }}>Assignee</th>
+                            <th className="cu-th cu-th-delivery" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '15%', textAlign: 'center' }}>Due Date</th>
+                            <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: 600, color: '#475569', width: '15%', textAlign: 'right' }}>Actions</th>
                           </tr>
                         </thead>
                         <tbody>

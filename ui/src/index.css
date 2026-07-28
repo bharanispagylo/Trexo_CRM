@@ -83,57 +83,104 @@ code {
   padding-right: 2.5rem !important; /* Extra padding to prevent text overlay on the arrow */
 }
 
-/* Global Typography Override Rules */
-* {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif !important;
+/* Theme variables mapped from theme.json */
+:root {
+  --theme-font-size: 14px;
+  --theme-font-weight-normal: 400;
+  --theme-font-weight-bold: 600;
+  --theme-table-row-height: 40px;
+  --theme-table-line-height: 20px;
+  --theme-table-padding-top-bottom: 10px;
 }
 
-body, 
-body *:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6) {
-  font-size: 12px !important;
-  font-weight: 400 !important;
+/* Global Typography Override Rules (Desktop Only, not involving mobile view) */
+@media (min-width: 769px) {
+  * {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif !important;
+  }
+
+  body, 
+  body * {
+    font-size: var(--theme-font-size) !important;
+    font-weight: var(--theme-font-weight-normal) !important;
+  }
+
+  /* Where there is already bold, headings, or semibold elements, set it as bold */
+  th,
+  thead th,
+  strong,
+  b,
+  button,
+  .btn,
+  .saas-btn,
+  [class*="-btn"],
+  [class*="button"],
+  .saas-tab,
+  .saas-tab.active,
+  [class*="tab"],
+  .active,
+  [class*="active"],
+  h1, h2, h3, h4, h5, h6,
+  .page-title,
+  .section-title,
+  .card-title,
+  .modal-title,
+  [class*="title"],
+  [class*="heading"] {
+    font-weight: var(--theme-font-weight-bold) !important;
+  }
 }
 
-h1, h2, h3, h4, h5, h6,
-.page-title,
-.section-title,
-.card-title,
-.modal-title,
-[class*="title"],
-[class*="heading"] {
-  font-size: 14px !important;
-  font-weight: 600 !important;
+/* Table Row and Cells height and padding override (Desktop Only, not involving mobile view) */
+@media (min-width: 769px) {
+  table tr,
+  table td,
+  table th,
+  .saas-table tr,
+  .saas-table td,
+  .saas-table th,
+  .reports-table tr,
+  .reports-table td,
+  .reports-table th,
+  .team-list-table tr,
+  .team-list-table td,
+  .team-list-table th,
+  .archive-table tr,
+  .archive-table td,
+  .archive-table th,
+  .clients-table tr,
+  .clients-table td,
+  .clients-table th,
+  .estimations-table tr,
+  .estimations-table td,
+  .estimations-table th,
+  .cu-section-header,
+  .cu-mobile-group-header,
+  .cu-mob-status-group,
+  .project-group-header,
+  .tg-page-container .cu-section-header,
+  .task-group-sections .cu-section-header {
+    height: var(--theme-table-row-height) !important;
+    line-height: var(--theme-table-line-height) !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    vertical-align: middle !important;
+    box-sizing: border-box !important;
+  }
+
+  .cu-status-section {
+    margin-bottom: 0 !important;
+  }
+
+  .cu-list-root.task-group-sections {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
 }
 
-th,
-thead th,
-strong,
-b,
-button,
-.btn,
-.saas-btn,
-[class*="-btn"],
-[class*="button"],
-.saas-tab,
-.saas-tab.active,
-[class*="tab"],
-.active,
-[class*="active"] {
-  font-weight: 600 !important;
-}
 
-.cu-task-title {
-  font-size: 12px !important;
-  font-weight: 500 !important;
-}
-
-.cu-section-title,
-.col-clickup-label {
-  font-size: 12px !important;
-  font-weight: 600 !important;
-}
 
 
 

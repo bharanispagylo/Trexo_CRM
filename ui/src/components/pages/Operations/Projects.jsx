@@ -103,7 +103,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [users, setUsers] = useState([]);
   const [clients, setClients] = useState([]);
 
-  const [selectedEmployeeToAdd, setSelectedEmployeeToAdd] = useState('');
+  const [selectedEmployeesToAdd, setSelectedEmployeesToAdd] = useState([]);
   const [createMemberForm, setCreateMemberForm] = useState({ name: '', role: '', status: 'Active', type: 'Employee', phoneNo: '', emergencyNo: '' });
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showCreateMemberModal, setShowCreateMemberModal] = useState(false);
@@ -120,7 +120,16 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   const [editingListName, setEditingListName] = useState('');
   const [togglingFavoriteId, setTogglingFavoriteId] = useState(null);
   const [deletingListId, setDeletingListId] = useState(null);
-  const [detailTab, setDetailTab] = useState('General');
+  const [detailTab, setDetailTab] = useState(() => {
+    const hash = window.location.hash.substring(1);
+    const lowerHash = hash.toLowerCase();
+    if (lowerHash === 'task-groups') return 'Tasks';
+    if (lowerHash === 'tasks') return 'ProjectTasks';
+    const allowedTabs = ['General', 'Tasks', 'ProjectTasks', 'Teams', 'Queries', 'Attachments'];
+    const matched = allowedTabs.find(t => t.toLowerCase() === lowerHash);
+    return matched || 'General';
+  });
+  const [expandedProjStatus, setExpandedProjStatus] = useState(undefined);
   const [selectedTaskListId, setSelectedTaskListId] = useState(null);
   const [expandedListId, setExpandedListId] = useState('__first__');
   const [expandedStatusSections, setExpandedStatusSections] = useState({});
@@ -142,6 +151,16 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
   const toggleListAccordion = (id) => {
     setExpandedListId(prev => prev === id ? null : id);
+  };
+  const toggleProjStatusSection = (statusId) => {
+    setExpandedProjStatus(prev => {
+      const allTasks = (selectedProject?.taskLists || [])
+        .flatMap(l => l.tasks || [])
+        .filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || 'Task') !== 'Recurring Task' && !t.recurringTemplateId && t.taskType !== 'calls/meetings');
+      const firstProjStatusWithTasks = COLUMNS.find(c => allTasks.some(t => (t.status || 'To Do') === c.id))?.id || null;
+      const currentActive = prev !== undefined ? prev : firstProjStatusWithTasks;
+      return currentActive === statusId ? null : statusId;
+    });
   };
   const handleOpenCreateTaskModalForList = (listId) => {
     setSelectedTaskListId(listId);
@@ -419,6 +438,27 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     }
   }, [initialProjectName, projects, onProjectSelect]);
 
+  // Synchronize detailTab state on browser navigation (e.g. Back/Forward)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.substring(1);
+      const lowerHash = hash.toLowerCase();
+      if (lowerHash === 'task-groups') {
+        setDetailTab('Tasks');
+      } else if (lowerHash === 'tasks') {
+        setDetailTab('ProjectTasks');
+      } else {
+        const allowedTabs = ['General', 'Tasks', 'ProjectTasks', 'Teams', 'Queries', 'Attachments'];
+        const matched = allowedTabs.find(t => t.toLowerCase() === lowerHash);
+        if (matched) {
+          setDetailTab(matched);
+        }
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   // ── FETCH DATA ──
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -529,8 +569,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   };
 
   const handleAddMember = async () => {
-    if (!selectedEmployeeToAdd) {
-      alert('Please select a user to add', 'warning', 'No Selection');
+    if (selectedEmployeesToAdd.length === 0) {
+      alert('Please select at least one user to add', 'warning', 'No Selection');
       return;
     }
     try {
@@ -539,21 +579,24 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         .map(m => m.trim())
         .filter(m => m !== "");
       
-      if (!currentMembers.includes(selectedEmployeeToAdd.trim())) {
-        currentMembers.push(selectedEmployeeToAdd.trim());
-      }
+      selectedEmployeesToAdd.forEach(id => {
+        const trimmed = id.trim();
+        if (!currentMembers.includes(trimmed)) {
+          currentMembers.push(trimmed);
+        }
+      });
 
       await api.put(`/projects/${selectedProject.id}`, {
         members: currentMembers.join(',')
       });
 
-      setSelectedEmployeeToAdd('');
+      setSelectedEmployeesToAdd([]);
       setShowAddMemberModal(false);
       fetchData(true);
-      alert('Member added to project successfully!', 'success', 'Member Added');
+      alert('Member(s) added to project successfully!', 'success', 'Members Added');
     } catch (error) {
       console.error('Error adding member:', error);
-      alert('Failed to add member: ' + error.message, 'error', 'Error');
+      alert('Failed to add member(s): ' + error.message, 'error', 'Error');
     }
   };
 
@@ -1271,7 +1314,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
         
         {/* Breadcrumb Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: '600' }}>
-          <button style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }} onClick={() => { setCurrentView('list'); setSelectedTaskListId(null); if (onProjectSelect) onProjectSelect(null); }}>
+          <button style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }} onClick={() => { setCurrentView('list'); setSelectedTaskListId(null); window.location.hash = ''; if (onProjectSelect) onProjectSelect(null); }}>
             Projects
           </button>
           <span style={{ color: '#94a3b8' }}>&gt;</span>
@@ -1434,13 +1477,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           {[
             { id: 'General', label: 'General', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> },
             { id: 'Tasks', label: 'Task Groups', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> },
+            { id: 'ProjectTasks', label: 'Tasks', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="15" y2="17"></line></svg> },
             { id: 'Teams', label: 'Team', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg> },
             { id: 'Queries', label: 'Queries', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> },
             { id: 'Attachments', label: 'Attachments', icon: <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> }
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => { setDetailTab(tab.id); setSelectedTaskListId(null); setViewingQuery(null); }}
+              onClick={() => { setDetailTab(tab.id); setSelectedTaskListId(null); setViewingQuery(null); window.location.hash = tab.id === 'Tasks' ? 'task-groups' : (tab.id === 'ProjectTasks' ? 'Tasks' : tab.id); }}
               className={detailTab === tab.id ? 'active' : ''}
             >
               {tab.icon}
@@ -1632,7 +1676,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         ? idx !== 0
                         : expandedListId !== list.id;
 
-                      const listTasks = (list.tasks || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || 'Task') !== 'Recurring Task' && !t.recurringTemplateId).sort((a, b) => {
+                      const listTasks = (list.tasks || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || 'Task') !== 'Recurring Task' && !t.recurringTemplateId && t.taskType !== 'calls/meetings').sort((a, b) => {
                         if (!a.dueDate) return 1;
                         if (!b.dueDate) return -1;
                         return new Date(a.dueDate) - new Date(b.dueDate);
@@ -1798,7 +1842,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         </div>
 
                                 {!isCollapsed && (hasTasks || can('tasks', 'create')) && (() => {
-                          const allTasks = (list.tasks || []).filter(t => (t.taskType || 'Task') !== 'Recurring Task' && !t.recurringTemplateId);
+                          const allTasks = (list.tasks || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || 'Task') !== 'Recurring Task' && !t.recurringTemplateId && t.taskType !== 'calls/meetings');
                           const firstStatusWithTasks = COLUMNS.find(c => allTasks.some(t => (t.status || 'To Do') === c.id))?.id || null;
                           return (
                           <div className="cu-list-root task-group-sections" style={{ marginTop: '0.5rem', marginBottom: '1.5rem' }}>
@@ -1990,6 +2034,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                                width: '100%',
                                                                height: '100%',
                                                                opacity: 0,
+                                                               fontSize:'12px',
                                                                cursor: 'pointer',
                                                                border: 'none',
                                                                outline: 'none'
@@ -2107,6 +2152,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                                   left: 0,
                                                                   width: '100%',
                                                                   height: '100%',
+
                                                                   opacity: 0,
                                                                   cursor: 'pointer',
                                                                   border: 'none',
@@ -2286,6 +2332,512 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             </div>
           )}
 
+          {detailTab === 'ProjectTasks' && (
+            <div>
+              {(() => {
+                const allProjectTasks = (selectedProject?.taskLists || [])
+                  .flatMap(l => l.tasks || [])
+                  .filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || 'Task') !== 'Recurring Task' && !t.recurringTemplateId && t.taskType !== 'calls/meetings');
+
+                if (allProjectTasks.length === 0) {
+                  return (
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '3rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem', background: 'white' }}>
+                      No tasks created for this project yet.
+                    </div>
+                  );
+                }
+
+                const firstProjStatusWithTasks = COLUMNS.find(c => allProjectTasks.some(t => (t.status || 'To Do') === c.id))?.id || null;
+
+                return (
+                  <div className="cu-list-root task-group-sections" style={{ marginTop: '0.5rem', marginBottom: '1.5rem', border: 'none', background: 'transparent', boxShadow: 'none' }}>
+                    {COLUMNS.map(col => {
+                      const meta = STATUS_HEADER_META[col.id] || { bg: '#f1f5f9', fg: '#475569', dotColor: '#94a3b8', isDone: false };
+                      const statusTasks = allProjectTasks.filter(t => (t.status || 'To Do') === col.id);
+                      
+                      const isStatusExpanded = expandedProjStatus !== undefined
+                        ? expandedProjStatus === col.id
+                        : firstProjStatusWithTasks === col.id;
+                      const isStatusCollapsed = !isStatusExpanded;
+
+                      return (
+                        <div key={col.id} className="cu-status-section" style={{ marginBottom: '1rem' }}>
+                          {/* Section Header */}
+                          <div className="cu-section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.35rem 0.75rem', paddingLeft: '2rem', background: 'transparent', borderRadius: '0', border: 'none' }}>
+                            <div className="cu-section-left" onClick={() => toggleProjStatusSection(col.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <span className="cu-section-chevron">
+                                <svg viewBox="0 0 10 6" width="10" height="6" fill="currentColor" style={{ transform: isStatusCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.2s", color: "#94a3b8" }}>
+                                  <path d="M0 0l5 6 5-6z"/>
+                                </svg>
+                              </span>
+                              <span className="cu-status-pill" style={{ color: meta.bg, fontSize: '0.68rem', fontWeight: '700', padding: '0', background: 'transparent', border: 'none' }}>
+                                {col.label}
+                              </span>
+                              <span className="cu-section-count" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', background: '#e2e8f0', padding: '0.1rem 0.4rem', borderRadius: '10px' }}>{statusTasks.length}</span>
+                            </div>
+                          </div>
+
+                          {/* Task Table if section is not collapsed */}
+                          {!isStatusCollapsed && statusTasks.length > 0 && (
+                            <div className="cu-table-wrapper" style={{ overflow: 'hidden', background: 'white', marginTop: '0.5rem', marginLeft: '2rem', marginRight: '1rem' }}>
+                              <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                <thead>
+                                  <tr className="cu-thead-row" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                                    <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '40%', textAlign: 'left' }}>Name</th>
+                                    <th className="cu-th cu-th-tg" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '30%', textAlign: 'left' }}>Task Group</th>
+                                    <th className="cu-th cu-th-delivery" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'center' }}>Due Date</th>
+                                    <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'right' }}>Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {(() => {
+                                    const mainTasks = statusTasks.filter(t => !t.parentId || !allProjectTasks.some(p => p.id === t.parentId));
+                                    const sortedMainTasks = [...mainTasks].sort((a, b) => {
+                                      if (!a.dueDate) return 1;
+                                      if (!b.dueDate) return -1;
+                                      return new Date(a.dueDate) - new Date(b.dueDate);
+                                    });
+
+                                    return sortedMainTasks.flatMap(task => {
+                                      const subTasks = allProjectTasks.filter(t => t.parentId === task.id);
+                                      const isExpanded = !!expandedSubtasks[task.id];
+                                      const relDate = formatRelativeDueDate(task.dueDate);
+                                      const listObj = selectedProject.taskLists?.find(l => (l.tasks || []).some(t => t.id === task.id));
+                                      const listName = listObj ? listObj.name : '-';
+
+                                      const parentRow = (
+                                        <tr key={task.id} className="cu-row" onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'projects', projectName: selectedProject.name }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
+                                          <td className="cu-td cu-td-name">
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
+                                              {subTasks.length > 0 && (
+                                                <button
+                                                  style={{ background: 'none', border: 'none', padding: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setExpandedSubtasks(prev => ({ ...prev, [task.id]: !prev[task.id] }));
+                                                  }}
+                                                  title={isExpanded ? "Collapse Subtasks" : "Expand Subtasks"}
+                                                >
+                                                  <svg viewBox="0 0 10 6" width="8" height="8" fill="currentColor" style={{ transform: isExpanded ? "none" : "rotate(-90deg)", transition: "transform 0.15s", color: "#64748b" }}><path d="M0 0l5 6 5-6z"/></svg>
+                                                </button>
+                                              )}
+                                              <TaskTitleTooltip text={`${getDisplayId(task)} ${task.title || 'Untitled Task'}`}>
+                                                <span className="cu-task-id-prefix">{getDisplayId(task)}</span>
+                                                <span className="cu-task-title" style={{ fontSize: '12px', fontWeight: 400, color: '#0f172a' }}>{task.title || 'Untitled Task'}</span>
+                                              </TaskTitleTooltip>
+                                              {subTasks.length > 0 && (
+                                                <span 
+                                                  style={{ 
+                                                    display: 'inline-flex', 
+                                                    alignItems: 'center', 
+                                                    gap: '4px', 
+                                                    marginLeft: '8px', 
+                                                    fontSize: '0.7rem', 
+                                                    fontWeight: '700', 
+                                                    color: '#2563eb', 
+                                                    background: '#eff6ff', 
+                                                    padding: '2px 6px', 
+                                                    borderRadius: '4px',
+                                                    border: '1px solid #bfdbfe'
+                                                  }}
+                                                  title={`${subTasks.length} Subtasks`}
+                                                >
+                                                  {subTasks.length}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </td>
+                                          <td className="cu-td cu-td-tg" style={{ padding: '0.85rem 1.25rem', textAlign: 'left', fontSize: '12px', color: '#334155', fontWeight: '400' }}>
+                                            {listName}
+                                          </td>
+                                          <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                            <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(task) ? 'pointer' : 'default', justifyContent: 'center' }}>
+                                              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke={task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                              <span className="cu-date-text" style={{ color: task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : '#475569', fontSize: '12px' }}>{task.dueDate ? formatDDMonDate(task.dueDate) : '-'}</span>
+                                              <input 
+                                                type="date" 
+                                                className="cu-date-hidden-input" 
+                                                value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} 
+                                                disabled={!canEditTask(task)} 
+                                                onClick={(e) => { e.stopPropagation(); if (canEditTask(task)) { try { e.target.showPicker(); } catch (err) {} } }} 
+                                                onChange={async (e) => { 
+                                                  e.stopPropagation(); 
+                                                  const val = e.target.value; 
+                                                  try { 
+                                                    await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); 
+                                                    fetchData(true);
+                                                  } catch(err) { 
+                                                    console.error(err); 
+                                                  } 
+                                                }} 
+                                                style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }} 
+                                              />
+                                            </div>
+                                          </td>
+                                          <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
+                                            {(() => {
+                                              const assignVal = task.assignees || '';
+                                              const uObj = assignVal ? users.find(u => u.id === assignVal) : null;
+                                              const fullName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim()) : '';
+                                              const getInitialsForAvatar = (name) => {
+                                                if (!name) return '';
+                                                const parts = name.split(' ').filter(Boolean);
+                                                if (parts.length >= 2) {
+                                                  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase().substring(0, 2);
+                                                }
+                                                return parts[0].substring(0, 2).toUpperCase();
+                                              };
+                                              const init = fullName ? getInitialsForAvatar(fullName) : '';
+                                              return (
+                                                <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                  <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                                    {init ? (
+                                                      <span 
+                                                        className="card-clickup-avatar" 
+                                                        style={{ 
+                                                          fontSize: '12px', 
+                                                          fontWeight: '700', 
+                                                          color: '#1e293b', 
+                                                          background: '#f1f5f9',
+                                                          width: '24px',
+                                                          height: '24px',
+                                                          borderRadius: '50%',
+                                                          border: '1px solid #cbd5e1',
+                                                          boxShadow: 'none',
+                                                          display: 'inline-flex',
+                                                          alignItems: 'center',
+                                                          justifyContent: 'center',
+                                                          marginRight: '6px',
+                                                          marginLeft: 0,
+                                                          flexShrink: 0
+                                                        }}
+                                                        title={fullName}
+                                                      >
+                                                        {init}
+                                                      </span>
+                                                    ) : (
+                                                      <span 
+                                                        className="card-clickup-avatar" 
+                                                        style={{ 
+                                                          fontSize: '12px', 
+                                                          fontWeight: '700', 
+                                                          color: '#94a3b8', 
+                                                          background: '#f1f5f9',
+                                                          width: '24px',
+                                                          height: '24px',
+                                                          borderRadius: '50%',
+                                                          border: '1.5px dashed #cbd5e1',
+                                                          boxShadow: 'none',
+                                                          display: 'inline-flex',
+                                                          alignItems: 'center',
+                                                          justifyContent: 'center',
+                                                          marginRight: '6px',
+                                                          marginLeft: 0,
+                                                          flexShrink: 0
+                                                        }}
+                                                        title="Unassigned"
+                                                      >
+                                                        ?
+                                                      </span>
+                                                    )}
+                                                    {canEditTask(task) && (
+                                                      <select
+                                                        value={task.assignees || ''}
+                                                        onClick={e => e.stopPropagation()}
+                                                        onChange={async (e) => {
+                                                          e.stopPropagation();
+                                                          const val = e.target.value;
+                                                          try {
+                                                            const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                            await api.put(`/tasks/${task.id}`, { assignees: val, updatedBy: updatedByName });
+                                                            fetchData(true);
+                                                          } catch (err) {
+                                                            console.error(err);
+                                                          }
+                                                        }}
+                                                        style={{
+                                                          position: 'absolute',
+                                                          top: 0,
+                                                          left: 0,
+                                                          width: '100%',
+                                                          height: '100%',
+                                                          opacity: 0,
+                                                          cursor: 'pointer',
+                                                          border: 'none',
+                                                          outline: 'none'
+                                                        }}
+                                                      >
+                                                        <option value="">Unassigned</option>
+                                                        {getFilteredUsersForProject().map(u => {
+                                                          const n = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
+                                                          return <option key={u.id} value={u.id}>{n}</option>;
+                                                        })}
+                                                      </select>
+                                                    )}
+                                                  </div>
+                                                  <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                                    <PriorityFlag priority={task.priority} />
+                                                    {canEditTask(task) && (
+                                                      <select
+                                                        value={task.priority || 'Medium'}
+                                                        onClick={e => e.stopPropagation()}
+                                                        onChange={async (e) => {
+                                                          e.stopPropagation();
+                                                          const newPriority = e.target.value;
+                                                          try {
+                                                            const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                            await api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName });
+                                                            fetchData(true);
+                                                          } catch (err) {
+                                                            console.error(err);
+                                                          }
+                                                        }}
+                                                        style={{
+                                                          position: 'absolute',
+                                                          top: 0,
+                                                          left: 0,
+                                                          width: '100%',
+                                                          height: '100%',
+                                                          opacity: 0,
+                                                          cursor: 'pointer',
+                                                          border: 'none',
+                                                          outline: 'none'
+                                                        }}
+                                                      >
+                                                        {Object.keys(PRIORITY_FLAGS).map(p => (
+                                                          <option key={p} value={p}>{p}</option>
+                                                        ))}
+                                                      </select>
+                                                    )}
+                                                  </div>
+                                                  {canDeleteTask(task) && (
+                                                    <button className="cu-act-btn danger" onClick={() => handleDeleteTask(task.id)} title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }}>
+                                                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                    </button>
+                                                  )}
+                                                </div>
+                                              );
+                                            })()}
+                                          </td>
+                                        </tr>
+                                      );
+
+                                      const rows = [parentRow];
+
+                                      if (isExpanded) {
+                                        const sortedSubtasks = [...subTasks].sort((a, b) => {
+                                          if (!a.dueDate) return 1;
+                                          if (!b.dueDate) return -1;
+                                          return new Date(a.dueDate) - new Date(b.dueDate);
+                                        });
+
+                                        sortedSubtasks.forEach(sub => {
+                                          const subRelDate = formatRelativeDueDate(sub.dueDate);
+
+                                          rows.push(
+                                            <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'projects', projectName: selectedProject.name }, '', `/tasks/${getDisplayId(sub)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
+                                              <td className="cu-td cu-td-name" style={{paddingLeft: '2.5rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
+                                                  <span className="cu-subtask-indicator" style={{ color: '#94a3b8', marginRight: '4px', fontSize: '1rem', fontWeight: 'bold' }}>↳</span>
+                                                  <TaskTitleTooltip text={`${getDisplayId(sub)} ${sub.title || 'Untitled Subtask'}`}>
+                                                    <span className="cu-task-id-prefix">{getDisplayId(sub)}</span>
+                                                    <span className="cu-task-title" style={{ fontSize: '12px', fontWeight: 400, color: '#475569' }}>{sub.title || 'Untitled Subtask'}</span>
+                                                  </TaskTitleTooltip>
+                                                </div>
+                                              </td>
+                                              <td className="cu-td cu-td-tg" style={{ padding: '0.85rem 1.25rem', textAlign: 'left', fontSize: '12px', color: '#334155', fontWeight: '400' }}>
+                                                {listName}
+                                              </td>
+                                              <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                                                <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default', justifyContent: 'center' }}>
+                                                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke={sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                  <span className="cu-date-text" style={{ color: sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : '#475569', fontSize: '12px' }}>{sub.dueDate ? formatDDMonDate(sub.dueDate) : '-'}</span>
+                                                  <input 
+                                                    type="date" 
+                                                    className="cu-date-hidden-input" 
+                                                    value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} 
+                                                    disabled={!canEditTask(sub)} 
+                                                    onClick={(e) => { e.stopPropagation(); if (canEditTask(sub)) { try { e.target.showPicker(); } catch (err) {} } }} 
+                                                    onChange={async (e) => { 
+                                                      e.stopPropagation(); 
+                                                      const val = e.target.value; 
+                                                      try { 
+                                                        await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); 
+                                                        fetchData(true);
+                                                      } catch(err) { 
+                                                        console.error(err); 
+                                                      } 
+                                                    }} 
+                                                    style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }} 
+                                                  />
+                                                </div>
+                                              </td>
+                                              <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
+                                                {(() => {
+                                                  const assignVal = sub.assignees || '';
+                                                  const uObj = assignVal ? users.find(u => u.id === assignVal) : null;
+                                                  const fullName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim()) : '';
+                                                  const getInitialsForAvatar = (name) => {
+                                                    if (!name) return '';
+                                                    const parts = name.split(' ').filter(Boolean);
+                                                    if (parts.length >= 2) {
+                                                      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase().substring(0, 2);
+                                                    }
+                                                    return parts[0].substring(0, 2).toUpperCase();
+                                                  };
+                                                  const init = fullName ? getInitialsForAvatar(fullName) : '';
+                                                  return (
+                                                    <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                      <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                                        {init ? (
+                                                          <span 
+                                                            className="card-clickup-avatar" 
+                                                            style={{ 
+                                                              fontSize: '12px', 
+                                                              fontWeight: '700', 
+                                                              color: '#1e293b', 
+                                                              background: '#f1f5f9',
+                                                              width: '24px',
+                                                              height: '24px',
+                                                              borderRadius: '50%',
+                                                              border: '1px solid #cbd5e1',
+                                                              boxShadow: 'none',
+                                                              display: 'inline-flex',
+                                                              alignItems: 'center',
+                                                              justifyContent: 'center',
+                                                              marginRight: '6px',
+                                                              marginLeft: 0,
+                                                              flexShrink: 0
+                                                            }}
+                                                            title={fullName}
+                                                          >
+                                                            {init}
+                                                          </span>
+                                                        ) : (
+                                                          <span 
+                                                            className="card-clickup-avatar" 
+                                                            style={{ 
+                                                              fontSize: '12px', 
+                                                              fontWeight: '700', 
+                                                              color: '#94a3b8', 
+                                                              background: '#f1f5f9',
+                                                              width: '24px',
+                                                              height: '24px',
+                                                              borderRadius: '50%',
+                                                              border: '1.5px dashed #cbd5e1',
+                                                              boxShadow: 'none',
+                                                              display: 'inline-flex',
+                                                              alignItems: 'center',
+                                                              justifyContent: 'center',
+                                                              marginRight: '6px',
+                                                              marginLeft: 0,
+                                                              flexShrink: 0
+                                                            }}
+                                                            title="Unassigned"
+                                                          >
+                                                            ?
+                                                          </span>
+                                                        )}
+                                                        {canEditTask(sub) && (
+                                                          <select
+                                                            value={sub.assignees || ''}
+                                                            onClick={e => e.stopPropagation()}
+                                                            onChange={async (e) => {
+                                                              e.stopPropagation();
+                                                              const val = e.target.value;
+                                                              try {
+                                                                const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                                await api.put(`/tasks/${sub.id}`, { assignees: val, updatedBy: updatedByName });
+                                                                fetchData(true);
+                                                              } catch (err) {
+                                                                console.error(err);
+                                                              }
+                                                            }}
+                                                            style={{
+                                                              position: 'absolute',
+                                                              top: 0,
+                                                              left: 0,
+                                                              width: '100%',
+                                                              height: '100%',
+                                                              opacity: 0,
+                                                              cursor: 'pointer',
+                                                              border: 'none',
+                                                              outline: 'none'
+                                                            }}
+                                                          >
+                                                            <option value="">Unassigned</option>
+                                                            {getFilteredUsersForProject().map(u => {
+                                                              const n = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
+                                                              return <option key={u.id} value={u.id}>{n}</option>;
+                                                            })}
+                                                          </select>
+                                                        )}
+                                                      </div>
+                                                      <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                                        <PriorityFlag priority={sub.priority} />
+                                                        {canEditTask(sub) && (
+                                                          <select
+                                                            value={sub.priority || 'Medium'}
+                                                            onClick={e => e.stopPropagation()}
+                                                            onChange={async (e) => {
+                                                              e.stopPropagation();
+                                                              const newPriority = e.target.value;
+                                                              try {
+                                                                const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                                await api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName });
+                                                                fetchData(true);
+                                                              } catch (err) {
+                                                                console.error(err);
+                                                              }
+                                                            }}
+                                                            style={{
+                                                              position: 'absolute',
+                                                              top: 0,
+                                                              left: 0,
+                                                              width: '100%',
+                                                              height: '100%',
+                                                              opacity: 0,
+                                                              cursor: 'pointer',
+                                                              border: 'none',
+                                                              outline: 'none'
+                                                            }}
+                                                          >
+                                                            {Object.keys(PRIORITY_FLAGS).map(p => (
+                                                              <option key={p} value={p}>{p}</option>
+                                                            ))}
+                                                          </select>
+                                                        )}
+                                                      </div>
+                                                      {canDeleteTask(sub) && (
+                                                        <button className="cu-act-btn danger" onClick={() => handleDeleteTask(sub.id)} title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.25rem' }}>
+                                                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                        </button>
+                                                      )}
+                                                    </div>
+                                                  );
+                                                })()}
+                                              </td>
+                                            </tr>
+                                          );
+                                        });
+                                      }
+
+                                      return rows;
+                                    });
+                                  })()}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
           {detailTab === 'Teams' && (
             <div>
               {/* Header */}
@@ -2295,7 +2847,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     <button
                       className="saas-btn-submit add-team-member-btn"
                       style={{ background: '#0066FF', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                      onClick={() => setShowAddMemberModal(true)}
+                      onClick={() => { setShowAddMemberModal(true); setSelectedEmployeesToAdd([]); }}
                     >
                       <span className="add-team-member-btn-text">+ Add Member</span>
                       <span className="add-team-member-btn-icon">+</span>
@@ -2497,23 +3049,102 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
                       <div className="saas-field">
-                        <label className="saas-label">Select Employee</label>
-                        <select
-                          className="saas-select"
-                          value={selectedEmployeeToAdd}
-                          onChange={e => setSelectedEmployeeToAdd(e.target.value)}
-                        >
-                          <option value="">Choose a user...</option>
-                          {users
-                            .filter(u => !projMembers.includes(u.id))
-                            .map(u => {
-                              const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
-                              return (
-                                <option key={u.id} value={u.id}>{displayName} ({u.role || 'No role'})</option>
-                              );
-                            })
-                          }
-                        </select>
+                        <label className="saas-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                          <span>Select Employees</span>
+                          {users.filter(u => !projMembers.includes(u.id)).length > 0 && (
+                            <button
+                              style={{ background: 'none', border: 'none', color: '#0066FF', fontSize: '11px', fontWeight: '600', cursor: 'pointer', padding: 0 }}
+                              onClick={() => {
+                                const allCandidateIds = users.filter(u => !projMembers.includes(u.id)).map(u => u.id);
+                                const areAllSelected = allCandidateIds.every(id => selectedEmployeesToAdd.includes(id));
+                                setSelectedEmployeesToAdd(areAllSelected ? [] : allCandidateIds);
+                              }}
+                            >
+                              {users.filter(u => !projMembers.includes(u.id)).map(u => u.id).every(id => selectedEmployeesToAdd.includes(id)) ? 'Deselect All' : 'Select All'}
+                            </button>
+                          )}
+                        </label>
+                        <div style={{
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          maxHeight: '260px',
+                          overflowY: 'auto',
+                          background: '#ffffff'
+                        }}>
+                          <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                            <thead>
+                              <tr className="cu-thead-row" style={{ background: '#fafbfc', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 1 }}>
+                                <th className="cu-th" style={{ width: '50px', padding: '10px 1.25rem', textAlign: 'center' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={users.filter(u => !projMembers.includes(u.id)).length > 0 && users.filter(u => !projMembers.includes(u.id)).map(u => u.id).every(id => selectedEmployeesToAdd.includes(id))}
+                                    onChange={() => {
+                                      const allCandidateIds = users.filter(u => !projMembers.includes(u.id)).map(u => u.id);
+                                      const areAllSelected = allCandidateIds.every(id => selectedEmployeesToAdd.includes(id));
+                                      setSelectedEmployeesToAdd(areAllSelected ? [] : allCandidateIds);
+                                    }}
+                                    style={{ width: '16px', height: '16px', cursor: 'pointer', verticalAlign: 'middle' }}
+                                  />
+                                </th>
+                                <th className="cu-th" style={{ padding: '10px 1.25rem', fontSize: '12px', fontWeight: '600', color: '#94a3b8' }}>Name</th>
+                                <th className="cu-th" style={{ padding: '10px 1.25rem', fontSize: '12px', fontWeight: '600', color: '#94a3b8' }}>Role</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(() => {
+                                const candidates = users.filter(u => !projMembers.includes(u.id));
+                                if (candidates.length === 0) {
+                                  return (
+                                    <tr>
+                                      <td colSpan="3" style={{ padding: '1.5rem', color: '#94a3b8', fontSize: '12px', textAlign: 'center', height: 'auto' }}>
+                                        All registered users are already members of this project.
+                                      </td>
+                                    </tr>
+                                  );
+                                }
+                                return candidates.map(u => {
+                                  const isChecked = selectedEmployeesToAdd.includes(u.id);
+                                  const displayName = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
+                                  return (
+                                    <tr
+                                      key={u.id}
+                                      className="cu-row"
+                                      style={{
+                                        cursor: 'pointer',
+                                        backgroundColor: isChecked ? '#eff6ff' : 'transparent',
+                                        borderBottom: '1px solid #f1f5f9'
+                                      }}
+                                      onClick={() => {
+                                        setSelectedEmployeesToAdd(prev =>
+                                          prev.includes(u.id) ? prev.filter(id => id !== u.id) : [...prev, u.id]
+                                        );
+                                      }}
+                                    >
+                                      <td className="cu-td" style={{ textAlign: 'center', width: '50px', padding: '4px 1.25rem' }} onClick={e => e.stopPropagation()}>
+                                        <input
+                                          type="checkbox"
+                                          checked={isChecked}
+                                          onChange={() => {
+                                            setSelectedEmployeesToAdd(prev =>
+                                              prev.includes(u.id) ? prev.filter(id => id !== u.id) : [...prev, u.id]
+                                            );
+                                          }}
+                                          style={{ width: '16px', height: '16px', cursor: 'pointer', verticalAlign: 'middle' }}
+                                        />
+                                      </td>
+                                      <td className="cu-td" style={{ padding: '4px 1.25rem', fontSize: '14px', color: '#1e293b', fontWeight: '500' }}>
+                                        {displayName}
+                                      </td>
+                                      <td className="cu-td" style={{ padding: '4px 1.25rem', fontSize: '14px', color: '#64748b' }}>
+                                        {u.role || 'No role'}
+                                      </td>
+                                    </tr>
+                                  );
+                                });
+                              })()}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
@@ -3211,7 +3842,16 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     });
   }
 
-  const filteredProjects = allowedProjects.filter(p => {
+  // Sort projects by name in ascending order (case-insensitive)
+  const sortedProjects = [...allowedProjects].sort((a, b) => {
+    const nameA = (a.name || '').toLowerCase();
+    const nameB = (b.name || '').toLowerCase();
+    if (nameA < nameB) return -1;
+    if (nameA > nameB) return 1;
+    return 0;
+  });
+
+  const filteredProjects = sortedProjects.filter(p => {
     if (statusFilter !== 'All') {
       const status = p.status || 'Active';
       if (status !== statusFilter) return false;
@@ -3380,6 +4020,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                           onClick={() => {
                             setSelectedProject(proj);
                             setCurrentView('detail');
+                            setDetailTab('General');
+                            window.location.hash = 'General';
                             if (onProjectSelect) onProjectSelect(proj.name);
                           }}
                         >
@@ -3449,6 +4091,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       onClick={() => {
                         setSelectedProject(proj);
                         setCurrentView('detail');
+                        setDetailTab('General');
+                        window.location.hash = 'General';
                         if (onProjectSelect) onProjectSelect(proj.name);
                       }}
                       className="mp-name-link"
