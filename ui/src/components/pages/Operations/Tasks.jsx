@@ -232,7 +232,14 @@ export const formatDDMonDate = (dateStr) => {
   return `${day}/${month}`;
 };
 
-const initials = (name) => name ? name.split(' ').map(w => w[0]).join('').toUpperCase() : '?';
+const initials = (name) => {
+  if (!name) return '?';
+  const parts = name.trim().split(' ').filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase().substring(0, 2);
+  }
+  return parts[0].substring(0, 2).toUpperCase();
+};
 
 const AVATAR_COLORS_LIST = ['av-blue', 'av-pink', 'av-green', 'av-amber', 'av-purple'];
 const getAvatarColor = (name) => {
@@ -3431,116 +3438,118 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                             <tr key={url} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="attachment-table-row">
                               
                               {/* File Name with beautiful Icon */}
-                              <td style={{ padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', overflow: 'hidden' }}>
-                                {(() => {
-                                  let typeLabel = 'FILE';
-                                  let bg = '#f8fafc';
-                                  let fg = '#64748b';
-                                  let border = '#e2e8f0';
-                                  
-                                  if (meta.isPdf) {
-                                    typeLabel = 'PDF';
-                                    bg = '#fef2f2';
-                                    fg = '#ef4444';
-                                    border = '#fee2e2';
-                                  } else if (meta.isImage) {
-                                    typeLabel = 'IMG';
-                                    bg = '#eff6ff';
-                                    fg = '#3b82f6';
-                                    border = '#dbeafe';
-                                  } else {
-                                    const ext = meta.fileName.split('.').pop()?.toUpperCase() || 'FILE';
-                                    typeLabel = ext.length <= 4 ? ext : 'FILE';
-                                  }
-                                  
-                                  return (
-                                    <div style={{
-                                      flexShrink: 0,
-                                      width: '28px',
-                                      height: '28px',
-                                      borderRadius: '6px',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      fontSize: '0.62rem',
-                                      fontWeight: '800',
-                                      background: bg,
-                                      color: fg,
-                                      border: `1px solid ${border}`
-                                    }}>
-                                      {typeLabel}
-                                    </div>
-                                  );
-                                })()}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflow: 'hidden', width: '100%' }}>
-                                  {meta.isImage ? (
-                                    <button 
-                                      type="button"
-                                      onClick={() => { 
-                                        setPreviewImageUrl(meta.url); 
-                                        setPreviewImageName(meta.fileName); 
-                                      }}
-                                      style={{ 
-                                        fontSize: '0.75rem', 
-                                        fontWeight: '500', 
-                                        color: '#2563eb', 
-                                        background: 'none',
-                                        border: 'none',
-                                        padding: 0,
-                                        cursor: 'pointer',
-                                        textDecoration: 'none', 
-                                        textOverflow: 'ellipsis', 
-                                        overflow: 'hidden', 
-                                        whiteSpace: 'nowrap', 
-                                        display: 'block',
-                                        textAlign: 'left',
-                                        width: '100%',
-                                        fontFamily: 'inherit'
-                                      }}
-                                      className="file-name-link"
-                                      title={meta.fileName}
-                                    >
-                                      {meta.fileName}
-                                    </button>
-                                  ) : (
-                                    <button 
-                                      type="button"
-                                      onClick={() => { 
-                                        handleDownloadFile(meta.url, meta.fileName); 
-                                      }}
-                                      style={{ 
-                                        fontSize: '0.75rem', 
-                                        fontWeight: '500', 
-                                        color: '#2563eb', 
-                                        background: 'none',
-                                        border: 'none',
-                                        padding: 0,
-                                        cursor: 'pointer',
-                                        textDecoration: 'none', 
-                                        textOverflow: 'ellipsis', 
-                                        overflow: 'hidden', 
-                                        whiteSpace: 'nowrap', 
-                                        display: 'block',
-                                        textAlign: 'left',
-                                        width: '100%',
-                                        fontFamily: 'inherit'
-                                      }}
-                                      className="file-name-link"
-                                      title={meta.fileName}
-                                    >
-                                      {meta.fileName}
-                                    </button>
-                                  )}
-                                  {meta.isImage && (
-                                    <div style={{ marginTop: '0.25rem' }}>
-                                      <img 
-                                        src={meta.url} 
-                                        alt={meta.fileName} 
-                                        style={{ maxWidth: '120px', maxHeight: '80px', borderRadius: '4px', border: '1px solid #e2e8f0', objectFit: 'contain', cursor: 'pointer', display: 'block' }}
-                                        onClick={() => { setPreviewImageUrl(meta.url); setPreviewImageName(meta.fileName); }}
-                                      />
-                                    </div>
-                                  )}
+                              <td style={{ padding: '0.85rem 1rem', overflow: 'hidden' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%' }}>
+                                  {(() => {
+                                    let typeLabel = 'FILE';
+                                    let bg = '#f8fafc';
+                                    let fg = '#64748b';
+                                    let border = '#e2e8f0';
+                                    
+                                    if (meta.isPdf) {
+                                      typeLabel = 'PDF';
+                                      bg = '#fef2f2';
+                                      fg = '#ef4444';
+                                      border = '#fee2e2';
+                                    } else if (meta.isImage) {
+                                      typeLabel = 'IMG';
+                                      bg = '#eff6ff';
+                                      fg = '#3b82f6';
+                                      border = '#dbeafe';
+                                    } else {
+                                      const ext = meta.fileName.split('.').pop()?.toUpperCase() || 'FILE';
+                                      typeLabel = ext.length <= 4 ? ext : 'FILE';
+                                    }
+                                    
+                                    return (
+                                      <div style={{
+                                        flexShrink: 0,
+                                        width: '28px',
+                                        height: '28px',
+                                        borderRadius: '6px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '0.62rem',
+                                        fontWeight: '800',
+                                        background: bg,
+                                        color: fg,
+                                        border: `1px solid ${border}`
+                                      }}>
+                                        {typeLabel}
+                                      </div>
+                                    );
+                                  })()}
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflow: 'hidden', width: '100%' }}>
+                                    {meta.isImage ? (
+                                      <button 
+                                        type="button"
+                                        onClick={() => { 
+                                          setPreviewImageUrl(meta.url); 
+                                          setPreviewImageName(meta.fileName); 
+                                        }}
+                                        style={{ 
+                                          fontSize: '0.75rem', 
+                                          fontWeight: '500', 
+                                          color: '#2563eb', 
+                                          background: 'none',
+                                          border: 'none',
+                                          padding: 0,
+                                          cursor: 'pointer',
+                                          textDecoration: 'none', 
+                                          textOverflow: 'ellipsis', 
+                                          overflow: 'hidden', 
+                                          whiteSpace: 'nowrap', 
+                                          display: 'block',
+                                          textAlign: 'left',
+                                          width: '100%',
+                                          fontFamily: 'inherit'
+                                        }}
+                                        className="file-name-link"
+                                        title={meta.fileName}
+                                      >
+                                        {meta.fileName}
+                                      </button>
+                                    ) : (
+                                      <button 
+                                        type="button"
+                                        onClick={() => { 
+                                          handleDownloadFile(meta.url, meta.fileName); 
+                                        }}
+                                        style={{ 
+                                          fontSize: '0.75rem', 
+                                          fontWeight: '500', 
+                                          color: '#2563eb', 
+                                          background: 'none',
+                                          border: 'none',
+                                          padding: 0,
+                                          cursor: 'pointer',
+                                          textDecoration: 'none', 
+                                          textOverflow: 'ellipsis', 
+                                          overflow: 'hidden', 
+                                          whiteSpace: 'nowrap', 
+                                          display: 'block',
+                                          textAlign: 'left',
+                                          width: '100%',
+                                          fontFamily: 'inherit'
+                                        }}
+                                        className="file-name-link"
+                                        title={meta.fileName}
+                                      >
+                                        {meta.fileName}
+                                      </button>
+                                    )}
+                                    {meta.isImage && (
+                                      <div style={{ marginTop: '0.25rem' }}>
+                                        <img 
+                                          src={meta.url} 
+                                          alt={meta.fileName} 
+                                          style={{ maxWidth: '120px', maxHeight: '80px', borderRadius: '4px', border: '1px solid #e2e8f0', objectFit: 'contain', cursor: 'pointer', display: 'block' }}
+                                          onClick={() => { setPreviewImageUrl(meta.url); setPreviewImageName(meta.fileName); }}
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </td>
 
@@ -5452,7 +5461,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                     )}
                     <td className="cu-td cu-td-project" style={{ textAlign: 'left' }}>
                       {task.projectName ? (
-                        <span className="cu-project-badge">{task.projectName}</span>
+                        <span className="cu-project-text">{task.projectName}</span>
                       ) : <span className="cu-empty-cell">-</span>}
                     </td>
                     {isTemplateList ? (
@@ -5552,7 +5561,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                         )}
                         <td className="cu-td cu-td-project" style={{ textAlign: 'left' }}>
                           {sub.projectName ? (
-                            <span className="cu-project-badge">{sub.projectName}</span>
+                            <span className="cu-project-text">{sub.projectName}</span>
                           ) : <span className="cu-empty-cell">-</span>}
                         </td>
                         {isTemplateList ? (
@@ -7061,7 +7070,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                   <thead>
                                     <tr className="cu-thead-row">
                                       <th className="cu-th cu-th-name">Name</th>
-                                      <th className="cu-th cu-th-assignee">Assignee</th>
                                       <th className="cu-th cu-th-list">Status</th>
                                       <th className="cu-th cu-th-delivery">Due Date</th>
                                       <th className="cu-th cu-th-actions">Actions</th>
@@ -7149,14 +7157,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 </button>
                                               </div>
                                             </td>
-                                            <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
-                                              <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
-                                                <select className="cu-inline-dropdown" value={task.assignees || ''} disabled={!canEditTask(task)} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${task.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
-                                                  <option value="">Unassigned</option>
-                                                  {getFilteredUsersForProject(getTaskProjectId(task), task.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
-                                                </select>
-                                              </div>
-                                            </td>
+
                                             <td className="cu-td cu-td-list" onClick={e => e.stopPropagation()}>
                                               <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
                                                 <select className="cu-inline-dropdown" value={task.status || 'To Do'} disabled={!canEditTask(task)} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (task.status !== 'Archived' && task.status !== 'Archive') ? task.status : (task.previousStatus || 'To Do'); } else if (newStatus === 'Delivered' && !task.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${task.id}`, updateData); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: meta.dotColor, fontSize: '12px', fontWeight: 600, padding: '0px', background: 'transparent', border: 'none', cursor: canEditTask(task) ? 'pointer' : 'default' }}>
@@ -7172,7 +7173,99 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               </div>
                                             </td>
                                             <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
-                                              <div className="cu-row-actions">
+                                              <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                {(() => {
+                                                  const assignVal = task.assignees || '';
+                                                  const uObj = assignVal ? listUsers.find(u => u.id === assignVal) : null;
+                                                  const fullName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim()) : '';
+                                                  const init = fullName ? initials(fullName) : '';
+                                                  return (
+                                                    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                                      {init ? (
+                                                        <span 
+                                                          className="card-clickup-avatar" 
+                                                          style={{ 
+                                                            fontSize: '12px', 
+                                                            fontWeight: '700', 
+                                                            color: '#1e293b', 
+                                                            background: '#f1f5f9',
+                                                            width: '24px',
+                                                            height: '24px',
+                                                            borderRadius: '50%',
+                                                            border: '1px solid #cbd5e1',
+                                                            boxShadow: 'none',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            marginRight: '6px',
+                                                            marginLeft: 0,
+                                                            flexShrink: 0
+                                                          }}
+                                                          title={fullName}
+                                                        >
+                                                          {init}
+                                                        </span>
+                                                      ) : (
+                                                        <span 
+                                                          className="card-clickup-avatar" 
+                                                          style={{ 
+                                                            fontSize: '12px', 
+                                                            fontWeight: '700', 
+                                                            color: '#94a3b8', 
+                                                            background: '#f1f5f9',
+                                                            width: '24px',
+                                                            height: '24px',
+                                                            borderRadius: '50%',
+                                                            border: '1.5px dashed #cbd5e1',
+                                                            boxShadow: 'none',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            marginRight: '6px',
+                                                            marginLeft: 0,
+                                                            flexShrink: 0
+                                                          }}
+                                                          title="Unassigned"
+                                                        >
+                                                          ?
+                                                        </span>
+                                                      )}
+                                                      {canEditTask(task) && (
+                                                        <select
+                                                          value={task.assignees || ''}
+                                                          onClick={e => e.stopPropagation()}
+                                                          onChange={async (e) => {
+                                                            e.stopPropagation();
+                                                            const val = e.target.value;
+                                                            const updated = { ...task, assignees: val };
+                                                            try {
+                                                              const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                              await api.put(`/tasks/${task.id}`, { assignees: val, updatedBy: updatedByName });
+                                                              setTasks(ts => ts.map(t => t.id === task.id ? updated : t));
+                                                            } catch(err) {
+                                                              console.error(err);
+                                                            }
+                                                          }}
+                                                          style={{
+                                                            position: 'absolute',
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            opacity: 0,
+                                                            cursor: 'pointer'
+                                                          }}
+                                                        >
+                                                          <option value="">Unassigned</option>
+                                                          {getFilteredUsersForProject(getTaskProjectId(task), task.assignees).map(u => {
+                                                            const n = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim();
+                                                            return <option key={u.id} value={u.id}>{n}</option>;
+                                                          })}
+                                                        </select>
+                                                      )}
+                                                    </div>
+                                                  );
+                                                })()}
                                                 <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                                                   <PriorityFlag priority={task.priority} />
                                                   {canEditTask(task) && (
@@ -7236,14 +7329,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                     </TaskTitleTooltip>
                                                   </div>
                                                 </td>
-                                                <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
-                                                  <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
-                                                    <select className="cu-inline-dropdown" value={sub.assignees || ''} disabled={!canEditTask(sub)} onChange={async (e) => { e.stopPropagation(); const updated = { ...sub, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${sub.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === sub.id ? updated : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
-                                                      <option value="">Unassigned</option>
-                                                      {getFilteredUsersForProject(getTaskProjectId(sub) || getTaskProjectId(task), sub.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
-                                                    </select>
-                                                  </div>
-                                                </td>
+
                                                 <td className="cu-td cu-td-list" onClick={e => e.stopPropagation()}>
                                                   <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
                                                     <select className="cu-inline-dropdown" value={sub.status || 'To Do'} disabled={!canEditTask(sub)} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (sub.status !== 'Archived' && sub.status !== 'Archive') ? sub.status : (sub.previousStatus || 'To Do'); } else if (newStatus === 'Delivered' && !sub.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${sub.id}`, updateData); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: subMeta.dotColor, fontSize: '12px', fontWeight: 600, padding: '0px', background: 'transparent', border: 'none', cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
@@ -7259,7 +7345,99 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
-                                                  <div className="cu-row-actions">
+                                                  <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                    {(() => {
+                                                      const assignVal = sub.assignees || '';
+                                                      const uObj = assignVal ? listUsers.find(u => u.id === assignVal) : null;
+                                                      const fullName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim()) : '';
+                                                      const init = fullName ? initials(fullName) : '';
+                                                      return (
+                                                        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                                          {init ? (
+                                                            <span 
+                                                              className="card-clickup-avatar" 
+                                                              style={{ 
+                                                                fontSize: '12px', 
+                                                                fontWeight: '700', 
+                                                                color: '#1e293b', 
+                                                                background: '#f1f5f9',
+                                                                width: '24px',
+                                                                height: '24px',
+                                                                borderRadius: '50%',
+                                                                border: '1px solid #cbd5e1',
+                                                                boxShadow: 'none',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                marginRight: '6px',
+                                                                marginLeft: 0,
+                                                                flexShrink: 0
+                                                              }}
+                                                              title={fullName}
+                                                            >
+                                                              {init}
+                                                            </span>
+                                                          ) : (
+                                                            <span 
+                                                              className="card-clickup-avatar" 
+                                                              style={{ 
+                                                                fontSize: '12px', 
+                                                                fontWeight: '700', 
+                                                                color: '#94a3b8', 
+                                                                background: '#f1f5f9',
+                                                                width: '24px',
+                                                                height: '24px',
+                                                                borderRadius: '50%',
+                                                                border: '1.5px dashed #cbd5e1',
+                                                                boxShadow: 'none',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                marginRight: '6px',
+                                                                marginLeft: 0,
+                                                                flexShrink: 0
+                                                              }}
+                                                              title="Unassigned"
+                                                            >
+                                                              ?
+                                                            </span>
+                                                          )}
+                                                          {canEditTask(sub) && (
+                                                            <select
+                                                              value={sub.assignees || ''}
+                                                              onClick={e => e.stopPropagation()}
+                                                              onChange={async (e) => {
+                                                                e.stopPropagation();
+                                                                const val = e.target.value;
+                                                                const updated = { ...sub, assignees: val };
+                                                                try {
+                                                                  const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                                  await api.put(`/tasks/${sub.id}`, { assignees: val, updatedBy: updatedByName });
+                                                                  setTasks(ts => ts.map(t => t.id === sub.id ? updated : t));
+                                                                } catch(err) {
+                                                                  console.error(err);
+                                                                }
+                                                              }}
+                                                              style={{
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                left: 0,
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                opacity: 0,
+                                                                cursor: 'pointer'
+                                                              }}
+                                                            >
+                                                              <option value="">Unassigned</option>
+                                                              {getFilteredUsersForProject(getTaskProjectId(sub) || getTaskProjectId(task), sub.assignees).map(u => {
+                                                                const n = u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim();
+                                                                return <option key={u.id} value={u.id}>{n}</option>;
+                                                              })}
+                                                            </select>
+                                                          )}
+                                                        </div>
+                                                      );
+                                                    })()}
                                                     <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                                                       <PriorityFlag priority={sub.priority} />
                                                       {canEditTask(sub) && (
@@ -7310,7 +7488,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                           if (isAddingSubtask) {
                                             rows.push(
                                               <tr key={`add-sub-${task.id}`} className="cu-inline-row animate-fade-in" style={{ background: '#f8fafc' }}>
-                                                <td colSpan="5" style={{ paddingLeft: '2.5rem' }}>
+                                                <td colSpan="4" style={{ paddingLeft: '2.5rem' }}>
                                                   <div className="new-task-inline-bar" style={{ borderLeft: '2px solid #2563eb', paddingLeft: '8px' }}>
                                                     <div className="ntib-left">
                                                       <span className="ntib-dotted-circle"></span>
@@ -7856,7 +8034,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                             )}
                                             <td className="cu-td cu-td-project">
                                               {task.projectName ? (
-                                                <span className="cu-project-badge">{task.projectName}</span>
+                                                <span className="cu-project-text">{task.projectName}</span>
                                               ) : <span className="cu-empty-cell">-</span>}
                                             </td>
                                             <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>
@@ -7943,7 +8121,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 )}
                                                 <td className="cu-td cu-td-project">
                                                   {sub.projectName ? (
-                                                    <span className="cu-project-badge">{sub.projectName}</span>
+                                                    <span className="cu-project-text">{sub.projectName}</span>
                                                   ) : <span className="cu-empty-cell">-</span>}
                                                 </td>
                                                 <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()}>

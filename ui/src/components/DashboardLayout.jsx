@@ -18,6 +18,7 @@ import ReportsStatusBased from './pages/Administration/ReportsStatusBased';
 import TimesheetOverall from './pages/Administration/TimesheetOverall';
 import DailyLoadIndividual from './pages/Administration/DailyLoadIndividual';
 import DailyLoadAll from './pages/Administration/DailyLoadAll';
+import BugCapture from './pages/Operations/BugCapture';
 
 
 // Helper to parse deep-link paths like /projects/Name or /tasks/abc123
@@ -29,6 +30,9 @@ const parseRoutePath = (pathname) => {
   }
   if (path === 'tasks-worklog') {
     return { tab: 'reports-status-based', projectName: null, taskId: null };
+  }
+  if (path === 'bug-capture') {
+    return { tab: 'bug-capture', projectName: null, taskId: null };
   }
   if (segments[0] === 'projects' && segments.length > 1) {
     const projectName = decodeURIComponent(segments.slice(1).join('/'));
@@ -793,6 +797,8 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             return renderOverview(setActiveTab, (taskData) => navigateToTaskDetail(taskData, 'reports'));
           }
           return <Reports user={user} onNavigateToTask={(taskData) => navigateToTaskDetail(taskData, 'reports')} />;
+        case 'bug-capture':
+          return <BugCapture user={user} />;
         default:
           return renderOverview(
             setActiveTab,
@@ -805,7 +811,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
     const allTabIds = [
       'overview', 'projects', 'estimations', 'clients', 'track-team', 'tasks', 'task-groups',
       'archive', 'users', 'roles', 'add-user', 'edit-user', 'timesheet-overall', 'daily-load-all',
-      'daily-load-individual', 'reports-status-based', 'reports'
+      'daily-load-individual', 'reports-status-based', 'reports', 'bug-capture'
     ];
 
     // If activeTab is none of the defined ones, treat it as overview/default
@@ -905,6 +911,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
       case 'daily-load-all': return { title: 'Daily Load - All', back: 'Reports', id: 'DailyLoadAll' };
       case 'daily-load-individual': return { title: 'Daily Load - Individual', back: 'Reports', id: 'DailyLoadIndividual' };
       case 'archive': return { title: 'Archive', back: 'Admin', id: 'Archive' };
+      case 'bug-capture': return { title: 'Bug Capture Extension', back: 'Operations', id: 'BugCapture' };
 
       default: return { title: 'Dashboard', back: 'Main', id: 'Overview' };
     }
@@ -991,6 +998,10 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
               {can('archive', 'view') && <NavItem id="archive" label="Archive" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>} />}
             </div>
           )}
+
+          <div className="saas-nav-group">
+            <NavItem id="bug-capture" label="Bug Capture" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>} />
+          </div>
 
         </div>
 
@@ -1138,7 +1149,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
                 )}                {filteredTasks.length > 0 && (
                   <div className="saas-search-category">
                     <div className="saas-search-category-title">Tasks</div>
-                    {filteredTasks.slice(0, 5).map(t => (
+                    {filteredTasks.map(t => (
                       <div key={t.id} className="saas-search-item" onClick={() => handleItemClick('task', t)}>
                         <div className="saas-search-item-icon">#</div>
                         <div className="saas-search-item-content">
@@ -1153,7 +1164,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
                 {filteredProjects.length > 0 && (
                   <div className="saas-search-category">
                     <div className="saas-search-category-title">Projects</div>
-                    {filteredProjects.slice(0, 5).map(p => (
+                    {filteredProjects.map(p => (
                       <div key={p.id} className="saas-search-item" onClick={() => handleItemClick('project', p)}>
                         <div className="saas-search-item-icon project-icon">
                           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
@@ -1170,7 +1181,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
                 {filteredUsers.length > 0 && (
                   <div className="saas-search-category">
                     <div className="saas-search-category-title">Users & Employees</div>
-                    {filteredUsers.slice(0, 5).map(u => (
+                    {filteredUsers.map(u => (
                       <div key={u.id} className="saas-search-item" onClick={() => handleItemClick('user', u)}>
                         <div className="saas-search-item-icon user-icon">
                           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
@@ -1187,7 +1198,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
                 {filteredTaskGroups.length > 0 && (
                   <div className="saas-search-category">
                     <div className="saas-search-category-title">Task Groups</div>
-                    {filteredTaskGroups.slice(0, 5).map(tg => (
+                    {filteredTaskGroups.map(tg => (
                       <div key={tg.id} className="saas-search-item" onClick={() => handleItemClick('task-group', tg)}>
                         <div className="saas-search-item-icon project-icon" style={{ background: '#f1f5f9', color: '#64748b' }}>
                           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
