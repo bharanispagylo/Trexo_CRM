@@ -66,7 +66,7 @@
   font-weight: 400;
   color: #64748b;
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  /* transition: all 0.15s ease-in-out; */
   min-width: 80px;
   text-align: center;
   border-radius: 6px;
@@ -79,7 +79,7 @@
 .view-toggle button.active {
   background: #ffffff;
   color: #0f172a;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  /* box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06); */
 }
 
 .kanban-new-btn {
@@ -3470,12 +3470,11 @@
 .cu-th-actions { text-align: right !important; }
 
 /* All Tasks List View Column Widths */
-.all-tasks-list .cu-th-name     { width: 50%; }
+.all-tasks-list .cu-th-name     { width: 45%; }
 .all-tasks-list .cu-th-project  { width: 15%; }
-.all-tasks-list .cu-th-assignee { width: 15%; text-align: center; }
 .all-tasks-list .cu-th-list     { width: 15%; }
 .all-tasks-list .cu-th-delivery { width: 10%; text-align: center; }
-.all-tasks-list .cu-th-actions  { width: 10%; }
+.all-tasks-list .cu-th-actions  { width: 15%; }
 
 .all-tasks-list .cu-table-wrapper {
   overflow-x: hidden !important;
@@ -3598,6 +3597,17 @@
   border: 1px solid #e2e8f0;
   border-radius: 4px;
   padding: 0.1rem 0.4rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cu-project-text {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 400;
+  color: #475569;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -6138,16 +6148,16 @@
   border-bottom: 2px solid transparent;
   font-weight: 600;
   font-size: 12px;
-  color: var(--saas-text-muted);
+  color: #475569;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .saas-tab:hover {
-  color: #0f172a;
+  color: #2563eb;
 }
 
 .saas-tab.active {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
+  color: #2563eb !important;
+  border-bottom-color: #2563eb !important;
 }

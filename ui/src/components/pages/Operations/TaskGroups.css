@@ -159,18 +159,18 @@
   padding: 0.75rem 0.5rem;
   font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: #475569;
   cursor: pointer;
   position: relative;
   transition: color 0.2s;
 }
 
 .tg-tab-btn:hover {
-  color: #0f172a;
+  color: #2563eb;
 }
 
 .tg-tab-btn.active {
-  color: black;
+  color: #2563eb;
 }
 
 .tg-tab-btn.active::after {
@@ -180,7 +180,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: black;
+  background: #2563eb;
   border-radius: 3px;
   animation: tabSlide 0.2s ease-out;
 }

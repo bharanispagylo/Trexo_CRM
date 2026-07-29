@@ -89,7 +89,14 @@ const formatRelativeDueDate = (dateStr) => {
   }
 };
 
-const initials = (name) => name ? name.split(' ').map(w => w[0]).join('').toUpperCase() : '?';
+const initials = (name) => {
+  if (!name) return '?';
+  const parts = name.trim().split(' ').filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase().substring(0, 2);
+  }
+  return parts[0].substring(0, 2).toUpperCase();
+};
 
 const AVATAR_COLORS_LIST = ['av-blue', 'av-pink', 'av-green', 'av-amber', 'av-purple'];
 const getAvatarColor = (name) => {

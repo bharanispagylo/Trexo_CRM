@@ -164,7 +164,7 @@
   border-radius: 8px;
   background: transparent;
   border: none;
-  color: var(--saas-text-secondary);
+  color: #334155;
   font-size: 0.85rem;
   /* ~13.5px */
   font-weight: 500;
@@ -175,26 +175,28 @@
 }
 
 .nav-item:hover {
-  background-color: #EBECEF;
-  color: var(--saas-text-primary);
+  background-color: #eff6ff;
+  color: #2563eb;
 }
 
 .nav-item.active {
-  background-color: var(--saas-active-item);
-  color: var(--saas-text-primary);
+  background-color: #eff6ff;
+  color: #2563eb;
   font-weight: 600;
 }
 
 .nav-icon {
-  color: var(--saas-text-muted);
+  color: #64748b;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 20px;
+  transition: color 0.15s ease;
 }
 
+.nav-item:hover .nav-icon,
 .nav-item.active .nav-icon {
-  color: var(--saas-text-primary);
+  color: #2563eb;
 }
 
 /* Favorites Section */
@@ -469,7 +471,7 @@
   font-size: 0.85rem;
   outline: none;
   width: 100%;
-  color: #1e293b;
+  color: black;
   font-family: inherit;
   font-weight: 500;
 }
