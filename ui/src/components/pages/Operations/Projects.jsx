@@ -1081,7 +1081,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       .filter(Boolean);
 
     return (
-      <div ref={queryFormRef} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', maxWidth: '780px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+      <div ref={queryFormRef} className="saas-form-card query-modal-card" style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', maxWidth: '780px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
           <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>
             {queryFormType === 'create' ? 'Create New Query' : 'Edit Query'}
@@ -1089,11 +1089,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
           <button style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#94a3b8' }} onClick={() => setShowQueryModal(false)}>✕</button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', marginBottom: '1.25rem' }}>
+        <div className="query-form-grid" style={{ marginBottom: '1.25rem' }}>
           <div className="saas-field" style={{ gridColumn: 'span 2' }}>
             <label className="saas-label">Query Title *</label>
             <input
               className="saas-input"
+              style={{ maxWidth: 'min(660px, 100%)', boxSizing: 'border-box' }}
               placeholder="What is the query about?"
               value={queryFormFields.title}
               onChange={e => setQueryFormFields({ ...queryFormFields, title: e.target.value })}
@@ -1142,7 +1143,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
             <textarea
               className="saas-textarea"
               placeholder="Query details..."
-              style={{ minHeight: '80px', resize: 'vertical' }}
+              style={{ minHeight: '80px', resize: 'vertical', maxWidth: 'min(660px, 100%)', boxSizing: 'border-box' }}
               value={queryFormFields.description}
               onChange={e => setQueryFormFields({ ...queryFormFields, description: e.target.value })}
             />
@@ -1884,10 +1885,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                       <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                         <thead>
                                           <tr className="cu-thead-row" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                                            <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '67%', textAlign: 'left' }}>Name</th>
-                                            <th className="cu-th cu-th-assignee" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'center' }}>Assignee</th>
-                                            <th className="cu-th cu-th-delivery" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '10%', textAlign: 'center' }}>Due Date</th>
-                                            <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '8%', textAlign: 'right' }}>Actions</th>
+                                            <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '60%', textAlign: 'left' }}>Name</th>
+                                            <th className="cu-th cu-th-delivery" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '20%', textAlign: 'center' }}>Due Date</th>
+                                            <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '20%', textAlign: 'right' }}>Actions</th>
                                           </tr>
                                         </thead>
                                         <tbody>
@@ -1967,30 +1967,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                       )}
                                                     </div>
                                                   </td>
-                                                  <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                                     <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
-                                                       <select 
-                                                         className="cu-inline-dropdown" 
-                                                         value={task.assignees || ''} 
-                                                         disabled={!canEditTask(task)} 
-                                                         onChange={async (e) => { 
-                                                           e.stopPropagation(); 
-                                                           const val = e.target.value;
-                                                           try { 
-                                                             const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; 
-                                                             await api.put(`/tasks/${task.id}`, { assignees: val, updatedBy: updatedByName }); 
-                                                             fetchData(true);
-                                                           } catch(err) { 
-                                                             console.error(err); 
-                                                           } 
-                                                         }} 
-                                                         style={{ cursor: canEditTask(task) ? 'pointer' : 'default', textAlignLast: 'center' }}
-                                                       >
-                                                         <option value="">Unassigned</option>
-                                                         {getFilteredUsersForProject().map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
-                                                       </select>
-                                                     </div>
-                                                   </td>
                                                   <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
                                                      <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(task) ? 'pointer' : 'default', justifyContent: 'center' }}>
                                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke={task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
@@ -2017,6 +1993,27 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                    </td>
                                                   <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
                                                      <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                       {(() => {
+                                                         const assignVal = task.assignees || '';
+                                                         const uObj = assignVal ? users.find(u => u.id === assignVal) : null;
+                                                         const fullName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim()) : '';
+                                                         const init = fullName ? initials(fullName) : '';
+                                                         return (
+                                                           <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                                             {init ? (
+                                                               <span className="card-clickup-avatar" style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', background: '#f1f5f9', width: '24px', height: '24px', borderRadius: '50%', border: '1px solid #cbd5e1', boxShadow: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginRight: '6px', marginLeft: 0, flexShrink: 0 }} title={fullName}>{init}</span>
+                                                             ) : (
+                                                               <span className="card-clickup-avatar" style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', width: '24px', height: '24px', borderRadius: '50%', border: '1.5px dashed #cbd5e1', boxShadow: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginRight: '6px', marginLeft: 0, flexShrink: 0 }} title="Unassigned">?</span>
+                                                             )}
+                                                             {canEditTask(task) && (
+                                                               <select value={task.assignees || ''} onClick={e => e.stopPropagation()} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${task.id}`, { assignees: val, updatedBy: updatedByName }); fetchData(true); } catch (err) { console.error(err); } }} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', outline: 'none' }}>
+                                                                 <option value="">Unassigned</option>
+                                                                 {getFilteredUsersForProject().map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                               </select>
+                                                             )}
+                                                           </div>
+                                                         );
+                                                       })()}
                                                        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                                                          <PriorityFlag priority={task.priority} />
                                                          {canEditTask(task) && (
@@ -2086,30 +2083,6 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                           </TaskTitleTooltip>
                                                         </div>
                                                       </td>
-                                                      <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                                                         <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
-                                                           <select 
-                                                             className="cu-inline-dropdown" 
-                                                             value={sub.assignees || ''} 
-                                                             disabled={!canEditTask(sub)} 
-                                                             onChange={async (e) => { 
-                                                               e.stopPropagation(); 
-                                                               const val = e.target.value;
-                                                               try { 
-                                                                 const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; 
-                                                                 await api.put(`/tasks/${sub.id}`, { assignees: val, updatedBy: updatedByName }); 
-                                                                 fetchData(true);
-                                                               } catch(err) { 
-                                                                 console.error(err); 
-                                                               } 
-                                                             }} 
-                                                             style={{ cursor: canEditTask(sub) ? 'pointer' : 'default', textAlignLast: 'center' }}
-                                                           >
-                                                             <option value="">Unassigned</option>
-                                                             {getFilteredUsersForProject().map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
-                                                           </select>
-                                                         </div>
-                                                       </td>
                                                       <td className="cu-td cu-td-delivery" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
                                                          <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default', justifyContent: 'center' }}>
                                                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke={sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
@@ -2136,6 +2109,27 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                        </td>
                                                       <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
                                                         <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                          {(() => {
+                                                            const assignVal = sub.assignees || '';
+                                                            const uObj = assignVal ? users.find(u => u.id === assignVal) : null;
+                                                            const fullName = uObj ? (uObj.fullName || `${uObj.firstName || ''} ${uObj.lastName || ''}`.trim()) : '';
+                                                            const init = fullName ? initials(fullName) : '';
+                                                            return (
+                                                              <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                                                {init ? (
+                                                                  <span className="card-clickup-avatar" style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', background: '#f1f5f9', width: '24px', height: '24px', borderRadius: '50%', border: '1px solid #cbd5e1', boxShadow: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginRight: '6px', marginLeft: 0, flexShrink: 0 }} title={fullName}>{init}</span>
+                                                                ) : (
+                                                                  <span className="card-clickup-avatar" style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', width: '24px', height: '24px', borderRadius: '50%', border: '1.5px dashed #cbd5e1', boxShadow: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginRight: '6px', marginLeft: 0, flexShrink: 0 }} title="Unassigned">?</span>
+                                                                )}
+                                                                {canEditTask(sub) && (
+                                                                  <select value={sub.assignees || ''} onClick={e => e.stopPropagation()} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${sub.id}`, { assignees: val, updatedBy: updatedByName }); fetchData(true); } catch (err) { console.error(err); } }} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', outline: 'none' }}>
+                                                                    <option value="">Unassigned</option>
+                                                                    {getFilteredUsersForProject().map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
+                                                                  </select>
+                                                                )}
+                                                              </div>
+                                                            );
+                                                          })()}
                                                           <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                                                             <PriorityFlag priority={sub.priority} />
                                                             {canEditTask(sub) && (
@@ -2188,7 +2182,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                               if (inlineSubtaskParentId === task.id) {
                                                 rows.push(
                                                   <tr key={`add-sub-${task.id}`} className="cu-inline-row animate-fade-in" style={{ background: '#f8fafc' }}>
-                                                    <td colSpan="4" style={{ paddingLeft: '2.5rem' }}>
+                                                    <td colSpan="3" style={{ paddingLeft: '2.5rem' }}>
                                                       <div className="new-task-inline-bar" style={{ borderLeft: '2px solid #2563eb', paddingLeft: '8px' }} onClick={e => e.stopPropagation()}>
                                                         <div className="ntib-left">
                                                           <span className="ntib-dotted-circle"></span>
@@ -2252,7 +2246,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                             if (isInline) {
                                               renderedTasks.push(
                                                 <tr key="inline-add-row" className="cu-inline-row animate-fade-in">
-                                                  <td colSpan="4" style={{ padding: '8px' }}>
+                                                  <td colSpan="3" style={{ padding: '8px' }}>
                                                     <div className="new-task-inline-bar" onClick={e => e.stopPropagation()}>
                                                       <div className="ntib-left">
                                                         <span className="ntib-dotted-circle"></span>
@@ -2308,7 +2302,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                             } else if (can('tasks', 'create')) {
                                               renderedTasks.push(
                                                 <tr key="add-task-row" className="cu-add-row" onClick={(e) => { e.stopPropagation(); openInlineAdd(list.id, col.id); }}>
-                                                  <td colSpan="4">
+                                                  <td colSpan="3">
                                                     <span className="cu-add-icon">+</span>
                                                     <span className="cu-add-text">Add Task</span>
                                                   </td>
