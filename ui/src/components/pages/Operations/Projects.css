@@ -885,6 +885,12 @@
 /* Desktop: hide mobile team cards by default */
 .team-cards-mobile { display: none; }
 
+.query-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
 @media (max-width: 768px) {
   .projects-3col-layout {
     flex-direction: column !important;
@@ -1204,6 +1210,15 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
     gap: 0.6rem !important;
     margin-bottom: 0 !important;
+  }
+
+  .query-form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.85rem !important;
+  }
+
+  .query-form-grid .saas-field {
+    grid-column: span 1 !important;
   }
 
   .proj-span-2 {
