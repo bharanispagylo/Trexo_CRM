@@ -698,6 +698,17 @@ export default function TaskGroups({ user, onBack }) {
     setDragOverListId(null);
   };
 
+  const updateTaskOptimistically = (taskId, fields) => {
+    setTaskLists(prevLists =>
+      prevLists.map(list => ({
+        ...list,
+        tasks: (list.tasks || []).map(t =>
+          t.id === taskId ? { ...t, ...fields } : t
+        )
+      }))
+    );
+  };
+
   const getAvatarColor = (name) => {
     if (!name) return 'av-blue';
     const c = name.charCodeAt(0) % 5;
@@ -1032,15 +1043,12 @@ export default function TaskGroups({ user, onBack }) {
                                          value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} 
                                          disabled={!canEditTask(task)} 
                                          onClick={(e) => { e.stopPropagation(); if (canEditTask(task)) { try { e.target.showPicker(); } catch (err) {} } }} 
-                                         onChange={async (e) => { 
+                                         onChange={(e) => { 
                                            e.stopPropagation(); 
                                            const val = e.target.value; 
-                                           try { 
-                                             await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); 
-                                             fetchTaskListsOnly();
-                                           } catch(err) { 
-                                             console.error(err); 
-                                           } 
+                                           const newDueDate = val ? new Date(val).toISOString() : null;
+                                           updateTaskOptimistically(task.id, { dueDate: newDueDate });
+                                           api.put(`/tasks/${task.id}`, { dueDate: newDueDate }).catch(err => console.error(err));
                                          }} 
                                          style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }} 
                                        />
@@ -1108,16 +1116,12 @@ export default function TaskGroups({ user, onBack }) {
                                               <select
                                                 value={task.assignees || ''}
                                                 onClick={e => e.stopPropagation()}
-                                                onChange={async (e) => {
+                                                onChange={(e) => {
                                                   e.stopPropagation();
                                                   const val = e.target.value;
-                                                  try {
-                                                    const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                    await api.put(`/tasks/${task.id}`, { assignees: val, updatedBy: updatedByName });
-                                                    fetchTaskListsOnly();
-                                                  } catch (err) {
-                                                    console.error(err);
-                                                  }
+                                                  const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                  updateTaskOptimistically(task.id, { assignees: val });
+                                                  api.put(`/tasks/${task.id}`, { assignees: val, updatedBy: updatedByName }).catch(err => console.error(err));
                                                 }}
                                                 style={{
                                                   position: 'absolute',
@@ -1144,16 +1148,12 @@ export default function TaskGroups({ user, onBack }) {
                                            <select
                                              value={task.priority || 'Medium'}
                                              onClick={e => e.stopPropagation()}
-                                             onChange={async (e) => {
+                                             onChange={(e) => {
                                                e.stopPropagation();
                                                const newPriority = e.target.value;
-                                               try {
-                                                 const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                 await api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName });
-                                                 fetchTaskListsOnly();
-                                               } catch (err) {
-                                                 console.error(err);
-                                               }
+                                               const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                               updateTaskOptimistically(task.id, { priority: newPriority });
+                                               api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName }).catch(err => console.error(err));
                                              }}
                                              style={{
                                                position: 'absolute',
@@ -1287,15 +1287,12 @@ export default function TaskGroups({ user, onBack }) {
                                              value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} 
                                              disabled={!canEditTask(sub)} 
                                              onClick={(e) => { e.stopPropagation(); if (canEditTask(sub)) { try { e.target.showPicker(); } catch (err) {} } }} 
-                                             onChange={async (e) => { 
+                                             onChange={(e) => { 
                                                e.stopPropagation(); 
                                                const val = e.target.value; 
-                                               try { 
-                                                 await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); 
-                                                 fetchTaskListsOnly();
-                                               } catch(err) { 
-                                                 console.error(err); 
-                                               } 
+                                               const newDueDate = val ? new Date(val).toISOString() : null;
+                                               updateTaskOptimistically(sub.id, { dueDate: newDueDate });
+                                               api.put(`/tasks/${sub.id}`, { dueDate: newDueDate }).catch(err => console.error(err));
                                              }} 
                                              style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }} 
                                            />
@@ -1363,17 +1360,13 @@ export default function TaskGroups({ user, onBack }) {
                                                   <select
                                                     value={sub.assignees || ''}
                                                     onClick={e => e.stopPropagation()}
-                                                    onChange={async (e) => {
-                                                      e.stopPropagation();
-                                                      const val = e.target.value;
-                                                      try {
-                                                        const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                        await api.put(`/tasks/${sub.id}`, { assignees: val, updatedBy: updatedByName });
-                                                        fetchTaskListsOnly();
-                                                      } catch (err) {
-                                                        console.error(err);
-                                                      }
-                                                    }}
+                                                    onChange={(e) => {
+                                                     e.stopPropagation();
+                                                     const val = e.target.value;
+                                                     const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                     updateTaskOptimistically(sub.id, { assignees: val });
+                                                     api.put(`/tasks/${sub.id}`, { assignees: val, updatedBy: updatedByName }).catch(err => console.error(err));
+                                                   }}
                                                     style={{
                                                       position: 'absolute',
                                                       top: 0,
@@ -1399,17 +1392,13 @@ export default function TaskGroups({ user, onBack }) {
                                               <select
                                                 value={sub.priority || 'Medium'}
                                                 onClick={e => e.stopPropagation()}
-                                                onChange={async (e) => {
-                                                  e.stopPropagation();
-                                                  const newPriority = e.target.value;
-                                                  try {
-                                                    const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                    await api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName });
-                                                    fetchTaskListsOnly();
-                                                  } catch (err) {
-                                                    console.error(err);
-                                                  }
-                                                }}
+                                                onChange={(e) => {
+                                                   e.stopPropagation();
+                                                   const newPriority = e.target.value;
+                                                   const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                   updateTaskOptimistically(sub.id, { priority: newPriority });
+                                                   api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName }).catch(err => console.error(err));
+                                                 }}
                                                 style={{
                                                   position: 'absolute',
                                                   top: 0,

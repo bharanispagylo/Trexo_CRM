@@ -5452,7 +5452,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                     {showAssigneeCol && (
                       <td className="cu-td cu-td-assignee" style={{ textAlign: 'left' }} onClick={e => e.stopPropagation()}>
                         <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
-                          <select className="cu-inline-dropdown" value={task.assignees || ''} disabled={!canEditTask(task)} onChange={async (e) => { e.stopPropagation(); const updated = { ...task, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${task.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === task.id ? updated : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                          <select className="cu-inline-dropdown" value={task.assignees || ''} disabled={!canEditTask(task)} onChange={(e) => { e.stopPropagation(); const val = e.target.value; const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; setTasks(ts => ts.map(t => t.id === task.id ? { ...t, assignees: val } : t)); api.put(`/tasks/${task.id}`, { assignees: val, updatedBy: updatedByName }).catch(console.error); }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
                             <option value="">Unassigned</option>
                             {getFilteredUsersForProject(getTaskProjectId(task), task.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                           </select>
@@ -5477,7 +5477,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                         <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
                           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                           <span className="cu-date-text" style={{ color: task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(task.dueDate)}</span>
-                          <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(task)} onClick={(e) => { e.stopPropagation(); if (canEditTask(task)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }} />
+                          <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(task)} onClick={(e) => { e.stopPropagation(); if (canEditTask(task)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={(e) => { e.stopPropagation(); const val = e.target.value; const newDueDate = val ? new Date(val).toISOString() : null; setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: newDueDate } : t)); api.put(`/tasks/${task.id}`, { dueDate: newDueDate }).catch(console.error); }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }} />
                         </div>
                       </td>
                     )}
@@ -5489,17 +5489,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                             <select
                               value={task.priority || 'Medium'}
                               onClick={e => e.stopPropagation()}
-                              onChange={async (e) => {
+                              onChange={(e) => {
                                 e.stopPropagation();
                                 const newPriority = e.target.value;
-                                const updated = { ...task, priority: newPriority };
-                                try {
-                                  const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                  await api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName });
-                                  setTasks(ts => ts.map(t => t.id === task.id ? updated : t));
-                                } catch (err) {
-                                  console.error(err);
-                                }
+                                const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                setTasks(ts => ts.map(t => t.id === task.id ? { ...t, priority: newPriority } : t));
+                                api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName }).catch(console.error);
                               }}
                               style={{
                                 position: 'absolute',
@@ -5552,7 +5547,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                         {showAssigneeCol && (
                           <td className="cu-td cu-td-assignee" style={{ textAlign: 'left' }} onClick={e => e.stopPropagation()}>
                             <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
-                              <select className="cu-inline-dropdown" value={sub.assignees || ''} disabled={!canEditTask(sub)} onChange={async (e) => { e.stopPropagation(); const updated = { ...sub, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${sub.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === sub.id ? updated : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                              <select className="cu-inline-dropdown" value={sub.assignees || ''} disabled={!canEditTask(sub)} onChange={(e) => { e.stopPropagation(); const val = e.target.value; const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, assignees: val } : t)); api.put(`/tasks/${sub.id}`, { assignees: val, updatedBy: updatedByName }).catch(console.error); }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
                                 <option value="">Unassigned</option>
                                 {getFilteredUsersForProject(getTaskProjectId(sub) || getTaskProjectId(task), sub.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                               </select>
@@ -5573,7 +5568,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                             <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
                               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                               <span className="cu-date-text" style={{ color: sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(sub.dueDate)}</span>
-                              <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(sub)} onClick={(e) => { e.stopPropagation(); if (canEditTask(sub)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }} />
+                              <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(sub)} onClick={(e) => { e.stopPropagation(); if (canEditTask(sub)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={(e) => { e.stopPropagation(); const val = e.target.value; const newDueDate = val ? new Date(val).toISOString() : null; setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: newDueDate } : t)); api.put(`/tasks/${sub.id}`, { dueDate: newDueDate }).catch(console.error); }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }} />
                             </div>
                           </td>
                         )}
@@ -5585,17 +5580,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                 <select
                                   value={sub.priority || 'Medium'}
                                   onClick={e => e.stopPropagation()}
-                                  onChange={async (e) => {
+                                  onChange={(e) => {
                                     e.stopPropagation();
                                     const newPriority = e.target.value;
-                                    const updated = { ...sub, priority: newPriority };
-                                    try {
-                                      const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                      await api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName });
-                                      setTasks(ts => ts.map(t => t.id === sub.id ? updated : t));
-                                    } catch (err) {
-                                      console.error(err);
-                                    }
+                                    const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                    setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, priority: newPriority } : t));
+                                    api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName }).catch(console.error);
                                   }}
                                   style={{
                                     position: 'absolute',
@@ -7169,7 +7159,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                               <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
                                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                                 <span className="cu-date-text" style={{ color: task.status === 'Delivered' ? '#16a34a' : relDate?.isOverdue ? '#ea580c' : relDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(task.dueDate)}</span>
-                                                <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(task)} onClick={(e) => { e.stopPropagation(); if (canEditTask(task)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }} />
+                                                <input type="date" className="cu-date-hidden-input" value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(task)} onClick={(e) => { e.stopPropagation(); if (canEditTask(task)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={(e) => { e.stopPropagation(); const val = e.target.value; const newDueDate = val ? new Date(val).toISOString() : null; setTasks(ts => ts.map(t => t.id === task.id ? { ...t, dueDate: newDueDate } : t)); api.put(`/tasks/${task.id}`, { dueDate: newDueDate }).catch(console.error); }} style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }} />
                                               </div>
                                             </td>
                                             <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
@@ -7234,17 +7224,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                         <select
                                                           value={task.assignees || ''}
                                                           onClick={e => e.stopPropagation()}
-                                                          onChange={async (e) => {
+                                                          onChange={(e) => {
                                                             e.stopPropagation();
                                                             const val = e.target.value;
-                                                            const updated = { ...task, assignees: val };
-                                                            try {
-                                                              const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                              await api.put(`/tasks/${task.id}`, { assignees: val, updatedBy: updatedByName });
-                                                              setTasks(ts => ts.map(t => t.id === task.id ? updated : t));
-                                                            } catch(err) {
-                                                              console.error(err);
-                                                            }
+                                                            const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                            setTasks(ts => ts.map(t => t.id === task.id ? { ...t, assignees: val } : t));
+                                                            api.put(`/tasks/${task.id}`, { assignees: val, updatedBy: updatedByName }).catch(console.error);
                                                           }}
                                                           style={{
                                                             position: 'absolute',
@@ -7272,17 +7257,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                     <select
                                                       value={task.priority || 'Medium'}
                                                       onClick={e => e.stopPropagation()}
-                                                      onChange={async (e) => {
+                                                      onChange={(e) => {
                                                         e.stopPropagation();
                                                         const newPriority = e.target.value;
-                                                        const updated = { ...task, priority: newPriority };
-                                                        try {
-                                                          const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                          await api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName });
-                                                          setTasks(ts => ts.map(t => t.id === task.id ? updated : t));
-                                                        } catch (err) {
-                                                          console.error(err);
-                                                        }
+                                                        const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                        setTasks(ts => ts.map(t => t.id === task.id ? { ...t, priority: newPriority } : t));
+                                                        api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName }).catch(console.error);
                                                       }}
                                                       style={{
                                                         position: 'absolute',
@@ -7341,7 +7321,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                   <div className="cu-inline-field-wrapper cu-date-cell" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
                                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#64748b'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                                     <span className="cu-date-text" style={{ color: sub.status === 'Delivered' ? '#16a34a' : subRelDate?.isOverdue ? '#ea580c' : subRelDate?.isToday ? '#2563eb' : '#475569' }}>{formatDDMonDate(sub.dueDate)}</span>
-                                                    <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(sub)} onClick={(e) => { e.stopPropagation(); if (canEditTask(sub)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: val ? new Date(val).toISOString() : null } : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }} />
+                                                    <input type="date" className="cu-date-hidden-input" value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} disabled={!canEditTask(sub)} onClick={(e) => { e.stopPropagation(); if (canEditTask(sub)) { try { e.target.showPicker(); } catch (err) {} } }} onChange={(e) => { e.stopPropagation(); const val = e.target.value; const newDueDate = val ? new Date(val).toISOString() : null; setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, dueDate: newDueDate } : t)); api.put(`/tasks/${sub.id}`, { dueDate: newDueDate }).catch(console.error); }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }} />
                                                   </div>
                                                 </td>
                                                 <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()}>
@@ -7406,17 +7386,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                             <select
                                                               value={sub.assignees || ''}
                                                               onClick={e => e.stopPropagation()}
-                                                              onChange={async (e) => {
+                                                              onChange={(e) => {
                                                                 e.stopPropagation();
                                                                 const val = e.target.value;
-                                                                const updated = { ...sub, assignees: val };
-                                                                try {
-                                                                  const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                                  await api.put(`/tasks/${sub.id}`, { assignees: val, updatedBy: updatedByName });
-                                                                  setTasks(ts => ts.map(t => t.id === sub.id ? updated : t));
-                                                                } catch(err) {
-                                                                  console.error(err);
-                                                                }
+                                                                const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                                setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, assignees: val } : t));
+                                                                api.put(`/tasks/${sub.id}`, { assignees: val, updatedBy: updatedByName }).catch(console.error);
                                                               }}
                                                               style={{
                                                                 position: 'absolute',
@@ -7444,17 +7419,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                         <select
                                                           value={sub.priority || 'Medium'}
                                                           onClick={e => e.stopPropagation()}
-                                                          onChange={async (e) => {
+                                                          onChange={(e) => {
                                                             e.stopPropagation();
                                                             const newPriority = e.target.value;
-                                                            const updated = { ...sub, priority: newPriority };
-                                                            try {
-                                                              const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                              await api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName });
-                                                              setTasks(ts => ts.map(t => t.id === sub.id ? updated : t));
-                                                            } catch (err) {
-                                                              console.error(err);
-                                                            }
+                                                            const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                            setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, priority: newPriority } : t));
+                                                            api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName }).catch(console.error);
                                                           }}
                                                           style={{
                                                             position: 'absolute',
@@ -8052,17 +8022,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                     <select
                                                       value={task.priority || 'Medium'}
                                                       onClick={e => e.stopPropagation()}
-                                                      onChange={async (e) => {
+                                                      onChange={(e) => {
                                                         e.stopPropagation();
                                                         const newPriority = e.target.value;
-                                                        const updated = { ...task, priority: newPriority };
-                                                        try {
-                                                          const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                          await api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName });
-                                                          setTasks(ts => ts.map(t => t.id === task.id ? updated : t));
-                                                        } catch (err) {
-                                                          console.error(err);
-                                                        }
+                                                        const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                        setTasks(ts => ts.map(t => t.id === task.id ? { ...t, priority: newPriority } : t));
+                                                        api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName }).catch(console.error);
                                                       }}
                                                       style={{
                                                         position: 'absolute',
@@ -8112,7 +8077,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                 {showAssigneeCol && (
                                                   <td className="cu-td cu-td-assignee" onClick={e => e.stopPropagation()}>
                                                     <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
-                                                      <select className="cu-inline-dropdown" value={sub.assignees || ''} disabled={!canEditTask(sub)} onChange={async (e) => { e.stopPropagation(); const updated = { ...sub, assignees: e.target.value }; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${sub.id}`, { assignees: e.target.value, updatedBy: updatedByName }); setTasks(ts => ts.map(t => t.id === sub.id ? updated : t)); } catch(err) { console.error(err); } }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                                                      <select className="cu-inline-dropdown" value={sub.assignees || ''} disabled={!canEditTask(sub)} onChange={(e) => { e.stopPropagation(); const val = e.target.value; const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, assignees: val } : t)); api.put(`/tasks/${sub.id}`, { assignees: val, updatedBy: updatedByName }).catch(console.error); }} style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
                                                         <option value="">Unassigned</option>
                                                         {getFilteredUsersForProject(getTaskProjectId(sub) || getTaskProjectId(task), sub.assignees).map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                       </select>
@@ -8139,17 +8104,12 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                                         <select
                                                           value={sub.priority || 'Medium'}
                                                           onClick={e => e.stopPropagation()}
-                                                          onChange={async (e) => {
+                                                          onChange={(e) => {
                                                             e.stopPropagation();
                                                             const newPriority = e.target.value;
-                                                            const updated = { ...sub, priority: newPriority };
-                                                            try {
-                                                              const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                              await api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName });
-                                                              setTasks(ts => ts.map(t => t.id === sub.id ? updated : t));
-                                                            } catch (err) {
-                                                              console.error(err);
-                                                            }
+                                                            const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                            setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, priority: newPriority } : t));
+                                                            api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName }).catch(console.error);
                                                           }}
                                                           style={{
                                                             position: 'absolute',

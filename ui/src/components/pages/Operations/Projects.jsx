@@ -138,6 +138,64 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
   });
   const [expandedProjStatus, setExpandedProjStatus] = useState(undefined);
   const [selectedTaskListId, setSelectedTaskListId] = useState(null);
+  const [taskSortField, setTaskSortField] = useState('dueDate');
+  const [taskSortOrder, setTaskSortOrder] = useState('asc');
+
+  const handleSortToggle = (field) => {
+    if (taskSortField === field) {
+      setTaskSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setTaskSortField(field);
+      setTaskSortOrder('asc');
+    }
+  };
+
+  const sortProjectTasks = (tasksList) => {
+    return [...tasksList].sort((a, b) => {
+      let res = 0;
+      if (taskSortField === 'name') {
+        const titleA = (a.title || getDisplayId(a) || '').toLowerCase();
+        const titleB = (b.title || getDisplayId(b) || '').toLowerCase();
+        res = titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' });
+      } else if (taskSortField === 'dueDate') {
+        if (!a.dueDate && !b.dueDate) res = 0;
+        else if (!a.dueDate) res = 1;
+        else if (!b.dueDate) res = -1;
+        else res = new Date(a.dueDate) - new Date(b.dueDate);
+      }
+      return taskSortOrder === 'asc' ? res : -res;
+    });
+  };
+
+  const renderSortableHeader = (label, field, styleProps) => {
+    const isActive = taskSortField === field;
+    const isCenter = styleProps?.textAlign === 'center';
+    const isRight = styleProps?.textAlign === 'right';
+
+    return (
+      <th
+        className={`cu-th cu-th-${field}`}
+        onClick={() => handleSortToggle(field)}
+        style={{
+          ...styleProps,
+          cursor: 'pointer',
+          userSelect: 'none',
+          transition: 'color 0.15s'
+        }}
+        title={`Click to sort by ${label} (${isActive && taskSortOrder === 'asc' ? 'Descending' : 'Ascending'})`}
+      >
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: isCenter ? 'center' : isRight ? 'flex-end' : 'flex-start' }}>
+          <span style={{ color: isActive ? '#1e293b' : '#475569' }}>{label}</span>
+          <span style={{ display: 'inline-flex', flexDirection: 'column', gap: '1px', opacity: isActive ? 1 : 0.45, marginLeft: '3px' }}>
+            <svg viewBox="0 0 10 12" width="9" height="11" fill="none" style={{ display: 'block' }}>
+              <path d="M5 1L9 5H1L5 1Z" fill={isActive && taskSortOrder === 'asc' ? '#2563eb' : '#94a3b8'} />
+              <path d="M5 11L1 7H9L5 11Z" fill={isActive && taskSortOrder === 'desc' ? '#2563eb' : '#94a3b8'} />
+            </svg>
+          </span>
+        </div>
+      </th>
+    );
+  };
   const [expandedListId, setExpandedListId] = useState('__first__');
   const [expandedStatusSections, setExpandedStatusSections] = useState({});
   const toggleStatusSection = (listId, statusId) => {
@@ -488,6 +546,29 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       console.error('Fetch error:', error);
     }
     if (!silent) setLoading(false);
+  };
+
+  const updateProjectTaskOptimistically = (taskId, fields) => {
+    const updateTasks = (tasks = []) =>
+      tasks.map(t => (t.id === taskId ? { ...t, ...fields } : t));
+
+    const updateTaskLists = (taskLists = []) =>
+      taskLists.map(list => ({
+        ...list,
+        tasks: updateTasks(list.tasks || [])
+      }));
+
+    setProjects(prevProjects =>
+      prevProjects.map(proj => ({
+        ...proj,
+        taskLists: updateTaskLists(proj.taskLists || [])
+      }))
+    );
+
+    setSelectedProject(prev => prev ? {
+      ...prev,
+      taskLists: updateTaskLists(prev.taskLists || [])
+    } : null);
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1684,11 +1765,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                         ? idx !== 0
                         : expandedListId !== list.id;
 
-                      const listTasks = (list.tasks || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || 'Task') !== 'Recurring Task' && !t.recurringTemplateId && t.taskType !== 'calls/meetings').sort((a, b) => {
-                        if (!a.dueDate) return 1;
-                        if (!b.dueDate) return -1;
-                        return new Date(a.dueDate) - new Date(b.dueDate);
-                      });
+                      const listTasks = sortProjectTasks(
+                        (list.tasks || []).filter(t => t.status !== 'Archived' && t.status !== 'Archive' && (t.taskType || 'Task') !== 'Recurring Task' && !t.recurringTemplateId && t.taskType !== 'calls/meetings')
+                      );
                       const hasTasks = listTasks.length > 0;
 
                       return (
@@ -1885,22 +1964,18 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                       <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                         <thead>
                                           <tr className="cu-thead-row" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                                            <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '60%', textAlign: 'left' }}>Name</th>
-                                            <th className="cu-th cu-th-delivery" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '20%', textAlign: 'center' }}>Due Date</th>
+                                            {renderSortableHeader('Name', 'name', { padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '60%', textAlign: 'left' })}
+                                            {renderSortableHeader('Due Date', 'dueDate', { padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '20%', textAlign: 'center' })}
                                             <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', color: '#475569', width: '20%', textAlign: 'right' }}>Actions</th>
                                           </tr>
                                         </thead>
                                         <tbody>
                                           {(() => {
                                             const mainTasks = statusTasks.filter(t => !t.parentId || !allTasks.some(p => p.id === t.parentId));
-                                            const sortedMainTasks = [...mainTasks].sort((a, b) => {
-                                              if (!a.dueDate) return 1;
-                                              if (!b.dueDate) return -1;
-                                              return new Date(a.dueDate) - new Date(b.dueDate);
-                                            });
+                                            const sortedMainTasks = sortProjectTasks(mainTasks);
 
                                             const renderedTasks = sortedMainTasks.flatMap(task => {
-                                              const subTasks = allTasks.filter(t => t.parentId === task.id);
+                                              const subTasks = sortProjectTasks(allTasks.filter(t => t.parentId === task.id));
                                               const isExpanded = !!expandedSubtasks[task.id];
                                               const relDate = formatRelativeDueDate(task.dueDate);
                                               const assignees = task.assignees ? task.assignees.split(',').map(a => a.trim()).filter(Boolean) : [];
@@ -1977,15 +2052,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                          value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} 
                                                          disabled={!canEditTask(task)} 
                                                          onClick={(e) => { e.stopPropagation(); if (canEditTask(task)) { try { e.target.showPicker(); } catch (err) {} } }} 
-                                                         onChange={async (e) => { 
+                                                         onChange={(e) => { 
                                                            e.stopPropagation(); 
                                                            const val = e.target.value; 
-                                                           try { 
-                                                             await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); 
-                                                             fetchData(true);
-                                                           } catch(err) { 
-                                                             console.error(err); 
-                                                           } 
+                                                           const newDueDate = val ? new Date(val).toISOString() : null;
+                                                           updateProjectTaskOptimistically(task.id, { dueDate: newDueDate });
+                                                           api.put(`/tasks/${task.id}`, { dueDate: newDueDate }).catch(err => console.error(err));
                                                          }} 
                                                          style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }} 
                                                        />
@@ -2006,7 +2078,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                                <span className="card-clickup-avatar" style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', width: '24px', height: '24px', borderRadius: '50%', border: '1.5px dashed #cbd5e1', boxShadow: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginRight: '6px', marginLeft: 0, flexShrink: 0 }} title="Unassigned">?</span>
                                                              )}
                                                              {canEditTask(task) && (
-                                                               <select value={task.assignees || ''} onClick={e => e.stopPropagation()} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${task.id}`, { assignees: val, updatedBy: updatedByName }); fetchData(true); } catch (err) { console.error(err); } }} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', outline: 'none' }}>
+                                                               <select value={task.assignees || ''} onClick={e => e.stopPropagation()} onChange={(e) => { e.stopPropagation(); const val = e.target.value; const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; updateProjectTaskOptimistically(task.id, { assignees: val }); api.put(`/tasks/${task.id}`, { assignees: val, updatedBy: updatedByName }).catch(err => console.error(err)); }} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', outline: 'none' }}>
                                                                  <option value="">Unassigned</option>
                                                                  {getFilteredUsersForProject().map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                                </select>
@@ -2020,16 +2092,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                            <select
                                                              value={task.priority || 'Medium'}
                                                              onClick={e => e.stopPropagation()}
-                                                             onChange={async (e) => {
+                                                             onChange={(e) => {
                                                                e.stopPropagation();
                                                                const newPriority = e.target.value;
-                                                               try {
-                                                                 const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                                 await api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName });
-                                                                 fetchData(true);
-                                                               } catch (err) {
-                                                                 console.error(err);
-                                                               }
+                                                               const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                               updateProjectTaskOptimistically(task.id, { priority: newPriority });
+                                                               api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName }).catch(err => console.error(err));
                                                              }}
                                                              style={{
                                                                position: 'absolute',
@@ -2063,11 +2131,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                               const rows = [parentRow];
 
                                               if (isExpanded) {
-                                                const sortedSubtasks = [...subTasks].sort((a, b) => {
-                                                  if (!a.dueDate) return 1;
-                                                  if (!b.dueDate) return -1;
-                                                  return new Date(a.dueDate) - new Date(b.dueDate);
-                                                });
+                                                const sortedSubtasks = sortProjectTasks(subTasks);
 
                                                 sortedSubtasks.forEach(sub => {
                                                   const subRelDate = formatRelativeDueDate(sub.dueDate);
@@ -2093,15 +2157,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                              value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} 
                                                              disabled={!canEditTask(sub)} 
                                                              onClick={(e) => { e.stopPropagation(); if (canEditTask(sub)) { try { e.target.showPicker(); } catch (err) {} } }} 
-                                                             onChange={async (e) => { 
+                                                             onChange={(e) => { 
                                                                e.stopPropagation(); 
                                                                const val = e.target.value; 
-                                                               try { 
-                                                                 await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); 
-                                                                 fetchData(true);
-                                                               } catch(err) { 
-                                                                 console.error(err); 
-                                                               } 
+                                                               const newDueDate = val ? new Date(val).toISOString() : null;
+                                                               updateProjectTaskOptimistically(sub.id, { dueDate: newDueDate });
+                                                               api.put(`/tasks/${sub.id}`, { dueDate: newDueDate }).catch(err => console.error(err));
                                                              }} 
                                                              style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }} 
                                                            />
@@ -2122,7 +2183,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                                   <span className="card-clickup-avatar" style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', width: '24px', height: '24px', borderRadius: '50%', border: '1.5px dashed #cbd5e1', boxShadow: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginRight: '6px', marginLeft: 0, flexShrink: 0 }} title="Unassigned">?</span>
                                                                 )}
                                                                 {canEditTask(sub) && (
-                                                                  <select value={sub.assignees || ''} onClick={e => e.stopPropagation()} onChange={async (e) => { e.stopPropagation(); const val = e.target.value; try { const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; await api.put(`/tasks/${sub.id}`, { assignees: val, updatedBy: updatedByName }); fetchData(true); } catch (err) { console.error(err); } }} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', outline: 'none' }}>
+                                                                  <select value={sub.assignees || ''} onClick={e => e.stopPropagation()} onChange={(e) => { e.stopPropagation(); const val = e.target.value; const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User'; updateProjectTaskOptimistically(sub.id, { assignees: val }); api.put(`/tasks/${sub.id}`, { assignees: val, updatedBy: updatedByName }).catch(err => console.error(err)); }} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', outline: 'none' }}>
                                                                     <option value="">Unassigned</option>
                                                                     {getFilteredUsersForProject().map(u => { const n = u.firstName || u.fullName?.split(' ')[0] || 'Unknown'; return <option key={u.id} value={u.id}>{n}</option>; })}
                                                                   </select>
@@ -2136,16 +2197,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                               <select
                                                                 value={sub.priority || 'Medium'}
                                                                 onClick={e => e.stopPropagation()}
-                                                                onChange={async (e) => {
+                                                                onChange={(e) => {
                                                                   e.stopPropagation();
                                                                   const newPriority = e.target.value;
-                                                                  try {
-                                                                    const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                                    await api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName });
-                                                                    fetchData(true);
-                                                                  } catch (err) {
-                                                                    console.error(err);
-                                                                  }
+                                                                  const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                                  updateProjectTaskOptimistically(sub.id, { priority: newPriority });
+                                                                  api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName }).catch(err => console.error(err));
                                                                 }}
                                                                 style={{
                                                                   position: 'absolute',
@@ -2384,23 +2441,19 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                               <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                 <thead>
                                   <tr className="cu-thead-row" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                                    <th className="cu-th cu-th-name" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '40%', textAlign: 'left' }}>Name</th>
+                                    {renderSortableHeader('Name', 'name', { padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '40%', textAlign: 'left' })}
                                     <th className="cu-th cu-th-tg" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '30%', textAlign: 'left' }}>Task Group</th>
-                                    <th className="cu-th cu-th-delivery" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'center' }}>Due Date</th>
+                                    {renderSortableHeader('Due Date', 'dueDate', { padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'center' })}
                                     <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'right' }}>Actions</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {(() => {
                                     const mainTasks = statusTasks.filter(t => !t.parentId || !allProjectTasks.some(p => p.id === t.parentId));
-                                    const sortedMainTasks = [...mainTasks].sort((a, b) => {
-                                      if (!a.dueDate) return 1;
-                                      if (!b.dueDate) return -1;
-                                      return new Date(a.dueDate) - new Date(b.dueDate);
-                                    });
+                                    const sortedMainTasks = sortProjectTasks(mainTasks);
 
                                     return sortedMainTasks.flatMap(task => {
-                                      const subTasks = allProjectTasks.filter(t => t.parentId === task.id);
+                                      const subTasks = sortProjectTasks(allProjectTasks.filter(t => t.parentId === task.id));
                                       const isExpanded = !!expandedSubtasks[task.id];
                                       const relDate = formatRelativeDueDate(task.dueDate);
                                       const listObj = selectedProject.taskLists?.find(l => (l.tasks || []).some(t => t.id === task.id));
@@ -2461,15 +2514,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                 value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''} 
                                                 disabled={!canEditTask(task)} 
                                                 onClick={(e) => { e.stopPropagation(); if (canEditTask(task)) { try { e.target.showPicker(); } catch (err) {} } }} 
-                                                onChange={async (e) => { 
+                                                onChange={(e) => { 
                                                   e.stopPropagation(); 
                                                   const val = e.target.value; 
-                                                  try { 
-                                                    await api.put(`/tasks/${task.id}`, { dueDate: val ? new Date(val).toISOString() : null }); 
-                                                    fetchData(true);
-                                                  } catch(err) { 
-                                                    console.error(err); 
-                                                  } 
+                                                  const newDueDate = val ? new Date(val).toISOString() : null;
+                                                  updateProjectTaskOptimistically(task.id, { dueDate: newDueDate });
+                                                  api.put(`/tasks/${task.id}`, { dueDate: newDueDate }).catch(err => console.error(err));
                                                 }} 
                                                 style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }} 
                                               />
@@ -2545,16 +2595,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                       <select
                                                         value={task.assignees || ''}
                                                         onClick={e => e.stopPropagation()}
-                                                        onChange={async (e) => {
+                                                        onChange={(e) => {
                                                           e.stopPropagation();
                                                           const val = e.target.value;
-                                                          try {
-                                                            const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                            await api.put(`/tasks/${task.id}`, { assignees: val, updatedBy: updatedByName });
-                                                            fetchData(true);
-                                                          } catch (err) {
-                                                            console.error(err);
-                                                          }
+                                                          const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                          updateProjectTaskOptimistically(task.id, { assignees: val });
+                                                          api.put(`/tasks/${task.id}`, { assignees: val, updatedBy: updatedByName }).catch(err => console.error(err));
                                                         }}
                                                         style={{
                                                           position: 'absolute',
@@ -2582,16 +2628,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                       <select
                                                         value={task.priority || 'Medium'}
                                                         onClick={e => e.stopPropagation()}
-                                                        onChange={async (e) => {
+                                                        onChange={(e) => {
                                                           e.stopPropagation();
                                                           const newPriority = e.target.value;
-                                                          try {
-                                                            const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                            await api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName });
-                                                            fetchData(true);
-                                                          } catch (err) {
-                                                            console.error(err);
-                                                          }
+                                                          const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                          updateProjectTaskOptimistically(task.id, { priority: newPriority });
+                                                          api.put(`/tasks/${task.id}`, { priority: newPriority, updatedBy: updatedByName }).catch(err => console.error(err));
                                                         }}
                                                         style={{
                                                           position: 'absolute',
@@ -2659,15 +2701,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                     value={sub.dueDate ? new Date(sub.dueDate).toISOString().split('T')[0] : ''} 
                                                     disabled={!canEditTask(sub)} 
                                                     onClick={(e) => { e.stopPropagation(); if (canEditTask(sub)) { try { e.target.showPicker(); } catch (err) {} } }} 
-                                                    onChange={async (e) => { 
+                                                    onChange={(e) => { 
                                                       e.stopPropagation(); 
                                                       const val = e.target.value; 
-                                                      try { 
-                                                        await api.put(`/tasks/${sub.id}`, { dueDate: val ? new Date(val).toISOString() : null }); 
-                                                        fetchData(true);
-                                                      } catch(err) { 
-                                                        console.error(err); 
-                                                      } 
+                                                      const newDueDate = val ? new Date(val).toISOString() : null;
+                                                      updateProjectTaskOptimistically(sub.id, { dueDate: newDueDate });
+                                                      api.put(`/tasks/${sub.id}`, { dueDate: newDueDate }).catch(err => console.error(err));
                                                     }} 
                                                     style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }} 
                                                   />
@@ -2743,16 +2782,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                           <select
                                                             value={sub.assignees || ''}
                                                             onClick={e => e.stopPropagation()}
-                                                            onChange={async (e) => {
+                                                            onChange={(e) => {
                                                               e.stopPropagation();
                                                               const val = e.target.value;
-                                                              try {
-                                                                const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                                await api.put(`/tasks/${sub.id}`, { assignees: val, updatedBy: updatedByName });
-                                                                fetchData(true);
-                                                              } catch (err) {
-                                                                console.error(err);
-                                                              }
+                                                              const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                              updateProjectTaskOptimistically(sub.id, { assignees: val });
+                                                              api.put(`/tasks/${sub.id}`, { assignees: val, updatedBy: updatedByName }).catch(err => console.error(err));
                                                             }}
                                                             style={{
                                                               position: 'absolute',
@@ -2780,16 +2815,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                           <select
                                                             value={sub.priority || 'Medium'}
                                                             onClick={e => e.stopPropagation()}
-                                                            onChange={async (e) => {
+                                                            onChange={(e) => {
                                                               e.stopPropagation();
                                                               const newPriority = e.target.value;
-                                                              try {
-                                                                const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
-                                                                await api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName });
-                                                                fetchData(true);
-                                                              } catch (err) {
-                                                                console.error(err);
-                                                              }
+                                                              const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                                                              updateProjectTaskOptimistically(sub.id, { priority: newPriority });
+                                                              api.put(`/tasks/${sub.id}`, { priority: newPriority, updatedBy: updatedByName }).catch(err => console.error(err));
                                                             }}
                                                             style={{
                                                               position: 'absolute',
