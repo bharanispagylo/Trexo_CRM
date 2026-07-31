@@ -473,7 +473,10 @@ function openCommentBox(clickX, clickY, pageInfo, screenshot) {
     // Edit button
     const annotateBtn = commentBoxEl.querySelector('.__spagylo__btn-annotate');
     if (annotateBtn && screenshot) {
-      annotateBtn.addEventListener('click', () => openAnnotateCanvas(screenshot, pageInfo));
+      annotateBtn.addEventListener('click', () => {
+        const curImg = commentBoxEl.__spagylo_screenshot || screenshot;
+        openAnnotateCanvas(curImg, pageInfo);
+      });
     }
 
     // Screenshot thumbnail click -> full-size preview lightbox
@@ -536,7 +539,7 @@ function openAnnotateCanvas(screenshot, pageInfo) {
     <div class="__spagylo__annotate-toolbar" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; background: #ffffff; padding: 10px 16px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; user-select: none;">
       <span style="font-weight:700; font-size:14px; color:#0f172a;">Edit Screenshot</span>
 
-      <!-- Shape & Text Tool Selectors -->
+      <!-- Shape & Text Tool Selectors + Undo -->
       <div class="__spagylo__tool-buttons" style="display: flex; gap: 6px; align-items: center;">
         <button class="__spagylo__tool-btn active" data-tool="rect" title="Rectangle" style="padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: #2563eb; color: #ffffff; cursor: pointer; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
@@ -549,6 +552,11 @@ function openAnnotateCanvas(screenshot, pageInfo) {
         <button class="__spagylo__tool-btn" data-tool="text" title="Text Annotation" style="padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #334155; cursor: pointer; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="9" y1="20" x2="15" y2="20"/></svg>
           Text
+        </button>
+        <div style="width: 1px; height: 18px; background: #cbd5e1; margin: 0 2px;"></div>
+        <button class="__spagylo__undo-btn" title="Undo annotation (Ctrl+Z)" disabled style="padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 6px; background: #ffffff; color: #94a3b8; cursor: not-allowed; opacity: 0.5; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+          Undo
         </button>
       </div>
 
@@ -594,6 +602,60 @@ function openAnnotateCanvas(screenshot, pageInfo) {
   let activeTool   = 'rect'; // 'rect', 'circle', 'text'
   let strokeColor  = '#dc2626';
   let selectedFont = 'Arial';
+
+  // Undo History Management
+  const undoHistory = [];
+  const undoBtn = annotateEl.querySelector('.__spagylo__undo-btn');
+
+  const updateUndoBtn = () => {
+    if (!undoBtn) return;
+    if (undoHistory.length > 0) {
+      undoBtn.disabled = false;
+      undoBtn.style.color = '#334155';
+      undoBtn.style.cursor = 'pointer';
+      undoBtn.style.opacity = '1';
+      undoBtn.style.borderColor = '#cbd5e1';
+    } else {
+      undoBtn.disabled = true;
+      undoBtn.style.color = '#94a3b8';
+      undoBtn.style.cursor = 'not-allowed';
+      undoBtn.style.opacity = '0.5';
+      undoBtn.style.borderColor = '#e2e8f0';
+    }
+  };
+
+  const performUndo = () => {
+    if (undoHistory.length > 0) {
+      const lastState = undoHistory.pop();
+      ctx.putImageData(lastState, 0, 0);
+      updateUndoBtn();
+    }
+  };
+
+  if (undoBtn) {
+    undoBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      performUndo();
+    });
+  }
+
+  const handleKeyDown = e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      const activeTag = document.activeElement?.tagName;
+      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+      e.preventDefault();
+      performUndo();
+    }
+  };
+  document.addEventListener('keydown', handleKeyDown);
+
+  const closeAnnotate = () => {
+    document.removeEventListener('keydown', handleKeyDown);
+    if (annotateEl) {
+      annotateEl.remove();
+      annotateEl = null;
+    }
+  };
 
   // Tool Switching (Rectangle, Circle, Text)
   annotateEl.querySelectorAll('.__spagylo__tool-btn').forEach(btn => {
@@ -721,8 +783,7 @@ function openAnnotateCanvas(screenshot, pageInfo) {
     const { x, y } = getCanvasCoords(e);
     const dist = Math.sqrt((x - startX) ** 2 + (y - startY) ** 2);
 
-    // If Text tool is active or mouse click without drag
-    if (activeTool === 'text' || dist < 4) {
+    if (activeTool === 'text') {
       e.stopPropagation();
       e.preventDefault();
 
@@ -759,9 +820,16 @@ function openAnnotateCanvas(screenshot, pageInfo) {
       canvasWrap.appendChild(input);
       input.focus();
 
+      let saved = false;
       const saveText = () => {
+        if (saved) return;
+        saved = true;
         const text = input.value.trim();
         if (text) {
+          if (savedSnapshot) {
+            undoHistory.push(savedSnapshot);
+            updateUndoBtn();
+          }
           const rect = canvas.getBoundingClientRect();
           const scale = canvas.width / (rect.width || 1);
           const fontSize = Math.round(18 * scale);
@@ -778,11 +846,20 @@ function openAnnotateCanvas(screenshot, pageInfo) {
         if (keyEvent.key === 'Enter') {
           saveText();
         } else if (keyEvent.key === 'Escape') {
+          saved = true;
           input.remove();
         }
       });
 
       input.addEventListener('blur', saveText);
+    } else {
+      // Shape tool (rect / circle)
+      if (dist >= 4 && savedSnapshot) {
+        undoHistory.push(savedSnapshot);
+        updateUndoBtn();
+      } else if (dist < 4 && savedSnapshot) {
+        ctx.putImageData(savedSnapshot, 0, 0);
+      }
     }
   });
 
@@ -790,8 +867,7 @@ function openAnnotateCanvas(screenshot, pageInfo) {
 
   // Cancel
   annotateEl.querySelector('.__spagylo__annotate-cancel').addEventListener('click', () => {
-    annotateEl.remove();
-    annotateEl = null;
+    closeAnnotate();
   });
 
   // Save — merge drawing canvas with background image
@@ -816,8 +892,7 @@ function openAnnotateCanvas(screenshot, pageInfo) {
       commentBoxEl.__spagylo_screenshot = newScreenshot;
     }
 
-    annotateEl.remove();
-    annotateEl = null;
+    closeAnnotate();
   });
 
   // Prevent propagation
