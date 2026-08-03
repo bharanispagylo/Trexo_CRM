@@ -2364,7 +2364,7 @@
 
 .comment-box-flex-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.5rem;
 }
 
@@ -2379,15 +2379,16 @@
   width: 100%;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 0.6rem 2.25rem 0.6rem 1rem;
+  border-radius: 12px;
+  min-height: 80px;
+  padding: 0.6rem 4.5rem 0.6rem 1rem;
   font-family: inherit;
   font-size: 0.88rem;
   color: #0f172a;
   outline: none;
   transition: all 0.15s ease;
-  overflow-y: hidden;
-  scrollbar-width: none;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .comment-main-text-input::-webkit-scrollbar {

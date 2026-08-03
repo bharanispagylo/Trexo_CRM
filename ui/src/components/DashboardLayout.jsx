@@ -383,8 +383,6 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 10000); // Check every 10 seconds
-    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
