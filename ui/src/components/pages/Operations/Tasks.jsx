@@ -3971,7 +3971,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 </div>
               );
             })()}
-            <div className="comment-box-flex-row">
+            <div className="comment-box-flex-row" style={{ alignItems: 'flex-end' }}>
               <div className="comment-input-field-wrapper" style={{ position: 'relative' }}>
                 <textarea 
                   ref={commentTextareaRef}
@@ -4018,12 +4018,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   style={{
                     paddingRight: '4.5rem',
                     resize: 'none',
-                    height: '38px',
-                    minHeight: '38px',
+                    height: '80px',
+                    minHeight: '80px',
                     boxSizing: 'border-box',
-                    paddingTop: '8px',
-                    paddingBottom: '8px',
-                    borderRadius: '20px'
+                    paddingTop: '10px',
+                    paddingBottom: '10px',
+                    borderRadius: '12px'
                   }}
                   disabled={!isEdit || commentUploading || commentPosting}
                 />
@@ -4079,7 +4079,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                     )}
                   </div>
                 )}
-                <div style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ position: 'absolute', right: '0.75rem', bottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <span 
                     className="comment-emoji-icon" 
                     title="Insert Emoji"
