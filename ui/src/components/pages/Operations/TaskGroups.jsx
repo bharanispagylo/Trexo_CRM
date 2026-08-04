@@ -402,6 +402,30 @@ export default function TaskGroups({ user, onBack }) {
 
   useEffect(() => {
     fetchInitialData();
+
+    const handleTaskUpdated = (e) => {
+      if (e.detail) {
+        const targetId = e.detail.id || e.detail.taskNo;
+        if (targetId) {
+          updateTaskOptimistically(targetId, e.detail);
+        }
+        fetchTaskListsOnly();
+      }
+    };
+
+    const handlePopState = () => {
+      if (!taskLists || taskLists.length === 0) {
+        fetchTaskListsOnly();
+      }
+    };
+
+    window.addEventListener('taskUpdated', handleTaskUpdated);
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('taskUpdated', handleTaskUpdated);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchInitialData]);
 
   const fetchTaskListsOnly = async () => {
@@ -699,12 +723,17 @@ export default function TaskGroups({ user, onBack }) {
   };
 
   const updateTaskOptimistically = (taskId, fields) => {
+    if (!taskId) return;
+    const targetStr = String(taskId).toLowerCase();
     setTaskLists(prevLists =>
       prevLists.map(list => ({
         ...list,
-        tasks: (list.tasks || []).map(t =>
-          t.id === taskId ? { ...t, ...fields } : t
-        )
+        tasks: (list.tasks || []).map(t => {
+          const match = String(t.id || '').toLowerCase() === targetStr ||
+                        String(t.taskNo || '').toLowerCase() === targetStr ||
+                        getDisplayId(t).toLowerCase() === targetStr;
+          return match ? { ...t, ...fields } : t;
+        })
       }))
     );
   };
