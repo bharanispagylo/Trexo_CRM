@@ -2523,7 +2523,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '12px', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconStatus /> Status</span>
                     <span className="saas-meta-value">
-                      <select value={form.status} onChange={e => { const newSt = e.target.value; const updated = { ...form, status: newSt }; if (newSt === 'Archived' || newSt === 'Archive') { updated.previousStatus = (form.status !== 'Archived' && form.status !== 'Archive') ? form.status : (form.previousStatus || 'To Do'); } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontSize: '12px', fontWeight: 400 }}>
+                      <select value={form.status} onChange={e => { const newSt = e.target.value; const updated = { ...form, status: newSt }; if (newSt === 'Archived' || newSt === 'Archive') { updated.previousStatus = (form.status !== 'Archived' && form.status !== 'Archive') ? form.status : (form.previousStatus || 'To Do'); } else if (newSt === 'Delivered' && !form.deliveredDate) { updated.deliveredDate = new Date().toISOString(); } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontSize: '12px', fontWeight: 400 }}>
                         {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                       </select>
                     </span>
@@ -4703,49 +4703,53 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     setExpandedMobileStatusKey(prev => prev === key ? null : key);
   };
 
-  const initialSelectedTaskId = useRef(null);
+  // Instantly open task when initialSelectedTask or initialTaskId is provided
   useEffect(() => {
     if (initialSelectedTask) {
-      initialSelectedTaskId.current = initialSelectedTask.id;
-    }
-  }, [initialSelectedTask]);
+      setDrawerTask(initialSelectedTask);
+      setDrawerOpen(true);
+      setTaskDetailMode(false);
+      setOpeningInitialTask(false);
+      if (onTaskSelect) onTaskSelect(getDisplayId(initialSelectedTask));
+      if (onClearInitialTask) onClearInitialTask();
 
-  // Reset opening state when a new task is requested
-  useEffect(() => {
-    if (initialSelectedTask || initialTaskId) {
-      setOpeningInitialTask(true);
-    }
-  }, [initialSelectedTask, initialTaskId]);
-
-  useEffect(() => {
-    if (initialSelectedTask && initialSelectedTaskId.current && openingInitialTask) {
-      const targetId = initialSelectedTaskId.current;
-      api.get(`/tasks/${targetId}`)
-        .then(task => {
-          if (task) {
-            initialSelectedTaskId.current = null;
-            setDrawerTask(task);
-            setDrawerOpen(true);
-            setTaskDetailMode(false);
-            if (onTaskSelect) onTaskSelect(getDisplayId(task));
-            if (onClearInitialTask) onClearInitialTask();
-          }
-          setOpeningInitialTask(false);
-        })
-        .catch(err => {
-          console.error('Failed to load initial task:', err);
-          setOpeningInitialTask(false);
-        });
+      if (initialSelectedTask.id) {
+        api.get(`/tasks/${initialSelectedTask.id}`)
+          .then(task => { if (task) setDrawerTask(task); })
+          .catch(console.error);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialSelectedTask, openingInitialTask]);
+  }, [initialSelectedTask]);
 
-  // Auto-open task from URL deep-link (e.g. /tasks/taskId)
-  // Tracks the last task ID we fetched so repeated Kanban clicks work correctly
   const lastHandledTaskId = useRef(null);
   useEffect(() => {
-    if (initialTaskId && lastHandledTaskId.current !== initialTaskId && openingInitialTask) {
+    if (!initialTaskId) return;
+
+    // Check if task already exists in tasks list
+    const existing = (tasks || []).find(t => 
+      t.id === initialTaskId || 
+      getDisplayId(t).toLowerCase() === initialTaskId.toLowerCase() || 
+      (t.taskNo && t.taskNo.toLowerCase() === initialTaskId.toLowerCase())
+    );
+
+    if (existing) {
+      setDrawerTask(existing);
+      setDrawerOpen(true);
+      setTaskDetailMode(false);
+      setOpeningInitialTask(false);
+      if (lastHandledTaskId.current !== initialTaskId) {
+        lastHandledTaskId.current = initialTaskId;
+        api.get(`/tasks/${initialTaskId}`)
+          .then(task => { if (task) setDrawerTask(task); })
+          .catch(console.error);
+      }
+      return;
+    }
+
+    if (lastHandledTaskId.current !== initialTaskId) {
       lastHandledTaskId.current = initialTaskId;
+      setOpeningInitialTask(true);
       api.get(`/tasks/${initialTaskId}`)
         .then(task => {
           if (task) {
@@ -4760,7 +4764,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           setOpeningInitialTask(false);
         });
     }
-  }, [initialTaskId, openingInitialTask]);
+  }, [initialTaskId, tasks]);
 
   useEffect(() => {
     if (onDetailViewChange) {
@@ -5059,16 +5063,28 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     try {
       let savedTask = null;
       if (taskData.id) {
+        setTasks(prevTasks => prevTasks.map(t => t.id === taskData.id ? { ...t, ...taskData } : t));
+        setDrawerTask(prev => (prev && prev.id === taskData.id ? { ...prev, ...taskData } : prev));
+        window.dispatchEvent(new CustomEvent('taskUpdated', { detail: taskData }));
+
         const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
         savedTask = await api.put(`/tasks/${taskData.id}`, { ...taskData, updatedBy: updatedByName });
+        if (savedTask) {
+          setTasks(prevTasks => prevTasks.map(t => t.id === savedTask.id ? { ...t, ...savedTask } : t));
+          setDrawerTask(prev => (prev && prev.id === savedTask.id ? { ...prev, ...savedTask } : prev));
+          window.dispatchEvent(new CustomEvent('taskUpdated', { detail: savedTask }));
+        }
         if (!silent) toast('Task updated successfully!', 'success');
       } else {
         if (taskData.assignees) localStorage.setItem('lastTaskAssignee', taskData.assignees);
         savedTask = await api.post('/tasks', taskData);
+        if (savedTask) {
+          setTasks(prevTasks => [savedTask, ...prevTasks]);
+          window.dispatchEvent(new CustomEvent('taskUpdated', { detail: savedTask }));
+        }
         toast('Task created successfully!', 'success');
       }
-      const data = await api.get('/tasks');
-      setTasks(data || []);
+      api.get('/tasks').then(data => { if (data) setTasks(data); }).catch(console.error);
       return savedTask;
     } catch (error) {
       console.error('Save error:', error);
@@ -5306,11 +5322,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   const pageTitle = subTab === 'my' ? '' : subTab === 'calls' ? 'Calls/Meeting' : subTab === 'recurring' ? `Recurring (${unreadRecurringCount})` : 'All Tasks';
   const showAssigneeCol = subTab === 'recurring' && isTeamLeadOrAdmin && recurringToggle === 'all';
 
-  if (loading || openingInitialTask) {
+  if (loading && tasks.length === 0) {
     return (
       <div className="loading-screen" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f8fafc', flexDirection: 'column', gap: '1.2rem' }}>
         <div style={{ color: '#64748b', fontWeight: 600, fontSize: '0.95rem' }}>
-          {openingInitialTask ? 'Loading task details...' : 'Loading tasks...'}
+          Loading tasks...
         </div>
       </div>
     );

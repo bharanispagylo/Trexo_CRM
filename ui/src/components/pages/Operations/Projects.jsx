@@ -1432,11 +1432,27 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                     };
                     let savedTask = null;
                     if (editingTask && editingTask.id) {
+                      if (typeof updateProjectTaskOptimistically === 'function') {
+                        updateProjectTaskOptimistically(editingTask.id, payload);
+                      }
+                      setEditingTask(prev => ({ ...prev, ...payload }));
+                      window.dispatchEvent(new CustomEvent('taskUpdated', { detail: { id: editingTask.id, ...payload } }));
+
                       payload.updatedBy = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
                       savedTask = await api.put(`/tasks/${editingTask.id}`, payload);
+                      if (savedTask) {
+                        if (typeof updateProjectTaskOptimistically === 'function') {
+                          updateProjectTaskOptimistically(savedTask.id, savedTask);
+                        }
+                        setEditingTask(savedTask);
+                        window.dispatchEvent(new CustomEvent('taskUpdated', { detail: savedTask }));
+                      }
                       if (!silent) alert('Task updated successfully!', 'success', 'Success');
                     } else {
                       savedTask = await api.post('/tasks', payload);
+                      if (savedTask) {
+                        window.dispatchEvent(new CustomEvent('taskUpdated', { detail: savedTask }));
+                      }
                       if (!silent) alert('Task created successfully!', 'success', 'Success');
                     }
                     fetchData(true);
@@ -2441,8 +2457,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                               <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                 <thead>
                                   <tr className="cu-thead-row" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                                    {renderSortableHeader('Name', 'name', { padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '40%', textAlign: 'left' })}
-                                    <th className="cu-th cu-th-tg" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '30%', textAlign: 'left' }}>Task Group</th>
+                                    {renderSortableHeader('Name', 'name', { padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '45%', textAlign: 'left' })}
+                                    <th className="cu-th cu-th-tg" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '25%', textAlign: 'left' }}>Task Group</th>
                                     {renderSortableHeader('Due Date', 'dueDate', { padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'center' })}
                                     <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'right' }}>Actions</th>
                                   </tr>
@@ -2541,6 +2557,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                               const init = fullName ? getInitialsForAvatar(fullName) : '';
                                               return (
                                                 <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                  <span 
+                                                    style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a', cursor: 'default', userSelect: 'none', marginRight: '2px' }} 
+                                                    title="Billable"
+                                                  >
+                                                    {task.approvedHours !== undefined && task.approvedHours !== null ? task.approvedHours : 0}
+                                                  </span>
                                                   <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                                                     {init ? (
                                                       <span 
@@ -2728,6 +2750,12 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                   const init = fullName ? getInitialsForAvatar(fullName) : '';
                                                   return (
                                                     <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                      <span 
+                                                        style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a', cursor: 'default', userSelect: 'none', marginRight: '2px' }} 
+                                                        title="Billable"
+                                                      >
+                                                        {sub.approvedHours !== undefined && sub.approvedHours !== null ? sub.approvedHours : 0}
+                                                      </span>
                                                       <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                                                         {init ? (
                                                           <span 

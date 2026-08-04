@@ -75,14 +75,14 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   const profileDropdownRef = useRef(null);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [mobileReportsOpen, setMobileReportsOpen] = useState(false);
-  const [projectsKey, setProjectsKey] = useState(0);
-  const [tasksKey, setTasksKey] = useState(0);
-  const [trackTeamKey, setTrackTeamKey] = useState(0);
-  const [estimationsKey, setEstimationsKey] = useState(0);
-  const [clientsKey, setClientsKey] = useState(0);
-  const [usersKey, setUsersKey] = useState(0);
-  const [rolesKey, setRolesKey] = useState(0);
-  const [taskGroupsKey, setTaskGroupsKey] = useState(0);
+  const [projectsKey] = useState(0);
+  const [tasksKey] = useState(0);
+  const [trackTeamKey] = useState(0);
+  const [estimationsKey] = useState(0);
+  const [clientsKey] = useState(0);
+  const [usersKey] = useState(0);
+  const [rolesKey] = useState(0);
+  const [taskGroupsKey] = useState(0);
   const [visitedTabs, setVisitedTabs] = useState([activeTab]);
   const [dailyLoadUserId, setDailyLoadUserId] = useState(null);
 
@@ -349,7 +349,19 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
         setActiveTab('overview');
       } else if (activeTab === 'task-groups' && !can('taskGroups', 'view') && user?.role?.toLowerCase() !== 'admin') {
         setActiveTab('overview');
-      } else if (activeTab === 'reports'             && !canReport('tasks-report'))         { setActiveTab('overview');
+      } else if (activeTab === 'reports' && !canReport('tasks-report')) {
+        const reportTabs = [
+          { key: 'reports-status-based', action: 'reports-status-based' },
+          { key: 'timesheet-overall', action: 'timesheet-overall' },
+          { key: 'daily-load-all', action: 'daily-load-all' },
+          { key: 'daily-load-individual', action: 'daily-load-individual' }
+        ];
+        const firstPermitted = reportTabs.find(rt => canReport(rt.action));
+        if (firstPermitted) {
+          setActiveTab(firstPermitted.key);
+        } else {
+          setActiveTab('overview');
+        }
       } else if (activeTab === 'reports-status-based' && !canReport('reports-status-based')) { setActiveTab('overview');
       } else if (activeTab === 'timesheet-overall'    && !canReport('timesheet-overall'))    { setActiveTab('overview');
       } else if (activeTab === 'daily-load-all'       && !canReport('daily-load-all'))       { setActiveTab('overview');
@@ -787,10 +799,7 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
             ];
             const firstPermitted = reportTabs.find(rt => canReport(rt.action));
             if (firstPermitted) {
-              if (activeTab === 'reports') {
-                setTimeout(() => setActiveTab(firstPermitted.key), 0);
-              }
-              return <div className="loading-screen">Loading Report...</div>;
+              return renderTabComponent(firstPermitted.key);
             }
             return renderOverview(setActiveTab, (taskData) => navigateToTaskDetail(taskData, 'reports'));
           }
@@ -837,41 +846,42 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   };
 
   const navigateToTab = (id) => {
-    if (id !== 'tasks') {
+    let targetTab = id;
+    if (id === 'reports' && !canReport('tasks-report')) {
+      const reportTabs = [
+        { key: 'reports-status-based', action: 'reports-status-based' },
+        { key: 'timesheet-overall', action: 'timesheet-overall' },
+        { key: 'daily-load-all', action: 'daily-load-all' },
+        { key: 'daily-load-individual', action: 'daily-load-individual' }
+      ];
+      const firstPermitted = reportTabs.find(rt => canReport(rt.action));
+      if (firstPermitted) {
+        targetTab = firstPermitted.key;
+      }
+    }
+    if (targetTab !== 'tasks') {
       setIsTaskDetailOpen(false);
       setSearchSelectedTask(null);
       setInitialTaskId(null);
       setSelectedTaskId(null);
     }
-    if (id === 'projects') {
-      setProjectsKey(prev => prev + 1);
+    if (targetTab === 'projects') {
       setSearchSelectedProject(null);
       setInitialProjectName(null);
       setSelectedProjectName(null);
-    } else if (id === 'tasks') {
-      setTasksKey(prev => prev + 1);
+    } else if (targetTab === 'tasks') {
       setSearchSelectedTask(null);
       setInitialTaskId(null);
       setSelectedTaskId(null);
       setIsTaskDetailOpen(false);
-    } else if (id === 'task-groups') {
-      setTaskGroupsKey(prev => prev + 1);
-    } else if (id === 'track-team') {
-      setTrackTeamKey(prev => prev + 1);
+    } else if (targetTab === 'track-team') {
       setTeamMemberAssigneeFilter(null);
-    } else if (id === 'estimations') {
-      setEstimationsKey(prev => prev + 1);
-    } else if (id === 'clients') {
-      setClientsKey(prev => prev + 1);
-    } else if (id === 'users') {
-      setUsersKey(prev => prev + 1);
+    } else if (targetTab === 'users') {
       setUserToEdit(null);
-    } else if (id === 'roles') {
-      setRolesKey(prev => prev + 1);
-    } else if (id === 'daily-load-individual') {
+    } else if (targetTab === 'daily-load-individual') {
       setDailyLoadUserId(null);
     }
-    setActiveTab(id);
+    setActiveTab(targetTab);
     setSidebarOpen(false);
     setMobileMoreOpen(false);
   };

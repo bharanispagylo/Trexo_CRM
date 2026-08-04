@@ -1347,17 +1347,36 @@ app.get('/api/tasks/:idOrDisplayId', async (req, res) => {
       });
     } else {
       // It's a display ID, e.g. T359369 or S12345
-      const digits = param.substring(1);
-      const tasks = await prisma.task.findMany({
+      const digits = param.replace(/\D/g, '');
+      task = await prisma.task.findFirst({
         where: {
-          taskNo: {
-            contains: digits
-          }
+          OR: [
+            { id: param },
+            { taskNo: { equals: param, mode: 'insensitive' } },
+            ...(digits ? [
+              { taskNo: { equals: digits, mode: 'insensitive' } },
+              { taskNo: { equals: `T${digits}`, mode: 'insensitive' } },
+              { taskNo: { equals: `S${digits}`, mode: 'insensitive' } },
+              { taskNo: { equals: `B${digits}`, mode: 'insensitive' } },
+              { taskNo: { equals: `C${digits}`, mode: 'insensitive' } }
+            ] : [])
+          ]
         },
         include: { projectRef: { select: { name: true } } }
       });
 
-      task = tasks.find(t => getTaskDisplayId(t).toLowerCase() === param.toLowerCase());
+      if (!task && digits) {
+        const tasks = await prisma.task.findMany({
+          where: {
+            taskNo: {
+              contains: digits
+            }
+          },
+          include: { projectRef: { select: { name: true } } }
+        });
+
+        task = tasks.find(t => getTaskDisplayId(t).toLowerCase() === param.toLowerCase());
+      }
     }
 
     if (!task) {
@@ -1745,7 +1764,7 @@ app.put('/api/tasks/:id', async (req, res) => {
               buttonLink: `${frontendUrl}${route}`
             };
 
-            await sendNotificationEmail(creatorEmail, `Task Delivered: ${task.title}`, userContext, 'task');
+            sendNotificationEmail(creatorEmail, `Task Delivered: ${task.title}`, userContext, 'task').catch(err => console.error('[Delivered Notification Error]', err.message));
           }
         }
       } catch (err) {
