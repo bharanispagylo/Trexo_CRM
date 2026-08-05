@@ -70,17 +70,35 @@ const app = express();
 
 // ── Prisma singleton (prevents connection pool exhaustion in Vercel serverless) ──
 if (!global._prismaClient) {
-  // Append connection_limit=1 to avoid exceeding Supabase pooler limit on serverless
   const dbUrl = (process.env.DATABASE_URL || '');
+  // For Vercel serverless, use connection_limit=1. For dedicated server, use connection_limit=10.
+  const poolLimit = process.env.VERCEL ? '1' : (process.env.DB_POOL_LIMIT || '10');
   const dbUrlWithLimit = dbUrl.includes('connection_limit')
-    ? dbUrl
-    : dbUrl + (dbUrl.includes('?') ? '&' : '?') + 'connection_limit=1';
+    ? dbUrl.replace(/connection_limit=\d+/, `connection_limit=${poolLimit}`)
+    : dbUrl + (dbUrl.includes('?') ? '&' : '?') + `connection_limit=${poolLimit}`;
   global._prismaClient = new PrismaClient({
     datasources: { db: { url: dbUrlWithLimit } },
     log: process.env.VERCEL ? [] : ['warn', 'error'],
   });
 }
 const prisma = global._prismaClient;
+
+// In-memory data cache to speed up repeated GET endpoints and cut DB load
+const apiMemoryCache = {
+  users: { data: null, time: 0, ttl: 10000 },
+  projects: { data: null, time: 0, ttl: 10000 },
+  taskLists: { data: null, time: 0, ttl: 10000 },
+  tasks: { data: null, time: 0, ttl: 5000 },
+  clients: { data: null, time: 0, ttl: 15000 }
+};
+
+function clearApiCache(key) {
+  if (key === 'all') {
+    Object.keys(apiMemoryCache).forEach(k => apiMemoryCache[k].data = null);
+  } else if (apiMemoryCache[key]) {
+    apiMemoryCache[key].data = null;
+  }
+}
 
 const PORT = process.env.PORT || 5000;
 
@@ -552,9 +570,15 @@ app.get('/api/test-db', async (req, res) => {
 // 0. Users (Administration)
 app.get('/api/users', async (req, res) => {
   try {
+    const now = Date.now();
+    if (apiMemoryCache.users.data && (now - apiMemoryCache.users.time < apiMemoryCache.users.ttl)) {
+      return res.json(apiMemoryCache.users.data);
+    }
     const users = await prisma.user.findMany({
       orderBy: { createdAt: 'desc' }
     });
+    apiMemoryCache.users.data = users;
+    apiMemoryCache.users.time = now;
     res.json(users);
   } catch (error) {
     console.error('GET /api/users error:', error);
@@ -568,6 +592,7 @@ app.get('/api/users', async (req, res) => {
 
 app.post('/api/users', async (req, res) => {
   try {
+    clearApiCache('users');
     const { fullName, firstName, lastName, workLogs, ...rest } = req.body;
     
     // Determine names
@@ -1098,17 +1123,25 @@ app.delete('/api/teams/:id', async (req, res) => {
 app.get('/api/projects', async (req, res) => {
   try {
     const userId = req.headers['x-user-id'];
-    const projects = await prisma.project.findMany({
-      include: {
-        taskLists: {
-          include: { tasks: true }
+    const now = Date.now();
+    let projects = null;
+    if (apiMemoryCache.projects.data && (now - apiMemoryCache.projects.time < apiMemoryCache.projects.ttl)) {
+      projects = apiMemoryCache.projects.data;
+    } else {
+      projects = await prisma.project.findMany({
+        include: {
+          taskLists: {
+            include: { tasks: true }
+          },
+          queries: true,
+          attachments: true
         },
-        queries: true,
-        attachments: true
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-    // Map sentToId → sentTo so frontend stays compatible, and map isFavorite for taskLists
+        orderBy: { createdAt: 'desc' }
+      });
+      apiMemoryCache.projects.data = projects;
+      apiMemoryCache.projects.time = now;
+    }
+
     const mapped = projects.map(p => ({
       ...p,
       queries: (p.queries || []).map(q => ({ ...q, sentTo: q.sentToId })),
@@ -1128,6 +1161,7 @@ app.get('/api/projects', async (req, res) => {
 
 app.post('/api/projects', async (req, res) => {
   try {
+    clearApiCache('projects');
     const { estimatedHours, actualHours, billableHours, taskLists, queries, attachments, clientRef, tasks, estimations, ...rest } = req.body;
     const data = { ...rest };
     if (estimatedHours !== undefined) data.estimatedHours = parseFloat(estimatedHours) || 0;
@@ -1205,10 +1239,18 @@ app.delete('/api/projects/:id', async (req, res) => {
 app.get('/api/task-lists', async (req, res) => {
   try {
     const userId = req.headers['x-user-id'];
-    const taskLists = await prisma.taskList.findMany({
-      include: { tasks: true, project: true },
-      orderBy: { createdAt: 'desc' }
-    });
+    const now = Date.now();
+    let taskLists = null;
+    if (apiMemoryCache.taskLists.data && (now - apiMemoryCache.taskLists.time < apiMemoryCache.taskLists.ttl)) {
+      taskLists = apiMemoryCache.taskLists.data;
+    } else {
+      taskLists = await prisma.taskList.findMany({
+        include: { tasks: true, project: true },
+        orderBy: { createdAt: 'desc' }
+      });
+      apiMemoryCache.taskLists.data = taskLists;
+      apiMemoryCache.taskLists.time = now;
+    }
     const mapped = taskLists.map(list => {
       const favoritedByArr = list.favoritedBy ? list.favoritedBy.split(',').map(id => id.trim()).filter(Boolean) : [];
       return {
@@ -1224,6 +1266,8 @@ app.get('/api/task-lists', async (req, res) => {
 
 app.post('/api/task-lists', async (req, res) => {
   try {
+    clearApiCache('taskLists');
+    clearApiCache('projects');
     const { tasks, project, ...rest } = req.body;
     const taskList = await prisma.taskList.create({
       data: rest
@@ -1318,6 +1362,10 @@ app.post('/api/teams', async (req, res) => {
 // 7. Tasks
 app.get('/api/tasks', async (req, res) => {
   try {
+    const now = Date.now();
+    if (apiMemoryCache.tasks.data && (now - apiMemoryCache.tasks.time < apiMemoryCache.tasks.ttl)) {
+      return res.json(apiMemoryCache.tasks.data);
+    }
     const tasks = await prisma.task.findMany({
       orderBy: { createdAt: 'desc' },
       include: { projectRef: { select: { name: true } } }
@@ -1326,6 +1374,8 @@ app.get('/api/tasks', async (req, res) => {
       ...t,
       projectName: projectRef?.name || ''
     }));
+    apiMemoryCache.tasks.data = result;
+    apiMemoryCache.tasks.time = now;
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1413,6 +1463,9 @@ app.get('/api/tasks/:idOrDisplayId', async (req, res) => {
 
 app.post('/api/tasks', async (req, res) => {
   try {
+    clearApiCache('tasks');
+    clearApiCache('projects');
+    clearApiCache('taskLists');
     console.log('POST /api/tasks body:', req.body);
     let { id, comments, createdAt, createdBy: createdByName, ...taskData } = req.body;
     
@@ -1448,6 +1501,10 @@ app.post('/api/tasks', async (req, res) => {
       }
     });
 
+    if (taskData.status === 'Delivered' && !taskData.deliveredDate) {
+      return res.status(400).json({ error: 'Delivery date is required' });
+    }
+
     if (taskData.taskType === 'Recurring Task' && taskData.recurrenceFrequency) {
       taskData.nextOccurrence = getInitialRecurrenceDate(taskData.recurrenceFrequency, taskData.recurrenceDetail, taskData.dueDate || new Date());
     }
@@ -1470,6 +1527,7 @@ app.post('/api/tasks', async (req, res) => {
     // Auto-generate sequential task number if not provided or placeholder
     if (!taskData.taskNo || taskData.taskNo.startsWith('TSK-')) {
       const allTasks = await prisma.task.findMany({
+        where: { taskNo: { not: null } },
         select: { taskNo: true }
       });
       let maxNo = 0;
@@ -1512,19 +1570,21 @@ app.post('/api/tasks', async (req, res) => {
 
         if (bugRecipients.length > 0) {
           createNotification(bugRecipients, `New Bug Report: ${task.title}`, `A new bug report has been created: ${task.title}`);
-          const { taskListName, projectName } = await getTaskDetailsForEmail(task);
-          notifyEmailsByNames(bugRecipients, `New Bug Report: ${task.title}`, {
-            author: finalCreatedBy || createdByName || task.createdBy || 'User',
-            action: 'created bug report',
-            itemTitle: task.title,
-            boardName: taskListName,
-            projectName: projectName,
-            buttonText: 'View Item',
-            taskId: getTaskDisplayId(task)
-          }, 'task');
+          // Send email asynchronously in background so response isn't blocked
+          getTaskDetailsForEmail(task).then(({ taskListName, projectName }) => {
+            return notifyEmailsByNames(bugRecipients, `New Bug Report: ${task.title}`, {
+              author: finalCreatedBy || createdByName || task.createdBy || 'User',
+              action: 'created bug report',
+              itemTitle: task.title,
+              boardName: taskListName,
+              projectName: projectName,
+              buttonText: 'View Item',
+              taskId: getTaskDisplayId(task)
+            }, 'task');
+          }).catch(notifErr => console.error('Error sending bug report notifications:', notifErr));
         }
       } catch (notifErr) {
-        console.error('Error sending bug report notifications:', notifErr);
+        console.error('Error creating bug report notifications:', notifErr);
       }
     } else if (task.assignees) {
       // For all other task types (regular, Calls/Meetings, Recurring Task):
@@ -1536,16 +1596,18 @@ app.post('/api/tasks', async (req, res) => {
 
       if (notifyAssignees) {
         createNotification(notifyAssignees, `New Task Assigned: ${task.title}`, `You have been assigned to a new task.`);
-        const { taskListName, projectName } = await getTaskDetailsForEmail(task);
-        notifyEmailsByNames(notifyAssignees, `New Task Assigned: ${task.title}`, {
-          author: finalCreatedBy || createdByName || 'Admin',
-          action: 'assigned you to',
-          itemTitle: task.title,
-          boardName: taskListName,
-          projectName: projectName,
-          buttonText: 'View Item',
-          taskId: getTaskDisplayId(task)
-        }, 'task');
+        // Send email asynchronously in background so response isn't blocked
+        getTaskDetailsForEmail(task).then(({ taskListName, projectName }) => {
+          return notifyEmailsByNames(notifyAssignees, `New Task Assigned: ${task.title}`, {
+            author: finalCreatedBy || createdByName || 'Admin',
+            action: 'assigned you to',
+            itemTitle: task.title,
+            boardName: taskListName,
+            projectName: projectName,
+            buttonText: 'View Item',
+            taskId: getTaskDisplayId(task)
+          }, 'task');
+        }).catch(notifErr => console.error('Error sending task assigned notifications:', notifErr));
       }
     }
     res.json(task);
@@ -1585,6 +1647,9 @@ const isUpdaterAssignee = async (task, updaterId) => {
 
 app.put('/api/tasks/:id', async (req, res) => {
   try {
+    clearApiCache('tasks');
+    clearApiCache('projects');
+    clearApiCache('taskLists');
     console.log('PUT /api/tasks body:', req.body);
     let { id, createdAt, comments, updatedBy: updatedByName, ...taskData } = req.body;
     
@@ -1622,6 +1687,12 @@ app.put('/api/tasks/:id', async (req, res) => {
         }
       }
     });
+
+    const finalStatus = taskData.status !== undefined ? taskData.status : existingTask.status;
+    const finalDeliveredDate = taskData.deliveredDate !== undefined ? taskData.deliveredDate : existingTask.deliveredDate;
+    if (finalStatus === 'Delivered' && !finalDeliveredDate) {
+      return res.status(400).json({ error: 'Delivery date is required' });
+    }
 
     // Recurrence frequency and detail delegation logic
     if (taskData.recurrenceFrequency !== undefined || taskData.recurrenceDetail !== undefined) {
@@ -1794,16 +1865,18 @@ app.put('/api/tasks/:id', async (req, res) => {
       const notificationMsg = isReassignment ? `You have been reassigned to this task.` : `You have been assigned to this task.`;
 
       createNotification(addedAssigneesStr, notificationTitle, notificationMsg);
-      const { taskListName, projectName } = await getTaskDetailsForEmail(task);
-      notifyEmailsByNames(addedAssigneesStr, notificationTitle, {
-        author: finalUpdaterName || updatedByName || 'Admin',
-        action: isReassignment ? 'reassigned you to' : 'assigned you to',
-        itemTitle: task.title,
-        boardName: taskListName,
-        projectName: projectName,
-        buttonText: 'View Item',
-        taskId: getTaskDisplayId(task)
-      }, 'task');
+      // Send email asynchronously in background
+      getTaskDetailsForEmail(task).then(({ taskListName, projectName }) => {
+        return notifyEmailsByNames(addedAssigneesStr, notificationTitle, {
+          author: finalUpdaterName || updatedByName || 'Admin',
+          action: isReassignment ? 'reassigned you to' : 'assigned you to',
+          itemTitle: task.title,
+          boardName: taskListName,
+          projectName: projectName,
+          buttonText: 'View Item',
+          taskId: getTaskDisplayId(task)
+        }, 'task');
+      }).catch(notifErr => console.error('Error sending task reassignment notifications:', notifErr));
     }
 
     res.json(task);
@@ -1815,6 +1888,9 @@ app.put('/api/tasks/:id', async (req, res) => {
 
 app.delete('/api/tasks/:id', async (req, res) => {
   try {
+    clearApiCache('tasks');
+    clearApiCache('projects');
+    clearApiCache('taskLists');
     const existing = await prisma.task.findUnique({
       where: { id: req.params.id }
     });
@@ -2707,9 +2783,19 @@ app.get('/api/reports/status-based', async (req, res) => {
 });
 
 // 13. Role Permissions
+let rolePermissionsCache = null;
+let rolePermissionsCacheTime = 0;
+const CACHE_TTL_MS = 15000; // 15s in-memory cache
+
 app.get('/api/roles/permissions', async (req, res) => {
   try {
+    const now = Date.now();
+    if (rolePermissionsCache && (now - rolePermissionsCacheTime < CACHE_TTL_MS)) {
+      return res.json(rolePermissionsCache);
+    }
     const perms = await prisma.rolePermission.findMany();
+    rolePermissionsCache = perms;
+    rolePermissionsCacheTime = now;
     res.json(perms);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -2719,6 +2805,7 @@ app.get('/api/roles/permissions', async (req, res) => {
 app.post('/api/roles/permissions', async (req, res) => {
   const { role, data } = req.body;
   try {
+    rolePermissionsCache = null; // Invalidate cache
     const perm = await prisma.rolePermission.upsert({
       where: { role },
       update: { data },
@@ -2734,6 +2821,7 @@ app.delete('/api/roles/permissions/:role', async (req, res) => {
   const { role } = req.params;
   console.log(`Deleting role: ${role}`);
   try {
+    rolePermissionsCache = null; // Invalidate cache
     await prisma.rolePermission.deleteMany({
       where: { role }
     });

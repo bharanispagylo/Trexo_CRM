@@ -883,6 +883,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       alert('Task title and description are required.', 'warning', 'Required Fields');
       return;
     }
+    if (taskFormFields.status === 'Delivered' && (!taskFormFields.deliveredDate || !taskFormFields.deliveredDate.trim())) {
+      alert('Delivery date is required', 'warning', 'Validation Error');
+      return;
+    }
     
     setIsSaving(true);
     try {
