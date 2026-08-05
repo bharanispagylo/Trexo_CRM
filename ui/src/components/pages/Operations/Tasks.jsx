@@ -712,22 +712,60 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
   const isWorkLogToday = (log) => {
     if (!log) return false;
-    const logDate = new Date(log.logDate || log.createdAt);
-    if (isNaN(logDate.getTime())) return false;
-    const today = new Date();
-    return logDate.getFullYear() === today.getFullYear()
-      && logDate.getMonth() === today.getMonth()
-      && logDate.getDate() === today.getDate();
+    const rawDate = log.logDate || log.createdAt;
+    if (!rawDate) return false;
+
+    const todayObj = new Date();
+    const todayLocalYMD = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+    const todayUTCYMD = todayObj.toISOString().split('T')[0];
+
+    if (typeof rawDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(rawDate)) {
+      const ymd = rawDate.substring(0, 10);
+      if (ymd === todayLocalYMD || ymd === todayUTCYMD) return true;
+    }
+
+    const d = new Date(rawDate);
+    if (!isNaN(d.getTime())) {
+      const logLocalYMD = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const logUTCYMD = d.toISOString().split('T')[0];
+      if (
+        logLocalYMD === todayLocalYMD ||
+        logLocalYMD === todayUTCYMD ||
+        logUTCYMD === todayLocalYMD ||
+        logUTCYMD === todayUTCYMD
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  const isOwnWorkLog = (log) => {
+    if (!log || !currentUser) return false;
+    const currentUserId = String(currentUser.id || '').toLowerCase().trim();
+    const currentUserName = (currentUser.fullName || currentUser.name || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`).trim().toLowerCase();
+
+    const logUserId = String(log.userId || log.user?.id || '').toLowerCase().trim();
+    const logUserName = (log.user?.fullName || log.user?.name || `${log.user?.firstName || ''} ${log.user?.lastName || ''}`).trim().toLowerCase();
+
+    if (currentUserId && logUserId && currentUserId === logUserId) return true;
+    if (currentUserName && logUserName && currentUserName === logUserName) return true;
+    return false;
   };
 
   const canEditWorkLog = (log) => {
+    if (!log) return false;
+    if (log.isBilled) return isTeamLeadOrAdmin || canEdit;
     if (!isWorkLogToday(log)) return false;
-    return isAssigned() || isTeamLeadOrAdmin;
+    return isOwnWorkLog(log) || isAssigned() || isTeamLeadOrAdmin;
   };
 
   const canDeleteWorkLog = (log) => {
+    if (!log) return false;
+    if (log.isBilled) return isTeamLeadOrAdmin || canDelete;
     if (!isWorkLogToday(log)) return false;
-    return isAssigned() || isTeamLeadOrAdmin;
+    return isOwnWorkLog(log) || isAssigned() || isTeamLeadOrAdmin;
   };
 
   const canDeleteAttachment = (meta) => {
@@ -1765,6 +1803,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       setForm(form);
       return;
     }
+    if (updatedForm.status === 'Delivered' && (!updatedForm.deliveredDate || !updatedForm.deliveredDate.toString().trim())) {
+      alert("Delivery date is required", "warning", "Validation Error");
+      setForm(form);
+      return;
+    }
     try {
       const { comments, taskList, ...payload } = updatedForm;
       await onSave(payload, true);
@@ -1794,6 +1837,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
 
     if (form.taskType !== 'calls/meetings' && (!form.assignees || !form.assignees.trim())) {
       newErrors.assignees = "Assignee is required";
+    }
+
+    if (form.status === 'Delivered' && (!form.deliveredDate || !form.deliveredDate.toString().trim())) {
+      newErrors.deliveredDate = "Delivery date is required";
     }
 
     if (form.isBillable && (form.approvedHours < 0 || form.actualHours < 0)) {
@@ -2523,7 +2570,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '12px', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconStatus /> Status</span>
                     <span className="saas-meta-value">
-                      <select value={form.status} onChange={e => { const newSt = e.target.value; const updated = { ...form, status: newSt }; if (newSt === 'Archived' || newSt === 'Archive') { updated.previousStatus = (form.status !== 'Archived' && form.status !== 'Archive') ? form.status : (form.previousStatus || 'To Do'); } else if (newSt === 'Delivered' && !form.deliveredDate) { updated.deliveredDate = new Date().toISOString(); } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontSize: '12px', fontWeight: 400 }}>
+                      <select value={form.status} onChange={e => { const newSt = e.target.value; const updated = { ...form, status: newSt }; if (newSt === 'Archived' || newSt === 'Archive') { updated.previousStatus = (form.status !== 'Archived' && form.status !== 'Archive') ? form.status : (form.previousStatus || 'To Do'); } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontSize: '12px', fontWeight: 400 }}>
                         {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                       </select>
                     </span>
@@ -2870,9 +2917,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                 type="date" 
                                 className="saas-detail-date-input"
                                 value={form.deliveredDate ? new Date(form.deliveredDate).toISOString().split('T')[0] : ''} 
-                                onChange={e => set('deliveredDate', e.target.value)} 
+                                onChange={e => { set('deliveredDate', e.target.value); if (errors.deliveredDate) setErrors(prev => { const { deliveredDate: _, ...rest } = prev; return rest; }); }} 
                                 disabled={!canEdit}
-                                style={{ border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '12px', color: '#64748b', width: '120px', cursor: canEdit ? 'pointer' : 'default', fontWeight: 400 }} 
+                                style={{ border: errors.deliveredDate ? '1px solid #ef4444' : '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', padding: '0.15rem 0.3rem', fontSize: '12px', color: '#64748b', width: '120px', cursor: canEdit ? 'pointer' : 'default', fontWeight: 400 }} 
                                 title="Delivery Date"
                               />
                               <span className={`saas-date-display-overlay${!form.deliveredDate ? ' saas-date-empty' : ''}`}>
@@ -3236,9 +3283,19 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                     <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                                       {canEditWorkLog(log) && (
                                         <button title="Edit" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', background: 'white', cursor: 'pointer' }} onClick={() => {
+                                          const logDateVal = log.logDate || log.createdAt;
+                                          let formattedLogDate = new Date().toISOString().split('T')[0];
+                                          if (typeof logDateVal === 'string' && /^\d{4}-\d{2}-\d{2}/.test(logDateVal)) {
+                                            formattedLogDate = logDateVal.substring(0, 10);
+                                          } else {
+                                            const d = new Date(logDateVal);
+                                            if (!isNaN(d.getTime())) {
+                                              formattedLogDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                            }
+                                          }
                                           setWorkLogForm({
                                             id: log.id,
-                                            logDate: new Date(log.logDate).toISOString().split('T')[0],
+                                            logDate: formattedLogDate,
                                             hoursWorked: String(log.hoursWorked),
                                             description: log.description || '',
                                             isBilled: false
@@ -3345,10 +3402,20 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                               <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                                 {canEdit && (
                                   <button title="Edit" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', background: 'white', cursor: 'pointer' }} onClick={() => {
+                                    const logDateVal = log.logDate || log.createdAt;
+                                    let formattedLogDate = new Date().toISOString().split('T')[0];
+                                    if (typeof logDateVal === 'string' && /^\d{4}-\d{2}-\d{2}/.test(logDateVal)) {
+                                      formattedLogDate = logDateVal.substring(0, 10);
+                                    } else {
+                                      const d = new Date(logDateVal);
+                                      if (!isNaN(d.getTime())) {
+                                        formattedLogDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                      }
+                                    }
                                     setWorkLogForm({
                                       id: log.id,
-                                      logDate: new Date(log.logDate).toISOString().split('T')[0],
-                                      hoursWorked: log.hoursWorked,
+                                      logDate: formattedLogDate,
+                                      hoursWorked: String(log.hoursWorked),
                                       description: log.description || '',
                                       isBilled: true
                                     });
@@ -4984,7 +5051,10 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       if (colId === 'Delivered') {
         const existingTask = tasks.find(t => t.id === id);
         if (existingTask && !existingTask.deliveredDate) {
-          updateData.deliveredDate = new Date().toISOString();
+          alert('Delivery date is required', 'warning', 'Validation Error');
+          dragId.current = null;
+          setDragOver(null);
+          return;
         }
       }
       setTasks(ts => ts.map(t => t.id === id ? { ...t, ...updateData } : t));
@@ -5059,6 +5129,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
   };
 
   const handleSaveTask = async (taskData, silent = false) => {
+    if (taskData.status === 'Delivered' && (!taskData.deliveredDate || !taskData.deliveredDate.toString().trim())) {
+      alert('Delivery date is required', 'warning', 'Validation Error');
+      if (!silent) setIsSaving(false);
+      return null;
+    }
     if (!silent) setIsSaving(true);
     try {
       let savedTask = null;
@@ -7166,7 +7241,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
                                             <td className="cu-td cu-td-list" onClick={e => e.stopPropagation()}>
                                               <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
-                                                <select className="cu-inline-dropdown" value={task.status || 'To Do'} disabled={!canEditTask(task)} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (task.status !== 'Archived' && task.status !== 'Archive') ? task.status : (task.previousStatus || 'To Do'); } else if (newStatus === 'Delivered' && !task.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${task.id}`, updateData); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: meta.dotColor, fontSize: '12px', fontWeight: 600, padding: '0px', background: 'transparent', border: 'none', cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                                                <select className="cu-inline-dropdown" value={task.status || 'To Do'} disabled={!canEditTask(task)} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; if (newStatus === 'Delivered' && !task.deliveredDate) { alert('Delivery date is required', 'warning', 'Validation Error'); return; } const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (task.status !== 'Archived' && task.status !== 'Archive') ? task.status : (task.previousStatus || 'To Do'); } try { await api.put(`/tasks/${task.id}`, updateData); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: meta.dotColor, fontSize: '12px', fontWeight: 600, padding: '0px', background: 'transparent', border: 'none', cursor: canEditTask(task) ? 'pointer' : 'default' }}>
                                                   {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                                                 </select>
                                               </div>
@@ -7328,7 +7403,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
                                                 <td className="cu-td cu-td-list" onClick={e => e.stopPropagation()}>
                                                   <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
-                                                    <select className="cu-inline-dropdown" value={sub.status || 'To Do'} disabled={!canEditTask(sub)} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (sub.status !== 'Archived' && sub.status !== 'Archive') ? sub.status : (sub.previousStatus || 'To Do'); } else if (newStatus === 'Delivered' && !sub.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } try { await api.put(`/tasks/${sub.id}`, updateData); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: subMeta.dotColor, fontSize: '12px', fontWeight: 600, padding: '0px', background: 'transparent', border: 'none', cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                                                    <select className="cu-inline-dropdown" value={sub.status || 'To Do'} disabled={!canEditTask(sub)} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; if (newStatus === 'Delivered' && !sub.deliveredDate) { alert('Delivery date is required', 'warning', 'Validation Error'); return; } const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (sub.status !== 'Archived' && sub.status !== 'Archive') ? sub.status : (sub.previousStatus || 'To Do'); } try { await api.put(`/tasks/${sub.id}`, updateData); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: subMeta.dotColor, fontSize: '12px', fontWeight: 600, padding: '0px', background: 'transparent', border: 'none', cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
                                                       {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                                                     </select>
                                                   </div>

@@ -19,22 +19,34 @@ const getHeaders = (customHeaders = {}) => {
   return headers;
 };
 
+// In-flight GET request deduplication map to prevent redundant concurrent fetches
+const pendingRequests = new Map();
+
 export const api = {
 
   async get(route) {
-    const separator = route.includes('?') ? '&' : '?';
-    const res = await fetch(`${BASE_URL}${route}${separator}t=${Date.now()}`, {
-      headers: getHeaders({
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      })
-    });
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.details || errorData.error || `GET ${route} failed: ${res.status}`);
+    if (pendingRequests.has(route)) {
+      return pendingRequests.get(route);
     }
-    return res.json();
+
+    const requestPromise = (async () => {
+      try {
+        const separator = route.includes('?') ? '&' : '?';
+        const res = await fetch(`${BASE_URL}${route}${separator}t=${Date.now()}`, {
+          headers: getHeaders()
+        });
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.details || errorData.error || `GET ${route} failed: ${res.status}`);
+        }
+        return await res.json();
+      } finally {
+        pendingRequests.delete(route);
+      }
+    })();
+
+    pendingRequests.set(route, requestPromise);
+    return requestPromise;
   },
 
   async post(route, body) {
