@@ -524,6 +524,18 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  useEffect(() => {
+    const handleTaskUpdated = (e) => {
+      if (e.detail && e.detail.id) {
+        if (typeof updateProjectTaskOptimistically === 'function') {
+          updateProjectTaskOptimistically(e.detail.id, e.detail);
+        }
+      }
+    };
+    window.addEventListener('taskUpdated', handleTaskUpdated);
+    return () => window.removeEventListener('taskUpdated', handleTaskUpdated);
+  }, []);
+
   // ── FETCH DATA ──
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -884,8 +896,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       return;
     }
     if (taskFormFields.status === 'Delivered' && (!taskFormFields.deliveredDate || !taskFormFields.deliveredDate.trim())) {
-      alert('Delivery date is required', 'warning', 'Validation Error');
-      return;
+      taskFormFields.deliveredDate = new Date().toISOString();
     }
     
     setIsSaving(true);

@@ -1502,7 +1502,7 @@ app.post('/api/tasks', async (req, res) => {
     });
 
     if (taskData.status === 'Delivered' && !taskData.deliveredDate) {
-      return res.status(400).json({ error: 'Delivery date is required' });
+      taskData.deliveredDate = new Date();
     }
 
     if (taskData.taskType === 'Recurring Task' && taskData.recurrenceFrequency) {
@@ -1689,9 +1689,10 @@ app.put('/api/tasks/:id', async (req, res) => {
     });
 
     const finalStatus = taskData.status !== undefined ? taskData.status : existingTask.status;
-    const finalDeliveredDate = taskData.deliveredDate !== undefined ? taskData.deliveredDate : existingTask.deliveredDate;
+    let finalDeliveredDate = taskData.deliveredDate !== undefined ? taskData.deliveredDate : existingTask.deliveredDate;
     if (finalStatus === 'Delivered' && !finalDeliveredDate) {
-      return res.status(400).json({ error: 'Delivery date is required' });
+      finalDeliveredDate = new Date();
+      taskData.deliveredDate = finalDeliveredDate;
     }
 
     // Recurrence frequency and detail delegation logic
