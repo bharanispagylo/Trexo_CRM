@@ -1804,9 +1804,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       return;
     }
     if (updatedForm.status === 'Delivered' && (!updatedForm.deliveredDate || !updatedForm.deliveredDate.toString().trim())) {
-      alert("Delivery date is required", "warning", "Validation Error");
-      setForm(form);
-      return;
+      updatedForm.deliveredDate = new Date().toISOString();
     }
     try {
       const { comments, taskList, ...payload } = updatedForm;
@@ -1840,7 +1838,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     }
 
     if (form.status === 'Delivered' && (!form.deliveredDate || !form.deliveredDate.toString().trim())) {
-      newErrors.deliveredDate = "Delivery date is required";
+      form.deliveredDate = new Date().toISOString();
     }
 
     if (form.isBillable && (form.approvedHours < 0 || form.actualHours < 0)) {
@@ -4755,6 +4753,17 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     }
   }, [drawerTask, user?.id]);
 
+  useEffect(() => {
+    const handleTaskUpdated = (e) => {
+      if (e.detail && e.detail.id) {
+        setTasks(prevTasks => prevTasks.map(t => t.id === e.detail.id ? { ...t, ...e.detail } : t));
+        setDrawerTask(prev => (prev && prev.id === e.detail.id ? { ...prev, ...e.detail } : prev));
+      }
+    };
+    window.addEventListener('taskUpdated', handleTaskUpdated);
+    return () => window.removeEventListener('taskUpdated', handleTaskUpdated);
+  }, []);
+
   const [listUsers, setListUsers] = useState([]);
   const toggleGroup = (key) => {
     setExpandedGroupId(prev => prev === key ? null : key);
@@ -5051,13 +5060,11 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       if (colId === 'Delivered') {
         const existingTask = tasks.find(t => t.id === id);
         if (existingTask && !existingTask.deliveredDate) {
-          alert('Delivery date is required', 'warning', 'Validation Error');
-          dragId.current = null;
-          setDragOver(null);
-          return;
+          updateData.deliveredDate = new Date().toISOString();
         }
       }
       setTasks(ts => ts.map(t => t.id === id ? { ...t, ...updateData } : t));
+      window.dispatchEvent(new CustomEvent('taskUpdated', { detail: { id, ...updateData } }));
       try {
         await api.put(`/tasks/${id}`, updateData);
       } catch (error) {
@@ -5130,9 +5137,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
   const handleSaveTask = async (taskData, silent = false) => {
     if (taskData.status === 'Delivered' && (!taskData.deliveredDate || !taskData.deliveredDate.toString().trim())) {
-      alert('Delivery date is required', 'warning', 'Validation Error');
-      if (!silent) setIsSaving(false);
-      return null;
+      taskData.deliveredDate = new Date().toISOString();
     }
     if (!silent) setIsSaving(true);
     try {
@@ -7241,7 +7246,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
                                             <td className="cu-td cu-td-list" onClick={e => e.stopPropagation()}>
                                               <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(task) ? 'pointer' : 'default' }}>
-                                                <select className="cu-inline-dropdown" value={task.status || 'To Do'} disabled={!canEditTask(task)} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; if (newStatus === 'Delivered' && !task.deliveredDate) { alert('Delivery date is required', 'warning', 'Validation Error'); return; } const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (task.status !== 'Archived' && task.status !== 'Archive') ? task.status : (task.previousStatus || 'To Do'); } try { await api.put(`/tasks/${task.id}`, updateData); setTasks(ts => ts.map(t => t.id === task.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: meta.dotColor, fontSize: '12px', fontWeight: 600, padding: '0px', background: 'transparent', border: 'none', cursor: canEditTask(task) ? 'pointer' : 'default' }}>
+                                                <select className="cu-inline-dropdown" value={task.status || 'To Do'} disabled={!canEditTask(task)} onChange={(e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Delivered' && !task.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (task.status !== 'Archived' && task.status !== 'Archive') ? task.status : (task.previousStatus || 'To Do'); } setTasks(ts => ts.map(t => t.id === task.id ? { ...t, ...updateData } : t)); window.dispatchEvent(new CustomEvent('taskUpdated', { detail: { id: task.id, ...updateData } })); api.put(`/tasks/${task.id}`, updateData).catch(err => console.error(err)); }} style={{ color: meta.dotColor, fontSize: '12px', fontWeight: 600, padding: '0px', background: 'transparent', border: 'none', cursor: canEditTask(task) ? 'pointer' : 'default' }}>
                                                   {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                                                 </select>
                                               </div>
@@ -7403,7 +7408,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
 
                                                 <td className="cu-td cu-td-list" onClick={e => e.stopPropagation()}>
                                                   <div className="cu-inline-field-wrapper" style={{ cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
-                                                    <select className="cu-inline-dropdown" value={sub.status || 'To Do'} disabled={!canEditTask(sub)} onChange={async (e) => { e.stopPropagation(); const newStatus = e.target.value; if (newStatus === 'Delivered' && !sub.deliveredDate) { alert('Delivery date is required', 'warning', 'Validation Error'); return; } const updateData = { status: newStatus }; if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (sub.status !== 'Archived' && sub.status !== 'Archive') ? sub.status : (sub.previousStatus || 'To Do'); } try { await api.put(`/tasks/${sub.id}`, updateData); setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, ...updateData } : t)); } catch(err) { console.error(err); } }} style={{ color: subMeta.dotColor, fontSize: '12px', fontWeight: 600, padding: '0px', background: 'transparent', border: 'none', cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
+                                                    <select className="cu-inline-dropdown" value={sub.status || 'To Do'} disabled={!canEditTask(sub)} onChange={(e) => { e.stopPropagation(); const newStatus = e.target.value; const updateData = { status: newStatus }; if (newStatus === 'Delivered' && !sub.deliveredDate) { updateData.deliveredDate = new Date().toISOString(); } if (newStatus === 'Archived' || newStatus === 'Archive') { updateData.previousStatus = (sub.status !== 'Archived' && sub.status !== 'Archive') ? sub.status : (sub.previousStatus || 'To Do'); } setTasks(ts => ts.map(t => t.id === sub.id ? { ...t, ...updateData } : t)); window.dispatchEvent(new CustomEvent('taskUpdated', { detail: { id: sub.id, ...updateData } })); api.put(`/tasks/${sub.id}`, updateData).catch(err => console.error(err)); }} style={{ color: subMeta.dotColor, fontSize: '12px', fontWeight: 600, padding: '0px', background: 'transparent', border: 'none', cursor: canEditTask(sub) ? 'pointer' : 'default' }}>
                                                       {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                                                     </select>
                                                   </div>
