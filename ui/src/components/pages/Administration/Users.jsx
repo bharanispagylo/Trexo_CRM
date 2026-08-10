@@ -22,26 +22,9 @@ export default function Users({ onAddUser, onEditUser }) {
   const [deleteAfterReassign, setDeleteAfterReassign] = useState(false);
 
   const fetchUsers = async () => {
-    const pageStartMs = performance.now();
-    const apiTimings = [];
-    const methodTimings = [];
-
     setLoading(true);
     try {
-      const fetchRoute = async (name, route) => {
-        const t0 = performance.now();
-        const data = await api.get(route).catch(() => []);
-        const duration = Number((performance.now() - t0).toFixed(2));
-        apiTimings.push({ name, duration, items: Array.isArray(data) ? data.length : 0 });
-        return data;
-      };
-
-      const [userData, roleData] = await Promise.all([
-        fetchRoute('GET /users', '/users'),
-        fetchRoute('GET /roles/permissions', '/roles/permissions')
-      ]);
-
-      const m0 = performance.now();
+      const userData = await api.get('/users');
       const sortedUsers = (userData || []).sort((a, b) => {
         const nameA = a.fullName || `${a.firstName || ''} ${a.lastName || ''}`.trim();
         const nameB = b.fullName || `${b.firstName || ''} ${b.lastName || ''}`.trim();
@@ -49,6 +32,7 @@ export default function Users({ onAddUser, onEditUser }) {
       });
       setUsers(sortedUsers);
       
+      const roleData = await api.get('/roles/permissions');
       if (roleData) {
         const dynamicRoles = ['Admin', 'Employee'];
         roleData.forEach(r => {
@@ -57,34 +41,6 @@ export default function Users({ onAddUser, onEditUser }) {
         });
         setRoles(dynamicRoles.sort((a, b) => a.localeCompare(b)));
       }
-      const dProc = Number((performance.now() - m0).toFixed(2));
-      methodTimings.push({ name: 'User Sorting & Role Processing', duration: dProc });
-
-      const logPagePerf = (pageName, apis, methods, startMs) => {
-        const totalDur = Number((performance.now() - startMs).toFixed(2));
-        const totalApi = Number(apis.reduce((s, a) => s + (a.duration || 0), 0).toFixed(2));
-        const totalMethod = Number(methods.reduce((s, m) => s + (m.duration || 0), 0).toFixed(2));
-        console.group(`%c🚀 [${pageName.toUpperCase()} PERFORMANCE REPORT]`, 'color: #2563eb; font-weight: bold; font-size: 13px;');
-        console.log('%c🌐 API FETCHING TIMINGS (Single Endpoint Breakdown):', 'font-weight: bold; color: #1e293b;');
-        apis.forEach(a => {
-          const isSlow = a.duration > 200;
-          const icon = isSlow ? '🔴' : '🟢';
-          console.log(`  ${icon} ${a.name}: %c${a.duration}ms%c ${a.items !== undefined ? `(${a.items} items returned)` : ''}`, 'font-weight: bold; color: ' + (isSlow ? '#ef4444' : '#2563eb'), 'color: #64748b');
-        });
-        console.log(`  📊 Total API Fetching Time: %c${totalApi}ms`, 'font-weight: bold; color: #1e293b;');
-        console.log('%c⚡ METHOD & COMPUTATION TIMINGS (Single Function Breakdown):', 'font-weight: bold; color: #1e293b;');
-        methods.forEach(m => {
-          const isSlow = m.duration > 50;
-          const icon = isSlow ? '🟡' : '⚡';
-          console.log(`  ${icon} ${m.name}: %c${m.duration}ms`, 'font-weight: bold; color: ' + (isSlow ? '#d97706' : '#16a34a'));
-        });
-        console.log(`  🧮 Total Methods Execution Time: %c${totalMethod}ms`, 'font-weight: bold; color: #1e293b;');
-        const isOverallSlow = totalDur > 300;
-        console.log(`%c⏱️ TOTAL ${pageName.toUpperCase()} LOAD & RENDER TIME: ${totalDur}ms`, `font-weight: bold; font-size: 12px; color: ${isOverallSlow ? '#ef4444' : '#16a34a'};`);
-        console.groupEnd();
-      };
-
-      logPagePerf('USERS PAGE', apiTimings, methodTimings, pageStartMs);
     } catch (error) {
       console.error('Fetch error:', error);
     }

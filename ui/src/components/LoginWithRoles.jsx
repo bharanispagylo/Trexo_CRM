@@ -1057,12 +1057,11 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
         setTasks({ today: todayTasks, upcoming: upcomingTasks, backlog: backlogTasks });
 
         const m2 = performance.now();
-        const _now = new Date(); _now.setHours(0, 0, 0, 0);
-        const _all = [...todayTasks, ...upcomingTasks, ...backlogTasks];
-        _all.forEach(t => {
+        const _nowCalc = new Date(); _nowCalc.setHours(0, 0, 0, 0);
+        const _allCalc = [...todayTasks, ...upcomingTasks, ...backlogTasks];
+        _allCalc.forEach(t => {
           if (t.dueDate) {
-            const d = new Date(t.dueDate);
-            d.setHours(0, 0, 0, 0);
+            const d = new Date(t.dueDate); d.setHours(0, 0, 0, 0);
           }
         });
         const dMetrics = Number((performance.now() - m2).toFixed(2));
