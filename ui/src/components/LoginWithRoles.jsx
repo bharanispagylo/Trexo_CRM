@@ -27,6 +27,45 @@ const PasswordToggleIcon = ({ show }) => {
 
 
 
+const logDashboardPerformance = (dashboardType, apiTimings, methodTimings, pageStartMs) => {
+  const totalDashboardDuration = Number((performance.now() - pageStartMs).toFixed(2));
+  const totalApiDuration = Number(apiTimings.reduce((sum, a) => sum + (a.duration || 0), 0).toFixed(2));
+  const totalMethodDuration = Number(methodTimings.reduce((sum, m) => sum + (m.duration || 0), 0).toFixed(2));
+
+  console.group(`%c🚀 [DASHBOARD PERFORMANCE REPORT - ${dashboardType.toUpperCase()}]`, 'color: #2563eb; font-weight: bold; font-size: 13px;');
+
+  console.log('%c🌐 API FETCHING TIMINGS (Single Endpoint Breakdown):', 'font-weight: bold; color: #1e293b;');
+  apiTimings.forEach(a => {
+    const isSlow = a.duration > 200;
+    const icon = isSlow ? '🔴' : '🟢';
+    console.log(`  ${icon} ${a.name}: %c${a.duration}ms%c ${a.items !== undefined ? `(${a.items} items returned)` : ''}`, 'font-weight: bold; color: ' + (isSlow ? '#ef4444' : '#2563eb'), 'color: #64748b');
+  });
+  console.log(`  📊 Total API Fetching Time: %c${totalApiDuration}ms`, 'font-weight: bold; color: #1e293b;');
+
+  console.log('%c⚡ METHOD & COMPUTATION TIMINGS (Single Function Breakdown):', 'font-weight: bold; color: #1e293b;');
+  methodTimings.forEach(m => {
+    const isSlow = m.duration > 50;
+    const icon = isSlow ? '🟡' : '⚡';
+    console.log(`  ${icon} ${m.name}: %c${m.duration}ms`, 'font-weight: bold; color: ' + (isSlow ? '#d97706' : '#16a34a'));
+  });
+  console.log(`  🧮 Total Methods Execution Time: %c${totalMethodDuration}ms`, 'font-weight: bold; color: #1e293b;');
+
+  const isOverallSlow = totalDashboardDuration > 300;
+  console.log(`%c⏱️ TOTAL DASHBOARD PAGE LOAD & RENDER TIME: ${totalDashboardDuration}ms`, `font-weight: bold; font-size: 12px; color: ${isOverallSlow ? '#ef4444' : '#16a34a'};`);
+
+  if (isOverallSlow) {
+    const slowestApi = [...apiTimings].sort((a, b) => b.duration - a.duration)[0];
+    const slowestMethod = [...methodTimings].sort((a, b) => b.duration - a.duration)[0];
+    if (slowestApi && slowestApi.duration > 150) {
+      console.warn(`⚠️ DASHBOARD LAGGING NOTICE: API Endpoint ${slowestApi.name} is lagging (${slowestApi.duration}ms)`);
+    }
+    if (slowestMethod && slowestMethod.duration > 30) {
+      console.warn(`⚠️ DASHBOARD LAGGING NOTICE: Calculation Method "${slowestMethod.name}" is lagging (${slowestMethod.duration}ms)`);
+    }
+  }
+  console.groupEnd();
+};
+
 // ══════════════════════════════════════════════════════════
 //  LOGIN PAGE
 // ══════════════════════════════════════════════════════════
@@ -618,107 +657,129 @@ function MobileHomeDashboard({ user, todayCount, overdueCount, myTasksCount, pri
   const [mhdMyTasks, setMhdMyTasks] = useState(0);
 
   useEffect(() => {
-    Promise.all([
-      api.get('/task-lists').catch(() => []),
-      api.get('/tasks').catch(() => []),
-      api.get('/projects').catch(() => []),
-      api.get('/clients').catch(() => []),
-      api.get('/users').catch(() => [])
-    ]).then(([lists, tasks, projects, clients, users]) => {
-      setAllTasks(tasks || []);
-      setAllProjects(projects || []);
-      setAllClients(clients || []);
-      setAllUsers(users || []);
-      
-      // Filter tasks to only those assigned to the logged-in user
-      const userName = (user?.fullName || user?.firstName || '').trim().toLowerCase();
-      const cleanName = userName.replace(/[^a-z0-9]/g, '');
-      const cleanEmail = (user?.email || '').toLowerCase().trim();
-      const cleanEmailPrefix = cleanEmail.split('@')[0].replace(/[^a-z0-9]/g, '');
-      const userId = user?.id || '';
+    const fetchMobileDashboardData = async () => {
+      const pageStartMs = performance.now();
+      const apiTimings = [];
+      const methodTimings = [];
 
-      const isMyTask = (t) => {
-        if (!t.assignees) return false;
-        const assigneesList = t.assignees.split(',').map(s => s.trim().toLowerCase());
-        return assigneesList.some(assignee => {
-          if (userId && assignee === userId.toLowerCase().trim()) return true;
-          const cleanAssignee = assignee.replace(/[^a-z0-9]/g, '');
-          if (assignee === cleanEmail) return true;
-          if (cleanAssignee === cleanEmailPrefix) return true;
-          if (cleanName && (cleanAssignee.includes(cleanName) || cleanName.includes(cleanAssignee))) return true;
-          return false;
-        });
-      };
+      try {
+        const fetchRoute = async (name, route) => {
+          const t0 = performance.now();
+          const data = await api.get(route).catch(() => []);
+          const duration = Number((performance.now() - t0).toFixed(2));
+          apiTimings.push({ name, duration, items: Array.isArray(data) ? data.length : 0 });
+          return data;
+        };
 
-      const myTasks = (tasks || []).filter(isMyTask);
-      
-      // Personal active tasks (excluding completed: 'Delivered', 'Prod Verified', or 'Not an issue')
-      const activeMyTasks = myTasks.filter(t => t.status !== 'Delivered' && t.status !== 'Prod Verified' && t.status !== 'Not an issue');
+        const [lists, tasks, projects, clients, users] = await Promise.all([
+          fetchRoute('GET /task-lists', '/task-lists'),
+          fetchRoute('GET /tasks', '/tasks'),
+          fetchRoute('GET /projects', '/projects'),
+          fetchRoute('GET /clients', '/clients'),
+          fetchRoute('GET /users', '/users')
+        ]);
 
-      // Calculate mobile dashboard stats internally based on activeMyTasks
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayTime = today.getTime();
+        setAllTasks(tasks || []);
+        setAllProjects(projects || []);
+        setAllClients(clients || []);
+        setAllUsers(users || []);
 
-      const sevenDaysLater = new Date(today);
-      sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
-      const sevenDaysTime = sevenDaysLater.getTime();
+        const m0 = performance.now();
+        // Filter tasks to only those assigned to the logged-in user
+        const userName = (user?.fullName || user?.firstName || '').trim().toLowerCase();
+        const cleanName = userName.replace(/[^a-z0-9]/g, '');
+        const cleanEmail = (user?.email || '').toLowerCase().trim();
+        const cleanEmailPrefix = cleanEmail.split('@')[0].replace(/[^a-z0-9]/g, '');
+        const userId = user?.id || '';
 
-      let localToday = 0;
-      let localOverdue = 0;
-      let localUpcoming = 0;
+        const isMyTask = (t) => {
+          if (!t.assignees) return false;
+          const assigneesList = t.assignees.split(',').map(s => s.trim().toLowerCase());
+          return assigneesList.some(assignee => {
+            if (userId && assignee === userId.toLowerCase().trim()) return true;
+            const cleanAssignee = assignee.replace(/[^a-z0-9]/g, '');
+            if (assignee === cleanEmail) return true;
+            if (cleanAssignee === cleanEmailPrefix) return true;
+            if (cleanName && (cleanAssignee.includes(cleanName) || cleanName.includes(cleanAssignee))) return true;
+            return false;
+          });
+        };
 
-      activeMyTasks.forEach(task => {
-        if (task.dueDate) {
-          const d = new Date(task.dueDate);
-          d.setHours(0, 0, 0, 0);
-          const dueTime = d.getTime();
+        const myTasks = (tasks || []).filter(isMyTask);
+        const activeMyTasks = myTasks.filter(t => t.status !== 'Delivered' && t.status !== 'Prod Verified' && t.status !== 'Not an issue');
+        const filterDuration = Number((performance.now() - m0).toFixed(2));
+        methodTimings.push({ name: 'User Task Assignee Filtering', duration: filterDuration });
 
-          if (dueTime < todayTime) {
-            localOverdue++;
-          } else if (dueTime === todayTime) {
-            localToday++;
-          } else if (dueTime > todayTime && dueTime <= sevenDaysTime) {
-            localUpcoming++;
+        const m1 = performance.now();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayTime = today.getTime();
+
+        const sevenDaysLater = new Date(today);
+        sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+        const sevenDaysTime = sevenDaysLater.getTime();
+
+        let localToday = 0;
+        let localOverdue = 0;
+        let localUpcoming = 0;
+
+        activeMyTasks.forEach(task => {
+          if (task.dueDate) {
+            const d = new Date(task.dueDate);
+            d.setHours(0, 0, 0, 0);
+            const dueTime = d.getTime();
+
+            if (dueTime < todayTime) {
+              localOverdue++;
+            } else if (dueTime === todayTime) {
+              localToday++;
+            } else if (dueTime > todayTime && dueTime <= sevenDaysTime) {
+              localUpcoming++;
+            }
           }
-        }
-      });
+        });
 
-      setMhdToday(localToday);
-      setMhdOverdue(localOverdue);
-      setMhdPriority(activeMyTasks.filter(t => t.priority === 'High' || t.priority === 'Critical').length);
-      setMhdUpcoming(localUpcoming);
-      setMhdMyTasks(activeMyTasks.length);
+        setMhdToday(localToday);
+        setMhdOverdue(localOverdue);
+        setMhdPriority(activeMyTasks.filter(t => t.priority === 'High' || t.priority === 'Critical').length);
+        setMhdUpcoming(localUpcoming);
+        setMhdMyTasks(activeMyTasks.length);
 
-      // Find projects where the user is a team member
-      const myProjectIds = new Set();
-      (projects || []).forEach(p => {
-        const memberIds = (p.members || '').split(',').map(m => m.trim().toLowerCase()).filter(Boolean);
-        if (userId && memberIds.includes(userId.toLowerCase().trim())) {
-          myProjectIds.add(p.id);
-        }
-      });
+        const myProjectIds = new Set();
+        (projects || []).forEach(p => {
+          const memberIds = (p.members || '').split(',').map(m => m.trim().toLowerCase()).filter(Boolean);
+          if (userId && memberIds.includes(userId.toLowerCase().trim())) {
+            myProjectIds.add(p.id);
+          }
+        });
 
-      // Project-level task counts (ClickUp My Lists format)
-      const projCounts = {};
-      activeMyTasks.forEach(t => {
-        let projId = t.projectId;
-        if (!projId && t.taskListId) {
-          const list = (lists || []).find(l => l.id === t.taskListId);
-          if (list) projId = list.projectId;
-        }
-        const key = projId || '__personal__';
-        projCounts[key] = (projCounts[key] || 0) + 1;
-      });
-      setProjectTaskCounts(projCounts);
+        const projCounts = {};
+        activeMyTasks.forEach(t => {
+          let projId = t.projectId;
+          if (!projId && t.taskListId) {
+            const list = (lists || []).find(l => l.id === t.taskListId);
+            if (list) projId = list.projectId;
+          }
+          const key = projId || '__personal__';
+          projCounts[key] = (projCounts[key] || 0) + 1;
+        });
+        setProjectTaskCounts(projCounts);
 
-      // Collect projects the user is in OR has tasks assigned
-      const allProjIds = new Set([
-        ...myProjectIds,
-        ...Object.keys(projCounts).filter(k => k !== '__personal__')
-      ]);
-      setMyProjects((projects || []).filter(p => allProjIds.has(p.id)));
-    });
+        const allProjIds = new Set([
+          ...myProjectIds,
+          ...Object.keys(projCounts).filter(k => k !== '__personal__')
+        ]);
+        setMyProjects((projects || []).filter(p => allProjIds.has(p.id)));
+
+        const calcDuration = Number((performance.now() - m1).toFixed(2));
+        methodTimings.push({ name: 'Mobile Dashboard Stats & Project Counts Calculation', duration: calcDuration });
+
+        logDashboardPerformance('Mobile Home Dashboard', apiTimings, methodTimings, pageStartMs);
+      } catch (err) {
+        console.error('Failed to fetch mobile dashboard data:', err);
+      }
+    };
+    fetchMobileDashboardData();
   }, [user]);
 
   const q = searchQuery.trim().toLowerCase();
@@ -936,14 +997,25 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
 
   useEffect(() => {
     const fetchData = async () => {
+      const pageStartMs = performance.now();
+      const apiTimings = [];
+      const methodTimings = [];
+
       try {
-        const [allTasksRaw, projectsData] = await Promise.all([
-          api.get('/tasks'),
-          api.get('/projects').catch(() => [])
-        ]);
+        const tTasks = performance.now();
+        const allTasksRaw = await api.get('/tasks').catch(() => []);
+        const dTasks = Number((performance.now() - tTasks).toFixed(2));
+        apiTimings.push({ name: 'GET /tasks', duration: dTasks, items: (allTasksRaw || []).length });
+
+        const tProj = performance.now();
+        const projectsData = await api.get('/projects').catch(() => []);
+        const dProj = Number((performance.now() - tProj).toFixed(2));
+        apiTimings.push({ name: 'GET /projects', duration: dProj, items: (projectsData || []).length });
+
         const allTasks = allTasksRaw || [];
         setProjects(projectsData || []);
 
+        const m0 = performance.now();
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayTime = today.getTime();
@@ -973,14 +1045,30 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
             }
           }
         });
+        const dCat = Number((performance.now() - m0).toFixed(2));
+        methodTimings.push({ name: 'Task Categorization (Today/Upcoming/Backlog)', duration: dCat });
 
+        const m1 = performance.now();
         // Sort the tasks by Due Date in ascending order (earliest due date first)
         upcomingTasks.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        const dSort = Number((performance.now() - m1).toFixed(2));
+        methodTimings.push({ name: 'Task Sorting (Due Date asc)', duration: dSort });
 
         setTasks({ today: todayTasks, upcoming: upcomingTasks, backlog: backlogTasks });
 
+        const m2 = performance.now();
+        const _now = new Date(); _now.setHours(0, 0, 0, 0);
+        const _all = [...todayTasks, ...upcomingTasks, ...backlogTasks];
+        _all.forEach(t => {
+          if (t.dueDate) {
+            const d = new Date(t.dueDate);
+            d.setHours(0, 0, 0, 0);
+          }
+        });
+        const dMetrics = Number((performance.now() - m2).toFixed(2));
+        methodTimings.push({ name: 'Dashboard Metric Cards Calculation', duration: dMetrics });
 
-
+        logDashboardPerformance('Admin Dashboard', apiTimings, methodTimings, pageStartMs);
       } catch (err) {
         console.error('Failed to fetch dashboard data', err);
       }
@@ -1151,28 +1239,21 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
 
   useEffect(() => {
     const fetchData = async () => {
+      const pageStartMs = performance.now();
+      const apiTimings = [];
+      const methodTimings = [];
+
       try {
         const userName = (user.fullName || user.firstName || '').trim().toLowerCase();
 
-        // 1. Fetch Attendance
-        // const allAttendance = await api.get('/attendance');
-        // const myAttendanceCount = (allAttendance || []).filter(a => a.name?.trim().toLowerCase() === userName).length;
-        // setAttendanceCount(myAttendanceCount);
+        const tTasks = performance.now();
+        const allTasks = await api.get('/tasks').catch(() => []);
+        const dTasks = Number((performance.now() - tTasks).toFixed(2));
+        apiTimings.push({ name: 'GET /tasks', duration: dTasks, items: (allTasks || []).length });
 
-        // 2. Fetch Leaves
-        // const allLeaves = await api.get('/leaves');
-        // const myLeaves = (allLeaves || []).filter(l => l.name?.trim().toLowerCase() === userName);
-        // setRecentLeaves(myLeaves.slice(0, 5));
-
-        // const myApprovedLeaves = myLeaves.filter(l => l.status === 'Approved');
-        // const usedDays = myApprovedLeaves.reduce((sum, l) => sum + (l.days || 0), 0);
-        // setLeaveBalance(15 - usedDays);
-
-        // 3. Fetch Tasks
-        const allTasks = await api.get('/tasks');
-
+        const m0 = performance.now();
         // Robust assignee matching
-        const myTasks = allTasks.filter(t => {
+        const myTasks = (allTasks || []).filter(t => {
           if (!t.assignees) return false;
           const assigneesList = t.assignees.split(',').map(s => s.trim().toLowerCase());
           const cleanName = userName.replace(/[^a-z0-9]/g, '');
@@ -1188,7 +1269,10 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
             return false;
           });
         });
+        const dMatch = Number((performance.now() - m0).toFixed(2));
+        methodTimings.push({ name: 'User Task Assignee Matching', duration: dMatch });
 
+        const m1 = performance.now();
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayTime = today.getTime();
@@ -1202,7 +1286,7 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
         const backlogTasks = [];
 
         myTasks.forEach(task => {
-          if (task.status === 'Delivered' || task.status === 'Prod Verified' || task.status === 'Not an issue') return; // ignore completed
+          if (task.status === 'Delivered' || task.status === 'Prod Verified' || task.status === 'Not an issue') return;
 
           if (task.dueDate) {
             const d = new Date(task.dueDate);
@@ -1218,11 +1302,17 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
             }
           }
         });
+        const dCat = Number((performance.now() - m1).toFixed(2));
+        methodTimings.push({ name: 'Task Categorization (Today/Upcoming/Backlog)', duration: dCat });
 
-        // Sort the tasks by Due Date in ascending order (earliest due date first)
+        const m2 = performance.now();
         upcomingTasks.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        const dSort = Number((performance.now() - m2).toFixed(2));
+        methodTimings.push({ name: 'Task Sorting (Due Date asc)', duration: dSort });
 
         setTasks({ today: todayTasks, upcoming: upcomingTasks, backlog: backlogTasks });
+
+        logDashboardPerformance('Employee Dashboard', apiTimings, methodTimings, pageStartMs);
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error);

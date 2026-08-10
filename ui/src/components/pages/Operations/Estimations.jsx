@@ -36,20 +36,58 @@ export default function Estimations({ user }) {
   });
 
   const fetchData = async () => {
+    const pageStartMs = performance.now();
+    const apiTimings = [];
+    const methodTimings = [];
+
     setLoading(true);
     try {
+      const fetchRoute = async (name, route) => {
+        const t0 = performance.now();
+        const data = await api.get(route).catch(() => []);
+        const duration = Number((performance.now() - t0).toFixed(2));
+        apiTimings.push({ name, duration, items: Array.isArray(data) ? data.length : 0 });
+        return data;
+      };
+
       const [estData, projData, clientData, usersData, listsData] = await Promise.all([
-        api.get('/estimations'),
-        api.get('/projects'),
-        api.get('/clients'),
-        api.get('/users'),
-        api.get('/task-lists')
+        fetchRoute('GET /estimations', '/estimations'),
+        fetchRoute('GET /projects', '/projects'),
+        fetchRoute('GET /clients', '/clients'),
+        fetchRoute('GET /users', '/users'),
+        fetchRoute('GET /task-lists', '/task-lists')
       ]);
       setEstimations(estData || []);
       setProjects(projData || []);
       setClients(clientData || []);
       setUsers(usersData || []);
       setTaskLists(listsData || []);
+
+      const logPagePerf = (pageName, apis, methods, startMs) => {
+        const totalDur = Number((performance.now() - startMs).toFixed(2));
+        const totalApi = Number(apis.reduce((s, a) => s + (a.duration || 0), 0).toFixed(2));
+        const totalMethod = Number(methods.reduce((s, m) => s + (m.duration || 0), 0).toFixed(2));
+        console.group(`%c🚀 [${pageName.toUpperCase()} PERFORMANCE REPORT]`, 'color: #2563eb; font-weight: bold; font-size: 13px;');
+        console.log('%c🌐 API FETCHING TIMINGS (Single Endpoint Breakdown):', 'font-weight: bold; color: #1e293b;');
+        apis.forEach(a => {
+          const isSlow = a.duration > 200;
+          const icon = isSlow ? '🔴' : '🟢';
+          console.log(`  ${icon} ${a.name}: %c${a.duration}ms%c ${a.items !== undefined ? `(${a.items} items returned)` : ''}`, 'font-weight: bold; color: ' + (isSlow ? '#ef4444' : '#2563eb'), 'color: #64748b');
+        });
+        console.log(`  📊 Total API Fetching Time: %c${totalApi}ms`, 'font-weight: bold; color: #1e293b;');
+        console.log('%c⚡ METHOD & COMPUTATION TIMINGS (Single Function Breakdown):', 'font-weight: bold; color: #1e293b;');
+        methods.forEach(m => {
+          const isSlow = m.duration > 50;
+          const icon = isSlow ? '🟡' : '⚡';
+          console.log(`  ${icon} ${m.name}: %c${m.duration}ms`, 'font-weight: bold; color: ' + (isSlow ? '#d97706' : '#16a34a'));
+        });
+        console.log(`  🧮 Total Methods Execution Time: %c${totalMethod}ms`, 'font-weight: bold; color: #1e293b;');
+        const isOverallSlow = totalDur > 300;
+        console.log(`%c⏱️ TOTAL ${pageName.toUpperCase()} LOAD & RENDER TIME: ${totalDur}ms`, `font-weight: bold; font-size: 12px; color: ${isOverallSlow ? '#ef4444' : '#16a34a'};`);
+        console.groupEnd();
+      };
+
+      logPagePerf('ESTIMATIONS PAGE', apiTimings, methodTimings, pageStartMs);
     } catch (err) {
       console.error('Failed to fetch estimations data:', err);
     } finally {
