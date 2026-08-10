@@ -85,11 +85,11 @@ const prisma = global._prismaClient;
 
 // In-memory data cache to speed up repeated GET endpoints and cut DB load
 const apiMemoryCache = {
-  users: { data: null, time: 0, ttl: 10000 },
-  projects: { data: null, time: 0, ttl: 10000 },
-  taskLists: { data: null, time: 0, ttl: 10000 },
-  tasks: { data: null, time: 0, ttl: 5000 },
-  clients: { data: null, time: 0, ttl: 15000 }
+  users: { data: null, time: 0, ttl: 60000 },
+  projects: { data: null, time: 0, ttl: 60000 },
+  taskLists: { data: null, time: 0, ttl: 60000 },
+  tasks: { data: null, time: 0, ttl: 60000 },
+  clients: { data: null, time: 0, ttl: 60000 }
 };
 
 function clearApiCache(key) {
@@ -97,6 +97,50 @@ function clearApiCache(key) {
     Object.keys(apiMemoryCache).forEach(k => apiMemoryCache[k].data = null);
   } else if (apiMemoryCache[key]) {
     apiMemoryCache[key].data = null;
+  }
+  // Immediately trigger background cache warming so cache is hot for next request
+  setTimeout(() => warmApiCache(), 50);
+}
+
+async function warmApiCache() {
+  try {
+    const now = Date.now();
+    const [users, projects, taskLists, tasks, clients] = await Promise.all([
+      prisma.user.findMany({ orderBy: { createdAt: 'desc' } }).catch(() => null),
+      prisma.project.findMany({
+        include: {
+          taskLists: { select: { id: true, name: true, projectId: true, favoritedBy: true } },
+          queries: true,
+          attachments: true
+        },
+        orderBy: { createdAt: 'desc' }
+      }).catch(() => null),
+      prisma.taskList.findMany({
+        include: { project: { select: { id: true, name: true } } },
+        orderBy: { createdAt: 'desc' }
+      }).catch(() => null),
+      prisma.task.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: { projectRef: { select: { name: true } } }
+      }).catch(() => null),
+      prisma.client.findMany({ orderBy: { createdAt: 'desc' } }).catch(() => null)
+    ]);
+
+    if (users) { apiMemoryCache.users.data = users; apiMemoryCache.users.time = now; }
+    if (projects) { apiMemoryCache.projects.data = projects; apiMemoryCache.projects.time = now; }
+    if (taskLists) { apiMemoryCache.taskLists.data = taskLists; apiMemoryCache.taskLists.time = now; }
+    if (tasks) {
+      const result = tasks.map(({ projectRef, ...t }) => ({
+        ...t,
+        projectName: projectRef?.name || ''
+      }));
+      apiMemoryCache.tasks.data = result;
+      apiMemoryCache.tasks.time = now;
+    }
+    if (clients) { apiMemoryCache.clients.data = clients; apiMemoryCache.clients.time = now; }
+    console.log('[Cache-Warm] Successfully pre-warmed API memory cache for fast dashboard loading!');
+  } catch (err) {
+    console.warn('[Cache-Warm] Warning pre-warming cache:', err.message);
   }
 }
 
@@ -237,6 +281,9 @@ if (!process.env.VERCEL) {
     } catch (e) {
       console.warn('[Self-Healing] Database clean empty client ID warning:', e.message);
     }
+    })
+    .then(() => {
+      warmApiCache();
     })
     .catch(console.error);
 }
@@ -466,6 +513,9 @@ const sanitizeLeaveData = (leaveData) => {
   return sanitized;
 };
 
+const compression = require('compression');
+
+app.use(compression());
 app.use(cors());
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
@@ -478,13 +528,77 @@ app.use((req, res, next) => {
   next();
 });
 
-// Request logging middleware
+// In-memory buffer for tracking API performance metrics (response times in ms)
+const performanceLogsBuffer = [];
+const MAX_PERF_LOGS = 200;
+
+// Request logging & Performance tracking middleware in ms format
 app.use((req, res, next) => {
   if (req.url.startsWith('/api/api/')) {
     req.url = req.url.replace(/^\/api\/api\//, '/api/');
   }
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+
+  const startMs = performance.now();
+  const startTimeISO = new Date().toISOString();
+
+  res.on('finish', () => {
+    const durationMs = Number((performance.now() - startMs).toFixed(2));
+    const status = res.statusCode;
+    const url = req.originalUrl || req.url;
+    
+    // Log in ms format: e.g., 2026-08-10T17:36:00.000Z - GET /api/users 200 in 45.2ms
+    console.log(`${startTimeISO} - ${req.method} ${url} ${status} in ${durationMs}ms`);
+
+    // Buffer performance metrics for reports (excluding performance report endpoint)
+    if (!url.includes('/api/performance-report')) {
+      performanceLogsBuffer.push({
+        timestamp: startTimeISO,
+        method: req.method,
+        url: url,
+        status: status,
+        durationMs: durationMs,
+        durationFormatted: `${durationMs}ms`
+      });
+      if (performanceLogsBuffer.length > MAX_PERF_LOGS) {
+        performanceLogsBuffer.shift();
+      }
+    }
+  });
+
   next();
+});
+
+// GET /api/performance-report - API endpoint to generate performance report in ms format
+app.get('/api/performance-report', (req, res) => {
+  const totalRequests = performanceLogsBuffer.length;
+  if (totalRequests === 0) {
+    return res.json({
+      summary: {
+        totalRequests: 0,
+        averageDuration: '0ms',
+        p95Duration: '0ms',
+        slowestDuration: '0ms'
+      },
+      logs: []
+    });
+  }
+
+  const durations = performanceLogsBuffer.map(l => l.durationMs).sort((a, b) => a - b);
+  const sum = durations.reduce((a, b) => a + b, 0);
+  const avg = (sum / totalRequests).toFixed(2);
+  const p95Idx = Math.floor(totalRequests * 0.95);
+  const p95 = durations[p95Idx] || durations[durations.length - 1];
+  const max = durations[durations.length - 1];
+
+  res.json({
+    summary: {
+      totalRequests,
+      averageDuration: `${avg}ms`,
+      p95Duration: `${p95}ms`,
+      slowestDuration: `${max}ms`
+    },
+    logs: [...performanceLogsBuffer].reverse()
+  });
 });
 
 // Root route to check API status
@@ -1130,9 +1244,7 @@ app.get('/api/projects', async (req, res) => {
     } else {
       projects = await prisma.project.findMany({
         include: {
-          taskLists: {
-            include: { tasks: true }
-          },
+          taskLists: { select: { id: true, name: true, projectId: true, favoritedBy: true } },
           queries: true,
           attachments: true
         },
@@ -1245,7 +1357,7 @@ app.get('/api/task-lists', async (req, res) => {
       taskLists = apiMemoryCache.taskLists.data;
     } else {
       taskLists = await prisma.taskList.findMany({
-        include: { tasks: true, project: true },
+        include: { project: { select: { id: true, name: true } } },
         orderBy: { createdAt: 'desc' }
       });
       apiMemoryCache.taskLists.data = taskLists;
@@ -2320,9 +2432,15 @@ app.delete('/api/project-queries/:id', async (req, res) => {
 // 9a. Clients
 app.get('/api/clients', async (req, res) => {
   try {
+    const now = Date.now();
+    if (apiMemoryCache.clients.data && (now - apiMemoryCache.clients.time < apiMemoryCache.clients.ttl)) {
+      return res.json(apiMemoryCache.clients.data);
+    }
     const clients = await prisma.client.findMany({
       orderBy: { createdAt: 'desc' }
     });
+    apiMemoryCache.clients.data = clients;
+    apiMemoryCache.clients.time = now;
     res.json(clients);
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -84,16 +84,28 @@ export default function Reports({ user, onNavigateToTask }) {
       let data;
       const common = { project: selectedProject, assignee: selectedAssignee, client: selectedClient };
 
+      const fetchRoute = async (name, route) => {
+        const t0 = performance.now();
+        const resData = await api.get(route).catch(() => []);
+        const duration = Number((performance.now() - t0).toFixed(2));
+        apiTimings.push({ name, duration, items: Array.isArray(resData) ? resData.length : 0 });
+        return resData;
+      };
+
+      const pageStartMs = performance.now();
+      const apiTimings = [];
+      const methodTimings = [];
+
       if (reportType === 'daily') {
         const start = new Date(selectedDailyDate);
         start.setHours(0, 0, 0, 0);
         const end = new Date(selectedDailyDate);
         end.setHours(23, 59, 59, 999);
         const params = new URLSearchParams({ startDate: start.toISOString(), endDate: end.toISOString(), ...common });
-        data = await api.get(`/reports/range?${params.toString()}`);
+        data = await fetchRoute('GET /reports/range (daily)', `/reports/range?${params.toString()}`);
       } else if (reportType === 'monthly') {
         const params = new URLSearchParams({ month: selectedMonth, year: selectedYear, ...common });
-        data = await api.get(`/reports/monthly?${params.toString()}`);
+        data = await fetchRoute('GET /reports/monthly', `/reports/monthly?${params.toString()}`);
       } else if (reportType === 'weekly') {
         const range = getWeekRange(selectedWeekDate);
         const params = new URLSearchParams({
@@ -101,7 +113,7 @@ export default function Reports({ user, onNavigateToTask }) {
           endDate:   new Date(new Date(range.sunday).setHours(23, 59, 59, 999)).toISOString(),
           ...common,
         });
-        data = await api.get(`/reports/range?${params.toString()}`);
+        data = await fetchRoute('GET /reports/range (weekly)', `/reports/range?${params.toString()}`);
       } else {
         if (customStartDate && customEndDate) {
           const params = new URLSearchParams({
@@ -109,7 +121,7 @@ export default function Reports({ user, onNavigateToTask }) {
             endDate:   new Date(new Date(customEndDate).setHours(23, 59, 59, 999)).toISOString(),
             ...common,
           });
-          data = await api.get(`/reports/range?${params.toString()}`);
+          data = await fetchRoute('GET /reports/range (custom)', `/reports/range?${params.toString()}`);
         } else {
           data = [];
         }
@@ -118,21 +130,50 @@ export default function Reports({ user, onNavigateToTask }) {
       
       if (projects.length === 0) {
         const [projectsData, usersData, clientsData, taskListsData] = await Promise.all([
-          api.get('/projects'),
-          api.get('/users'),
-          api.get('/clients'),
-          api.get('/task-lists')
+          fetchRoute('GET /projects', '/projects'),
+          fetchRoute('GET /users', '/users'),
+          fetchRoute('GET /clients', '/clients'),
+          fetchRoute('GET /task-lists', '/task-lists')
         ]);
         setProjects(projectsData || []);
         setAssignees(usersData || []);
+        const m0 = performance.now();
         const sortedClients = (clientsData || []).sort((a, b) => {
           const nameA = (a.company || a.name || '').toLowerCase();
           const nameB = (b.company || b.name || '').toLowerCase();
           return nameA.localeCompare(nameB);
         });
+        const dSort = Number((performance.now() - m0).toFixed(2));
+        methodTimings.push({ name: 'Client Alphabetical Sorting', duration: dSort });
         setClients(sortedClients);
         setTaskLists(taskListsData || []);
       }
+
+      const logPagePerf = (pageName, apis, methods, startMs) => {
+        const totalDur = Number((performance.now() - startMs).toFixed(2));
+        const totalApi = Number(apis.reduce((s, a) => s + (a.duration || 0), 0).toFixed(2));
+        const totalMethod = Number(methods.reduce((s, m) => s + (m.duration || 0), 0).toFixed(2));
+        console.group(`%c🚀 [${pageName.toUpperCase()} PERFORMANCE REPORT]`, 'color: #2563eb; font-weight: bold; font-size: 13px;');
+        console.log('%c🌐 API FETCHING TIMINGS (Single Endpoint Breakdown):', 'font-weight: bold; color: #1e293b;');
+        apis.forEach(a => {
+          const isSlow = a.duration > 200;
+          const icon = isSlow ? '🔴' : '🟢';
+          console.log(`  ${icon} ${a.name}: %c${a.duration}ms%c ${a.items !== undefined ? `(${a.items} items returned)` : ''}`, 'font-weight: bold; color: ' + (isSlow ? '#ef4444' : '#2563eb'), 'color: #64748b');
+        });
+        console.log(`  📊 Total API Fetching Time: %c${totalApi}ms`, 'font-weight: bold; color: #1e293b;');
+        console.log('%c⚡ METHOD & COMPUTATION TIMINGS (Single Function Breakdown):', 'font-weight: bold; color: #1e293b;');
+        methods.forEach(m => {
+          const isSlow = m.duration > 50;
+          const icon = isSlow ? '🟡' : '⚡';
+          console.log(`  ${icon} ${m.name}: %c${m.duration}ms`, 'font-weight: bold; color: ' + (isSlow ? '#d97706' : '#16a34a'));
+        });
+        console.log(`  🧮 Total Methods Execution Time: %c${totalMethod}ms`, 'font-weight: bold; color: #1e293b;');
+        const isOverallSlow = totalDur > 300;
+        console.log(`%c⏱️ TOTAL ${pageName.toUpperCase()} LOAD & RENDER TIME: ${totalDur}ms`, `font-weight: bold; font-size: 12px; color: ${isOverallSlow ? '#ef4444' : '#16a34a'};`);
+        console.groupEnd();
+      };
+
+      logPagePerf('REPORTS PAGE', apiTimings, methodTimings, pageStartMs);
     } catch (err) {
       console.error('Failed to fetch reports:', err);
     } finally {
