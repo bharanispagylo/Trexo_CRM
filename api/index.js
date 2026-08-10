@@ -2576,10 +2576,15 @@ app.get('/api/reports/monthly', async (req, res) => {
 
     const taskIds = reportRecords.map(r => r.id);
     const [dbTasks, workLogs] = await Promise.all([
-      prisma.task.findMany({ where: { id: { in: taskIds } }, select: { id: true, parentId: true } }),
+      prisma.task.findMany({ 
+        where: { id: { in: taskIds } }, 
+        select: { id: true, parentId: true, taskListId: true, taskList: { select: { name: true } } } 
+      }),
       prisma.workLog.findMany({ where: { taskId: { in: taskIds }, isBilled: false } })
     ]);
     const taskParentMap = new Map(dbTasks.map(t => [t.id, t.parentId]));
+    const taskGroupMap = new Map(dbTasks.map(t => [t.id, t.taskList?.name || null]));
+    const taskListIdMap = new Map(dbTasks.map(t => [t.id, t.taskListId || null]));
     const timeSpentMap = {};
     workLogs.forEach(l => { timeSpentMap[l.taskId] = (timeSpentMap[l.taskId] || 0) + (l.hoursWorked || 0); });
 
@@ -2588,6 +2593,8 @@ app.get('/api/reports/monthly', async (req, res) => {
       taskNo: r.taskNo,
       parentId: taskParentMap.get(r.id) || null,
       title: r.title,
+      taskGroupName: taskGroupMap.get(r.id) || null,
+      taskListId: taskListIdMap.get(r.id) || null,
       projectName: r.projectName,
       projectId: r.projectId,
       assignees: r.assignees,
@@ -2644,10 +2651,15 @@ app.get('/api/reports/range', async (req, res) => {
 
     const taskIds = reportRecords.map(r => r.id);
     const [dbTasks, workLogs] = await Promise.all([
-      prisma.task.findMany({ where: { id: { in: taskIds } }, select: { id: true, parentId: true } }),
+      prisma.task.findMany({ 
+        where: { id: { in: taskIds } }, 
+        select: { id: true, parentId: true, taskListId: true, taskList: { select: { name: true } } } 
+      }),
       prisma.workLog.findMany({ where: { taskId: { in: taskIds }, isBilled: false } })
     ]);
     const taskParentMap = new Map(dbTasks.map(t => [t.id, t.parentId]));
+    const taskGroupMap = new Map(dbTasks.map(t => [t.id, t.taskList?.name || null]));
+    const taskListIdMap = new Map(dbTasks.map(t => [t.id, t.taskListId || null]));
     const timeSpentMap = {};
     workLogs.forEach(l => { timeSpentMap[l.taskId] = (timeSpentMap[l.taskId] || 0) + (l.hoursWorked || 0); });
 
@@ -2656,6 +2668,8 @@ app.get('/api/reports/range', async (req, res) => {
       taskNo: r.taskNo,
       parentId: taskParentMap.get(r.id) || null,
       title: r.title,
+      taskGroupName: taskGroupMap.get(r.id) || null,
+      taskListId: taskListIdMap.get(r.id) || null,
       projectName: r.projectName,
       projectId: r.projectId,
       assignees: r.assignees,
