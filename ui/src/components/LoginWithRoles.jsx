@@ -1059,12 +1059,8 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
         const m2 = performance.now();
         const _now = new Date(); _now.setHours(0, 0, 0, 0);
         const _all = [...todayTasks, ...upcomingTasks, ...backlogTasks];
-        _all.forEach(t => {
-          if (t.dueDate) {
-            const d = new Date(t.dueDate);
-            d.setHours(0, 0, 0, 0);
-          }
-        });
+        const _overdue = _all.filter(t => { if (!t.dueDate) return false; const d = new Date(t.dueDate); d.setHours(0, 0, 0, 0); return d < _now; }).length;
+        const _prio = _all.filter(t => t.priority === 'High' || t.priority === 'Critical').length;
         const dMetrics = Number((performance.now() - m2).toFixed(2));
         methodTimings.push({ name: 'Dashboard Metric Cards Calculation', duration: dMetrics });
 

@@ -109,14 +109,14 @@ async function warmApiCache() {
       prisma.user.findMany({ orderBy: { createdAt: 'desc' } }).catch(() => null),
       prisma.project.findMany({
         include: {
-          taskLists: { select: { id: true, name: true, projectId: true, favoritedBy: true } },
+          taskLists: { include: { tasks: true } },
           queries: true,
           attachments: true
         },
         orderBy: { createdAt: 'desc' }
       }).catch(() => null),
       prisma.taskList.findMany({
-        include: { project: { select: { id: true, name: true } } },
+        include: { tasks: true, project: { select: { id: true, name: true } } },
         orderBy: { createdAt: 'desc' }
       }).catch(() => null),
       prisma.task.findMany({
@@ -143,6 +143,9 @@ async function warmApiCache() {
     console.warn('[Cache-Warm] Warning pre-warming cache:', err.message);
   }
 }
+
+// Trigger initial cache warming immediately on module load
+warmApiCache();
 
 const PORT = process.env.PORT || 5000;
 
@@ -1244,7 +1247,7 @@ app.get('/api/projects', async (req, res) => {
     } else {
       projects = await prisma.project.findMany({
         include: {
-          taskLists: { select: { id: true, name: true, projectId: true, favoritedBy: true } },
+          taskLists: { include: { tasks: true } },
           queries: true,
           attachments: true
         },
@@ -1357,7 +1360,7 @@ app.get('/api/task-lists', async (req, res) => {
       taskLists = apiMemoryCache.taskLists.data;
     } else {
       taskLists = await prisma.taskList.findMany({
-        include: { project: { select: { id: true, name: true } } },
+        include: { tasks: true, project: { select: { id: true, name: true } } },
         orderBy: { createdAt: 'desc' }
       });
       apiMemoryCache.taskLists.data = taskLists;

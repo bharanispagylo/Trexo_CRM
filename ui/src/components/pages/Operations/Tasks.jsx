@@ -1299,16 +1299,17 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     fetchComments();
     fetchWorkLogs();
     fetchSubtasks();
-    Promise.all([
-      api.get('/users').catch(() => []),
-      api.get('/clients').catch(() => []),
-      api.get('/task-lists').catch(() => []),
-      api.get('/projects').catch(() => [])
-    ]).then(([u, c, l, p]) => {
-      setUsers(u || []);
-      setClients(c || []);
-      setTaskLists(l || []);
-      setProjects(p || []);
+    api.get('/users').then(data => {
+      setUsers(data || []);
+    }).catch(console.error);
+    api.get('/clients').then(data => {
+      setClients(data || []);
+    }).catch(console.error);
+    api.get('/task-lists').then(data => {
+      setTaskLists(data || []);
+    }).catch(console.error);
+    api.get('/projects').then(data => {
+      setProjects(data || []);
     }).catch(console.error);
   }, [task, isEdit, fetchComments, fetchWorkLogs, fetchSubtasks]);
 
