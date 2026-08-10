@@ -340,7 +340,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
     const { taskListId, statusId } = inlineAdd;
     setIsSavingInline(true);
     try {
-      await api.post('/tasks', {
+      const createdTask = await api.post('/tasks', {
         title,
         status: statusId,
         projectName: selectedProject?.name || '',
@@ -359,6 +359,11 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
       toast('Task created successfully!', 'success');
       fetchData(true);
       closeInlineAdd();
+      if (createdTask) {
+        setEditingTask(createdTask);
+        setTaskFormType('edit');
+        setShowTaskFormModal(true);
+      }
     } catch (err) {
       console.error('Inline add failed:', err);
       toast('Failed to create task: ' + (err?.message || 'Unknown error'), 'error');
@@ -1471,10 +1476,10 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                       if (!silent) alert('Task created successfully!', 'success', 'Success');
                     }
                     fetchData(true);
-                    if (!silent) {
-                      setShowTaskFormModal(false);
-                    } else if (savedTask) {
+                    if (savedTask) {
                       setEditingTask(savedTask);
+                      setTaskFormType('edit');
+                      setShowTaskFormModal(true);
                     }
                   } catch (err) {
                     console.error('Error saving task:', err);

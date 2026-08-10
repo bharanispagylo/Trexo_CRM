@@ -76,6 +76,7 @@ export default function Reports({ user, onNavigateToTask }) {
   const [projects, setProjects] = useState([]);
   const [assignees, setAssignees] = useState([]);
   const [clients, setClients] = useState([]);
+  const [taskLists, setTaskLists] = useState([]);
 
   const fetchReports = async () => {
     try {
@@ -116,10 +117,11 @@ export default function Reports({ user, onNavigateToTask }) {
       setTasks(data || []);
       
       if (projects.length === 0) {
-        const [projectsData, usersData, clientsData] = await Promise.all([
+        const [projectsData, usersData, clientsData, taskListsData] = await Promise.all([
           api.get('/projects'),
           api.get('/users'),
-          api.get('/clients')
+          api.get('/clients'),
+          api.get('/task-lists')
         ]);
         setProjects(projectsData || []);
         setAssignees(usersData || []);
@@ -129,6 +131,7 @@ export default function Reports({ user, onNavigateToTask }) {
           return nameA.localeCompare(nameB);
         });
         setClients(sortedClients);
+        setTaskLists(taskListsData || []);
       }
     } catch (err) {
       console.error('Failed to fetch reports:', err);
@@ -161,9 +164,10 @@ export default function Reports({ user, onNavigateToTask }) {
   };
 
   const handleExport = () => {
-    const headers = ['Task # No', 'Title', 'Project', 'Assignee', 'Time Spent Hrs', 'Billable Hrs', 'Already Billed', 'Delivered Date'];
+    const headers = ['Task # No', 'Title', 'Task Groups', 'Project', 'Assignee', 'Billable Hrs', 'Already Billed', 'Delivered Date'];
     const rows = tasks.map(t => {
       const resolvedProj = t.projectName || (projects.find(p => p.id === t.projectId)?.name) || '-';
+      const resolvedTaskGroup = t.taskGroupName || (taskLists.find(tl => tl.id === t.taskListId)?.name) || '-';
       
       let resolvedAssignee = 'Unassigned';
       if (t.assignees) {
@@ -178,9 +182,9 @@ export default function Reports({ user, onNavigateToTask }) {
       return [
         getDisplayId(t),
         `"${(t.title || '').replace(/"/g, '""')}"`,
+        `"${resolvedTaskGroup.replace(/"/g, '""')}"`,
         `"${resolvedProj.replace(/"/g, '""')}"`,
         `"${resolvedAssignee.replace(/"/g, '""')}"`,
-        formatDecimal(parseFloat(t.timeSpent) || 0),
         formatDecimal(parseFloat(t.taskApprovedHours) || 0),
         formatDecimal(parseFloat(t.taskActualHours) || 0),
         t.deliveredDate ? new Date(t.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
@@ -378,9 +382,9 @@ export default function Reports({ user, onNavigateToTask }) {
               <tr>
                 <th>Task # No</th>
                 <th>Title</th>
+                <th>Task Groups</th>
                 <th>Project</th>
                 <th>Assignee</th>
-                <th>Time Spent Hrs</th>
                 <th>Billable Hrs</th>
                 <th>Already Billed</th>
                 <th>Delivered Date</th>
@@ -398,6 +402,7 @@ export default function Reports({ user, onNavigateToTask }) {
                       {task.title}
                     </span>
                   </td>
+                  <td>{task.taskGroupName || (taskLists.find(tl => tl.id === task.taskListId)?.name) || '-'}</td>
                   <td>{task.projectName || (projects.find(p => p.id === task.projectId)?.name) || '-'}</td>
                   <td>
                     {(() => {
@@ -414,7 +419,6 @@ export default function Reports({ user, onNavigateToTask }) {
                       );
                     })()}
                   </td>
-                  <td>{formatDecimal(parseFloat(task.timeSpent) || 0)}</td>
                   <td>{formatDecimal(parseFloat(task.taskApprovedHours) || 0)}</td>
                   <td>{formatDecimal(parseFloat(task.taskActualHours) || 0)}</td>
                   <td>{task.deliveredDate ? new Date(task.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
@@ -444,6 +448,7 @@ export default function Reports({ user, onNavigateToTask }) {
           {tasks.map(task => {
             const displayId = getDisplayId(task);
             const projName = task.projectName || (projects.find(p => p.id === task.projectId)?.name) || '-';
+            const taskGroupName = task.taskGroupName || (taskLists.find(tl => tl.id === task.taskListId)?.name) || '-';
             const deliveredStr = task.deliveredDate ? new Date(task.deliveredDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
             
             let assigneeNode;
@@ -474,6 +479,10 @@ export default function Reports({ user, onNavigateToTask }) {
                 
                 <div className="reports-mobile-card-body">
                   <div className="reports-mobile-card-row">
+                    <span className="reports-mobile-card-label">Task Group:</span>
+                    <span className="reports-mobile-card-value">{taskGroupName}</span>
+                  </div>
+                  <div className="reports-mobile-card-row">
                     <span className="reports-mobile-card-label">Assignee:</span>
                     <span className="reports-mobile-card-value">{assigneeNode}</span>
                   </div>
@@ -482,13 +491,7 @@ export default function Reports({ user, onNavigateToTask }) {
                     <span className="reports-mobile-card-value">{deliveredStr}</span>
                   </div>
                   
-                  <div className="reports-mobile-card-grid">
-                    <div className="reports-mobile-card-grid-item">
-                      <span className="reports-mobile-card-grid-label">TimeSpent</span>
-                      <span className="reports-mobile-card-grid-value" style={{ color: '#2563eb' }}>
-                        {formatDecimal(parseFloat(task.timeSpent) || 0)}
-                      </span>
-                    </div>
+                  <div className="reports-mobile-card-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
                     <div className="reports-mobile-card-grid-item">
                       <span className="reports-mobile-card-grid-label">Billable</span>
                       <span className="reports-mobile-card-grid-value">

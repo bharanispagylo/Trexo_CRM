@@ -348,7 +348,7 @@ export default function TaskGroups({ user, onBack }) {
     setIsSavingInline(true);
     try {
       if (inlineAssignee) localStorage.setItem('lastTaskAssignee', inlineAssignee);
-      await api.post('/tasks', {
+      const createdTask = await api.post('/tasks', {
         title,
         status: statusId,
         projectName: projName || '',
@@ -367,6 +367,10 @@ export default function TaskGroups({ user, onBack }) {
       toast('Task created successfully!', 'success');
       fetchTaskListsOnly();
       closeInlineAdd();
+      if (createdTask && createdTask.taskNo) {
+        window.history.pushState({ fromApp: true, prevTab: 'task-groups', editMode: true }, '', `/tasks/${getDisplayId(createdTask)}`);
+        window.dispatchEvent(new Event('popstate'));
+      }
     } catch (err) {
       console.error('Inline add failed:', err);
       toast('Failed to create task: ' + err.message, 'error');
@@ -581,7 +585,7 @@ export default function TaskGroups({ user, onBack }) {
     try {
       const assigneesToSave = taskForm.taskType === 'calls/meetings' ? (user?.id || '') : (taskForm.assignees || null);
       if (assigneesToSave) localStorage.setItem('lastTaskAssignee', assigneesToSave);
-      await api.post('/tasks', {
+      const createdTask = await api.post('/tasks', {
         title: taskForm.title.trim(),
         taskListId: targetGroup.id,
         projectId: targetGroup.projectId || null,
@@ -597,6 +601,10 @@ export default function TaskGroups({ user, onBack }) {
       setShowTaskModal(false);
       setTargetGroup(null);
       await fetchTaskListsOnly();
+      if (createdTask && createdTask.taskNo) {
+        window.history.pushState({ fromApp: true, prevTab: 'task-groups', editMode: true }, '', `/tasks/${getDisplayId(createdTask)}`);
+        window.dispatchEvent(new Event('popstate'));
+      }
     } catch (error) {
       console.error('Error creating task:', error);
       alert('Failed to add task', 'error');

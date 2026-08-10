@@ -1910,6 +1910,9 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const IconProject = () => (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
   );
+  const IconTaskGroup = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+  );
 
 
   const IconCalendar = () => (
@@ -2363,6 +2366,33 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     );
   }
 
+  const getCombinedProjectTaskGroup = (proj, group) => {
+    const p = (proj && proj !== '-') ? proj.trim() : '';
+    const g = (group && group !== '-') ? group.trim() : '';
+    if (p && g) {
+      if (p.toLowerCase() === g.toLowerCase()) return p;
+      return `${p} - ${g}`;
+    }
+    if (p) return p;
+    if (g) return g;
+    return '';
+  };
+
+  const resolvedProjectName = form.projectName 
+    || (task && task.projectName)
+    || (projects && form.projectId && projects.find(p => p.id === form.projectId)?.name)
+    || (projects && task?.projectId && projects.find(p => p.id === task.projectId)?.name)
+    || (taskLists && (form.taskListId || task?.taskListId) && projects && projects.find(p => p.id === taskLists.find(l => l.id === (form.taskListId || task?.taskListId))?.projectId)?.name)
+    || '';
+
+  const resolvedTaskGroup = form.taskGroupName
+    || (task && task.taskGroupName)
+    || (taskLists && (form.taskListId || task?.taskListId) && taskLists.find(tl => tl.id === (form.taskListId || task?.taskListId))?.name)
+    || (task && task.taskListId && taskLists && taskLists.find(tl => tl.id === task.taskListId)?.name)
+    || '';
+
+  const combinedProjectTaskGroup = getCombinedProjectTaskGroup(resolvedProjectName, resolvedTaskGroup);
+
   return (
     <div className="saas-task-page">
       {/* Top Navigation Bar */}
@@ -2563,16 +2593,30 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               <>
               <div className="saas-meta-grid animate-fade-in" style={{ paddingBottom: '2rem' }}>
                 
-                {/* Row 1: Status */}
-                {form.taskType !== 'calls/meetings' && (
+                {/* Row 1: Status & Combined Project - Task Group Name on Right Side */}
+                {form.taskType !== 'calls/meetings' ? (
                   <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '12px', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><IconStatus /> Status</span>
-                    <span className="saas-meta-value">
+                    <span className="saas-meta-value" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', width: '100%' }}>
                       <select value={form.status} onChange={e => { const newSt = e.target.value; const updated = { ...form, status: newSt }; if (newSt === 'Archived' || newSt === 'Archive') { updated.previousStatus = (form.status !== 'Archived' && form.status !== 'Archive') ? form.status : (form.previousStatus || 'To Do'); } setForm(updated); if (!isEditing) handleInlineSave(updated); }} disabled={!canEdit} className="saas-grid-select" style={{ width: 'fit-content', padding: '0.4rem', border: '1px solid transparent', background: 'transparent', cursor: canEdit ? 'pointer' : 'default', color: '#64748b', fontSize: '12px', fontWeight: 400 }}>
                         {STATUS_OPTIONS.map(col => <option key={col.id} value={col.id}>{col.label}</option>)}
                       </select>
+                      {combinedProjectTaskGroup && (
+                        <span style={{ color: '#0f172a', fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', userSelect: 'text' }} title={combinedProjectTaskGroup}>
+                          {combinedProjectTaskGroup}
+                        </span>
+                      )}
                     </span>
                   </div>
+                ) : (
+                  combinedProjectTaskGroup && (
+                    <div className="saas-meta-row saas-meta-row-2col" style={{ gap: '1rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                      <span className="saas-meta-label" style={{ color: '#64748b', fontSize: '12px', fontWeight: 400 }}></span>
+                      <span className="saas-meta-value" style={{ color: '#0f172a', fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', userSelect: 'text' }} title={combinedProjectTaskGroup}>
+                        {combinedProjectTaskGroup}
+                      </span>
+                    </div>
+                  )
                 )}
 
                 {/* Row 1b: Assignees & Type */}
@@ -4784,7 +4828,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     if (initialSelectedTask) {
       setDrawerTask(initialSelectedTask);
       setDrawerOpen(true);
-      setTaskDetailMode(false);
+      setTaskDetailMode(!!window.history.state?.editMode);
       setOpeningInitialTask(false);
       if (onTaskSelect) onTaskSelect(getDisplayId(initialSelectedTask));
       if (onClearInitialTask) onClearInitialTask();
@@ -4812,7 +4856,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     if (existing) {
       setDrawerTask(existing);
       setDrawerOpen(true);
-      setTaskDetailMode(false);
+      setTaskDetailMode(!!window.history.state?.editMode);
       setOpeningInitialTask(false);
       if (lastHandledTaskId.current !== initialTaskId) {
         lastHandledTaskId.current = initialTaskId;
@@ -4831,7 +4875,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           if (task) {
             setDrawerTask(task);
             setDrawerOpen(true);
-            setTaskDetailMode(false);
+            setTaskDetailMode(!!window.history.state?.editMode);
           }
           setOpeningInitialTask(false);
         })
@@ -5422,10 +5466,9 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
           onSelectTask={(t) => setDrawerTask(t)}
           onSave={async (taskData, silent) => {
             const saved = await handleSaveTask(taskData, silent);
-            if (!silent) {
-              closeDrawer();
-            } else if (saved) {
+            if (saved) {
               setDrawerTask(saved);
+              setTaskDetailMode(true);
             }
           }}
           onDelete={async (id) => { await handleDeleteTask(id); closeDrawer(); }}
