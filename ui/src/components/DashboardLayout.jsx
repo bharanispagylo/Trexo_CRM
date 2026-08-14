@@ -926,7 +926,6 @@ export default function DashboardLayout({ user, onLogout, renderOverview }) {
   };
 
   const header = getHeaderInfo();
-  console.log(user?.role);
   const initials = (name) => name ? name.split(' ').map(w => w[0]).join('').toUpperCase() : '?';
 
 

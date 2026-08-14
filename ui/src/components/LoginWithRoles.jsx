@@ -27,44 +27,7 @@ const PasswordToggleIcon = ({ show }) => {
 
 
 
-const logDashboardPerformance = (dashboardType, apiTimings, methodTimings, pageStartMs) => {
-  const totalDashboardDuration = Number((performance.now() - pageStartMs).toFixed(2));
-  const totalApiDuration = Number(apiTimings.reduce((sum, a) => sum + (a.duration || 0), 0).toFixed(2));
-  const totalMethodDuration = Number(methodTimings.reduce((sum, m) => sum + (m.duration || 0), 0).toFixed(2));
-
-  console.group(`%c🚀 [DASHBOARD PERFORMANCE REPORT - ${dashboardType.toUpperCase()}]`, 'color: #2563eb; font-weight: bold; font-size: 13px;');
-
-  console.log('%c🌐 API FETCHING TIMINGS (Single Endpoint Breakdown):', 'font-weight: bold; color: #1e293b;');
-  apiTimings.forEach(a => {
-    const isSlow = a.duration > 200;
-    const icon = isSlow ? '🔴' : '🟢';
-    console.log(`  ${icon} ${a.name}: %c${a.duration}ms%c ${a.items !== undefined ? `(${a.items} items returned)` : ''}`, 'font-weight: bold; color: ' + (isSlow ? '#ef4444' : '#2563eb'), 'color: #64748b');
-  });
-  console.log(`  📊 Total API Fetching Time: %c${totalApiDuration}ms`, 'font-weight: bold; color: #1e293b;');
-
-  console.log('%c⚡ METHOD & COMPUTATION TIMINGS (Single Function Breakdown):', 'font-weight: bold; color: #1e293b;');
-  methodTimings.forEach(m => {
-    const isSlow = m.duration > 50;
-    const icon = isSlow ? '🟡' : '⚡';
-    console.log(`  ${icon} ${m.name}: %c${m.duration}ms`, 'font-weight: bold; color: ' + (isSlow ? '#d97706' : '#16a34a'));
-  });
-  console.log(`  🧮 Total Methods Execution Time: %c${totalMethodDuration}ms`, 'font-weight: bold; color: #1e293b;');
-
-  const isOverallSlow = totalDashboardDuration > 300;
-  console.log(`%c⏱️ TOTAL DASHBOARD PAGE LOAD & RENDER TIME: ${totalDashboardDuration}ms`, `font-weight: bold; font-size: 12px; color: ${isOverallSlow ? '#ef4444' : '#16a34a'};`);
-
-  if (isOverallSlow) {
-    const slowestApi = [...apiTimings].sort((a, b) => b.duration - a.duration)[0];
-    const slowestMethod = [...methodTimings].sort((a, b) => b.duration - a.duration)[0];
-    if (slowestApi && slowestApi.duration > 150) {
-      console.warn(`⚠️ DASHBOARD LAGGING NOTICE: API Endpoint ${slowestApi.name} is lagging (${slowestApi.duration}ms)`);
-    }
-    if (slowestMethod && slowestMethod.duration > 30) {
-      console.warn(`⚠️ DASHBOARD LAGGING NOTICE: Calculation Method "${slowestMethod.name}" is lagging (${slowestMethod.duration}ms)`);
-    }
-  }
-  console.groupEnd();
-};
+const logDashboardPerformance = (dashboardType, apiTimings, methodTimings, pageStartMs) => {};
 
 // ══════════════════════════════════════════════════════════
 //  LOGIN PAGE
