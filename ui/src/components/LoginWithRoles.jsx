@@ -27,44 +27,7 @@ const PasswordToggleIcon = ({ show }) => {
 
 
 
-const logDashboardPerformance = (dashboardType, apiTimings, methodTimings, pageStartMs) => {
-  const totalDashboardDuration = Number((performance.now() - pageStartMs).toFixed(2));
-  const totalApiDuration = Number(apiTimings.reduce((sum, a) => sum + (a.duration || 0), 0).toFixed(2));
-  const totalMethodDuration = Number(methodTimings.reduce((sum, m) => sum + (m.duration || 0), 0).toFixed(2));
-
-  console.group(`%c🚀 [DASHBOARD PERFORMANCE REPORT - ${dashboardType.toUpperCase()}]`, 'color: #2563eb; font-weight: bold; font-size: 13px;');
-
-  console.log('%c🌐 API FETCHING TIMINGS (Single Endpoint Breakdown):', 'font-weight: bold; color: #1e293b;');
-  apiTimings.forEach(a => {
-    const isSlow = a.duration > 200;
-    const icon = isSlow ? '🔴' : '🟢';
-    console.log(`  ${icon} ${a.name}: %c${a.duration}ms%c ${a.items !== undefined ? `(${a.items} items returned)` : ''}`, 'font-weight: bold; color: ' + (isSlow ? '#ef4444' : '#2563eb'), 'color: #64748b');
-  });
-  console.log(`  📊 Total API Fetching Time: %c${totalApiDuration}ms`, 'font-weight: bold; color: #1e293b;');
-
-  console.log('%c⚡ METHOD & COMPUTATION TIMINGS (Single Function Breakdown):', 'font-weight: bold; color: #1e293b;');
-  methodTimings.forEach(m => {
-    const isSlow = m.duration > 50;
-    const icon = isSlow ? '🟡' : '⚡';
-    console.log(`  ${icon} ${m.name}: %c${m.duration}ms`, 'font-weight: bold; color: ' + (isSlow ? '#d97706' : '#16a34a'));
-  });
-  console.log(`  🧮 Total Methods Execution Time: %c${totalMethodDuration}ms`, 'font-weight: bold; color: #1e293b;');
-
-  const isOverallSlow = totalDashboardDuration > 300;
-  console.log(`%c⏱️ TOTAL DASHBOARD PAGE LOAD & RENDER TIME: ${totalDashboardDuration}ms`, `font-weight: bold; font-size: 12px; color: ${isOverallSlow ? '#ef4444' : '#16a34a'};`);
-
-  if (isOverallSlow) {
-    const slowestApi = [...apiTimings].sort((a, b) => b.duration - a.duration)[0];
-    const slowestMethod = [...methodTimings].sort((a, b) => b.duration - a.duration)[0];
-    if (slowestApi && slowestApi.duration > 150) {
-      console.warn(`⚠️ DASHBOARD LAGGING NOTICE: API Endpoint ${slowestApi.name} is lagging (${slowestApi.duration}ms)`);
-    }
-    if (slowestMethod && slowestMethod.duration > 30) {
-      console.warn(`⚠️ DASHBOARD LAGGING NOTICE: Calculation Method "${slowestMethod.name}" is lagging (${slowestMethod.duration}ms)`);
-    }
-  }
-  console.groupEnd();
-};
+const logDashboardPerformance = (dashboardType, apiTimings, methodTimings, pageStartMs) => {};
 
 // ══════════════════════════════════════════════════════════
 //  LOGIN PAGE
@@ -1075,35 +1038,62 @@ function AdminDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
     fetchData();
   }, []);
 
-  const renderTaskCard = (title, tasksList, type) => (
-    <div className={`panel-card task-card-${type}`} style={{ flex: 1, minWidth: '300px' }}>
-      <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 className="panel-title">{title}</h3>
-        <span style={{ background: '#e2e8f0', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600 }}>{tasksList.length}</span>
-      </div>
-      <div className="list-group" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-        {tasksList.length === 0 ? (
-          <p style={{ color: '#94a3b8', padding: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>No tasks found.</p>
-        ) : (
-          tasksList.slice(0, 5).map((t, i) => (
-            <div key={i} className="list-item" style={{ cursor: 'pointer', padding: '0.75rem', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '4px' }} onClick={() => handleTaskClick ? handleTaskClick(t) : (setActiveTab && setActiveTab('tasks'))}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: type === 'backlog' ? '#ef4444' : '#1e293b' }}>{t.title}</span>
-                <span className={`status-badge status-${t.status.toLowerCase().replace(' ', '-')}`} style={{ fontSize: '0.7rem' }}>{t.status}</span>
+  const renderTaskCard = (title, tasksList, type) => {
+    const isBacklog = type === 'backlog';
+    const displayedTasks = isBacklog ? tasksList : tasksList.slice(0, 5);
+
+    return (
+      <div className={`panel-card task-card-${type}`} style={{ flex: 1, minWidth: '300px', display: 'flex', flexDirection: 'column' }}>
+        <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+          <h3 className="panel-title">{title}</h3>
+          <span style={{ background: '#e2e8f0', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600 }}>{tasksList.length}</span>
+        </div>
+        <div className="list-group" style={{ 
+          maxHeight: isBacklog ? 'calc(100vh - 320px)' : '300px', 
+          minHeight: isBacklog ? '380px' : undefined, 
+          overflowY: 'auto',
+          flex: 1
+        }}>
+          {tasksList.length === 0 ? (
+            <p style={{ color: '#94a3b8', padding: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>No tasks found.</p>
+          ) : (
+            displayedTasks.map((t, i) => (
+              <div key={i} className="list-item" style={{ cursor: 'pointer', padding: '0.75rem', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '4px' }} onClick={() => handleTaskClick ? handleTaskClick(t) : (setActiveTab && setActiveTab('tasks'))}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.9rem', color: isBacklog ? '#ef4444' : '#1e293b' }}>{t.title}</span>
+                  <span className={`status-badge status-${t.status.toLowerCase().replace(' ', '-')}`} style={{ fontSize: '0.7rem' }}>{t.status}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.taskNo || `TSK-${t.id?.substring(0, 4)}`} • {t.priority}</span>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'No Date'}</span>
+                </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.taskNo || `TSK-${t.id?.substring(0, 4)}`} • {t.priority}</span>
-                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'No Date'}</span>
-              </div>
-            </div>
-          ))
-        )}
-        {tasksList.length > 5 && (
-          <button onClick={() => handleTaskClick ? handleTaskClick(null) : (setActiveTab && setActiveTab('tasks'))} style={{ width: '100%', padding: '0.5rem', background: 'none', border: 'none', color: '#2563eb', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600, borderTop: '1px solid #f1f5f9' }}>View All {tasksList.length} Tasks →</button>
-        )}
+            ))
+          )}
+          {tasksList.length > 5 && (
+            <button 
+              onClick={() => handleTaskClick ? handleTaskClick(null) : (setActiveTab && setActiveTab('tasks'))} 
+              style={{ 
+                width: '100%', 
+                padding: '0.6rem', 
+                background: '#f8fafc', 
+                border: 'none', 
+                color: '#2563eb', 
+                fontSize: '0.85rem', 
+                cursor: 'pointer', 
+                fontWeight: 600, 
+                borderTop: '1px solid #f1f5f9',
+                position: isBacklog ? 'sticky' : 'static',
+                bottom: isBacklog ? 0 : undefined
+              }}
+            >
+              View All {tasksList.length} Tasks →
+            </button>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
 
 
@@ -1320,35 +1310,62 @@ function EmployeeDashboard({ user, onLogout, setActiveTab, handleTaskClick }) {
     fetchData();
   }, [user]);
 
-  const renderTaskCard = (title, tasksList, type) => (
-    <div className={`panel-card task-card-${type}`} style={{ flex: 1, minWidth: '300px' }}>
-      <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 className="panel-title">{title}</h3>
-        <span style={{ background: '#e2e8f0', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600 }}>{tasksList.length}</span>
-      </div>
-      <div className="list-group" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-        {tasksList.length === 0 ? (
-          <p style={{ color: '#94a3b8', padding: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>No tasks found.</p>
-        ) : (
-          tasksList.slice(0, 5).map((t, i) => (
-            <div key={i} className="list-item" style={{ cursor: 'pointer', padding: '0.75rem', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '4px' }} onClick={() => handleTaskClick ? handleTaskClick(t) : (setActiveTab && setActiveTab('tasks'))}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: type === 'backlog' ? '#ef4444' : '#1e293b' }}>{t.title}</span>
-                <span className={`status-badge status-${t.status.toLowerCase().replace(' ', '-')}`} style={{ fontSize: '0.7rem' }}>{t.status}</span>
+  const renderTaskCard = (title, tasksList, type) => {
+    const isBacklog = type === 'backlog';
+    const displayedTasks = isBacklog ? tasksList : tasksList.slice(0, 5);
+
+    return (
+      <div className={`panel-card task-card-${type}`} style={{ flex: 1, minWidth: '300px', display: 'flex', flexDirection: 'column' }}>
+        <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+          <h3 className="panel-title">{title}</h3>
+          <span style={{ background: '#e2e8f0', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600 }}>{tasksList.length}</span>
+        </div>
+        <div className="list-group" style={{ 
+          maxHeight: isBacklog ? 'calc(100vh - 320px)' : '300px', 
+          minHeight: isBacklog ? '380px' : undefined, 
+          overflowY: 'auto',
+          flex: 1
+        }}>
+          {tasksList.length === 0 ? (
+            <p style={{ color: '#94a3b8', padding: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>No tasks found.</p>
+          ) : (
+            displayedTasks.map((t, i) => (
+              <div key={i} className="list-item" style={{ cursor: 'pointer', padding: '0.75rem', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '4px' }} onClick={() => handleTaskClick ? handleTaskClick(t) : (setActiveTab && setActiveTab('tasks'))}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.9rem', color: isBacklog ? '#ef4444' : '#1e293b' }}>{t.title}</span>
+                  <span className={`status-badge status-${t.status.toLowerCase().replace(' ', '-')}`} style={{ fontSize: '0.7rem' }}>{t.status}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.taskNo || `TSK-${t.id?.substring(0, 4)}`} • {t.priority}</span>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'No Date'}</span>
+                </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.taskNo || `TSK-${t.id?.substring(0, 4)}`} • {t.priority}</span>
-                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'No Date'}</span>
-              </div>
-            </div>
-          ))
-        )}
-        {tasksList.length > 5 && (
-          <button onClick={() => handleTaskClick ? handleTaskClick(null) : (setActiveTab && setActiveTab('tasks'))} style={{ width: '100%', padding: '0.5rem', background: 'none', border: 'none', color: '#2563eb', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600, borderTop: '1px solid #f1f5f9' }}>View All {tasksList.length} Tasks →</button>
-        )}
+            ))
+          )}
+          {tasksList.length > 5 && (
+            <button 
+              onClick={() => handleTaskClick ? handleTaskClick(null) : (setActiveTab && setActiveTab('tasks'))} 
+              style={{ 
+                width: '100%', 
+                padding: '0.6rem', 
+                background: '#f8fafc', 
+                border: 'none', 
+                color: '#2563eb', 
+                fontSize: '0.85rem', 
+                cursor: 'pointer', 
+                fontWeight: 600, 
+                borderTop: '1px solid #f1f5f9',
+                position: isBacklog ? 'sticky' : 'static',
+                bottom: isBacklog ? 0 : undefined
+              }}
+            >
+              View All {tasksList.length} Tasks →
+            </button>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Employee derived counts
   const _enow = new Date(); _enow.setHours(0, 0, 0, 0);

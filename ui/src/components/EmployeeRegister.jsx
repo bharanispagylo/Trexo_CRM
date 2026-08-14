@@ -575,7 +575,6 @@ export default function EmployeeRegister() {
 
   const submit = () => {
     if (validate(6)) {
-      console.log("Employee Data:", form);
       setSubmitted(true);
     }
   };

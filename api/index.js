@@ -94,12 +94,14 @@ const apiMemoryCache = {
 
 function clearApiCache(key) {
   if (key === 'all') {
-    Object.keys(apiMemoryCache).forEach(k => apiMemoryCache[k].data = null);
+    Object.keys(apiMemoryCache).forEach(k => {
+      apiMemoryCache[k].data = null;
+      apiMemoryCache[k].time = 0;
+    });
   } else if (apiMemoryCache[key]) {
     apiMemoryCache[key].data = null;
+    apiMemoryCache[key].time = 0;
   }
-  // Immediately trigger background cache warming so cache is hot for next request
-  setTimeout(() => warmApiCache(), 50);
 }
 
 async function warmApiCache() {
@@ -1578,9 +1580,6 @@ app.get('/api/tasks/:idOrDisplayId', async (req, res) => {
 
 app.post('/api/tasks', async (req, res) => {
   try {
-    clearApiCache('tasks');
-    clearApiCache('projects');
-    clearApiCache('taskLists');
     console.log('POST /api/tasks body:', req.body);
     let { id, comments, createdAt, createdBy: createdByName, ...taskData } = req.body;
     
@@ -1665,8 +1664,14 @@ app.post('/api/tasks', async (req, res) => {
     }
 
     const task = await prisma.task.create({
-      data: taskData
+      data: taskData,
+      include: { projectRef: { select: { name: true } } }
     });
+
+    clearApiCache('tasks');
+    clearApiCache('projects');
+    clearApiCache('taskLists');
+
     const isBugTask = (task.taskType && (task.taskType.trim().toLowerCase() === 'bug' || task.taskType.trim().toLowerCase() === 'bug report')) || (task.taskNo && task.taskNo.startsWith('B'));
 
     // Helper: get a flat list of assigned user IDs from a comma-separated string
@@ -1725,7 +1730,13 @@ app.post('/api/tasks', async (req, res) => {
         }).catch(notifErr => console.error('Error sending task assigned notifications:', notifErr));
       }
     }
-    res.json(task);
+
+    const { projectRef, ...restTask } = task;
+    const result = {
+      ...restTask,
+      projectName: projectRef?.name || taskData.projectName || ''
+    };
+    res.json(result);
   } catch (error) {
     console.error('POST /api/tasks error:', error);
     res.status(500).json({ error: error.message });
@@ -1762,9 +1773,6 @@ const isUpdaterAssignee = async (task, updaterId) => {
 
 app.put('/api/tasks/:id', async (req, res) => {
   try {
-    clearApiCache('tasks');
-    clearApiCache('projects');
-    clearApiCache('taskLists');
     console.log('PUT /api/tasks body:', req.body);
     let { id, createdAt, comments, updatedBy: updatedByName, ...taskData } = req.body;
     
@@ -1877,8 +1885,13 @@ app.put('/api/tasks/:id', async (req, res) => {
 
     const task = await prisma.task.update({
       where: { id: req.params.id },
-      data: taskData
+      data: taskData,
+      include: { projectRef: { select: { name: true } } }
     });
+
+    clearApiCache('tasks');
+    clearApiCache('projects');
+    clearApiCache('taskLists');
 
     // Check if status changed to "Delivered" and the updater is one of the assignees
     const newStatus = taskData.status;
@@ -1995,7 +2008,12 @@ app.put('/api/tasks/:id', async (req, res) => {
       }).catch(notifErr => console.error('Error sending task reassignment notifications:', notifErr));
     }
 
-    res.json(task);
+    const { projectRef, ...restTask } = task;
+    const result = {
+      ...restTask,
+      projectName: projectRef?.name || taskData.projectName || existingTask.projectName || ''
+    };
+    res.json(result);
   } catch (error) {
     console.error('PUT /api/tasks error:', error);
     res.status(500).json({ error: error.message });
