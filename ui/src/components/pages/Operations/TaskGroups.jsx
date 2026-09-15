@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../../api/client';
 import { useAlert } from '../../../context/AlertContext';
 import { usePermissions } from '../../../hooks/usePermissions';
-import { TaskTitleTooltip, getDisplayId, formatDDMonDate } from './Tasks';
+import { TaskDetailView, TaskTitleTooltip, getDisplayId, formatDDMonDate } from './Tasks';
 import './TaskGroups.css';
 import './Tasks.css'; // import to ensure ClickUp styles are available
 
@@ -155,7 +155,21 @@ export default function TaskGroups({ user, onBack }) {
   const [targetGroup, setTargetGroup] = useState(null);
   const [taskForm, setTaskForm] = useState({ title: '', assignees: '', priority: 'Medium', dueDate: '' });
   const [isCreatingTask, setIsCreatingTask] = useState(false);
+  // Side drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTask, setDrawerTask] = useState(null);
+  const [taskDetailMode, setTaskDetailMode] = useState(false);
 
+  const openTaskDetail = (task, editMode = false) => {
+    setDrawerTask(task);
+    setTaskDetailMode(editMode);
+    setDrawerOpen(true);
+  };
+
+  const closeTaskDetail = () => {
+    setDrawerOpen(false);
+    setDrawerTask(null);
+  };
 
   const [activeTab, setActiveTab] = useState('favourites');
   const [weeklyDropdownOpen, setWeeklyDropdownOpen] = useState(false);
@@ -367,9 +381,8 @@ export default function TaskGroups({ user, onBack }) {
       toast('Task created successfully!', 'success');
       fetchTaskListsOnly();
       closeInlineAdd();
-      if (createdTask && createdTask.taskNo) {
-        window.history.pushState({ fromApp: true, prevTab: 'task-groups', editMode: true }, '', `/tasks/${getDisplayId(createdTask)}`);
-        window.dispatchEvent(new Event('popstate'));
+      if (createdTask) {
+        openTaskDetail(createdTask, true);
       }
     } catch (err) {
       console.error('Inline add failed:', err);
@@ -620,9 +633,8 @@ export default function TaskGroups({ user, onBack }) {
       setShowTaskModal(false);
       setTargetGroup(null);
       await fetchTaskListsOnly();
-      if (createdTask && createdTask.taskNo) {
-        window.history.pushState({ fromApp: true, prevTab: 'task-groups', editMode: true }, '', `/tasks/${getDisplayId(createdTask)}`);
-        window.dispatchEvent(new Event('popstate'));
+      if (createdTask) {
+        openTaskDetail(createdTask, true);
       }
     } catch (error) {
       console.error('Error creating task:', error);
@@ -1015,7 +1027,7 @@ export default function TaskGroups({ user, onBack }) {
                         </thead>
                         <tbody>
                           {(() => {
-                            const mainTasks = statusTasks.filter(t => !t.parentId || !allTasks.some(p => p.id === t.parentId));
+                            const mainTasks = statusTasks.filter(t => !t.parentId || !statusTasks.some(p => p.id === t.parentId));
                             const sortedMainTasks = [...mainTasks].sort((a, b) => {
                               const titleA = a.title || '';
                               const titleB = b.title || '';
@@ -1028,7 +1040,7 @@ export default function TaskGroups({ user, onBack }) {
                               const relDate = formatRelativeDueDate(task.dueDate);
 
                               const parentRow = (
-                                <tr key={task.id} className="cu-row" onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'task-groups' }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
+                                <tr key={task.id} className="cu-row" onClick={() => openTaskDetail(task)} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}>
                                   <td className="cu-td cu-td-name">
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                       {subTasks.length > 0 && (
@@ -1323,7 +1335,7 @@ export default function TaskGroups({ user, onBack }) {
                                   const subRelDate = formatRelativeDueDate(sub.dueDate);
 
                                   rows.push(
-                                    <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'task-groups' }, '', `/tasks/${getDisplayId(sub)}`); window.dispatchEvent(new Event('popstate')); }} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
+                                    <tr key={sub.id} className="cu-row cu-subtask-row" onClick={() => openTaskDetail(sub)} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s', background: '#f8fafc' }}>
                                       <td className="cu-td cu-td-name">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
                                           <span className="cu-subtask-indicator" style={{ color: '#94a3b8', marginRight: '2px', fontSize: '1rem', fontWeight: 'bold' }}>↳</span>
@@ -1659,7 +1671,7 @@ export default function TaskGroups({ user, onBack }) {
                         draggable={true}
                         onDragStart={e => handleDragStart(e, task.id)}
                         onDragEnd={handleDragEnd}
-                        onClick={() => { window.history.pushState({ fromApp: true, prevTab: 'task-groups' }, '', `/tasks/${getDisplayId(task)}`); window.dispatchEvent(new Event('popstate')); }}
+                        onClick={() => openTaskDetail(task)}
                         style={{
                           background: 'white',
                           border: '1.5px solid #e2e8f0',
@@ -2374,6 +2386,47 @@ export default function TaskGroups({ user, onBack }) {
       )}
 
 
+      {drawerOpen && drawerTask && (
+        <div className="task-drawer-overlay" style={{ position: 'fixed', inset: 0, zIndex: 99999, background: '#f8fafc', overflowY: 'auto' }}>
+          <TaskDetailView
+            task={drawerTask}
+            tasks={taskLists.flatMap(l => l.tasks || [])}
+            onRefresh={fetchTaskListsOnly}
+            onSelectTask={(t) => setDrawerTask(t)}
+            onSave={async (taskData, silent) => {
+              try {
+                const updatedByName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || user?.email || 'User';
+                const payload = { ...taskData, updatedBy: updatedByName };
+                if (taskData.id) {
+                  setDrawerTask(prev => (prev && prev.id === taskData.id ? { ...prev, ...payload } : prev));
+                  updateTaskOptimistically(taskData.id, payload);
+                }
+                let savedTask = null;
+                if (taskData.id) {
+                  savedTask = await api.put(`/tasks/${taskData.id}`, payload);
+                } else {
+                  savedTask = await api.post('/tasks', payload);
+                }
+                if (!silent) toast('Task saved successfully', 'success');
+                if (savedTask) {
+                  const merged = { ...taskData, ...savedTask };
+                  setDrawerTask(merged);
+                  updateTaskOptimistically(merged.id, merged);
+                  fetchTaskListsOnly();
+                }
+                return savedTask;
+              } catch (err) {
+                console.error('Save task error:', err);
+                toast('Failed to save task', 'error');
+              }
+            }}
+            onDelete={async (id) => { await handleDeleteTask(id); closeTaskDetail(); }}
+            onClose={closeTaskDetail}
+            currentUser={user}
+            initialEditMode={taskDetailMode}
+          />
+        </div>
+      )}
     </div>
   );
 }

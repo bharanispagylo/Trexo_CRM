@@ -1259,17 +1259,59 @@ app.get('/api/projects', async (req, res) => {
       apiMemoryCache.projects.time = now;
     }
 
-    const mapped = projects.map(p => ({
-      ...p,
-      queries: (p.queries || []).map(q => ({ ...q, sentTo: q.sentToId })),
-      taskLists: (p.taskLists || []).map(list => {
+    const allUnassignedTasks = await prisma.task.findMany({
+      where: {
+        projectId: { not: null },
+        OR: [
+          { taskListId: null },
+          { taskListId: '' },
+          { taskListId: { startsWith: 'gen_' } }
+        ]
+      }
+    });
+
+    const mapped = projects.map(p => {
+      const existingLists = (p.taskLists || []).map(list => {
         const favoritedByArr = list.favoritedBy ? list.favoritedBy.split(',').map(id => id.trim()).filter(Boolean) : [];
         return {
           ...list,
           isFavorite: userId ? favoritedByArr.includes(userId) : false
         };
-      })
-    }));
+      });
+
+      const unassignedForP = allUnassignedTasks.filter(t => t.projectId === p.id);
+      if (unassignedForP.length > 0) {
+        const genId = `gen_${p.id}`;
+        const genListExists = existingLists.some(l => l.id === genId || l.name === 'General Tasks');
+        if (!genListExists) {
+          existingLists.push({
+            id: genId,
+            name: 'General Tasks',
+            projectId: p.id,
+            project: { id: p.id, name: p.name },
+            tasks: unassignedForP,
+            createdAt: p.createdAt || new Date(),
+            updatedAt: new Date()
+          });
+        } else {
+          const genList = existingLists.find(l => l.id === genId || l.name === 'General Tasks');
+          if (genList) {
+            const existingIds = new Set((genList.tasks || []).map(t => t.id));
+            unassignedForP.forEach(t => {
+              if (!existingIds.has(t.id)) {
+                genList.tasks.push(t);
+              }
+            });
+          }
+        }
+      }
+
+      return {
+        ...p,
+        queries: (p.queries || []).map(q => ({ ...q, sentTo: q.sentToId })),
+        taskLists: existingLists
+      };
+    });
     res.json(mapped);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1375,6 +1417,60 @@ app.get('/api/task-lists', async (req, res) => {
         isFavorite: userId ? favoritedByArr.includes(userId) : false
       };
     });
+
+    const allProjects = await prisma.project.findMany({ select: { id: true, name: true, createdAt: true } });
+    const allUnassignedTasks = await prisma.task.findMany({
+      where: {
+        projectId: { not: null },
+        OR: [
+          { taskListId: null },
+          { taskListId: '' },
+          { taskListId: { startsWith: 'gen_' } }
+        ]
+      }
+    });
+
+    const projectMap = new Map(allProjects.map(p => [p.id, p]));
+    const unassignedByProj = {};
+    allUnassignedTasks.forEach(t => {
+      if (t.projectId) {
+        if (!unassignedByProj[t.projectId]) unassignedByProj[t.projectId] = [];
+        unassignedByProj[t.projectId].push(t);
+      }
+    });
+
+    Object.keys(unassignedByProj).forEach(projId => {
+      const proj = projectMap.get(projId);
+      const unassignedTasks = unassignedByProj[projId];
+      if (proj && unassignedTasks && unassignedTasks.length > 0) {
+        const genId = `gen_${projId}`;
+        const exists = mapped.some(l => l.id === genId || (l.projectId === projId && l.name === 'General Tasks'));
+        if (!exists) {
+          mapped.push({
+            id: genId,
+            name: 'General Tasks',
+            projectId: projId,
+            project: { id: projId, name: proj.name },
+            tasks: unassignedTasks,
+            favoritedBy: '',
+            isFavorite: false,
+            createdAt: proj.createdAt || new Date(),
+            updatedAt: new Date()
+          });
+        } else {
+          const genList = mapped.find(l => l.id === genId || (l.projectId === projId && l.name === 'General Tasks'));
+          if (genList) {
+            const existingIds = new Set((genList.tasks || []).map(t => t.id));
+            unassignedTasks.forEach(t => {
+              if (!existingIds.has(t.id)) {
+                genList.tasks.push(t);
+              }
+            });
+          }
+        }
+      }
+    });
+
     res.json(mapped);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1397,6 +1493,18 @@ app.post('/api/task-lists', async (req, res) => {
 
 app.delete('/api/task-lists/:id', async (req, res) => {
   try {
+    clearApiCache('taskLists');
+    clearApiCache('projects');
+    clearApiCache('tasks');
+
+    if (req.params.id && req.params.id.startsWith('gen_')) {
+      const projId = req.params.id.substring(4);
+      await prisma.task.deleteMany({
+        where: { projectId: projId, OR: [{ taskListId: null }, { taskListId: '' }, { taskListId: req.params.id }] }
+      });
+      return res.json({ success: true });
+    }
+
     // Delete all tasks associated with this task list
     await prisma.task.deleteMany({
       where: { taskListId: req.params.id }
@@ -1413,6 +1521,13 @@ app.delete('/api/task-lists/:id', async (req, res) => {
 
 app.put('/api/task-lists/:id', async (req, res) => {
   try {
+    clearApiCache('taskLists');
+    clearApiCache('projects');
+
+    if (req.params.id && req.params.id.startsWith('gen_')) {
+      return res.json({ id: req.params.id, name: req.body.name || 'General Tasks' });
+    }
+
     const userId = req.headers['x-user-id'];
     const { tasks, project, isFavorite, ...rest } = req.body;
     let updatedData = { ...rest };
@@ -1638,14 +1753,23 @@ app.post('/api/tasks', async (req, res) => {
     // Universal model field sanitizer to protect Prisma against drift
     taskData = sanitizeTaskData(taskData);
 
-    // Auto-generate sequential task number if not provided or placeholder
-    if (!taskData.taskNo || taskData.taskNo.startsWith('TSK-')) {
+    // Check if taskNo is missing, placeholder, or already taken in DB
+    let isDuplicateTaskNo = false;
+    if (taskData.taskNo) {
+      const existing = await prisma.task.findFirst({
+        where: { taskNo: { equals: taskData.taskNo, mode: 'insensitive' } }
+      });
+      if (existing) isDuplicateTaskNo = true;
+    }
+
+    // Auto-generate sequential task number if not provided, placeholder, or duplicate
+    if (!taskData.taskNo || taskData.taskNo.startsWith('TSK-') || isDuplicateTaskNo) {
       const allTasks = await prisma.task.findMany({
         where: { taskNo: { not: null } },
         select: { taskNo: true }
       });
       let maxNo = 0;
-      let prefix = 'T';
+      let prefix = taskData.parentId ? 'S' : 'T';
       const type = (taskData.taskType || '').toLowerCase();
       if (type === 'bug') {
         prefix = 'B';
@@ -3673,8 +3797,71 @@ const checkAndGenerateRecurringTasks = async () => {
   }
 };
 
+async function fixDuplicateTaskNumbers() {
+  try {
+    const allTasks = await prisma.task.findMany({
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, taskNo: true, taskType: true, parentId: true }
+    });
+
+    const seenTaskNos = new Map();
+    let maxDigits = 0;
+
+    for (const t of allTasks) {
+      if (t.taskNo) {
+        const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
+        if (!isNaN(digits) && digits > maxDigits && digits < 50000) {
+          maxDigits = digits;
+        }
+      }
+    }
+
+    let fixCount = 0;
+    for (const t of allTasks) {
+      if (!t.taskNo) continue;
+      const normalizedNo = t.taskNo.trim().toUpperCase();
+      if (seenTaskNos.has(normalizedNo)) {
+        maxDigits += 1;
+        let prefix = t.parentId ? 'S' : 'T';
+        const type = (t.taskType || '').toLowerCase();
+        if (type === 'bug') prefix = 'B';
+        else if (type === 'calls/meetings') prefix = 'C';
+
+        const newNo = `${prefix}${maxDigits}`;
+        await prisma.task.update({
+          where: { id: t.id },
+          data: { taskNo: newNo }
+        });
+        console.log(`[Deduplicate] Reassigned duplicate task ${t.id} from ${t.taskNo} to ${newNo}`);
+        seenTaskNos.set(newNo.toUpperCase(), t.id);
+        fixCount++;
+      } else {
+        seenTaskNos.set(normalizedNo, t.id);
+      }
+    }
+    if (fixCount > 0) {
+      if (typeof clearApiCache === 'function') {
+        clearApiCache('tasks');
+        clearApiCache('projects');
+        clearApiCache('taskLists');
+      }
+      console.log(`[Deduplicate] Successfully fixed ${fixCount} duplicate task number(s).`);
+    }
+    return fixCount;
+  } catch (err) {
+    console.error('[Deduplicate] Error fixing duplicate task numbers:', err);
+    return 0;
+  }
+}
+
+app.post('/api/admin/fix-duplicate-task-nos', async (req, res) => {
+  const fixed = await fixDuplicateTaskNumbers();
+  res.json({ success: true, fixedCount: fixed });
+});
+
 app.listen(PORT, async () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+  await fixDuplicateTaskNumbers();
   await checkAndGenerateRecurringTasks();
   setInterval(checkAndGenerateRecurringTasks, 10000); // Check every 10 seconds
 });

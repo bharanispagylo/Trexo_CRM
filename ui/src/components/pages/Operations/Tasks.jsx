@@ -480,7 +480,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     }
     return {
       ...defaults,
-      taskNo: fallbackNo
+      taskNo: ''
     };
   });
 
@@ -1808,7 +1808,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     }
     try {
       const { comments, taskList, ...payload } = updatedForm;
-      await onSave(payload, true);
+      if (onSelectTask && task) onSelectTask({ ...task, ...payload });
+      onSave(payload, true);
     } catch (err) {
       console.error('Failed inline save:', err);
       setForm(form);
@@ -5506,30 +5507,6 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
     );
   }
 
-  if (drawerOpen && drawerTask) {
-    return (
-      <div className="tasks-3col-layout" style={{ background: '#f8fafc' }}>
-        <TaskDetailView
-          task={drawerTask}
-          tasks={tasks}
-          onRefresh={fetchTasks}
-          onSelectTask={(t) => setDrawerTask(t)}
-          onSave={async (taskData, silent) => {
-            const saved = await handleSaveTask(taskData, silent);
-            if (saved) {
-              setDrawerTask(saved);
-              setTaskDetailMode(true);
-            }
-          }}
-          onDelete={async (id) => { await handleDeleteTask(id); closeDrawer(); }}
-          onClose={closeDrawer}
-          currentUser={user}
-          initialEditMode={taskDetailMode}
-        />
-      </div>
-    );
-  }
-
   const renderRecurringTable = (taskList, isTemplateList = false) => {
     if (taskList.length === 0) {
       return (
@@ -6963,7 +6940,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                   )}
                                 </div>
                                 {!isMobCollapsed && (() => {
-                                   const mainTasks = statusTasks.filter(t => !t.parentId || !allProjTasks.some(p => p.id === t.parentId));
+                                   const mainTasks = statusTasks.filter(t => !t.parentId || !statusTasks.some(p => p.id === t.parentId));
                              
                              return mainTasks.flatMap(task => {
                                const subTasks = tasks.filter(t => t.parentId === task.id);
@@ -7838,7 +7815,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                     </div>
                     {/* Tasks in this group */}
                     {!isCollapsed && (() => {
-                      const mainTasks = groupTasks.filter(t => !t.parentId || !flatSorted.some(p => p.id === t.parentId));
+                      const mainTasks = groupTasks.filter(t => !t.parentId || !groupTasks.some(p => p.id === t.parentId));
                       
                       return mainTasks.flatMap(task => {
                         const subTasks = tasks.filter(t => t.parentId === task.id);
@@ -8474,12 +8451,27 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
       {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Side Drawer ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
 
       
-      <PromptModal
-        isOpen={promptState.isOpen}
-        title={promptState.title}
-        onSave={promptState.onSubmit}
-        onCancel={() => setPromptState({ isOpen: false, title: '', onSubmit: null })}
-      />
+      {drawerOpen && drawerTask && (
+        <div className="task-drawer-overlay" style={{ position: 'fixed', inset: 0, zIndex: 99999, background: '#f8fafc', overflowY: 'auto' }}>
+          <TaskDetailView
+            task={drawerTask}
+            tasks={tasks}
+            onRefresh={fetchTasks}
+            onSelectTask={(t) => setDrawerTask(t)}
+            onSave={async (taskData, silent) => {
+              const saved = await handleSaveTask(taskData, silent);
+              if (saved) {
+                setDrawerTask(saved);
+                setTaskDetailMode(true);
+              }
+            }}
+            onDelete={async (id) => { await handleDeleteTask(id); closeDrawer(); }}
+            onClose={closeDrawer}
+            currentUser={user}
+            initialEditMode={taskDetailMode}
+          />
+        </div>
+      )}
       </div>
       </div>
     </div>

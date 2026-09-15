@@ -2007,7 +2007,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                         </thead>
                                         <tbody>
                                           {(() => {
-                                            const mainTasks = statusTasks.filter(t => !t.parentId || !allTasks.some(p => p.id === t.parentId));
+                                            const mainTasks = statusTasks.filter(t => !t.parentId || !statusTasks.some(p => p.id === t.parentId));
                                             const sortedMainTasks = sortProjectTasks(mainTasks);
 
                                             const renderedTasks = sortedMainTasks.flatMap(task => {
@@ -2485,7 +2485,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                 </thead>
                                 <tbody>
                                   {(() => {
-                                    const mainTasks = statusTasks.filter(t => !t.parentId || !allProjectTasks.some(p => p.id === t.parentId));
+                                    const mainTasks = statusTasks.filter(t => !t.parentId || !statusTasks.some(p => p.id === t.parentId));
                                     const sortedMainTasks = sortProjectTasks(mainTasks);
 
                                     return sortedMainTasks.flatMap(task => {
