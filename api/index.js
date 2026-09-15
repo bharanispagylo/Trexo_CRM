@@ -1698,24 +1698,23 @@ app.post('/api/tasks', async (req, res) => {
     console.log('POST /api/tasks body:', req.body);
     let { id, comments, createdAt, createdBy: createdByName, ...taskData } = req.body;
     
-    // Resolve creator ID and creator name from headers
+    // Resolve creator ID, creator name, and check duplicate taskNo in parallel
     const userIdFromHeader = req.headers['x-user-id'];
     let finalCreatorId = userIdFromHeader || null;
     let finalCreatedBy = createdByName || null;
 
-    if (userIdFromHeader) {
-      const userObj = await prisma.user.findUnique({
-        where: { id: userIdFromHeader }
-      });
-      if (userObj) {
-        finalCreatedBy = userObj.fullName || `${userObj.firstName || ''} ${userObj.lastName || ''}`.trim() || userObj.email;
-      }
+    const [userObj, existing] = await Promise.all([
+      userIdFromHeader ? prisma.user.findUnique({ where: { id: userIdFromHeader } }) : Promise.resolve(null),
+      taskData.taskNo ? prisma.task.findFirst({ where: { taskNo: { equals: taskData.taskNo, mode: 'insensitive' } } }) : Promise.resolve(null)
+    ]);
+
+    if (userObj) {
+      finalCreatedBy = userObj.fullName || `${userObj.firstName || ''} ${userObj.lastName || ''}`.trim() || userObj.email;
     }
 
     taskData.creatorId = finalCreatorId;
     taskData.createdBy = finalCreatedBy;
 
-    
     // Sanitize and convert dates
     ['dueDate', 'assignedDate', 'deliveredDate', 'nextOccurrence', 'lastOccurrence'].forEach(key => {
       if (taskData[key]) {
@@ -1753,20 +1752,15 @@ app.post('/api/tasks', async (req, res) => {
     // Universal model field sanitizer to protect Prisma against drift
     taskData = sanitizeTaskData(taskData);
 
-    // Check if taskNo is missing, placeholder, or already taken in DB
-    let isDuplicateTaskNo = false;
-    if (taskData.taskNo) {
-      const existing = await prisma.task.findFirst({
-        where: { taskNo: { equals: taskData.taskNo, mode: 'insensitive' } }
-      });
-      if (existing) isDuplicateTaskNo = true;
-    }
+    const isDuplicateTaskNo = !!existing;
 
-    // Auto-generate sequential task number if not provided, placeholder, or duplicate
+    // Auto-generate sequential task number if not provided, placeholder, or duplicate (fast indexed query)
     if (!taskData.taskNo || taskData.taskNo.startsWith('TSK-') || isDuplicateTaskNo) {
-      const allTasks = await prisma.task.findMany({
+      const latestTasks = await prisma.task.findMany({
         where: { taskNo: { not: null } },
-        select: { taskNo: true }
+        select: { taskNo: true },
+        orderBy: { createdAt: 'desc' },
+        take: 50
       });
       let maxNo = 0;
       let prefix = taskData.parentId ? 'S' : 'T';
@@ -1776,13 +1770,17 @@ app.post('/api/tasks', async (req, res) => {
       } else if (type === 'calls/meetings') {
         prefix = 'C';
       }
-      for (const t of allTasks) {
+      for (const t of latestTasks) {
         if (t.taskNo) {
           const digits = parseInt(t.taskNo.replace(/\D/g, ''), 10);
           if (!isNaN(digits) && digits > maxNo && digits < 50000) {
             maxNo = digits;
           }
         }
+      }
+      if (maxNo === 0) {
+        const maxRecord = await prisma.$queryRaw`SELECT MAX(NULLIF(regexp_replace(task_no, '\D', '', 'g'), '')::int) as max_val FROM tasks WHERE task_no IS NOT NULL AND length(regexp_replace(task_no, '\D', '', 'g')) <= 6;`.catch(() => null);
+        maxNo = maxRecord?.[0]?.max_val || 0;
       }
       taskData.taskNo = `${prefix}${maxNo + 1}`;
     }
@@ -1902,19 +1900,16 @@ app.put('/api/tasks/:id', async (req, res) => {
     
     const userIdFromHeader = req.headers['x-user-id'];
     let finalUpdaterName = updatedByName || null;
-    if (userIdFromHeader) {
-      const userObj = await prisma.user.findUnique({
-        where: { id: userIdFromHeader }
-      });
-      if (userObj) {
-        finalUpdaterName = userObj.fullName || `${userObj.firstName || ''} ${userObj.lastName || ''}`.trim() || userObj.email;
-      }
-    }
     
-    // Fetch existing task to compare assignees
-    const existingTask = await prisma.task.findUnique({
-      where: { id: req.params.id }
-    });
+    // Fetch user and existing task in parallel to eliminate sequential round-trip delay
+    const [userObj, existingTask] = await Promise.all([
+      userIdFromHeader ? prisma.user.findUnique({ where: { id: userIdFromHeader } }) : Promise.resolve(null),
+      prisma.task.findUnique({ where: { id: req.params.id } })
+    ]);
+
+    if (userObj) {
+      finalUpdaterName = userObj.fullName || `${userObj.firstName || ''} ${userObj.lastName || ''}`.trim() || userObj.email;
+    }
     if (!existingTask) {
       return res.status(404).json({ error: 'Task not found' });
     }

@@ -772,30 +772,105 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     return isAssigned() || isTeamLeadOrAdmin;
   };
 
+  const handleViewFile = (url, fileName) => {
+    if (!url) return;
+    const isImage = /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(fileName || '') || url.startsWith('data:image/');
+    if (isImage) {
+      setPreviewImageUrl(url);
+      setPreviewImageName(fileName || 'Image Preview');
+      return;
+    }
+
+    if (url.startsWith('data:')) {
+      try {
+        const arr = url.split(',');
+        const mime = arr[0].match(/:(.*?);/)?.[1] || 'application/pdf';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        const blobUrl = window.URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+        return;
+      } catch (err) {
+        console.error('Error opening base64 file:', err);
+      }
+    }
+
+    // For Cloudinary PDF URLs that return 401 on direct .pdf delivery, open the rendered JPG conversion
+    if (url.includes('cloudinary.com') && url.toLowerCase().endsWith('.pdf')) {
+      const jpgUrl = url.replace(/\.pdf$/i, '.jpg');
+      window.open(jpgUrl, '_blank');
+      return;
+    }
+
+    window.open(url, '_blank');
+  };
+
   const handleDownloadFile = async (url, fileName) => {
+    if (!url) return;
     try {
       if (url.startsWith('data:')) {
+        const arr = url.split(',');
+        const mime = arr[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = url;
+        link.href = blobUrl;
         link.download = fileName || 'download';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
         return;
       }
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Network response was not ok');
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
+
+      // If it's a Cloudinary PDF, use the rendered JPG URL to bypass 401 restriction
+      let downloadUrl = url;
+      if (url.includes('cloudinary.com') && url.toLowerCase().endsWith('.pdf')) {
+        downloadUrl = url.replace(/\.pdf$/i, '.jpg');
+      } else if (url.includes('cloudinary.com') && url.includes('/upload/')) {
+        const cleanName = (fileName || 'download').replace(/[,\s/\\?%*:|"<>]/g, '_');
+        downloadUrl = url.replace('/upload/', `/upload/fl_attachment:${encodeURIComponent(cleanName)}/`);
+      }
+
+      try {
+        const response = await fetch(downloadUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          const blobUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = fileName || 'download';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+          return;
+        }
+      } catch (fetchErr) {
+        // Fallback for CORS
+      }
+
       const link = document.createElement('a');
-      link.href = blobUrl;
+      link.href = downloadUrl;
       link.download = fileName || 'download';
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      console.warn('CORS fetch failed, opening in new tab:', err);
+      console.warn('Download fallback opening in new tab:', err);
       window.open(url, '_blank');
     }
   };
@@ -846,8 +921,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     if (!file) return;
     setUploading(true);
 
-    // Try Cloudinary first if configured
-    if (process.env.REACT_APP_CLOUDINARY_CLOUD_NAME && process.env.REACT_APP_CLOUDINARY_CLOUD_NAME !== 'undefined') {
+    const isImageFile = file.type ? file.type.startsWith('image/') : /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(file.name || '');
+
+    // For image files, upload to Cloudinary
+    if (isImageFile && process.env.REACT_APP_CLOUDINARY_CLOUD_NAME && process.env.REACT_APP_CLOUDINARY_CLOUD_NAME !== 'undefined') {
       try {
         const formData = new FormData();
         formData.append('file', file);
@@ -886,7 +963,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       }
     }
 
-    // Local base64 file reader fallback (100% robust offline & without Cloudinary credentials!)
+    // For PDFs and documents, use FileReader Base64 stored in database TEXT column (100% robust, no Cloudinary 401 restrictions)
     try {
       const reader = new FileReader();
       reader.onloadend = async () => {
@@ -912,12 +989,12 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         if (onUploadSuccess) onUploadSuccess(reader.result, file.name);
       };
       reader.onerror = () => {
-        alert('Failed to read file locally.', 'error', 'Error');
+        alert('Failed to read file.', 'error', 'Error');
         setUploading(false);
       };
       reader.readAsDataURL(file);
     } catch (err) {
-      alert('Local file read failed: ' + err.message, 'error', 'Error');
+      alert('File read failed: ' + err.message, 'error', 'Error');
       setUploading(false);
     }
   };
@@ -1341,8 +1418,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     if (!file) return;
     setCommentUploading(true);
 
-    // Try Cloudinary first if configured
-    if (process.env.REACT_APP_CLOUDINARY_CLOUD_NAME && process.env.REACT_APP_CLOUDINARY_CLOUD_NAME !== 'undefined') {
+    const isImageFile = file.type ? file.type.startsWith('image/') : /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(file.name || '');
+
+    // Try Cloudinary for images
+    if (isImageFile && process.env.REACT_APP_CLOUDINARY_CLOUD_NAME && process.env.REACT_APP_CLOUDINARY_CLOUD_NAME !== 'undefined') {
       try {
         const formData = new FormData();
         formData.append('file', file);
@@ -1364,7 +1443,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       }
     }
 
-    // Local Base64 reader fallback
+    // For PDFs/docs or fallback, use Base64 reader
     try {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -1378,7 +1457,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       };
       reader.readAsDataURL(file);
     } catch (err) {
-      alert('Local comment file read failed: ' + err.message, 'error', 'Error');
+      alert('Comment file read failed: ' + err.message, 'error', 'Error');
       setCommentUploading(false);
     }
   };
@@ -1541,7 +1620,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         <button 
           type="button"
           onClick={(e) => { 
-            handleDownloadFile(attachment.url, attachment.name); 
+            handleViewFile(attachment.url, attachment.name); 
           }}
           style={{ 
             fontSize: '0.8rem', 
@@ -3591,71 +3670,40 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                     );
                                   })()}
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflow: 'hidden', width: '100%' }}>
-                                    {meta.isImage ? (
-                                      <button 
-                                        type="button"
-                                        onClick={() => { 
-                                          setPreviewImageUrl(meta.url); 
-                                          setPreviewImageName(meta.fileName); 
-                                        }}
-                                        style={{ 
-                                          fontSize: '0.75rem', 
-                                          fontWeight: '500', 
-                                          color: '#2563eb', 
-                                          background: 'none',
-                                          border: 'none',
-                                          padding: 0,
-                                          cursor: 'pointer',
-                                          textDecoration: 'none', 
-                                          textOverflow: 'ellipsis', 
-                                          overflow: 'hidden', 
-                                          whiteSpace: 'nowrap', 
-                                          display: 'block',
-                                          textAlign: 'left',
-                                          width: '100%',
-                                          fontFamily: 'inherit'
-                                        }}
-                                        className="file-name-link"
-                                        title={meta.fileName}
-                                      >
-                                        {meta.fileName}
-                                      </button>
-                                    ) : (
-                                      <button 
-                                        type="button"
-                                        onClick={() => { 
-                                          handleDownloadFile(meta.url, meta.fileName); 
-                                        }}
-                                        style={{ 
-                                          fontSize: '0.75rem', 
-                                          fontWeight: '500', 
-                                          color: '#2563eb', 
-                                          background: 'none',
-                                          border: 'none',
-                                          padding: 0,
-                                          cursor: 'pointer',
-                                          textDecoration: 'none', 
-                                          textOverflow: 'ellipsis', 
-                                          overflow: 'hidden', 
-                                          whiteSpace: 'nowrap', 
-                                          display: 'block',
-                                          textAlign: 'left',
-                                          width: '100%',
-                                          fontFamily: 'inherit'
-                                        }}
-                                        className="file-name-link"
-                                        title={meta.fileName}
-                                      >
-                                        {meta.fileName}
-                                      </button>
-                                    )}
+                                    <button 
+                                      type="button"
+                                      onClick={() => { 
+                                        handleViewFile(meta.url, meta.fileName); 
+                                      }}
+                                      style={{ 
+                                        fontSize: '0.75rem', 
+                                        fontWeight: '500', 
+                                        color: '#2563eb', 
+                                        background: 'none',
+                                        border: 'none',
+                                        padding: 0,
+                                        cursor: 'pointer',
+                                        textDecoration: 'none', 
+                                        textOverflow: 'ellipsis', 
+                                        overflow: 'hidden', 
+                                        whiteSpace: 'nowrap', 
+                                        display: 'block',
+                                        textAlign: 'left',
+                                        width: '100%',
+                                        fontFamily: 'inherit'
+                                      }}
+                                      className="file-name-link"
+                                      title={meta.fileName}
+                                    >
+                                      {meta.fileName}
+                                    </button>
                                     {meta.isImage && (
                                       <div style={{ marginTop: '0.25rem' }}>
                                         <img 
                                           src={meta.url} 
                                           alt={meta.fileName} 
                                           style={{ maxWidth: '120px', maxHeight: '80px', borderRadius: '4px', border: '1px solid #e2e8f0', objectFit: 'contain', cursor: 'pointer', display: 'block' }}
-                                          onClick={() => { setPreviewImageUrl(meta.url); setPreviewImageName(meta.fileName); }}
+                                          onClick={() => handleViewFile(meta.url, meta.fileName)}
                                         />
                                       </div>
                                     )}
@@ -3682,17 +3730,10 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                               <td style={{ padding: '0.85rem 0.5rem', textAlign: 'right' }}>
                                 <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                                   
-                                  {/* Download/Preview Icon Button */}
+                                  {/* View Icon Button */}
                                   <button 
                                     type="button"
-                                    onClick={async () => {
-                                      if (meta.isImage) {
-                                        setPreviewImageUrl(meta.url);
-                                        setPreviewImageName(meta.fileName);
-                                      } else {
-                                        await handleDownloadFile(meta.url, meta.fileName);
-                                      }
-                                    }}
+                                    onClick={() => handleViewFile(meta.url, meta.fileName)}
                                     style={{
                                       width: '28px',
                                       height: '28px',
@@ -3705,14 +3746,32 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                                       background: 'white',
                                       cursor: 'pointer'
                                     }}
-                                    title={meta.isImage ? "Preview Image" : "Download File"}
+                                    title={meta.isImage ? "View Image" : meta.isPdf ? "View PDF" : "View File"}
                                     className="action-icon-btn"
                                   >
-                                    {meta.isImage ? (
-                                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                    ) : (
-                                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                    )}
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                  </button>
+
+                                  {/* Download Icon Button */}
+                                  <button 
+                                    type="button"
+                                    onClick={() => handleDownloadFile(meta.url, meta.fileName)}
+                                    style={{
+                                      width: '28px',
+                                      height: '28px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #e2e8f0',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: '#64748b',
+                                      background: 'white',
+                                      cursor: 'pointer'
+                                    }}
+                                    title="Download"
+                                    className="action-icon-btn"
+                                  >
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                   </button>
 
                                   {/* Delete/Action Button */}
