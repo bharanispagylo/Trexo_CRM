@@ -774,7 +774,17 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
     return isAssigned() || isTeamLeadOrAdmin;
   };
 
-  const handleViewFile = (url, fileName) => {
+  const closePdfModal = () => {
+    if (previewPdfUrl && previewPdfUrl.startsWith('blob:')) {
+      try {
+        window.URL.revokeObjectURL(previewPdfUrl);
+      } catch (e) {}
+    }
+    setPreviewPdfUrl(null);
+    setPreviewPdfName('');
+  };
+
+  const handleViewFile = async (url, fileName) => {
     if (!url) return;
     const isImage = /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(fileName || '') || url.startsWith('data:image/');
     if (isImage) {
@@ -783,19 +793,38 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       return;
     }
 
-    // For base64 encoded files (PDF or other), show inline in PDF preview modal
-    if (url.startsWith('data:')) {
+    const isPdf = /\.pdf$/i.test(fileName || '') || url.includes('application/pdf') || url.startsWith('data:application/pdf');
+
+    // For base64 encoded files (PDF or other)
+    if (url.startsWith('data:') || url.startsWith('JVBERi0')) {
       try {
-        const arr = url.split(',');
-        const mime = arr[0].match(/:(.*?);/)?.[1] || 'application/pdf';
-        if (mime === 'application/pdf' || mime.includes('pdf')) {
-          // Use data URI directly in iframe — works perfectly in same-tab modal (no blob cross-tab issue)
-          setPreviewPdfUrl(url);
+        let base64Data = url;
+        let mime = 'application/pdf';
+        if (url.startsWith('data:')) {
+          const arr = url.split(',');
+          mime = arr[0].match(/:(.*?);/)?.[1] || 'application/pdf';
+          base64Data = arr[1] || '';
+        }
+
+        if (isPdf || mime === 'application/pdf' || mime.includes('pdf')) {
+          // Convert base64 to same-origin Blob URL
+          // Chrome blocks data: URIs in iframes ("Failed to load PDF document"),
+          // but same-origin blob: URLs created via URL.createObjectURL render flawlessly!
+          const cleanB64 = base64Data.replace(/\s/g, '');
+          const bstr = atob(cleanB64);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) { u8arr[n] = bstr.charCodeAt(n); }
+          const blob = new Blob([u8arr], { type: 'application/pdf' });
+          const blobUrl = window.URL.createObjectURL(blob);
+          setPreviewPdfUrl(blobUrl);
           setPreviewPdfName(fileName || 'Document Preview');
           return;
         }
+
         // For non-PDF data: URIs (e.g. Word docs), trigger a download
-        const bstr = atob(arr[1]);
+        const cleanB64 = base64Data.replace(/\s/g, '');
+        const bstr = atob(cleanB64);
         let n = bstr.length;
         const u8arr = new Uint8Array(n);
         while (n--) { u8arr[n] = bstr.charCodeAt(n); }
@@ -823,9 +852,19 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       return;
     }
 
-    // For any other direct URL (non-Cloudinary PDF), show in inline PDF modal
-    const isPdfByName = /\.pdf$/i.test(fileName || '') || /\.pdf$/i.test(url);
-    if (isPdfByName) {
+    // For any other direct URL (non-Cloudinary PDF), fetch as blob or show in inline PDF modal
+    if (isPdf) {
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          const blob = await response.blob();
+          const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+          const blobUrl = window.URL.createObjectURL(pdfBlob);
+          setPreviewPdfUrl(blobUrl);
+          setPreviewPdfName(fileName || 'Document Preview');
+          return;
+        }
+      } catch (e) {}
       setPreviewPdfUrl(url);
       setPreviewPdfName(fileName || 'Document Preview');
       return;
@@ -837,6 +876,16 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const handleDownloadFile = async (url, fileName) => {
     if (!url) return;
     try {
+      if (url.startsWith('blob:')) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName || 'document.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
+      }
+
       if (url.startsWith('data:')) {
         const arr = url.split(',');
         const mime = arr[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
@@ -4432,7 +4481,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
             justifyContent: 'center',
             zIndex: 99999
           }}
-          onClick={() => { setPreviewPdfUrl(null); setPreviewPdfName(''); }}
+          onClick={closePdfModal}
         >
           <div
             style={{
@@ -4457,6 +4506,7 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
               </h3>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
                 <button
+                  type="button"
                   onClick={() => handleDownloadFile(previewPdfUrl, previewPdfName)}
                   style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '7px', padding: '0.4rem 0.9rem', fontSize: '0.78rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                   title="Download PDF"
@@ -4465,7 +4515,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                   Download
                 </button>
                 <button
-                  onClick={() => { setPreviewPdfUrl(null); setPreviewPdfName(''); }}
+                  type="button"
+                  onClick={closePdfModal}
                   style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '1rem', color: '#64748b', cursor: 'pointer', padding: '0.35rem 0.65rem', lineHeight: 1 }}
                   title="Close"
                 >
@@ -4473,12 +4524,31 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 </button>
               </div>
             </div>
-            {/* PDF iframe — data: URI works in same-page context, no cross-tab blob issue */}
-            <iframe
-              src={previewPdfUrl}
-              title={previewPdfName || 'PDF Viewer'}
-              style={{ flex: 1, width: '100%', border: 'none', borderRadius: '8px', background: '#f8fafc' }}
-            />
+            {/* PDF Viewer: Object + iframe fallback with same-origin Blob URL */}
+            <div style={{ flex: 1, width: '100%', height: 'calc(100% - 60px)', position: 'relative', borderRadius: '8px', overflow: 'hidden', background: '#f8fafc' }}>
+              <object
+                data={previewPdfUrl}
+                type="application/pdf"
+                style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+              >
+                <iframe
+                  src={previewPdfUrl}
+                  title={previewPdfName || 'PDF Viewer'}
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                >
+                  <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                    <p style={{ margin: '0 0 1rem 0' }}>PDF preview is not supported directly in this browser.</p>
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadFile(previewPdfUrl, previewPdfName)}
+                      style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      Download {previewPdfName || 'PDF'}
+                    </button>
+                  </div>
+                </iframe>
+              </object>
+            </div>
           </div>
         </div>
       )}
