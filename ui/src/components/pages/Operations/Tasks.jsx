@@ -6940,7 +6940,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                                   )}
                                 </div>
                                 {!isMobCollapsed && (() => {
-                                   const mainTasks = statusTasks.filter(t => !t.parentId || !allProjTasks.some(p => p.id === t.parentId));
+                                   const mainTasks = statusTasks.filter(t => !t.parentId || !statusTasks.some(p => p.id === t.parentId));
                              
                              return mainTasks.flatMap(task => {
                                const subTasks = tasks.filter(t => t.parentId === task.id);
@@ -7815,7 +7815,7 @@ export default function Tasks({ user, initialSelectedTask, onClearInitialTask, o
                     </div>
                     {/* Tasks in this group */}
                     {!isCollapsed && (() => {
-                      const mainTasks = groupTasks.filter(t => !t.parentId || !flatSorted.some(p => p.id === t.parentId));
+                      const mainTasks = groupTasks.filter(t => !t.parentId || !groupTasks.some(p => p.id === t.parentId));
                       
                       return mainTasks.flatMap(task => {
                         const subTasks = tasks.filter(t => t.parentId === task.id);

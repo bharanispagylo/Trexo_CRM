@@ -1027,7 +1027,7 @@ export default function TaskGroups({ user, onBack }) {
                         </thead>
                         <tbody>
                           {(() => {
-                            const mainTasks = statusTasks.filter(t => !t.parentId || !allTasks.some(p => p.id === t.parentId));
+                            const mainTasks = statusTasks.filter(t => !t.parentId || !statusTasks.some(p => p.id === t.parentId));
                             const sortedMainTasks = [...mainTasks].sort((a, b) => {
                               const titleA = a.title || '';
                               const titleB = b.title || '';
