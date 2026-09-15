@@ -793,28 +793,56 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       return;
     }
 
-    const isPdf = /\.pdf$/i.test(fileName || '') || url.includes('application/pdf') || url.startsWith('data:application/pdf');
+    // Check Cloudinary PDFs first (Cloudinary restricts direct .pdf delivery with 401, but allows .jpg rendering)
+    if (url.includes('cloudinary.com') && /\.pdf($|\?)/i.test(url)) {
+      const jpgUrl = url.replace(/\.pdf(\?.*)?$/i, '.jpg$1');
+      setPreviewImageUrl(jpgUrl);
+      setPreviewImageName(fileName || 'Document Preview');
+      return;
+    }
 
-    // For base64 encoded files (PDF or other)
-    if (url.startsWith('data:') || url.startsWith('JVBERi0')) {
+    const isPdfByName = /\.pdf$/i.test(fileName || '') || url.includes('application/pdf') || url.startsWith('data:application/pdf');
+
+    // For base64 encoded files
+    if (url.startsWith('data:') || url.startsWith('JVBERi0') || url.startsWith('/9j/')) {
       try {
         let base64Data = url;
         let mime = 'application/pdf';
         if (url.startsWith('data:')) {
           const arr = url.split(',');
           mime = arr[0].match(/:(.*?);/)?.[1] || 'application/pdf';
-          base64Data = arr[1] || '';
+          base64Data = arr.slice(1).join(',') || '';
         }
 
-        if (isPdf || mime === 'application/pdf' || mime.includes('pdf')) {
-          // Convert base64 to same-origin Blob URL
-          // Chrome blocks data: URIs in iframes ("Failed to load PDF document"),
-          // but same-origin blob: URLs created via URL.createObjectURL render flawlessly!
-          const cleanB64 = base64Data.replace(/\s/g, '');
-          const bstr = atob(cleanB64);
-          let n = bstr.length;
-          const u8arr = new Uint8Array(n);
-          while (n--) { u8arr[n] = bstr.charCodeAt(n); }
+        const cleanB64 = base64Data.replace(/\s/g, '');
+        const bstr = atob(cleanB64);
+        const len = bstr.length;
+        const u8arr = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          u8arr[i] = bstr.charCodeAt(i);
+        }
+
+        // Magic byte inspection:
+        // JPEG magic bytes: 0xFF 0xD8 0xFF (e.g. if a JPG was uploaded with .pdf filename)
+        if (u8arr.length >= 3 && u8arr[0] === 0xFF && u8arr[1] === 0xD8 && u8arr[2] === 0xFF) {
+          const imgBlob = new Blob([u8arr], { type: 'image/jpeg' });
+          const imgUrl = window.URL.createObjectURL(imgBlob);
+          setPreviewImageUrl(imgUrl);
+          setPreviewImageName(fileName || 'Image Preview');
+          return;
+        }
+
+        // PNG magic bytes: 0x89 0x50 0x4E 0x47 (\x89PNG)
+        if (u8arr.length >= 4 && u8arr[0] === 0x89 && u8arr[1] === 0x50 && u8arr[2] === 0x4E && u8arr[3] === 0x47) {
+          const imgBlob = new Blob([u8arr], { type: 'image/png' });
+          const imgUrl = window.URL.createObjectURL(imgBlob);
+          setPreviewImageUrl(imgUrl);
+          setPreviewImageName(fileName || 'Image Preview');
+          return;
+        }
+
+        // PDF magic bytes: 0x25 0x50 0x44 0x46 (%PDF)
+        if (u8arr.length >= 4 && u8arr[0] === 0x25 && u8arr[1] === 0x50 && u8arr[2] === 0x44 && u8arr[3] === 0x46) {
           const blob = new Blob([u8arr], { type: 'application/pdf' });
           const blobUrl = window.URL.createObjectURL(blob);
           setPreviewPdfUrl(blobUrl);
@@ -822,12 +850,16 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           return;
         }
 
-        // For non-PDF data: URIs (e.g. Word docs), trigger a download
-        const cleanB64 = base64Data.replace(/\s/g, '');
-        const bstr = atob(cleanB64);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while (n--) { u8arr[n] = bstr.charCodeAt(n); }
+        // If filename ends in .pdf, render in PDF modal
+        if (isPdfByName) {
+          const blob = new Blob([u8arr], { type: 'application/pdf' });
+          const blobUrl = window.URL.createObjectURL(blob);
+          setPreviewPdfUrl(blobUrl);
+          setPreviewPdfName(fileName || 'Document Preview');
+          return;
+        }
+
+        // Non-PDF binary data (e.g. Word, Excel) -> trigger download
         const blob = new Blob([u8arr], { type: mime });
         const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -843,28 +875,34 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       }
     }
 
-    // For Cloudinary PDF URLs that return 401 on direct .pdf delivery, show inline modal
-    if (url.includes('cloudinary.com') && url.toLowerCase().endsWith('.pdf')) {
-      // Convert to jpg preview for Cloudinary restricted PDFs
-      const jpgUrl = url.replace(/\.pdf$/i, '.jpg');
-      setPreviewImageUrl(jpgUrl);
-      setPreviewImageName(fileName || 'Document Preview');
-      return;
-    }
-
-    // For any other direct URL (non-Cloudinary PDF), fetch as blob or show in inline PDF modal
-    if (isPdf) {
+    // For any remote URL (PDF)
+    if (isPdfByName) {
       try {
         const response = await fetch(url);
-        if (response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        // If the URL returned HTML (SPA fallback), do NOT treat as PDF!
+        if (response.ok && !contentType.includes('text/html')) {
           const blob = await response.blob();
-          const pdfBlob = new Blob([blob], { type: 'application/pdf' });
-          const blobUrl = window.URL.createObjectURL(pdfBlob);
-          setPreviewPdfUrl(blobUrl);
-          setPreviewPdfName(fileName || 'Document Preview');
-          return;
+          const buffer = await blob.arrayBuffer();
+          const u8 = new Uint8Array(buffer);
+          // Check for JPEG disguised as PDF
+          if (u8.length >= 3 && u8[0] === 0xFF && u8[1] === 0xD8 && u8[2] === 0xFF) {
+            const imgUrl = window.URL.createObjectURL(blob);
+            setPreviewImageUrl(imgUrl);
+            setPreviewImageName(fileName || 'Image Preview');
+            return;
+          }
+          if (u8.length >= 4 && u8[0] === 0x25 && u8[1] === 0x50 && u8[2] === 0x44 && u8[3] === 0x46) {
+            const pdfBlob = new Blob([u8], { type: 'application/pdf' });
+            const blobUrl = window.URL.createObjectURL(pdfBlob);
+            setPreviewPdfUrl(blobUrl);
+            setPreviewPdfName(fileName || 'Document Preview');
+            return;
+          }
         }
       } catch (e) {}
+
+      // Direct fallback
       setPreviewPdfUrl(url);
       setPreviewPdfName(fileName || 'Document Preview');
       return;
@@ -889,11 +927,11 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       if (url.startsWith('data:')) {
         const arr = url.split(',');
         const mime = arr[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
-        const bstr = atob(arr[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while (n--) {
-          u8arr[n] = bstr.charCodeAt(n);
+        const bstr = atob(arr.slice(1).join(',') || '');
+        const len = bstr.length;
+        const u8arr = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          u8arr[i] = bstr.charCodeAt(i);
         }
         const blob = new Blob([u8arr], { type: mime });
         const blobUrl = window.URL.createObjectURL(blob);
@@ -907,10 +945,15 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
         return;
       }
 
-      // If it's a Cloudinary PDF, use the rendered JPG URL to bypass 401 restriction
+      // If it's a Cloudinary PDF, download the rendered JPG
       let downloadUrl = url;
-      if (url.includes('cloudinary.com') && url.toLowerCase().endsWith('.pdf')) {
-        downloadUrl = url.replace(/\.pdf$/i, '.jpg');
+      let finalFileName = fileName || 'download';
+      if (url.includes('cloudinary.com') && /\.pdf($|\?)/i.test(url)) {
+        downloadUrl = url.replace(/\.pdf(\?.*)?$/i, '.jpg$1');
+        // Ensure downloaded image file extension matches actual image content
+        if (finalFileName.toLowerCase().endsWith('.pdf')) {
+          finalFileName = finalFileName.replace(/\.pdf$/i, '.jpg');
+        }
       } else if (url.includes('cloudinary.com') && url.includes('/upload/')) {
         const cleanName = (fileName || 'download').replace(/[,\s/\\?%*:|"<>]/g, '_');
         downloadUrl = url.replace('/upload/', `/upload/fl_attachment:${encodeURIComponent(cleanName)}/`);
@@ -923,27 +966,23 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
           const blobUrl = window.URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.href = blobUrl;
-          link.download = fileName || 'download';
+          link.download = finalFileName;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
           setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
           return;
         }
-      } catch (fetchErr) {
-        // Fallback for CORS
-      }
+      } catch (fetchErr) {}
 
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = fileName || 'download';
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
+      link.download = finalFileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (err) {
-      console.warn('Download fallback opening in new tab:', err);
+      console.error('Error downloading file:', err);
       window.open(url, '_blank');
     }
   };
@@ -4524,30 +4563,13 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 </button>
               </div>
             </div>
-            {/* PDF Viewer: Object + iframe fallback with same-origin Blob URL */}
+            {/* PDF Viewer: Single clean iframe with same-origin Blob URL */}
             <div style={{ flex: 1, width: '100%', height: 'calc(100% - 60px)', position: 'relative', borderRadius: '8px', overflow: 'hidden', background: '#f8fafc' }}>
-              <object
-                data={previewPdfUrl}
-                type="application/pdf"
+              <iframe
+                src={previewPdfUrl}
+                title={previewPdfName || 'PDF Viewer'}
                 style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-              >
-                <iframe
-                  src={previewPdfUrl}
-                  title={previewPdfName || 'PDF Viewer'}
-                  style={{ width: '100%', height: '100%', border: 'none' }}
-                >
-                  <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-                    <p style={{ margin: '0 0 1rem 0' }}>PDF preview is not supported directly in this browser.</p>
-                    <button
-                      type="button"
-                      onClick={() => handleDownloadFile(previewPdfUrl, previewPdfName)}
-                      style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 600 }}
-                    >
-                      Download {previewPdfName || 'PDF'}
-                    </button>
-                  </div>
-                </iframe>
-              </object>
+              />
             </div>
           </div>
         </div>
