@@ -409,6 +409,8 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
   const [parentTask, setParentTask] = useState(null);
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
   const [previewImageName, setPreviewImageName] = useState('');
+  const [previewPdfUrl, setPreviewPdfUrl] = useState(null);
+  const [previewPdfName, setPreviewPdfName] = useState('');
   const [weeklyDropdownOpen, setWeeklyDropdownOpen] = useState(false);
 
   const [form, setForm] = useState(() => {
@@ -781,29 +783,51 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
       return;
     }
 
+    // For base64 encoded files (PDF or other), show inline in PDF preview modal
     if (url.startsWith('data:')) {
       try {
         const arr = url.split(',');
         const mime = arr[0].match(/:(.*?);/)?.[1] || 'application/pdf';
+        if (mime === 'application/pdf' || mime.includes('pdf')) {
+          // Use data URI directly in iframe — works perfectly in same-tab modal (no blob cross-tab issue)
+          setPreviewPdfUrl(url);
+          setPreviewPdfName(fileName || 'Document Preview');
+          return;
+        }
+        // For non-PDF data: URIs (e.g. Word docs), trigger a download
         const bstr = atob(arr[1]);
         let n = bstr.length;
         const u8arr = new Uint8Array(n);
-        while (n--) {
-          u8arr[n] = bstr.charCodeAt(n);
-        }
+        while (n--) { u8arr[n] = bstr.charCodeAt(n); }
         const blob = new Blob([u8arr], { type: mime });
         const blobUrl = window.URL.createObjectURL(blob);
-        window.open(blobUrl, '_blank');
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName || 'download';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
         return;
       } catch (err) {
         console.error('Error opening base64 file:', err);
       }
     }
 
-    // For Cloudinary PDF URLs that return 401 on direct .pdf delivery, open the rendered JPG conversion
+    // For Cloudinary PDF URLs that return 401 on direct .pdf delivery, show inline modal
     if (url.includes('cloudinary.com') && url.toLowerCase().endsWith('.pdf')) {
+      // Convert to jpg preview for Cloudinary restricted PDFs
       const jpgUrl = url.replace(/\.pdf$/i, '.jpg');
-      window.open(jpgUrl, '_blank');
+      setPreviewImageUrl(jpgUrl);
+      setPreviewImageName(fileName || 'Document Preview');
+      return;
+    }
+
+    // For any other direct URL (non-Cloudinary PDF), show in inline PDF modal
+    const isPdfByName = /\.pdf$/i.test(fileName || '') || /\.pdf$/i.test(url);
+    if (isPdfByName) {
+      setPreviewPdfUrl(url);
+      setPreviewPdfName(fileName || 'Document Preview');
       return;
     }
 
@@ -4389,6 +4413,71 @@ export function TaskDetailView({ task, onSave, onDelete, onClose, currentUser, i
                 borderRadius: '8px',
                 border: '1px solid #e2e8f0'
               }} 
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── PDF Preview Inline Modal (permanent fix: no window.open blob URL, works in production) ── */}
+      {previewPdfUrl && (
+        <div
+          className="animate-fade-in"
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.82)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999
+          }}
+          onClick={() => { setPreviewPdfUrl(null); setPreviewPdfName(''); }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              padding: '1.25rem',
+              width: '90vw',
+              maxWidth: '960px',
+              height: '90vh',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* PDF Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem', gap: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                📄 {previewPdfName || 'Document Preview'}
+              </h3>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
+                <button
+                  onClick={() => handleDownloadFile(previewPdfUrl, previewPdfName)}
+                  style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '7px', padding: '0.4rem 0.9rem', fontSize: '0.78rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                  title="Download PDF"
+                >
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  Download
+                </button>
+                <button
+                  onClick={() => { setPreviewPdfUrl(null); setPreviewPdfName(''); }}
+                  style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '1rem', color: '#64748b', cursor: 'pointer', padding: '0.35rem 0.65rem', lineHeight: 1 }}
+                  title="Close"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            {/* PDF iframe — data: URI works in same-page context, no cross-tab blob issue */}
+            <iframe
+              src={previewPdfUrl}
+              title={previewPdfName || 'PDF Viewer'}
+              style={{ flex: 1, width: '100%', border: 'none', borderRadius: '8px', background: '#f8fafc' }}
             />
           </div>
         </div>
