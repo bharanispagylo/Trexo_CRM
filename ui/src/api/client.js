@@ -50,6 +50,7 @@ export const api = {
   },
 
   async post(route, body) {
+    pendingRequests.clear();
     const res = await fetch(`${BASE_URL}${route}`, {
       method: 'POST',
       headers: getHeaders({ 'Content-Type': 'application/json' }),
@@ -62,8 +63,8 @@ export const api = {
     return res.json();
   },
 
-
   async put(route, body) {
+    pendingRequests.clear();
     const res = await fetch(`${BASE_URL}${route}`, {
       method: 'PUT',
       headers: getHeaders({ 'Content-Type': 'application/json' }),
@@ -77,6 +78,7 @@ export const api = {
   },
 
   async delete(route) {
+    pendingRequests.clear();
     const res = await fetch(`${BASE_URL}${route}`, {
       method: 'DELETE',
       headers: getHeaders()

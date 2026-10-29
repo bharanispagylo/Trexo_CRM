@@ -88,7 +88,7 @@ const apiMemoryCache = {
   users: { data: null, time: 0, ttl: 60000 },
   projects: { data: null, time: 0, ttl: 60000 },
   taskLists: { data: null, time: 0, ttl: 60000 },
-  tasks: { data: null, time: 0, ttl: 60000 },
+  tasks: { data: null, time: 0, ttl: 5000 },
   clients: { data: null, time: 0, ttl: 60000 }
 };
 
@@ -2075,6 +2075,9 @@ app.put('/api/tasks/:id', async (req, res) => {
       include: { projectRef: { select: { name: true } } }
     });
 
+    if (apiMemoryCache.tasks.data && Array.isArray(apiMemoryCache.tasks.data)) {
+      apiMemoryCache.tasks.data = apiMemoryCache.tasks.data.map(t => t.id === task.id ? { ...t, ...task, projectName: task.projectRef?.name || t.projectName || '' } : t);
+    }
     clearApiCache('tasks');
     clearApiCache('projects');
     clearApiCache('taskLists');
