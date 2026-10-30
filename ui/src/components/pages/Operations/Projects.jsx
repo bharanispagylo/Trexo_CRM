@@ -1996,7 +1996,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                                   {/* Task Table if section is not collapsed */}
                                   {!isStatusCollapsed && (statusTasks.length > 0 || can('tasks', 'create')) && (
-                                    <div className="cu-table-wrapper" style={{ overflow: 'hidden', background: 'white', marginTop: '0.5rem', marginLeft: '2rem', marginRight: '1rem' }}>
+                                    <div className="cu-table-wrapper" style={{ overflowX: 'auto', overflowY: 'hidden', background: 'white', marginTop: '0.5rem', marginLeft: '2rem', marginRight: '1rem' }}>
                                       <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                         <thead>
                                           <tr className="cu-thead-row" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
@@ -2099,8 +2099,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                        />
                                                      </div>
                                                    </td>
-                                                  <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
-                                                     <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                  <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 0.75rem', minWidth: '145px', whiteSpace: 'nowrap' }}>
+                                                     <div className="cu-row-actions" style={{ display: 'flex', gap: '0.45rem', justifyContent: 'flex-end', alignItems: 'center', whiteSpace: 'nowrap', flexWrap: 'nowrap' }}>
                                                        {(() => {
                                                          const assignVal = task.assignees || '';
                                                          const uObj = assignVal ? users.find(u => u.id === assignVal) : null;
@@ -2204,8 +2204,8 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                            />
                                                          </div>
                                                        </td>
-                                                      <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
-                                                        <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                      <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 0.75rem', minWidth: '145px', whiteSpace: 'nowrap' }}>
+                                                        <div className="cu-row-actions" style={{ display: 'flex', gap: '0.45rem', justifyContent: 'flex-end', alignItems: 'center', whiteSpace: 'nowrap', flexWrap: 'nowrap' }}>
                                                           {(() => {
                                                             const assignVal = sub.assignees || '';
                                                             const uObj = assignVal ? users.find(u => u.id === assignVal) : null;
@@ -2473,14 +2473,14 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
 
                           {/* Task Table if section is not collapsed */}
                           {!isStatusCollapsed && statusTasks.length > 0 && (
-                            <div className="cu-table-wrapper" style={{ overflow: 'hidden', background: 'white', marginTop: '0.5rem', marginLeft: '2rem', marginRight: '1rem' }}>
+                            <div className="cu-table-wrapper" style={{ overflowX: 'auto', overflowY: 'hidden', background: 'white', marginTop: '0.5rem', marginLeft: '2rem', marginRight: '1rem' }}>
                               <table className="cu-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                 <thead>
                                   <tr className="cu-thead-row" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                                    {renderSortableHeader('Name', 'name', { padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '45%', textAlign: 'left' })}
-                                    <th className="cu-th cu-th-tg" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '25%', textAlign: 'left' }}>Task Group</th>
-                                    {renderSortableHeader('Due Date', 'dueDate', { padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'center' })}
-                                    <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '15%', textAlign: 'right' }}>Actions</th>
+                                    {renderSortableHeader('Name', 'name', { padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '38%', textAlign: 'left' })}
+                                    <th className="cu-th cu-th-tg" style={{ padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '24%', textAlign: 'left' }}>Task Group</th>
+                                    {renderSortableHeader('Due Date', 'dueDate', { padding: '0.85rem 1.25rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '16%', textAlign: 'center' })}
+                                    <th className="cu-th cu-th-actions" style={{ padding: '0.85rem 0.75rem', fontSize: '12px', fontWeight: '700', color: '#475569', width: '22%', minWidth: '145px', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -2561,7 +2561,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                               />
                                             </div>
                                           </td>
-                                          <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
+                                          <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 0.75rem', minWidth: '145px', whiteSpace: 'nowrap' }}>
                                             {(() => {
                                               const assignVal = task.assignees || '';
                                               const uObj = assignVal ? users.find(u => u.id === assignVal) : null;
@@ -2576,9 +2576,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                               };
                                               const init = fullName ? getInitialsForAvatar(fullName) : '';
                                               return (
-                                                <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                <div className="cu-row-actions" style={{ display: 'flex', gap: '0.45rem', justifyContent: 'flex-end', alignItems: 'center', whiteSpace: 'nowrap', flexWrap: 'nowrap' }}>
                                                   <span 
-                                                    style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a', cursor: 'default', userSelect: 'none', marginRight: '2px' }} 
+                                                    style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a', cursor: 'default', userSelect: 'none', marginRight: '4px', flexShrink: 0, whiteSpace: 'nowrap' }} 
                                                     title="Billable"
                                                   >
                                                     {task.approvedHours !== undefined && task.approvedHours !== null ? task.approvedHours : 0}
@@ -2754,7 +2754,7 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                   />
                                                 </div>
                                               </td>
-                                              <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 1.25rem' }}>
+                                              <td className="cu-td cu-td-actions" onClick={e => e.stopPropagation()} style={{ padding: '0.85rem 0.75rem', minWidth: '145px', whiteSpace: 'nowrap' }}>
                                                 {(() => {
                                                   const assignVal = sub.assignees || '';
                                                   const uObj = assignVal ? users.find(u => u.id === assignVal) : null;
@@ -2769,9 +2769,9 @@ export default function Projects({ user, initialSelectedProject, onClearInitialP
                                                   };
                                                   const init = fullName ? getInitialsForAvatar(fullName) : '';
                                                   return (
-                                                    <div className="cu-row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                                    <div className="cu-row-actions" style={{ display: 'flex', gap: '0.45rem', justifyContent: 'flex-end', alignItems: 'center', whiteSpace: 'nowrap', flexWrap: 'nowrap' }}>
                                                       <span 
-                                                        style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a', cursor: 'default', userSelect: 'none', marginRight: '2px' }} 
+                                                        style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a', cursor: 'default', userSelect: 'none', marginRight: '4px', flexShrink: 0, whiteSpace: 'nowrap' }} 
                                                         title="Billable"
                                                       >
                                                         {sub.approvedHours !== undefined && sub.approvedHours !== null ? sub.approvedHours : 0}
